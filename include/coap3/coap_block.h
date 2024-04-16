@@ -65,28 +65,9 @@ typedef struct {
 #define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* (cl) Don't use pre-emptive Request-Tags */
 #define COAP_BLOCK_STLESS_FETCH  0x20 /* (cl) Assume server supports stateless FETCH */
 #define COAP_BLOCK_STLESS_BLOCK2 0x40 /* (svr)Server is stateless for handling Block2 */
-
-#if COAP_Q_BLOCK_SUPPORT
-#define COAP_BLOCK_SET_MASK (COAP_BLOCK_USE_LIBCOAP | \
-                             COAP_BLOCK_SINGLE_BODY | \
-                             COAP_BLOCK_TRY_Q_BLOCK | \
-                             COAP_BLOCK_USE_M_Q_BLOCK | \
-                             COAP_BLOCK_NO_PREEMPTIVE_RTAG | \
-                             COAP_BLOCK_STLESS_FETCH | \
-                             COAP_BLOCK_STLESS_BLOCK2)
-#else /* ! COAP_Q_BLOCK_SUPPORT */
-#define COAP_BLOCK_SET_MASK (COAP_BLOCK_USE_LIBCOAP | \
-                             COAP_BLOCK_SINGLE_BODY | \
-                             COAP_BLOCK_NO_PREEMPTIVE_RTAG | \
-                             COAP_BLOCK_STLESS_FETCH | \
-                             COAP_BLOCK_STLESS_BLOCK2)
-#endif /* ! COAP_Q_BLOCK_SUPPORT */
-
-#define COAP_BLOCK_MAX_SIZE_MASK 0x700 /* (svr)Mask to get the max supported block size */
-#define COAP_BLOCK_MAX_SIZE_SHIFT 8    /* (svr)Mask shift to get the max supported block size */
-#define COAP_BLOCK_MAX_SIZE_GET(a) (((a) & COAP_BLOCK_MAX_SIZE_MASK) >> COAP_BLOCK_MAX_SIZE_SHIFT)
-#define COAP_BLOCK_MAX_SIZE_SET(a) (((a) << COAP_BLOCK_MAX_SIZE_SHIFT) & COAP_BLOCK_MAX_SIZE_MASK)
-/* Note 0x4000 and 0x8000 are internally defined elsewhere */
+#define COAP_BLOCK_NOT_RANDOM_BLOCK1 0x80 /* (svr)Disable server handling random order
+                                             block1 */
+/* WARNING: Added defined values must not encroach into 0xff000000 which are defined elsewhere */
 
 /**
  * Returns @c 1 if libcoap was built with option Q-BlockX support,

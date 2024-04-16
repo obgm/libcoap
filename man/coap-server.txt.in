@@ -113,10 +113,11 @@ OPTIONS - General
    Sum of one or more COAP_BLOCK_* flag values for different block handling
    methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP).
 
-     COAP_BLOCK_USE_LIBCOAP    1
-     COAP_BLOCK_SINGLE_BODY    2
-     COAP_BLOCK_TRY_Q_BLOCK    4
-     COAP_BLOCK_STLESS_BLOCK2 64
+     COAP_BLOCK_USE_LIBCOAP         1
+     COAP_BLOCK_SINGLE_BODY         2
+     COAP_BLOCK_TRY_Q_BLOCK         4
+     COAP_BLOCK_STLESS_BLOCK2      64
+     COAP_BLOCK_NOT_RANDOM_BLOCK1 128
 
 *-N* ::
    Send NON-confirmable message for "observe" responses. If option *-N* is

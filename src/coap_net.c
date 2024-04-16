@@ -3307,7 +3307,7 @@ skip_handler:
     if (COAP_RESPONSE_CLASS(response->code) > 2) {
       if (observe)
         coap_delete_observer(resource, session, &pdu->actual_token);
-      if (added_block)
+      if (response->code != COAP_RESPONSE_CODE(413))
         coap_remove_option(response, COAP_OPTION_BLOCK1);
     }
 

@@ -2177,7 +2177,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tif the -A option is used\n"
           "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
-          "\t       \t\t(Sum of one or more of 1,2,4 and 64)\n"
+          "\t       \t\t(Sum of one or more of 1,2,4 64 and 128)\n"
           "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
           "\t       \t\tevery fifth response will still be sent as a confirmable\n"
           "\t       \t\tresponse (RFC 7641 requirement)\n"
