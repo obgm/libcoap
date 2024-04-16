@@ -509,7 +509,7 @@ init_resources(coap_context_t *ctx) {
   coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_separate);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-  coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("seperate"), 0);
+  coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("separate"), 0);
   coap_add_resource(ctx, r);
 }
 

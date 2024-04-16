@@ -109,7 +109,8 @@ In RAM constrained environments, option 2 may be the preferred method.
 This man page focuses on getting libcoap to do all the work, not how to do it
 all in the application.
 
-However, if the client supplies a Block1 or Block2 Option in the PDU where the
+However, if the client supplies a Block1 or Block2 Option in a GET request type
+PDU where the
 block number is not 0, this is assumed to be a random access request and any
 other blocks will not be requested by libcoap even if instructed otherwise.
 
@@ -157,6 +158,7 @@ session _block_mode_.
 #define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* (Client) Don't use pre-emptive Request-Tags */
 #define COAP_BLOCK_STLESS_FETCH  0x20 /* (Client) Assume server supports stateless FETCH */
 #define COAP_BLOCK_STLESS_BLOCK2 0x40 /* (Server) Server is stateless for Block2 transfers */
+#define COAP_BLOCK_NOT_RANDOM_BLOCK1 0x80 /* (Server) Disable server handling random order block1 */
 ----
 _block_mode_ is an or'd set of zero or more COAP_BLOCK_* definitions.
 
@@ -213,6 +215,14 @@ If *COAP_BLOCK_STLESS_BLOCK2* is set, then the server does not maintain state
 for any data returned that uses Block2 to split up the data chunks.
 The application is called for every request to get the complete set of data which
 is then split into the separate Block2 responses as appropriate.
+
+If *COAP_BLOCK_NOT_RANDOM_BLOCK1* is set, then the server does not allow any
+Block1 packets arriving in the wrong block number order by returning
+4.08 error codes. Normally this should not be set as networks can re-order
+the arrival of UDP packets, in particular this may happen if NON is being used
+for Block1 by the client.
+
+*NOTE:* This is ignored if Q-Block1 is being used.
 
 *Function: coap_context_set_max_block_size()*
 

@@ -31,9 +31,32 @@
  */
 
 #if COAP_Q_BLOCK_SUPPORT
+#define COAP_BLOCK_SET_MASK (COAP_BLOCK_USE_LIBCOAP | \
+                             COAP_BLOCK_SINGLE_BODY | \
+                             COAP_BLOCK_TRY_Q_BLOCK | \
+                             COAP_BLOCK_USE_M_Q_BLOCK | \
+                             COAP_BLOCK_NO_PREEMPTIVE_RTAG | \
+                             COAP_BLOCK_STLESS_FETCH | \
+                             COAP_BLOCK_STLESS_BLOCK2 | \
+                             COAP_BLOCK_NOT_RANDOM_BLOCK1)
+#else /* ! COAP_Q_BLOCK_SUPPORT */
+#define COAP_BLOCK_SET_MASK (COAP_BLOCK_USE_LIBCOAP | \
+                             COAP_BLOCK_SINGLE_BODY | \
+                             COAP_BLOCK_NO_PREEMPTIVE_RTAG | \
+                             COAP_BLOCK_STLESS_FETCH | \
+                             COAP_BLOCK_STLESS_BLOCK2 | \
+                             COAP_BLOCK_NOT_RANDOM_BLOCK1)
+#endif /* ! COAP_Q_BLOCK_SUPPORT */
+
+#define COAP_BLOCK_MAX_SIZE_MASK 0x7000000 /* (svr)Mask to get the max supported block size */
+#define COAP_BLOCK_MAX_SIZE_SHIFT 24    /* (svr)Mask shift to get the max supported block size */
+#define COAP_BLOCK_MAX_SIZE_GET(a) (((a) & COAP_BLOCK_MAX_SIZE_MASK) >> COAP_BLOCK_MAX_SIZE_SHIFT)
+#define COAP_BLOCK_MAX_SIZE_SET(a) (((a) << COAP_BLOCK_MAX_SIZE_SHIFT) & COAP_BLOCK_MAX_SIZE_MASK)
+
+#if COAP_Q_BLOCK_SUPPORT
 /* Internal use only and are dropped when setting block_mode */
-#define COAP_BLOCK_HAS_Q_BLOCK   0x4000 /* Set when Q_BLOCK supported */
-#define COAP_BLOCK_PROBE_Q_BLOCK 0x8000 /* Set when Q_BLOCK probing */
+#define COAP_BLOCK_HAS_Q_BLOCK   0x40000000 /* Set when Q_BLOCK supported */
+#define COAP_BLOCK_PROBE_Q_BLOCK 0x80000000 /* Set when Q_BLOCK probing */
 
 #define set_block_mode_probe_q(block_mode) \
   do { \
@@ -179,6 +202,7 @@ struct coap_lg_srcv_t {
   uint8_t observe[3];    /**< Observe data (if set) (only 24 bits) */
   uint8_t observe_length;/**< Length of observe data */
   uint8_t observe_set;   /**< Set if this is an observe receive PDU */
+  uint8_t no_more_seen;  /**< Set if block with more not set seen */
   uint8_t rtag_set;      /**< Set if RTag is in receive PDU */
   uint8_t rtag_length;   /**< RTag length */
   uint8_t rtag[8];       /**< RTag for block checking */
@@ -187,13 +211,10 @@ struct coap_lg_srcv_t {
   uint8_t szx;           /**< size of individual blocks */
   size_t total_len;      /**< Length as indicated by SIZE1 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
-  size_t amount_so_far;  /**< Amount of data seen so far */
   coap_resource_t *resource; /**< associated resource */
   coap_str_const_t *uri_path; /** set to uri_path if unknown resource */
   coap_rblock_t rec_blocks; /** < list of received blocks */
-#if COAP_Q_BLOCK_SUPPORT
   coap_bin_const_t *last_token; /**< last used token */
-#endif /* COAP_Q_BLOCK_SUPPORT */
   coap_mid_t last_mid;   /**< Last received mid for this set of packets */
   coap_tick_t last_used; /**< Last time data sent or 0 */
   uint16_t block_option; /**< Block option in use */
