@@ -41,7 +41,8 @@ SEE ALSO
 *coap_address*(3), *coap_async*(3), *coap_attribute*(3), *coap_block*(3),
 *coap_cache*(3), *coap_context*(3), *coap_deprecated*(3), *coap_encryption*(3),
 *coap_endpoint_client*(3), *coap_endpoint_server*(3), *coap_handler*(3),
-*coap_io*(3), *coap_keepalive*(3), *coap_logging*(3), *coap_lwip*(3),
+*coap_init*(), *coap_io*(3), *coap_keepalive*(3), *coap_locking*(3),
+*coap_logging*(3), *coap_lwip*(3),
 *coap_observe*(3), *coap_oscore*(3), *coap_pdu_access*(3), *coap_pdu_setup*(3),
 *coap_persist*(3), *coap_recovery*(3), *coap_resource*(3), *coap_session*(3),
 *coap_string*(3), *coap_tls_library*(3), *coap_uri*(3) and *coap_websockets*(3)

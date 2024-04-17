@@ -73,8 +73,8 @@ unsigned int _max_sockets_, unsigned int *_num_sockets_, coap_tick_t _now_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
-*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*
-*-lcoap-@LIBCOAP_API_VERSION@-wolfssl*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*,
+*-lcoap-@LIBCOAP_API_VERSION@-wolfssl*
 or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 *-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
 
@@ -94,14 +94,13 @@ The *coap_clear_event_handler*() function is replaced by
 
 *Function: coap_context_get_csm_timeout()*
 
-The *coap_context_get_csm_timeout*() function returns the seconds to wait for
-a (TCP) CSM negotiation response from the peer for _context_,
+The *coap_context_get_csm_timeout*() function is replaced by
+*coap_context_get_csm_timeout_ms*(3) returning milli-secs instead of seconds.
 
 *Function: coap_context_set_csm_timeout()*
 
-The *coap_context_set_csm_timeout*() function sets the number of seconds to
-wait for a (TCP) CSM negotiation response from the peer to _csm_timeout_ for
-_context_.  The default is 30 secionds.  0 (the default) means wait forever.
+The *coap_context_set_csm_timeout*() function is replaced by
+*coap_context_set_csm_timeout_ms*(3) by defining milli-secs instead of seconds.
 
 *Function: coap_context_set_psk()*
 
