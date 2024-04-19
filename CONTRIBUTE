@@ -33,8 +33,18 @@ libcoap library.
 
 2. Communications
 ~~~~~~~~~~~~~~~~~
-The main discussion and development platform for libcoap is the mailing list
-on Sourceforge.
+The best method to raise an Issue is to raise it at:
+
+   https://github.com/obgm/libcoap/issues
+
+Previous issues and fixes can easily be researched here.
+
+The best method to create a patch is to create a Pull Request at:
+
+  https://github.com/obgm/libcoap/pulls
+
+Otherwise, the main discussion and development platform for libcoap is the
+mailing list on Sourceforge.
 
 No matter if you just have a simple question, some specific problem or
 want to discuss some patches, please write it to the mailing list. Please
@@ -186,6 +196,10 @@ coap_add_block(coap_pdu_t *pdu,
   change existing functions. The doxygen documentation has to be done in the
   header files as they are the public part of the libcoap and only use the
   @-syntax for doxygen commands (akin to javadoc).
+
+* There are also man(1) pages to document how to use the APIs, held in the man/
+  directory. Any API changes or new APIs should be documented here to aid
+  development for other users.
 
 5.5 API Changes
 ---------------
