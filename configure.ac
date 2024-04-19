@@ -1194,7 +1194,7 @@ case $host in
 
     *)
     AC_MSG_WARN([==> Currently unsupported operating system '${host}' !])
-    AC_MSG_ERROR([==> If you can provide patches to support your operating system please write to 'libcoap-developers@lists.sourceforge.net'.])
+    AC_MSG_ERROR([==> If you can provide patches to support your operating system please raise a Pull Request at 'https://github.com/obgm/libcoap/pulls'.])
 esac
 
 # Exporting the PREDEFINED_CFLAGS definition
