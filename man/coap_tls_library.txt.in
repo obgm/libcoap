@@ -21,7 +21,9 @@ coap_tcp_is_supported,
 coap_get_tls_library_version,
 coap_string_tls_support,
 coap_string_tls_version,
-coap_show_tls_version
+coap_show_tls_version,
+coap_tls_engine_configure,
+coap_tls_engine_remove
 - Work with CoAP TLS libraries
 
 SYNOPSIS
@@ -49,6 +51,10 @@ SYNOPSIS
 *char *coap_string_tls_version(char *_buffer_, size_t _bufsize_);*
 
 *void coap_show_tls_version(coap_log_t _level_);*
+
+*int coap_tls_engine_configure(coap_str_const_t *_conf_mem_);*
+
+*int coap_tls_engine_remove(void);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -174,6 +180,18 @@ current (D)TLS library that libcoap was built against, as well as the current
 linked version of the (D)TLS library. _level_ defines the minimum logging level
 for this information to be output using coap_log().
 
+*Function: coap_tls_engine_configure()*
+
+The *coap_tls_engine_configure*() function is used to configure a TLS ENGINE
+(currently only OpenSSL).  It parses the provided configuration in _conf_mem_
+and initializes the ENGINE appropriately. The format of the parameters is
+documented in *coap-tls-engine-conf*(5).
+
+*Function: coap_tls_engine_remove()*
+
+The *coap_tls_engine_remove*() function removes a previously configured TLS
+ENGINE.  This function is called when coap_free_context() is called.
+
 RETURN VALUES
 -------------
 *coap_dtls_is_supported*(), *coap_tls_is_supported*(),
@@ -189,6 +207,97 @@ available, otherwise 0.
 
 *coap_string_tls_version*() and *coap_string_tls_support*() return
 a pointer to the provided buffer.
+
+*coap_tls_engine_configure*() returns 1 if the TLS ENGINE was successfully configured, otherwise 0.
+
+*coap_tls_engine_remove*() returns 1 if the TLS ENGINE was successfully removed, otherwise 0.
+
+EXAMPLES
+--------
+*CoAP Server DTLS PKI Setup with OpenSSL Engine *
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#define ENGINE_CONFIG \
+  "engine:pkcs11\n" \
+  "enable-methods:0xffff\n" \
+  "post-cmd:PIN:1234\n"
+
+/*
+ * Set up PKI encryption information
+ */
+static coap_context_t *
+setup_server_context_pki(const char *public_cert_file,
+                         const char *private_key,
+                         const char *ca_file) {
+  coap_endpoint_t *endpoint;
+  coap_address_t listen_addr;
+  coap_dtls_pki_t dtls_pki;
+  coap_context_t *context;
+  coap_str_const_t *engine_conf = coap_make_str_const(ENGINE_CONFIG);
+
+  /* See coap_tls_library(3) */
+  if (!coap_dtls_is_supported())
+    return NULL;
+
+  context = coap_new_context(NULL);
+  if (!context)
+    return NULL;
+  /* See coap_block(3) */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+  /* To get full logging of any issues here, you need to
+   *
+   * coap_set_log_level(COAP_LOG_DEBUG);
+   * coap_set_dtls_log_level(COAP_LOG_DEBUG);
+   */
+  if (!coap_tls_engine_configure(engine_conf))
+    return NULL;
+
+  memset(&dtls_pki, 0, sizeof(dtls_pki));
+
+  /* see coap_encryption(3) */
+  dtls_pki.version                 = COAP_DTLS_PKI_SETUP_VERSION;
+  dtls_pki.verify_peer_cert        = 1;
+  dtls_pki.check_common_ca         = 1;
+  dtls_pki.allow_self_signed       = 1;
+  dtls_pki.allow_expired_certs     = 1;
+  dtls_pki.cert_chain_validation   = 1;
+  dtls_pki.cert_chain_verify_depth = 1;
+  dtls_pki.check_cert_revocation   = 1;
+  dtls_pki.allow_no_crl            = 1;
+  dtls_pki.allow_expired_crl       = 1;
+  dtls_pki.pki_key.key_type                      = COAP_PKI_KEY_DEFINE;
+  dtls_pki.pki_key.key.define.ca.s_byte          = ca_file;
+  dtls_pki.pki_key.key.define.public_cert.s_byte = public_cert_file;
+  dtls_pki.pki_key.key.define.private_key.s_byte = private_key;
+  dtls_pki.pki_key.key.define.public_cert_def    = COAP_PKI_KEY_DEF_PEM;
+  dtls_pki.pki_key.key.define.private_key_def    = COAP_PKI_KEY_DEF_ENGINE;
+  dtls_pki.pki_key.key.define.ca_def             = COAP_PKI_KEY_DEF_PEM;
+
+  if (coap_context_set_pki(context, &dtls_pki)) {
+    coap_free_context(context);
+    return NULL;
+  }
+
+  /* See coap_address(3) */
+  coap_address_init(&listen_addr);
+  listen_addr.addr.sa.sa_family = AF_INET;
+  listen_addr.addr.sin.sin_port = htons(5684);
+
+  endpoint = coap_new_endpoint(context, &listen_addr, COAP_PROTO_DTLS);
+  if (!endpoint) {
+    coap_free_context(context);
+    return NULL;
+  }
+
+  /* Initialize resources - See coap_resource(3) init_resources() example */
+
+  return context;
+}
+----
 
 SEE ALSO
 --------

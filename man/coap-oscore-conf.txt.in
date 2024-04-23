@@ -6,7 +6,7 @@ coap-oscore-conf(5)
 :doctype: manpage
 :man source:   coap-oscore-conf
 :man version:  @PACKAGE_VERSION@
-:man manual:   Coap OSCORE configuration file format
+:man manual:   CoAP OSCORE configuration file format
 
 NAME
 -----

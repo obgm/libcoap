@@ -20,7 +20,7 @@ coap-server-notls
 SYNOPSIS
 --------
 *coap-server* [*-a* priority] [*-b* max_block_size] [*-d* max] [*-e*]
-              [*-g* group] [*-l* loss] [*-p* port]
+              [*-g* group] [*-l* loss] [*-p* port] [*-q* tls_engine_conf_file]
               [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]]
               [*-A* address] [*-E* oscore_conf_file[,seq_file]]
               [*-G* group_if] [*-L* value] [*-N*]
@@ -76,6 +76,11 @@ OPTIONS - General
    If (D)TLS is supported, then 'port' + 1 will also be listened on for
    (D)TLS connections.
    The default port is 5683 if not given any other value.
+
+*-q* tls_engine_conf_file::
+   'tls_engine_conf_file' contains TLS ENGINE configuration. Only OpenSSL
+   is currently supported.
+   See *coap-tls-engine-conf*(5) for definitions.
 
 *-r* ::
    Enable multicast per resource support.  If enabled, only '/', '/async'

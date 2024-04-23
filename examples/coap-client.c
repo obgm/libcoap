@@ -152,6 +152,8 @@ int doing_observe = 0;
 
 static coap_oscore_conf_t *oscore_conf = NULL;
 static int doing_oscore = 0;
+static int doing_tls_engine = 0;
+static char *tls_engine_conf = NULL;
 
 static int quit = 0;
 
@@ -502,8 +504,8 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
           "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
-          "\t\t[-m method] [-o file] [-p port] [-r] [-s duration] [-t type]\n"
-          "\t\t[-v num] [-w] [-A type] [-B seconds]\n"
+          "\t\t[-m method] [-o file] [-p port] [-q tls_engine_conf_file] [-r]\n"
+          "\t\t[-s duration] [-t type] [-v num] [-w] [-A type] [-B seconds]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
           "\t\t[-T token] [-U]  [-V num] [-X size]\n"
@@ -530,7 +532,9 @@ usage(const char *program, const char *version) {
           "\t       \t\tdefault is 'get'\n"
           "\t-o file\t\tOutput received data to this file (use '-' for STDOUT)\n"
           "\t-p port\t\tSend from the specified port\n"
-          "\t-r     \t\tUse reliable protocol (TCP or TLS); requires TCP support\n"
+          "\t-q tls_engine_conf_file\n"
+          "\t       \t\ttls_engine_conf_file contains TLS ENGINE configuration.\n"
+          "\t       \t\tSee coap-tls-engine-conf(5) for definitions.\n"
           "\t-s duration\tSubscribe to / Observe resource for given duration\n"
           "\t       \t\tin seconds\n"
           "\t-t type\t\tContent format for given resource for PUT/POST\n"
@@ -815,6 +819,28 @@ cmdline_oscore(char *arg) {
   }
   fprintf(stderr, "OSCORE support not enabled\n");
   return 0;
+}
+
+static int
+cmdline_tls_engine(char *arg) {
+  uint8_t *buf;
+  size_t length;
+  coap_str_const_t file_mem;
+
+  /* Need a rw var to free off later and file_mem.s is a const */
+  buf = read_file_mem(arg, &length);
+  if (buf == NULL) {
+    fprintf(stderr, "Openssl ENGINE configuration file error: %s\n", arg);
+    return 0;
+  }
+  file_mem.s = buf;
+  file_mem.length = length;
+  if (!coap_tls_engine_configure(&file_mem)) {
+    coap_free(buf);
+    return 0;
+  }
+  coap_free(buf);
+  return 1;
 }
 
 /**
@@ -1377,9 +1403,18 @@ setup_pki(coap_context_t *ctx) {
     memcpy(client_sni, "localhost", 9);
 
   dtls_pki.client_sni = client_sni;
-  if ((key_file && strncasecmp(key_file, "pkcs11:", 7) == 0) ||
-      (cert_file && strncasecmp(cert_file, "pkcs11:", 7) == 0) ||
-      (ca_file && strncasecmp(ca_file, "pkcs11:", 7) == 0)) {
+  if (doing_tls_engine) {
+    dtls_pki.pki_key.key_type = COAP_PKI_KEY_DEFINE;
+    dtls_pki.pki_key.key.define.public_cert.s_byte = cert_file;
+    dtls_pki.pki_key.key.define.private_key.s_byte = key_file ? key_file : cert_file;
+    dtls_pki.pki_key.key.define.ca.s_byte = ca_file;
+    dtls_pki.pki_key.key.define.public_cert_def = COAP_PKI_KEY_DEF_ENGINE;
+    dtls_pki.pki_key.key.define.private_key_def = COAP_PKI_KEY_DEF_ENGINE;
+    dtls_pki.pki_key.key.define.ca_def = COAP_PKI_KEY_DEF_ENGINE;
+    dtls_pki.pki_key.key.define.user_pin = pkcs11_pin;
+  } else if ((key_file && strncasecmp(key_file, "pkcs11:", 7) == 0) ||
+             (cert_file && strncasecmp(cert_file, "pkcs11:", 7) == 0) ||
+             (ca_file && strncasecmp(ca_file, "pkcs11:", 7) == 0)) {
     dtls_pki.pki_key.key_type = COAP_PKI_KEY_PKCS11;
     dtls_pki.pki_key.key.pkcs11.public_cert = cert_file;
     dtls_pki.pki_key.key.pkcs11.private_key = key_file ?
@@ -1619,7 +1654,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:e:f:h:j:k:l:m:no:p:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:")) != -1) {
+                       "a:b:c:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1768,6 +1803,10 @@ main(int argc, char **argv) {
         goto failed;
       }
       break;
+    case 'q':
+      tls_engine_conf = optarg;
+      doing_tls_engine = 1;
+      break;
     default:
       usage(argv[0], LIBCOAP_PACKAGE_VERSION);
       goto failed;
@@ -1833,6 +1872,11 @@ main(int argc, char **argv) {
   if (!ctx) {
     coap_log_emerg("cannot create context\n");
     goto failed;
+  }
+
+  if (doing_tls_engine) {
+    if (!cmdline_tls_engine(tls_engine_conf))
+      goto failed;
   }
 
   if (doing_oscore) {

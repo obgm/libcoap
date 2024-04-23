@@ -1257,6 +1257,7 @@ man/coap-client.txt
 man/coap-oscore-conf.txt
 man/coap-server.txt
 man/coap-rd.txt
+man/coap-tls-engine-conf.txt
 man/Makefile
 tests/test_common.h
 tests/Makefile

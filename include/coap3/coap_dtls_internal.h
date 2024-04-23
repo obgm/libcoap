@@ -43,6 +43,18 @@
 #define COAP_DTLS_CID_LENGTH 6
 #endif
 
+typedef enum {
+  COAP_DEFINE_KEY_CA,
+  COAP_DEFINE_KEY_PUBLIC,
+  COAP_DEFINE_KEY_PRIVATE
+} coap_define_issue_key_t;
+
+typedef enum {
+  COAP_DEFINE_FAIL_BAD,
+  COAP_DEFINE_FAIL_NOT_SUPPORTED,
+  COAP_DEFINE_FAIL_NONE
+} coap_define_issue_fail_t;
+
 /**
  * Creates a new DTLS context for the given @p coap_context. This function
  * returns a pointer to a new DTLS context object or @c NULL on error.
@@ -442,6 +454,30 @@ void coap_dtls_shutdown(void);
 void *coap_dtls_get_tls(const coap_session_t *session,
                         coap_tls_library_t *tls_lib);
 
+/**
+ * Map the PKI key definitions to the new DEFINE format.
+ *
+ * @param setup_data The PKI definition.
+ * @param key Updated with the DEFINE format of the key definitions.
+ *
+ */
+void coap_dtls_map_key_type_to_define(const coap_dtls_pki_t *setup_data,
+                                      coap_dtls_key_t *key);
+
+/**
+ * Report PKI DEFINE type issue
+ *
+ * @param type The type of key with the issue.
+ * @param fail Why the key is failing
+ * @param key The key with the issue.
+ * @param role Whether this is for the CLient or Server.
+ *
+ * @return @c 0 as there is a failure.
+ */
+int coap_dtls_define_issue(coap_define_issue_key_t type,
+                           coap_define_issue_fail_t fail,
+                           coap_dtls_key_t *key,
+                           const coap_dtls_role_t role);
 /** @} */
 
 #endif /* COAP_DTLS_INTERNAL_H */

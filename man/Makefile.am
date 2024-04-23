@@ -55,7 +55,8 @@ man3_MANS = $(MAN3)
 TXT5 = coap-client.txt \
        coap-rd.txt \
        coap-server.txt \
-       coap-oscore-conf.txt
+       coap-oscore-conf.txt \
+       coap-tls-engine-conf.txt
 
 MAN5 = $(TXT5:%.txt=%.5)
 
@@ -204,6 +205,8 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_tls_library.3" > coap_string_tls_support.3
 	@echo ".so man3/coap_tls_library.3" > coap_string_tls_version.3
 	@echo ".so man3/coap_tls_library.3" > coap_show_tls_version.3
+	@echo ".so man3/coap_tls_library.3" > coap_tls_engine_configure.3
+	@echo ".so man3/coap_tls_library.3" > coap_tls_engine_remove.3
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_3) "$(DESTDIR)$(man3dir)"
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_5) "$(DESTDIR)$(man5dir)"
 

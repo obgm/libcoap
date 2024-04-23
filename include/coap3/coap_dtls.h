@@ -90,6 +90,25 @@ int coap_dtls_pkcs11_is_supported(void);
  */
 int coap_dtls_rpk_is_supported(void);
 
+/**
+ * Configure an ENGINE for a TLS library.
+ * (Currently only OpenSSL is supported)
+ *
+ * @param conf_mem The configuration to use in memory.
+ *
+ * @return @c 1 if successful, or @c 0 if failure.
+ */
+int coap_tls_engine_configure(coap_str_const_t *conf_mem);
+
+/**
+ * Remove a previously configured ENGINE from a TLS library.
+ * (Currently only OpenSSL is supported)
+ * (This is automatically done when coap_free_context() is called)
+ *
+ * @return @c 1 if successful, or @c 0 if failure.
+ */
+int coap_tls_engine_remove(void);
+
 typedef enum coap_tls_library_t {
   COAP_TLS_LIBRARY_NOTLS = 0, /**< No DTLS library */
   COAP_TLS_LIBRARY_TINYDTLS,  /**< Using TinyDTLS library */
@@ -192,6 +211,7 @@ typedef enum coap_pki_key_t {
   COAP_PKI_KEY_ASN1,           /**< The PKI key type is ASN.1 (DER) buffer */
   COAP_PKI_KEY_PEM_BUF,        /**< The PKI key type is PEM buffer */
   COAP_PKI_KEY_PKCS11,         /**< The PKI key type is PKCS11 (DER) */
+  COAP_PKI_KEY_DEFINE,         /**< The individual PKI key types are Definable */
 } coap_pki_key_t;
 
 /**
@@ -250,6 +270,49 @@ typedef struct coap_pki_key_pkcs11_t {
 } coap_pki_key_pkcs11_t;
 
 /**
+ * The enum to define the format of the key parameter definition.
+ */
+typedef enum {
+  COAP_PKI_KEY_DEF_PEM = 0, /**< The PKI key type is PEM file.
+                                 Length ignored, NULL terminated. */
+  COAP_PKI_KEY_DEF_PEM_BUF, /**< The PKI key type is PEM buffer.
+                                 Length required. */
+  COAP_PKI_KEY_DEF_RPK_BUF, /**< The PKI key type is RPK in buffer.
+                                 Length required. */
+  COAP_PKI_KEY_DEF_DER,     /**< The PKI key type is DER file.
+                                 Length ignored, NULL terminated. */
+  COAP_PKI_KEY_DEF_ASN1,    /**< The PKI key type is ASN.1 (DER) buffer.
+                                 Length required.
+                                 Private Key Type required. */
+  COAP_PKI_KEY_DEF_PKCS11,  /**< The PKI key type is PKCS11 (pkcs11:...).
+                                 Length ignored, NULL terminated.
+                                 User Pin optional. */
+  COAP_PKI_KEY_DEF_ENGINE,  /**< The PKI key type is to be passed to ENGINE.
+                                 Length ignored, NULL terminated.
+                                 Supported by OpenSSL only */
+} coap_pki_define_t;
+
+/**
+ * The structure that holds the PKI Definable key type definitions.
+ */
+typedef struct coap_pki_key_define_t {
+  coap_const_char_ptr_t ca;          /**< define: Common CA Certificate */
+  coap_const_char_ptr_t public_cert; /**< define: Public Cert */
+  coap_const_char_ptr_t private_key; /**< define: Private Key */
+  size_t ca_len;             /**< define CA Cert length (if needed)*/
+  size_t public_cert_len;    /**< define Public Cert length (if needed)*/
+  size_t private_key_len;    /**< define Private Key length (if needed)*/
+  coap_pki_define_t ca_def;  /**< define: Common CA type definition*/
+  coap_pki_define_t public_cert_def; /**< define: Public Cert type definition*/
+  coap_pki_define_t private_key_def; /**< define: Private Key type definition*/
+  coap_asn1_privatekey_type_t private_key_type; /**< define: ASN1 Private Key
+                                                     Type (if needed) */
+  const char *user_pin;      /**< define: User pin to access type PKCS11.
+                                  If PKCS11 and NULL, then pin-value= parameter
+                                  must be set in pkcs11: URI as a query. */
+} coap_pki_key_define_t;
+
+/**
  * The structure that holds the PKI key information.
  */
 typedef struct coap_dtls_key_t {
@@ -259,6 +322,7 @@ typedef struct coap_dtls_key_t {
     coap_pki_key_pem_buf_t pem_buf;  /**< for PEM memory keys */
     coap_pki_key_asn1_t asn1;        /**< for ASN.1 (DER) memory keys */
     coap_pki_key_pkcs11_t pkcs11;    /**< for PKCS11 keys */
+    coap_pki_key_define_t define;    /**< for definable type keys */
   } key;
 } coap_dtls_key_t;
 
@@ -497,7 +561,6 @@ typedef struct coap_dtls_spsk_t {
 
   coap_dtls_spsk_info_t psk_info;  /**< Server PSK definition */
 } coap_dtls_spsk_t;
-
 
 /** @} */
 
