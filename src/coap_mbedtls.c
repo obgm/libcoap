@@ -752,6 +752,9 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     coap_log_err("***setup_pki: (D)TLS: PKCS11 not currently supported\n");
     return -1;
 
+  case COAP_PKI_KEY_DEFINE:
+    coap_log_err("*** setup_pki: (D)TLS: PKI type DEFINE not (yet) supported\n");
+    break;
   default:
     coap_log_err("***setup_pki: (D)TLS: Unknown key type %d\n",
                  setup_data->pki_key.key_type);

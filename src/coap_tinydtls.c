@@ -1190,24 +1190,22 @@ pem_decode_mem_asn1(const char *begstr, const uint8_t *str) {
 int
 coap_dtls_context_set_pki(coap_context_t *ctx,
                           const coap_dtls_pki_t *setup_data,
-                          const coap_dtls_role_t role COAP_UNUSED) {
+                          const coap_dtls_role_t role) {
 #ifdef DTLS_ECC
   coap_tiny_context_t *t_context;
-  coap_binary_t *asn1_priv;
-  coap_binary_t *asn1_pub;
+  coap_binary_t *asn1_priv = NULL;
+  coap_binary_t *asn1_pub = NULL;
   coap_binary_t *asn1_temp;
   int is_pkcs8 = 0;
+  coap_dtls_key_t key;
 
-  if (!setup_data)
-    return 0;
-  if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION)
-    return 0;
   if (!setup_data->is_rpk_not_cert) {
     coap_log_warn("Only RPK, not full PKI is supported\n");
     return 0;
   }
   if (!ctx)
     return 0;
+
   t_context = (coap_tiny_context_t *)ctx->dtls_context;
   if (!t_context)
     return 0;
@@ -1221,56 +1219,64 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
   }
   t_context->setup_data = *setup_data;
 
-  /* All should be RPK only now */
-  switch (setup_data->pki_key.key_type) {
-  case COAP_PKI_KEY_PEM:
-    coap_log_warn("RPK keys cannot be in COAP_PKI_KEY_PEM format\n");
-    break;
-  case COAP_PKI_KEY_PEM_BUF:
-    if (setup_data->pki_key.key.pem_buf.public_cert &&
-        setup_data->pki_key.key.pem_buf.public_cert[0] &&
-        setup_data->pki_key.key.pem_buf.private_key &&
-        setup_data->pki_key.key.pem_buf.private_key[0]) {
+  /* Map over to the new define format to save code duplication */
+  coap_dtls_map_key_type_to_define(setup_data, &key);
+
+  assert(key.key_type == COAP_PKI_KEY_DEFINE);
+
+  /*
+   * Configure the Private Key
+   */
+  if (key.key.define.private_key.u_byte &&
+      key.key.define.private_key.u_byte[0]) {
+    switch (key.key.define.private_key_def) {
+    case COAP_PKI_KEY_DEF_RPK_BUF: /* define private key */
       /* Need to take PEM memory information and convert to binary */
       asn1_priv = pem_decode_mem_asn1("-----BEGIN EC PRIVATE KEY-----",
-                                      setup_data->pki_key.key.pem_buf.private_key);
+                                      key.key.define.private_key.u_byte);
       if (!asn1_priv) {
         asn1_priv = pem_decode_mem_asn1("-----BEGIN PRIVATE KEY-----",
-                                        setup_data->pki_key.key.pem_buf.private_key);
+                                        key.key.define.private_key.u_byte);
         if (!asn1_priv) {
-          coap_log_info("Private Key (RPK) invalid\n");
-          return 0;
+          return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                        COAP_DEFINE_FAIL_BAD,
+                                        &key, role);
         }
         asn1_temp = ec_abstract_pkcs8_asn1(asn1_priv->s, asn1_priv->length);
         if (!asn1_temp) {
-          coap_log_info("PKCS#8 Private Key (RPK) invalid\n");
+          coap_log_info("*** setup_pki: (D)TLS: PKCS#8 Private Key (RPK) invalid\n");
           coap_delete_binary(asn1_priv);
-          return 0;
+          return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                        COAP_DEFINE_FAIL_BAD,
+                                        &key, role);
         }
         coap_delete_binary(asn1_priv);
         asn1_priv = asn1_temp;
         is_pkcs8 = 1;
       }
-      asn1_pub = pem_decode_mem_asn1(
-                     "-----BEGIN PUBLIC KEY-----",
-                     setup_data->pki_key.key.pem_buf.public_cert);
+      asn1_pub = pem_decode_mem_asn1("-----BEGIN PUBLIC KEY-----",
+                                     key.key.define.public_cert.u_byte);
       if (!asn1_pub) {
         asn1_pub = pem_decode_mem_asn1("-----BEGIN EC PRIVATE KEY-----",
-                                       setup_data->pki_key.key.pem_buf.private_key);
+                                       key.key.define.private_key.u_byte);
         if (!asn1_pub) {
           asn1_pub = pem_decode_mem_asn1("-----BEGIN PRIVATE KEY-----",
-                                         setup_data->pki_key.key.pem_buf.private_key);
+                                         key.key.define.private_key.u_byte);
           if (!asn1_pub) {
-            coap_log_info("Public Key (RPK) invalid\n");
+            coap_log_info("*** setup_pki: (D)TLS: Public Key (RPK) invalid\n");
             coap_delete_binary(asn1_priv);
-            return 0;
+            return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                          COAP_DEFINE_FAIL_BAD,
+                                          &key, role);
           }
           asn1_temp = ec_abstract_pkcs8_asn1(asn1_pub->s, asn1_pub->length);
           if (!asn1_temp) {
-            coap_log_info("PKCS#8 Private Key (RPK) invalid\n");
+            coap_log_info("*** setup_pki: (D)TLS: PKCS#8 Private Key (RPK) invalid\n");
             coap_delete_binary(asn1_priv);
             coap_delete_binary(asn1_pub);
-            return 0;
+            return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                          COAP_DEFINE_FAIL_BAD,
+                                          &key, role);
           }
           coap_delete_binary(asn1_pub);
           asn1_pub = asn1_temp;
@@ -1279,7 +1285,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
       }
       if (!asn1_derive_keys(t_context, asn1_priv->s, asn1_priv->length,
                             asn1_pub->s, asn1_pub->length, is_pkcs8)) {
-        coap_log_info("Unable to derive Public/Private Keys\n");
+        coap_log_info("*** setup_pki: (D)TLS: Unable to derive Public/Private Keys\n");
         coap_delete_binary(asn1_priv);
         coap_delete_binary(asn1_pub);
         return 0;
@@ -1287,66 +1293,122 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
       coap_delete_binary(asn1_priv);
       coap_delete_binary(asn1_pub);
       return 1;
-    }
-    break;
-  case COAP_PKI_KEY_ASN1:
-    if (setup_data->pki_key.key.asn1.private_key &&
-        setup_data->pki_key.key.asn1.private_key_len &&
-        setup_data->pki_key.key.asn1.private_key_type == COAP_ASN1_PKEY_EC) {
-      const uint8_t *private_key = setup_data->pki_key.key.asn1.private_key;
-      size_t private_key_len = setup_data->pki_key.key.asn1.private_key_len;
+      break;
+    case COAP_PKI_KEY_DEF_ASN1: /* define private key */
+      if (key.key.define.private_key_len > 0 &&
+          key.key.define.private_key_type == COAP_ASN1_PKEY_EC) {
+        const uint8_t *private_key = key.key.define.private_key.u_byte;
+        size_t private_key_len = key.key.define.private_key_len;
 
-      /* Check to see whether this is in pkcs8 format or not */
-      asn1_temp = ec_abstract_pkcs8_asn1(
-                      setup_data->pki_key.key.asn1.private_key,
-                      setup_data->pki_key.key.asn1.private_key_len);
-      if (asn1_temp) {
-        private_key = asn1_temp->s;
-        private_key_len = asn1_temp->length;
-        is_pkcs8 = 1;
-      }
-      /* Need to take ASN1 memory information and convert to binary */
-      if (setup_data->pki_key.key.asn1.public_cert &&
-          setup_data->pki_key.key.asn1.public_cert_len) {
-        if (!asn1_derive_keys(t_context,
-                              private_key,
-                              private_key_len,
-                              setup_data->pki_key.key.asn1.public_cert,
-                              setup_data->pki_key.key.asn1.public_cert_len,
-                              is_pkcs8)) {
-          coap_log_info("Unable to derive Public/Private Keys\n");
-          if (asn1_temp)
-            coap_delete_binary(asn1_temp);
-          return 0;
+        /* Check to see whether this is in pkcs8 format or not */
+        asn1_temp = ec_abstract_pkcs8_asn1(key.key.define.private_key.u_byte,
+                                           key.key.define.private_key_len);
+        if (asn1_temp) {
+          private_key = asn1_temp->s;
+          private_key_len = asn1_temp->length;
+          is_pkcs8 = 1;
         }
+        /* Need to take ASN1 memory information and convert to binary */
+        if (key.key.define.public_cert.u_byte &&
+            key.key.define.public_cert_len) {
+          if (!asn1_derive_keys(t_context,
+                                private_key,
+                                private_key_len,
+                                key.key.define.public_cert.u_byte,
+                                key.key.define.public_cert_len,
+                                is_pkcs8)) {
+            coap_log_info("*** setup_pki: (D)TLS: Unable to derive Public/Private Keys\n");
+            coap_delete_binary(asn1_temp);
+            return 0;
+          }
+        } else {
+          if (!asn1_derive_keys(t_context,
+                                private_key,
+                                private_key_len,
+                                private_key,
+                                private_key_len,
+                                is_pkcs8)) {
+            coap_log_info("*** setup_pki: (D)TLS: Unable to derive Public/Private Keys\n");
+            coap_delete_binary(asn1_temp);
+            return 0;
+          }
+        }
+        coap_delete_binary(asn1_temp);
+        return 1;
       } else {
-        if (!asn1_derive_keys(t_context,
-                              private_key,
-                              private_key_len,
-                              private_key,
-                              private_key_len,
-                              is_pkcs8)) {
-          coap_log_info("Unable to derive Public/Private Keys\n");
-          if (asn1_temp)
-            coap_delete_binary(asn1_temp);
-          return 0;
-        }
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role);
       }
-      return 1;
+      break;
+    case COAP_PKI_KEY_DEF_PEM:
+    case COAP_PKI_KEY_DEF_PEM_BUF:
+    case COAP_PKI_KEY_DEF_DER:
+    case COAP_PKI_KEY_DEF_PKCS11:
+    case COAP_PKI_KEY_DEF_ENGINE:
+    default:
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role);
     }
-    break;
-  case COAP_PKI_KEY_PKCS11:
-    coap_log_warn("RPK keys cannot be in COAP_PKI_KEY_PCKS11 format\n");
-    break;
-  default:
-    break;
+  } else {
+    return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                  COAP_DEFINE_FAIL_NONE,
+                                  &key, role);
   }
+
+  /*
+   * Configure the Public Certificate / Key
+   */
+  if (key.key.define.public_cert.u_byte &&
+      key.key.define.public_cert.u_byte[0]) {
+    switch (key.key.define.public_cert_def) {
+    case COAP_PKI_KEY_DEF_RPK_BUF:
+    case COAP_PKI_KEY_DEF_ASN1:
+      /* done under private key */
+      break;
+    case COAP_PKI_KEY_DEF_PEM:
+    case COAP_PKI_KEY_DEF_PEM_BUF:
+    case COAP_PKI_KEY_DEF_DER:
+    case COAP_PKI_KEY_DEF_PKCS11:
+    case COAP_PKI_KEY_DEF_ENGINE:
+    default:
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role);
+    }
+  }
+
+  /*
+   * Configure the CA
+   */
+  if (key.key.define.ca.u_byte &&
+      key.key.define.ca.u_byte[0]) {
+    switch (key.key.define.ca_def) {
+    case COAP_PKI_KEY_DEF_RPK_BUF:
+    case COAP_PKI_KEY_DEF_ASN1:
+      /* Ignore if set */
+      break;
+    case COAP_PKI_KEY_DEF_PEM:
+    case COAP_PKI_KEY_DEF_PEM_BUF:
+    case COAP_PKI_KEY_DEF_DER:
+    case COAP_PKI_KEY_DEF_PKCS11:
+    case COAP_PKI_KEY_DEF_ENGINE:
+    default:
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role);
+    }
+  }
+
+  return 1;
 #else /* ! DTLS_ECC */
   (void)ctx;
   (void)setup_data;
-#endif /* ! DTLS_ECC */
+  (void)role;
   coap_log_warn("TinyDTLS not compiled with ECC support\n");
   return 0;
+#endif /* ! DTLS_ECC */
 }
 
 int

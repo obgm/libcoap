@@ -289,6 +289,8 @@ global:
   coap_ticks_from_rt_us;
   coap_ticks_to_rt;
   coap_ticks_to_rt_us;
+  coap_tls_engine_configure;
+  coap_tls_engine_remove;
   coap_tls_is_supported;
   coap_uri_into_options;
   coap_write_block_b_opt;

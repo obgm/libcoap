@@ -73,6 +73,8 @@ strndup(const char *s1, size_t n) {
 
 static coap_oscore_conf_t *oscore_conf;
 static int doing_oscore = 0;
+static int doing_tls_engine = 0;
+static char *tls_engine_conf = NULL;
 
 /* set to 1 to request clean server shutdown */
 static int quit = 0;
@@ -1860,9 +1862,18 @@ static void
 update_pki_key(coap_dtls_key_t *dtls_key, const char *key_name,
                const char *cert_name, const char *ca_name) {
   memset(dtls_key, 0, sizeof(*dtls_key));
-  if ((key_name && strncasecmp(key_name, "pkcs11:", 7) == 0) ||
-      (cert_name && strncasecmp(cert_name, "pkcs11:", 7) == 0) ||
-      (ca_name && strncasecmp(ca_name, "pkcs11:", 7) == 0)) {
+  if (doing_tls_engine) {
+    dtls_key->key_type = COAP_PKI_KEY_DEFINE;
+    dtls_key->key.define.public_cert.s_byte = cert_file;
+    dtls_key->key.define.private_key.s_byte = key_file ? key_file : cert_file;
+    dtls_key->key.define.ca.s_byte = ca_file;
+    dtls_key->key.define.public_cert_def = COAP_PKI_KEY_DEF_ENGINE;
+    dtls_key->key.define.private_key_def = COAP_PKI_KEY_DEF_ENGINE;
+    dtls_key->key.define.ca_def = COAP_PKI_KEY_DEF_ENGINE;
+    dtls_key->key.define.user_pin = pkcs11_pin;
+  } else if ((key_name && strncasecmp(key_name, "pkcs11:", 7) == 0) ||
+             (cert_name && strncasecmp(cert_name, "pkcs11:", 7) == 0) ||
+             (ca_name && strncasecmp(ca_name, "pkcs11:", 7) == 0)) {
     dtls_key->key_type = COAP_PKI_KEY_PKCS11;
     dtls_key->key.pkcs11.public_cert = cert_name;
     dtls_key->key.pkcs11.private_key = key_name ?  key_name : cert_name;
@@ -2125,7 +2136,8 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
           "Usage: %s [-a priority] [-b max_block_size] [-d max] [-e] [-g group]\n"
-          "\t\t[-l loss] [-p port] [-r] [-v num] [-w [port][,secure_port]]\n"
+          "\t\t[-l loss] [-p port] [-q tls_engine_conf_file] [-r] [-v num]\n"
+          "\t\t[-w [port][,secure_port]]\n"
           "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
           "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
@@ -2154,6 +2166,9 @@ usage(const char *program, const char *version) {
           "\t-p port\t\tListen on specified port for UDP and TCP. If (D)TLS is\n"
           "\t       \t\tenabled, then the coap-server will also listen on\n"
           "\t       \t\t'port'+1 for DTLS and TLS.  The default port is 5683\n"
+          "\t-q tls_engine_conf_file\n"
+          "\t       \t\ttls_engine_conf_file contains TLS ENGINE configuration.\n"
+          "\t       \t\tSee coap-tls-engine-conf(5) for definitions.\n"
           "\t-r     \t\tEnable multicast per resource support.  If enabled,\n"
           "\t       \t\tonly '/', '/async' and '/.well-known/core' are enabled\n"
           "\t       \t\tfor multicast requests support, otherwise all\n"
@@ -2473,6 +2488,28 @@ cmdline_oscore(char *arg) {
   return 0;
 }
 
+static int
+cmdline_tls_engine(char *arg) {
+  uint8_t *buf;
+  size_t length;
+  coap_str_const_t file_mem;
+
+  /* Need a rw var to free off later and file_mem.s is a const */
+  buf = read_file_mem(arg, &length);
+  if (buf == NULL) {
+    fprintf(stderr, "Openssl ENGINE configuration file error: %s\n", arg);
+    return 0;
+  }
+  file_mem.s = buf;
+  file_mem.length = length;
+  if (!coap_tls_engine_configure(&file_mem)) {
+    coap_free(buf);
+    return 0;
+  }
+  coap_free(buf);
+  return 1;
+}
+
 static ssize_t
 cmdline_read_key(char *arg, unsigned char **buf, size_t maxlen) {
   size_t len = strnlen(arg, maxlen);
@@ -2758,7 +2795,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:eg:G:h:i:j:J:k:l:mnp:rs:tu:v:w:A:C:E:L:M:NP:R:S:T:U:V:X:")) != -1) {
+                       "a:b:c:d:eg:h:i:j:k:l:mnp:q:rs:tu:v:w:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2866,6 +2903,10 @@ main(int argc, char **argv) {
       goto failed;
 #endif /* ! SERVER_CAN_PROXY */
       break;
+    case 'q':
+      tls_engine_conf = optarg;
+      doing_tls_engine = 1;
+      break;
     case 'r' :
       mcast_per_resource = 1;
       break;
@@ -2963,6 +3004,10 @@ main(int argc, char **argv) {
   coap_context_set_max_block_size(ctx, max_block_size);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
+  if (doing_tls_engine) {
+    if (!cmdline_tls_engine(tls_engine_conf))
+      goto failed;
+  }
   if (doing_oscore) {
     if (get_oscore_conf(ctx) == NULL)
       goto failed;

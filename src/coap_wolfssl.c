@@ -1390,6 +1390,9 @@ setup_pki_ssl(WOLFSSL *ssl,
     /* TODO: check if this can be implemented*/
     coap_log_err("PKCS11 Support not available in wolfSSL\n");
     return 0;
+  case COAP_PKI_KEY_DEFINE:
+    coap_log_err("*** setup_pki: (D)TLS: PKI type DEFINE not (yet) supported\n");
+    break;
   default:
     coap_log_err("*** setup_pki_ssl: (D)TLS: Unknown key type %d\n",
                  setup_data->pki_key.key_type);

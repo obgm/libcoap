@@ -17,6 +17,19 @@
 
 #include "coap3/coap_internal.h"
 
+#if !defined(COAP_WITH_LIBOPENSSL)
+int
+coap_tls_engine_configure(coap_str_const_t *conf_mem) {
+  (void)conf_mem;
+  return 0;
+}
+
+int
+coap_tls_engine_remove(void) {
+  return 0;
+}
+#endif /* ! COAP_WITH_LIBOPENSSL */
+
 #if !defined(COAP_WITH_LIBTINYDTLS) && !defined(COAP_WITH_LIBOPENSSL) && !defined(COAP_WITH_LIBWOLFSSL) && !defined(COAP_WITH_LIBGNUTLS) && !defined(COAP_WITH_LIBMBEDTLS)
 
 int

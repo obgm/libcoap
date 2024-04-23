@@ -20,7 +20,8 @@ coap-client-notls
 SYNOPSIS
 --------
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
-              [*-m* method] [*-o* file] [*-p* port] [*-r*] [*-s duration*]
+              [*-m* method] [*-o* file] [*-p* port] [*-q* tls_engine_conf_file]
+              [*-r*] [*-s duration*]
               [*-t* type] [*-v* num] [*-w*] [*-A* type] [*-B* seconds]
               [*-E* oscore_conf_file[,seq_file]] [*-G* count] [*-H* hoplimit]
               [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
@@ -93,6 +94,11 @@ OPTIONS - General
 
 *-p* port::
    The port to send from.
+
+*-q* tls_engine_conf_file::
+   'tls_engine_conf_file' contains TLS ENGINE configuration. Only OpenSSL
+   is currently supported.
+   See *coap-tls-engine-conf*(5) for definitions.
 
 *-r*::
    Use reliable protocol (TCP or TLS).

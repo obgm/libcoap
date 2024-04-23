@@ -1,0 +1,113 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap-tls-engine-conf(5)
+=======================
+:doctype: manpage
+:man source:   coap-tls-engine-conf
+:man version:  @PACKAGE_VERSION@
+:man manual:   CoAP TLS ENGINE configuration file format
+
+NAME
+-----
+coap-tls-engine-conf
+- CoAP TLS ENGINE configuration file format
+
+DESCRIPTION
+-----------
+The TLS ENGINE configuration file is read in and installed when using the
+_*-q* tls_engine_conf_file_ option for the *coap-client*(5) or *coap-server*(5)
+executables. This then allows a client or server to use the defined TLS
+ENGINE to do the appropriate TLS functions.
+
+*NOTE:* Currently only OpenSSL is supported.
+
+It is also read in, parsed and installed by *coap_tls_engine_configure*(3).
+
+This configuration file can be a configuration held in memory, the formatting
+of the memory region is same as that for a file as if the file was mapped
+into memory. The *coap_tls_engine_configure*(3) function uses the memory
+version of the file.
+
+The configuration file comprises of a set of keywords, one per line. Each
+keyword has a parameter with an optional second parameter.
+
+The format of each line is one of (colon separated)
+
+[source, c]
+----
+keyword:parameter_1:parameter_2
+keyword:parameter_1
+----
+
+For _parameter_2_, this can be a zero length string.  If the preceding character
+to _parameter_2_ is not a colon, then _parameter_2_ is treated as NULL (as in the
+second example).
+
+The keywords and parameters are case sensitive.  If a line starts with a *#*,
+then it is treated as a comment line and so is ignored. Empty lines are also
+valid and ignored.
+
+The possible keywords are:
+
+*engine* ::
+    _parameter_1_ containes the ENGINE name (ID). _parameter_2_ is ignored.
+
+*pre-cmd* ::
+    _parameter_1_ is the command that are to be issued to the ENGINE logic before
+    the ENGINE is initialized. If the command has a parameter, this is passed
+    passed in from _parameter_2_.  Some commands do not have a _parameter_2_ which
+    usually is enforced by the ENGINE.
+
+*post-cmd* ::
+    _parameter_1_ is the command that are to be issued to the ENGINE logic after
+    the ENGINE is initialized. If the command has a parameter, this is passed
+    passed in from _parameter_2_.  Some commands do not have a _parameter_2_ which
+    usually is enforced by the ENGINE.
+
+*enable-methods* ::
+    
+    _parameter_1_ is the numeric value of the or'd set of required ENGINE_METHOD_*
+    or ENGINE_METHOD_ALL. _parameter_1_ can be an ascii representation of a number
+    or formated as 0xXXXX. _parameter_2_ is ignored.
+
+EXAMPLE TLS ENGINE CONFIGURATION FILE
+-------------------------------------
+
+[source, c]
+----
+# Define the engine name
+engine:pkcs11
+
+# Define which methods are to be enabled
+enable-methods:0xffff
+
+# Define any post initialization commands
+post-cmd:PIN:1234
+
+----
+
+SEE ALSO
+--------
+
+*coap-client*(5), *coap-server*(5) and *coap_tls_engine_configure*(3)
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
+
+BUGS
+-----
+Please raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues to report any bugs.
+
+Please raise a Pull Request at https://github.com/obgm/libcoap/pulls
+for any fixes.
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

@@ -612,6 +612,7 @@ typedef struct coap_dtls_key_t {
     coap_pki_key_pem_buf_t pem_buf; /* for PEM memory keys */
     coap_pki_key_asn1_t asn1;       /* for ASN.1 (DER) memory keys */
     coap_pki_key_pkcs11_t pkcs11;   /* for PKCS11 keys */
+    coap_pki_key_define_t define;   /* definable type keys */
   } key;
 } coap_dtls_key_t;
 
@@ -687,12 +688,13 @@ typedef enum coap_pki_key_t {
   COAP_PKI_KEY_ASN1,    /* The PKI key type is ASN.1 (DER) buffer */
   COAP_PKI_KEY_PEM_BUF, /* The PKI key type is PEM buffer */
   COAP_PKI_KEY_PKCS11,  /* The PKI key type is PKCS11 (DER) */
+  COAP_PKI_KEY_DEFINE,  /* The individual PKI key types are Definable */
 } coap_pki_key_t;
 ----
 
 *key_type* defines the format that the certificates / keys are provided in.
-This can be COAP_PKI_KEY_PEM, COAP_PKI_KEY_PEM_BUF, COAP_PKI_KEY_ASN1 or
-COAP_PKI_KEY_PKCS11.
+This can be COAP_PKI_KEY_PEM, COAP_PKI_KEY_PEM_BUF, COAP_PKI_KEY_ASN1
+COAP_PKI_KEY_PKCS11 or COAP_PKI_KEY_DEFINE.
 
 *SECTION: PKI: coap_dtls_pki_t: PEM Key Definitions*
 [source, c]
@@ -712,7 +714,8 @@ requesting the client's certificate. This certificate is also added into
 the valid root CAs list if not already present.
 
 *key.pem.public_cert* points to the public certificate location on disk which
-will be in PEM format.
+will be in PEM format. This can be the entire certificate chain including the
+CAs.
 
 *key.pem.private_key* points to the private key location on disk which
 will be in PEM format.  This file cannot be password protected.
@@ -820,7 +823,7 @@ typedef struct coap_pki_key_pkcs11_t {
   const char *ca;            /* pkcs11: URI for Common CA Certificate */
   const char *public_cert;   /* pkcs11: URI for Public Cert */
   const char *private_key;   /* pkcs11: URI for Private Key */
-  const char *pin;           /* pin to access PKCS11.  If NULL, then
+  const char *user_pin;      /* User pin to access PKCS11.  If NULL, then
                                 pin-value= parameter must be set in
                                 pkcs11: URI as a query. */
 } coap_pki_key_pkcs11_t;
@@ -844,6 +847,103 @@ If NULL, the pin can be defined on the other pkcs11: URI entries by using
 pin-value=XXX as a query - e.g.
 'pkcs11:pkcs11:token=My%20Token;id=%aa%bb%cc%dd?pin-value=XXX' where XXX is
 the user pin.
+
+*SECTION: PKI/RPK: coap_dtls_pki_t: Individual Cert/Key type Definitions*
+[source, c]
+----
+typedef struct coap_pki_key_define_t {
+  coap_const_char_ptr_t ca;          /* define: Common CA Certificate */
+  coap_const_char_ptr_t public_cert; /* define: Public Cert */
+  coap_const_char_ptr_t private_key; /* define: Private Key */
+  size_t ca_len;             /* define CA Cert length (if needed)*/
+  size_t public_cert_len;    /* define Public Cert length (if needed)*/
+  size_t private_key_len;    /* define Private Key length (if needed)*/
+  coap_pki_define_t ca_def;  /* define: Common CA type definition*/
+  coap_pki_define_t public_cert_def;  /* define: Public Cert type definition*/
+  coap_pki_define_t private_key_def;  /* define: Private Key type definition*/
+  coap_asn1_privatekey_type_t private_key_type; /* define: ASN1 Private Key
+                                                   Type (if needed) */
+  const char *user_pin;      /* define: User pin to access type PKCS11.
+                                If PKCS11 and NULL, then pin-value= parameter
+                                must be set in pkcs11: URI as a query. */
+} coap_pki_key_define_t;
+
+typedef union {
+  const char *s_byte;    /* signed char ptr */
+  const uint8_t *u_byte; /* unsigned char ptr */
+} coap_const_char_ptr_t;
+
+typedef enum coap_pki_define_t {
+  COAP_PKI_KEY_DEF_PEM = 0, /* The PKI key type is PEM file.
+                               Length ignored, NULL terminated. */
+  COAP_PKI_KEY_DEF_PEM_BUF, /* The PKI key type is PEM buffer.
+                               Length required. */
+  COAP_PKI_KEY_DEF_RPK_BUF, /* The PKI key type is RPK in buffer.
+                               Length required. */
+  COAP_PKI_KEY_DEF_DER,     /* The PKI key type is DER file.
+                               Length ignored, NULL terminated. */
+  COAP_PKI_KEY_DEF_ASN1,    /* The PKI key type is ASN.1 (DER) buffer.
+                               Length required.
+                               Private Key Type required. */
+  COAP_PKI_KEY_DEF_PKCS11,  /* The PKI key type is PKCS11 (pkcs11:...).
+                               Length ignored, NULL terminated.
+                               User Pin optional. */
+  COAP_PKI_KEY_DEF_ENGINE,  /* The PKI key type is to be passed to ENGINE.
+                               Length ignored, NULL terminated.
+                               Supported by OpenSSL only */
+} coap_pki_define_t;
+----
+
+*key.define.ca.[su]_char* and possibly *key.define.ca_len* points to the CA
+location as defined by *key.define.ca_def*. *key.define.ca.[su]_char* can be
+NULL if there is no CA explicitely defined.  This definition should only
+contain one CA (that has signed the public certificate) as this is passed
+from the server to the client when requesting the client's certificate. This
+certificate is also added into the valid root CAs list if not already present.
+
+*key.define.public_cert.[su]_char* and possibly *key.define.public_cert_len*
+points to the public certificate location as defined by
+*key.define.public_cert_def*.
+
+*key.define.private_key.[su]_char* and possibly *key.define.privatr_key_len*
+points to the private key location as defined by *key.define.private_key_def*.
+This information cannot be password protected, but for type PKCS11
+*key.define.user_pin* can be defined. If type RPK and
+'EC PRIVATE KEY' this can be used for both the public_cert and private_key.
+
+*key.define.ca_len* is the optional length of the CA definition if
+required by *key.define.ca_def*.
+
+*key.define.public_cert_len* is the optional length of the public
+certificate definition if required by *key.define.public_cert_def*
+
+*key.define.private_key_len* is the optional length of the private key
+definition if required by *key.define.private_key_def*.
+
+*key.define.ca_def* defines the type of the CA entry, one of
+*coap_pki_define_t*.
+
+*key.define.public_cert_def* defines the type of the Public Cert/Key entry,
+one of *coap_pki_define_t*.
+
+*key.define.private_key_def* defines the type of the Private Key entry,
+one of *coap_pki_define_t*.
+
+*key.define.private_key_type* is the encoding type of the DER encoded ASN.1
+definition of the private key.  This will be one of the COAP_ASN1_PKEY_*
+definitions.
+
+*key.define.user_pin* is the user pin used to unlock the token or NULL if
+type is PKCS11.
+If NULL, the pin can be defined on the pkcs11: URI entry by using
+pin-value=XXX as a query - e.g.
+'pkcs11:pkcs11:token=My%20Token;id=%aa%bb%cc%dd?pin-value=XXX' where XXX is
+the user pin.
+
+*NOTE:* The PEM/ASN1/RPK buffer Certs and Key should be be NULL terminated strings for
+performance reasons (to save a potential buffer copy) and the length include
+this NULL terminator. It is not a requirement to have the NULL terminator
+though and the length must then reflect the actual data size.
 
 EXAMPLES
 --------
@@ -992,6 +1092,18 @@ setup_server_context_pki(const char *public_cert_file,
   dtls_pki.pki_key.key.pem.ca_file = ca_file;
   dtls_pki.pki_key.key.pem.public_cert = public_cert_file;
   dtls_pki.pki_key.key.pem.private_key = private_key_file;
+
+  /* Alternative definition for dtls_pki.pki_key that does the
+   * same thing as above.
+   *
+   * dtls_pki.pki_key.key_type                      = COAP_PKI_KEY_DEFINE;
+   * dtls_pki.pki_key.key.define.ca.s_byte          = ca_file;
+   * dtls_pki.pki_key.key.define.public_cert.s_byte = public_cert_file;
+   * dtls_pki.pki_key.key.define.private_key.s_byte = private_key_file;
+   * dtls_pki.pki_key.key.define.ca_def             = COAP_PKI_KEY_DEF_PEM;
+   * dtls_pki.pki_key.key.define.public_cert_def    = COAP_PKI_KEY_DEF_PEM;
+   * dtls_pki.pki_key.key.define.private_key_def    = COAP_PKI_KEY_DEF_PEM;
+   */
 
   /* See coap_context(3) */
   if (coap_context_set_pki(context, &dtls_pki)) {

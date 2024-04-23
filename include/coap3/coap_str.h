@@ -67,6 +67,14 @@ typedef struct coap_bin_const_t {
 } coap_bin_const_t;
 
 /**
+ * CoAP union for handling signed / unsigned chars
+ */
+typedef union {
+  const char *s_byte;    /**< signed char ptr */
+  const uint8_t *u_byte; /**< unsigned char ptr */
+} coap_const_char_ptr_t;
+
+/**
  * Returns a new string object with at least size+1 bytes storage allocated.
  * It is the responsibility of the caller to fill in all the appropriate
  * information.
