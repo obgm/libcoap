@@ -168,8 +168,8 @@ coap_resource_t *time_resource = NULL;
 
 static void
 hnd_get_time(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
-
+             const coap_pdu_t *request, const coap_string_t *query,
+             coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
   time_t now;
@@ -187,8 +187,7 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   if (query != NULL && coap_string_equal(query, coap_make_str_const("secs"))) {
     /* Output secs since Jan 1 1970 */
     len = snprintf((char *)buf, sizeof(buf), "%lu", now);
-  }
-  else {
+  } else {
     /* Output human-readable time */
     struct tm *tmp;
     tmp = gmtime(&now);
@@ -221,8 +220,8 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
 static void
 hnd_get_generic(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
-
+                const coap_pdu_t *request, const coap_string_t *query,
+                coap_pdu_t *response) {
   coap_str_const_t *uri_path = coap_resource_get_uri_path(resource);
 
   if (!uri_path) {
@@ -246,9 +245,7 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 /* Initialize generic GET handler */
 
 static void
-init_resources(coap_context_t *ctx)
-{
-
+init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
   /* Create a resource to return return or update time */
@@ -281,7 +278,7 @@ main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
 
-  memset (&tv_last, 0, sizeof(tv_last));
+  memset(&tv_last, 0, sizeof(tv_last));
 
   /* Create the libcoap context */
   ctx = coap_new_context(NULL);
@@ -304,10 +301,10 @@ main(int argc, char *argv[]) {
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
   while (1) {
-    int result = coap_io_process( ctx, wait_ms );
-    if ( result < 0 ) {
+    int result = coap_io_process(ctx, wait_ms);
+    if (result < 0) {
       break;
-    } else if ( result && (unsigned)result < wait_ms ) {
+    } else if (result && (unsigned)result < wait_ms) {
       /* decrement if there is a result wait time returned */
       wait_ms -= result;
     } else {
@@ -321,7 +318,7 @@ main(int argc, char *argv[]) {
     }
     if (time_resource) {
       struct timeval tv_now;
-      if (gettimeofday (&tv_now, NULL) == 0) {
+      if (gettimeofday(&tv_now, NULL) == 0) {
         if (tv_last.tv_sec != tv_now.tv_sec) {
           /* Happens once per second */
           tv_last = tv_now;
@@ -355,9 +352,9 @@ static unsigned char msgtype = COAP_MESSAGE_CON;
 static unsigned int token = 0;
 
 static coap_pdu_t *
-coap_new_request(coap_context_t *context, coap_session_t *session, char request_code,
-coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
-
+coap_new_request(coap_context_t *context, coap_session_t *session,
+                 char request_code, coap_optlist_t **options,
+                 unsigned char *data, size_t length, int observe) {
   coap_pdu_t *pdu;
   /* Remove (void) definition if variable is used */
   (void)context;
@@ -373,7 +370,7 @@ coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
    * delayed responses
    */
   token++;
-  if (!coap_add_token(pdu, sizeof(token), (unsigned char*)&token)) {
+  if (!coap_add_token(pdu, sizeof(token), (unsigned char *)&token)) {
     coap_log_debug("cannot add token to request\n");
     goto error;
   }
@@ -382,7 +379,7 @@ coap_optlist_t **options, unsigned char *data, size_t length, int observe) {
     /* Indicate that we want to observe this resource */
     if (!coap_insert_optlist(options,
                              coap_new_optlist(COAP_OPTION_OBSERVE,
-                                         COAP_OBSERVE_ESTABLISH, NULL)))
+                                              COAP_OBSERVE_ESTABLISH, NULL)))
       goto error;
   }
 

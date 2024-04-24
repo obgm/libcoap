@@ -221,7 +221,7 @@ EXAMPLES
 #include <netinet/in.h>
 
 static coap_session_t *
-setup_client_session (struct in_addr ip_address) {
+setup_client_session(struct in_addr ip_address) {
   coap_session_t *session;
   coap_address_t server;
   /* See coap_context(3) */
@@ -238,7 +238,7 @@ setup_client_session (struct in_addr ip_address) {
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
-  server.addr.sin.sin_port = htons (5683);
+  server.addr.sin.sin_port = htons(5683);
 
   session = coap_new_client_session(context, NULL, &server, COAP_PROTO_UDP);
   if (!session) {
@@ -260,7 +260,7 @@ setup_client_session (struct in_addr ip_address) {
 #include <unistd.h>
 
 static coap_session_t *
-setup_client_session (const char *server_ud) {
+setup_client_session(const char *server_ud) {
   coap_session_t *session;
   coap_address_t server;
   coap_address_t local;
@@ -312,8 +312,7 @@ verify_cn_callback(const char *cn,
                    coap_session_t *c_session,
                    unsigned int depth,
                    int validated,
-                   void *arg
-) {
+                   void *arg) {
   /* Remove (void) definition if variable is used */
   (void)cn;
   (void)asn1_public_cert;
@@ -331,11 +330,10 @@ verify_cn_callback(const char *cn,
 }
 
 static coap_session_t *
-setup_client_session_pki (struct in_addr ip_address,
-                          const char *public_cert_file,
-                          const char *private_key_file,
-                          const char *ca_file
-) {
+setup_client_session_pki(struct in_addr ip_address,
+                         const char *public_cert_file,
+                         const char *private_key_file,
+                         const char *ca_file) {
   coap_session_t *session;
   coap_address_t server;
   coap_dtls_pki_t dtls_pki;
@@ -353,9 +351,9 @@ setup_client_session_pki (struct in_addr ip_address,
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
-  server.addr.sin.sin_port = htons (5684);
+  server.addr.sin.sin_port = htons(5684);
 
-  memset (&dtls_pki, 0, sizeof (dtls_pki));
+  memset(&dtls_pki, 0, sizeof(dtls_pki));
 
   /* See coap_encryption(3) */
   dtls_pki.version                 = COAP_DTLS_PKI_SETUP_VERSION;
@@ -408,8 +406,7 @@ setup_client_session_pki (struct in_addr ip_address,
 static const coap_dtls_cpsk_info_t *
 verify_ih_callback(coap_str_const_t *hint,
                    coap_session_t *c_session,
-                   void *arg
-) {
+                   void *arg) {
   coap_dtls_cpsk_info_t *psk_info = (coap_dtls_cpsk_info_t *)arg;
   /* Remove (void) definition if variable is used */
   (void)c_session;
@@ -424,13 +421,12 @@ static coap_dtls_cpsk_t dtls_psk;
 static char client_sni[256];
 
 static coap_session_t *
-setup_client_session_psk (const char *uri,
-                          struct in_addr ip_address,
-                          const uint8_t *identity,
-                          unsigned int identity_len,
-                          const uint8_t *key,
-                          unsigned int key_len
-) {
+setup_client_session_psk(const char *uri,
+                         struct in_addr ip_address,
+                         const uint8_t *identity,
+                         unsigned int identity_len,
+                         const uint8_t *key,
+                         unsigned int key_len) {
   coap_session_t *session;
   coap_address_t server;
   /* See coap_context(3) */
@@ -447,10 +443,10 @@ setup_client_session_psk (const char *uri,
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
-  server.addr.sin.sin_port = htons (5684);
+  server.addr.sin.sin_port = htons(5684);
 
   /* See coap_encryption(3) */
-  memset (&dtls_psk, 0, sizeof(dtls_psk));
+  memset(&dtls_psk, 0, sizeof(dtls_psk));
   dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
   dtls_psk.validate_ih_call_back = verify_ih_callback;
   dtls_psk.ih_call_back_arg = &dtls_psk.psk_info;
@@ -464,7 +460,7 @@ setup_client_session_psk (const char *uri,
   dtls_psk.psk_info.key.s = key;
   dtls_psk.psk_info.key.length = key_len;
   session = coap_new_client_session_psk2(context, NULL, &server,
-                                        COAP_PROTO_DTLS, &dtls_psk);
+                                         COAP_PROTO_DTLS, &dtls_psk);
   if (!session) {
     coap_free_context(context);
     return NULL;
@@ -482,7 +478,7 @@ setup_client_session_psk (const char *uri,
 #include <netinet/in.h>
 
 static coap_session_t *
-setup_client_session_dtls (struct in_addr ip_address) {
+setup_client_session_dtls(struct in_addr ip_address) {
   coap_session_t *session;
   coap_address_t server;
   /* See coap_context(3) */
@@ -499,10 +495,10 @@ setup_client_session_dtls (struct in_addr ip_address) {
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
-  server.addr.sin.sin_port = htons (5683);
+  server.addr.sin.sin_port = htons(5683);
 
   session = coap_new_client_session(context, NULL, &server,
-                                        COAP_PROTO_DTLS);
+                                    COAP_PROTO_DTLS);
   if (!session) {
     coap_free_context(context);
     return NULL;

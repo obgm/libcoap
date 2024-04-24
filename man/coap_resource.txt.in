@@ -311,7 +311,8 @@ EXAMPLES
 
 static void
 hnd_get_index(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+              const coap_pdu_t *request, const coap_string_t *query,
+              coap_pdu_t *response) {
   unsigned char buf[3];
   /* Remove (void) definition if variable is used */
   (void)resource;
@@ -338,7 +339,8 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
 static void
 hnd_delete_time(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+                const coap_pdu_t *request, const coap_string_t *query,
+                coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
   (void)resource;
   (void)session;
@@ -352,7 +354,8 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
 static void
 hnd_get_time(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+             const coap_pdu_t *request, const coap_string_t *query,
+             coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
   (void)resource;
   (void)session;
@@ -367,7 +370,8 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
 static void
 hnd_put_time(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+             const coap_pdu_t *request, const coap_string_t *query,
+             coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
   (void)resource;
   (void)session;
@@ -429,7 +433,8 @@ init_resources(coap_context_t *ctx) {
 
 static void
 hnd_delete(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+           const coap_pdu_t *request, const coap_string_t *query,
+           coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
   (void)session;
   (void)request;
@@ -449,8 +454,8 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
 static void
 hnd_get(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
-
+        const coap_pdu_t *request, const coap_string_t *query,
+        coap_pdu_t *response) {
   coap_str_const_t *get_uri_path;
 
   /* Remove (void) definition if variable is used */
@@ -476,7 +481,8 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
 
 static void
 hnd_put(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+        const coap_pdu_t *request, const coap_string_t *query,
+        coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
   (void)resource;
   (void)session;
@@ -525,7 +531,8 @@ check_url_fn(coap_string_t *uri_path, uint8_t code) {
 
 static void
 hnd_put_unknown(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
+                const coap_pdu_t *request, const coap_string_t *query,
+                coap_pdu_t *response) {
   /* Remove (void) definition if variable is used */
   (void)resource;
   coap_pdu_code_t req_code = coap_pdu_get_code(request);
@@ -541,7 +548,7 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   }
 
   /* Check if new URI Path is valid */
-  if (!check_url_fn (uri_path, req_code)) {
+  if (!check_url_fn(uri_path, req_code)) {
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
     coap_delete_string(uri_path);
     return;
@@ -551,8 +558,8 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
    * Create a resource to handle the new URI
    * uri_path will get deleted when the resource is removed
    */
-  r = coap_resource_init((coap_str_const_t*)uri_path,
-        COAP_RESOURCE_FLAGS_RELEASE_URI | COAP_RESOURCE_FLAGS_NOTIFY_NON);
+  r = coap_resource_init((coap_str_const_t *)uri_path,
+                         COAP_RESOURCE_FLAGS_RELEASE_URI | COAP_RESOURCE_FLAGS_NOTIFY_NON);
   coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put);
   coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete);
   /* We possibly want to Observe the GETs */

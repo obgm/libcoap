@@ -217,17 +217,17 @@ EXAMPLES
 #include <stdio.h>
 
 static uint8_t oscore_config[] =
-  "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
-  "master_salt,hex,\"9e7ca92223786340\"\n"
-  "server_id,ascii,\"client\"\n"
-  "recipient_id,ascii,\"server\"\n"
-  "replay_window,integer,30\n"
-  "aead_alg,integer,10\n"
-  "hkdf_alg,integer,-10\n"
-;
+    "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
+    "master_salt,hex,\"9e7ca92223786340\"\n"
+    "server_id,ascii,\"client\"\n"
+    "recipient_id,ascii,\"server\"\n"
+    "replay_window,integer,30\n"
+    "aead_alg,integer,10\n"
+    "hkdf_alg,integer,-10\n"
+    ;
 static FILE *oscore_seq_num_fp = NULL;
 /* Not a particularly safe place to keep next Sender Sequence Number ... */
-static const char* oscore_seq_save_file = "/tmp/client.seq";
+static const char *oscore_seq_save_file = "/tmp/client.seq";
 
 static int
 oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
@@ -240,7 +240,7 @@ oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
 }
 
 static coap_session_t *
-setup_client_session (struct in_addr ip_address) {
+setup_client_session(struct in_addr ip_address) {
   coap_session_t *session;
   coap_address_t server;
   /* See coap_context(3) */
@@ -257,10 +257,10 @@ setup_client_session (struct in_addr ip_address) {
   coap_address_init(&server);
   server.addr.sa.sa_family = AF_INET;
   server.addr.sin.sin_addr = ip_address;
-  server.addr.sin.sin_port = htons (5683);
+  server.addr.sin.sin_port = htons(5683);
 
   if (coap_oscore_is_supported()) {
-    coap_str_const_t config = { sizeof (oscore_config), oscore_config };
+    coap_str_const_t config = { sizeof(oscore_config), oscore_config };
     uint64_t start_seq_num = 0;
     coap_oscore_conf_t *oscore_conf;
 
@@ -271,7 +271,7 @@ setup_client_session (struct in_addr ip_address) {
         oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
         if (oscore_seq_num_fp == NULL) {
           coap_log_err("OSCORE save restart info file error: %s\n",
-                   oscore_seq_save_file);
+                       oscore_seq_save_file);
           return NULL;
         }
       }
@@ -305,17 +305,17 @@ setup_client_session (struct in_addr ip_address) {
 #include <stdio.h>
 
 static uint8_t oscore_config[] =
-  "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
-  "master_salt,hex,\"9e7ca92223786340\"\n"
-  "sender_id,ascii,\"server\"\n"
-  "recipient_id,ascii,\"client\"\n"
-  "replay_window,integer,30\n"
-  "aead_alg,integer,10\n"
-  "hkdf_alg,integer,-10\n"
-;
+    "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
+    "master_salt,hex,\"9e7ca92223786340\"\n"
+    "sender_id,ascii,\"server\"\n"
+    "recipient_id,ascii,\"client\"\n"
+    "replay_window,integer,30\n"
+    "aead_alg,integer,10\n"
+    "hkdf_alg,integer,-10\n"
+    ;
 static FILE *oscore_seq_num_fp = NULL;
 /* Not a particularly safe place to keep next Sender Sequence Number ... */
-static const char* oscore_seq_save_file = "/tmp/server.seq";
+static const char *oscore_seq_save_file = "/tmp/server.seq";
 
 static int
 oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
@@ -328,7 +328,7 @@ oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
 }
 
 static int
-setup_context (void) {
+setup_context(void) {
   /* See coap_context(3) */
   coap_context_t *context = coap_new_context(NULL);
 
@@ -340,7 +340,7 @@ setup_context (void) {
                               COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
 
   if (coap_oscore_is_supported()) {
-    coap_str_const_t config = { sizeof (oscore_config), oscore_config };
+    coap_str_const_t config = { sizeof(oscore_config), oscore_config };
     uint64_t start_seq_num = 0;
     coap_oscore_conf_t *oscore_conf;
 
@@ -351,7 +351,7 @@ setup_context (void) {
         oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
         if (oscore_seq_num_fp == NULL) {
           coap_log_err("OSCORE save restart info file error: %s\n",
-                   oscore_seq_save_file);
+                       oscore_seq_save_file);
           return 0;
         }
       }
@@ -367,7 +367,6 @@ setup_context (void) {
   }
   return 1;
 }
-
 ----
 
 SEE ALSO

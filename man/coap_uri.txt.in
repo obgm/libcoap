@@ -175,7 +175,7 @@ parse_and_send_uri(coap_session_t *session, const char *do_uri) {
   unsigned char buf[BUFSIZE];
 
   /* Parse the URI */
-  res = coap_split_uri((const uint8_t*)do_uri, strlen(do_uri), &uri);
+  res = coap_split_uri((const uint8_t *)do_uri, strlen(do_uri), &uri);
   if (res != 0)
     return 0;
 
@@ -240,7 +240,6 @@ parse_and_send_uri(coap_session_t *session, const char *do_uri) {
     return 0;
   return 1;
 }
-
 ----
 
 SEE ALSO

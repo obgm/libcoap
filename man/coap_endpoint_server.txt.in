@@ -219,7 +219,7 @@ EXAMPLES
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 static coap_context_t *
-setup_server_context (void) {
+setup_server_context(void) {
   coap_endpoint_t *endpoint;
   coap_address_t listen_addr;
   coap_context_t *context = coap_new_context(NULL);
@@ -234,7 +234,7 @@ setup_server_context (void) {
   /* See coap_address(3) */
   coap_address_init(&listen_addr);
   listen_addr.addr.sa.sa_family = AF_INET;
-  listen_addr.addr.sin.sin_port = htons (5683);
+  listen_addr.addr.sin.sin_port = htons(5683);
 
   endpoint = coap_new_endpoint(context, &listen_addr, COAP_PROTO_UDP);
   if (!endpoint) {
@@ -261,7 +261,7 @@ setup_server_context (void) {
 #define UNIX_DOMAIN_LISTEN_DGRAM "/tmp/server.dgram"
 
 static coap_context_t *
-setup_server_context (void) {
+setup_server_context(void) {
   coap_endpoint_t *endpoint;
   coap_address_t listen_addr;
   coap_context_t *context = coap_new_context(NULL);
@@ -275,8 +275,8 @@ setup_server_context (void) {
 
   /* See coap_address(3) */
   coap_address_set_unix_domain(&listen_addr,
-                        (const uint8_t *)UNIX_DOMAIN_LISTEN_DGRAM,
-                         strlen(UNIX_DOMAIN_LISTEN_DGRAM));
+                               (const uint8_t *)UNIX_DOMAIN_LISTEN_DGRAM,
+                               strlen(UNIX_DOMAIN_LISTEN_DGRAM));
   /* Only do this if you know it is safe to do so */
   unlink(listen_addr.addr.cun.sun_path);
 
@@ -312,9 +312,8 @@ verify_cn_callback(const char *cn,
                    coap_session_t *c_session,
                    unsigned depth,
                    int validated,
-                   void *arg
-) {
-  valid_cns_t *valid_cn_list = (valid_cns_t*)arg;
+                   void *arg) {
+  valid_cns_t *valid_cn_list = (valid_cns_t *)arg;
   size_t i;
   /* Remove (void) definition if variable is used */
   (void)asn1_public_cert;
@@ -333,7 +332,7 @@ verify_cn_callback(const char *cn,
 }
 
 typedef struct sni_def_t {
-  char* sni;
+  char *sni;
   coap_dtls_key_t key;
 } sni_def_t;
 
@@ -347,8 +346,7 @@ typedef struct valid_snis_t {
  */
 static coap_dtls_key_t *
 verify_pki_sni_callback(const char *sni,
-                        void *arg
-) {
+                        void *arg) {
   valid_snis_t *valid_sni_list = (valid_snis_t *)arg;
   size_t i;
 
@@ -365,12 +363,11 @@ verify_pki_sni_callback(const char *sni,
  * Set up PKI encryption information
  */
 static coap_context_t *
-setup_server_context_pki (const char *public_cert_file,
-                          const char *private_key_file,
-                          const char *ca_file,
-                          valid_cns_t *valid_cn_list,
-                          valid_snis_t *valid_sni_list
-) {
+setup_server_context_pki(const char *public_cert_file,
+                         const char *private_key_file,
+                         const char *ca_file,
+                         valid_cns_t *valid_cn_list,
+                         valid_snis_t *valid_sni_list) {
   coap_endpoint_t *endpoint;
   coap_address_t listen_addr;
   coap_dtls_pki_t dtls_pki;
@@ -388,7 +385,7 @@ setup_server_context_pki (const char *public_cert_file,
                               COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
 
 
-  memset (&dtls_pki, 0, sizeof (dtls_pki));
+  memset(&dtls_pki, 0, sizeof(dtls_pki));
 
   /* see coap_encryption(3) */
   dtls_pki.version                 = COAP_DTLS_PKI_SETUP_VERSION;
@@ -423,7 +420,7 @@ setup_server_context_pki (const char *public_cert_file,
   /* See coap_address(3) */
   coap_address_init(&listen_addr);
   listen_addr.addr.sa.sa_family = AF_INET;
-  listen_addr.addr.sin.sin_port = htons (5684);
+  listen_addr.addr.sin.sin_port = htons(5684);
 
   endpoint = coap_new_endpoint(context, &listen_addr, COAP_PROTO_DTLS);
   if (!endpoint) {
@@ -443,7 +440,7 @@ setup_server_context_pki (const char *public_cert_file,
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 typedef struct id_def_t {
-  char* id;
+  char *id;
   coap_bin_const_t key;
 } id_def_t;
 
@@ -458,16 +455,15 @@ typedef struct valid_ids_t {
 static const coap_bin_const_t *
 verify_id_callback(coap_bin_const_t *identity,
                    coap_session_t *c_session,
-                   void *arg
-) {
-  valid_ids_t *valid_id_list = (valid_ids_t*)arg;
+                   void *arg) {
+  valid_ids_t *valid_id_list = (valid_ids_t *)arg;
   int i;
   /* Remove (void) definition if variable is used */
   (void)c_session;
 
   /* Check that the Identity is valid */
   for (i = 0; i < valid_id_list->count; i++) {
-    if (!strcasecmp((const char*)identity->s, valid_id_list->id_list[i].id)) {
+    if (!strcasecmp((const char *)identity->s, valid_id_list->id_list[i].id)) {
       return &valid_id_list->id_list[i].key;
     }
   }
@@ -475,7 +471,7 @@ verify_id_callback(coap_bin_const_t *identity,
 }
 
 typedef struct sni_psk_def_t {
-  char* sni;
+  char *sni;
   coap_dtls_spsk_info_t psk_info;
 } sni_psk_def_t;
 
@@ -490,8 +486,7 @@ typedef struct valid_psk_snis_t {
 static const coap_dtls_spsk_info_t *
 verify_psk_sni_callback(const char *sni,
                         coap_session_t *c_session,
-                        void *arg
-) {
+                        void *arg) {
   valid_psk_snis_t *valid_sni_list = (valid_psk_snis_t *)arg;
   int i;
   /* Remove (void) definition if variable is used */
@@ -507,12 +502,11 @@ verify_psk_sni_callback(const char *sni,
 }
 
 static coap_context_t *
-setup_server_context_psk (const char *hint,
-                          const uint8_t *key,
-                          unsigned int key_len,
-                          valid_ids_t *valid_id_list,
-                          valid_psk_snis_t *valid_sni_list
-) {
+setup_server_context_psk(const char *hint,
+                         const uint8_t *key,
+                         unsigned int key_len,
+                         valid_ids_t *valid_id_list,
+                         valid_psk_snis_t *valid_sni_list) {
   coap_endpoint_t *endpoint;
   coap_address_t listen_addr;
   coap_context_t *context;
@@ -530,7 +524,7 @@ setup_server_context_psk (const char *hint,
                               COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
 
 
-  memset (&dtls_psk, 0, sizeof (dtls_psk));
+  memset(&dtls_psk, 0, sizeof(dtls_psk));
 
   /* see coap_encryption(3) */
   dtls_psk.version                 = COAP_DTLS_SPSK_SETUP_VERSION;
@@ -538,7 +532,7 @@ setup_server_context_psk (const char *hint,
   dtls_psk.id_call_back_arg        = valid_id_list;
   dtls_psk.validate_sni_call_back  = verify_psk_sni_callback;
   dtls_psk.sni_call_back_arg       = valid_sni_list;
-  dtls_psk.psk_info.hint.s         = (const uint8_t*)hint;
+  dtls_psk.psk_info.hint.s         = (const uint8_t *)hint;
   dtls_psk.psk_info.hint.length    = hint ? strlen(hint) : 0;
   dtls_psk.psk_info.key.s          = key;
   dtls_psk.psk_info.key.length     = key_len;
@@ -551,7 +545,7 @@ setup_server_context_psk (const char *hint,
   /* See coap_address(3) */
   coap_address_init(&listen_addr);
   listen_addr.addr.sa.sa_family = AF_INET;
-  listen_addr.addr.sin.sin_port = htons (5684);
+  listen_addr.addr.sin.sin_port = htons(5684);
 
   endpoint = coap_new_endpoint(context, &listen_addr, COAP_PROTO_DTLS);
   if (!endpoint) {

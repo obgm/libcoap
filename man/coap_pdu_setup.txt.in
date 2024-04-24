@@ -569,9 +569,9 @@ EXAMPLES
 
 static int
 build_send_pdu(coap_context_t *context, coap_session_t *session,
-uint8_t msgtype, uint8_t request_code, const char *uri, const char *query,
-unsigned char *data, size_t length, int observe) {
-
+               uint8_t msgtype, uint8_t request_code, const char *uri,
+               const char *query, unsigned char *data, size_t length,
+               int observe) {
   coap_pdu_t *pdu;
   uint8_t buf[1024];
   size_t buflen;
@@ -600,11 +600,12 @@ unsigned char *data, size_t length, int observe) {
   if (uri) {
     /* Add in the URI options */
     buflen = sizeof(buf);
-    res = coap_split_path((const uint8_t*)uri, strlen(uri), sbuf, &buflen);
+    res = coap_split_path((const uint8_t *)uri, strlen(uri), sbuf, &buflen);
     while (res--) {
       if (!coap_insert_optlist(&optlist_chain,
                                coap_new_optlist(COAP_OPTION_URI_PATH,
-                        coap_opt_length(sbuf), coap_opt_value(sbuf))))
+                                                coap_opt_length(sbuf),
+                                                coap_opt_value(sbuf))))
         goto error;
       sbuf += coap_opt_size(sbuf);
     }
@@ -613,11 +614,12 @@ unsigned char *data, size_t length, int observe) {
   if (query) {
     /* Add in the QUERY options */
     buflen = sizeof(buf);
-    res = coap_split_query((const uint8_t*)query, strlen(query), sbuf, &buflen);
+    res = coap_split_query((const uint8_t *)query, strlen(query), sbuf, &buflen);
     while (res--) {
       if (!coap_insert_optlist(&optlist_chain,
                                coap_new_optlist(COAP_OPTION_URI_QUERY,
-                        coap_opt_length(sbuf), coap_opt_value(sbuf))))
+                                                coap_opt_length(sbuf),
+                                                coap_opt_value(sbuf))))
         goto error;
       sbuf += coap_opt_size(sbuf);
     }
@@ -627,9 +629,9 @@ unsigned char *data, size_t length, int observe) {
     /* Indicate that we want to observe this resource */
     if (!coap_insert_optlist(&optlist_chain,
                              coap_new_optlist(COAP_OPTION_OBSERVE,
-                               coap_encode_var_safe(buf, sizeof(buf),
-                               COAP_OBSERVE_ESTABLISH), buf)
-                             ))
+                                              coap_encode_var_safe(buf, sizeof(buf),
+                                                  COAP_OBSERVE_ESTABLISH), buf)
+                            ))
       goto error;
   }
 
@@ -668,8 +670,8 @@ error:
 
 static void
 hnd_get_time(coap_resource_t *resource, coap_session_t *session,
-const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
-
+             const coap_pdu_t *request, const coap_string_t *query,
+             coap_pdu_t *response) {
   unsigned char buf[40];
   size_t len;
   time_t now;
@@ -683,8 +685,7 @@ const coap_pdu_t *request, const coap_string_t *query, coap_pdu_t *response) {
   if (query != NULL && coap_string_equal(query, coap_make_str_const("secs"))) {
     /* Output secs since Jan 1 1970 */
     len = snprintf((char *)buf, sizeof(buf), "%lu", now);
-  }
-  else {
+  } else {
     /* Output human-readable time */
     struct tm *tmp;
     tmp = gmtime(&now);
