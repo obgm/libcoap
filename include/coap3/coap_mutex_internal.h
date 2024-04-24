@@ -342,7 +342,9 @@ int coap_lock_lock_func(coap_lock_t *lock);
   } while (0)
 
 #define coap_lock_check_locked(s) do { \
-    assert ((s) && (s)->lock.being_freed ? coap_thread_pid == (s)->lock.freeing_pid: coap_thread_pid == (s)->lock.pid); \
+    assert((s) && \
+           coap_thread_pid == ((s)->lock.being_freed ? (s)->lock.freeing_pid : \
+                               (s)->lock.pid)); \
   } while (0)
 
 #define coap_lock_invert(s,func,f) do { \

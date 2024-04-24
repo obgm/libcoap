@@ -50,6 +50,10 @@
 #include <mbedtls/version.h>
 #endif /* COAP_WITH_LIBMBEDTLS */
 
+#define ReturnIf_CU_ASSERT_PTR_NOT_NULL(value) \
+  CU_ASSERT_PTR_NOT_NULL(value); \
+  if ((void*)value == NULL) return;
+
 static void
 t_tls1(void) {
   int need_dtls = 0;
@@ -101,7 +105,7 @@ t_tls2(void) {
   version.type = COAP_TLS_LIBRARY_NOTLS;
 #endif /* COAP_WITH_LIBOPENSSL || COAP_WITH_LIBTINYDTLS */
 
-  CU_ASSERT_PTR_NOT_NULL_FATAL(v);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(v);
   CU_ASSERT(version.version == v->version);
   CU_ASSERT(version.type == v->type);
 }

@@ -1550,62 +1550,60 @@ get_session(coap_context_t *ctx,
   coap_session_t *session = NULL;
 
   is_mcast = coap_is_mcast(dst);
-  if (local_addr || coap_is_af_unix(dst)) {
-    if (coap_is_af_unix(dst)) {
-      coap_address_t bind_addr;
+  if (coap_is_af_unix(dst)) {
+    coap_address_t bind_addr;
 
-      if (local_addr) {
-        if (!coap_address_set_unix_domain(&bind_addr,
-                                          (const uint8_t *)local_addr,
-                                          strlen(local_addr))) {
-          fprintf(stderr, "coap_address_set_unix_domain: %s: failed\n",
-                  local_addr);
-          return NULL;
-        }
-      } else {
-        char buf[COAP_UNIX_PATH_MAX];
-
-        /* Need a unique address */
-        snprintf(buf, COAP_UNIX_PATH_MAX,
-                 "/tmp/coap-client.%d", (int)getpid());
-        if (!coap_address_set_unix_domain(&bind_addr, (const uint8_t *)buf,
-                                          strlen(buf))) {
-          fprintf(stderr, "coap_address_set_unix_domain: %s: failed\n",
-                  buf);
-          remove(buf);
-          return NULL;
-        }
-        (void)remove(buf);
-      }
-      session = open_session(ctx, proto, &bind_addr, dst,
-                             identity, identity_len, key, key_len);
-    } else {
-      coap_addr_info_t *info_list = NULL;
-      coap_addr_info_t *info;
-      coap_str_const_t local;
-      uint16_t port = local_port ? atoi(local_port) : 0;
-
-      local.s = (const uint8_t *)local_addr;
-      local.length = strlen(local_addr);
-      /* resolve local address where data should be sent from */
-      info_list = coap_resolve_address_info(&local, port, port, port, port,
-                                            AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL,
-                                            1 << scheme,
-                                            COAP_RESOLVE_TYPE_LOCAL);
-      if (!info_list) {
-        fprintf(stderr, "coap_resolve_address_info: %s: failed\n", local_addr);
+    if (local_addr) {
+      if (!coap_address_set_unix_domain(&bind_addr,
+                                        (const uint8_t *)local_addr,
+                                        strlen(local_addr))) {
+        fprintf(stderr, "coap_address_set_unix_domain: %s: failed\n",
+                local_addr);
         return NULL;
       }
+    } else {
+      char buf[COAP_UNIX_PATH_MAX];
 
-      /* iterate through results until success */
-      for (info = info_list; info != NULL; info = info->next) {
-        session = open_session(ctx, proto, &info->addr, dst,
-                               identity, identity_len, key, key_len);
-        if (session)
-          break;
+      /* Need a unique address */
+      snprintf(buf, COAP_UNIX_PATH_MAX,
+               "/tmp/coap-client.%d", (int)getpid());
+      if (!coap_address_set_unix_domain(&bind_addr, (const uint8_t *)buf,
+                                        strlen(buf))) {
+        fprintf(stderr, "coap_address_set_unix_domain: %s: failed\n",
+                buf);
+        remove(buf);
+        return NULL;
       }
-      coap_free_address_info(info_list);
+      (void)remove(buf);
     }
+    session = open_session(ctx, proto, &bind_addr, dst,
+                           identity, identity_len, key, key_len);
+  } else if (local_addr) {
+    coap_addr_info_t *info_list = NULL;
+    coap_addr_info_t *info;
+    coap_str_const_t local;
+    uint16_t port = local_port ? atoi(local_port) : 0;
+
+    local.s = (const uint8_t *)local_addr;
+    local.length = strlen(local_addr);
+    /* resolve local address where data should be sent from */
+    info_list = coap_resolve_address_info(&local, port, port, port, port,
+                                          AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL,
+                                          1 << scheme,
+                                          COAP_RESOLVE_TYPE_LOCAL);
+    if (!info_list) {
+      fprintf(stderr, "coap_resolve_address_info: %s: failed\n", local_addr);
+      return NULL;
+    }
+
+    /* iterate through results until success */
+    for (info = info_list; info != NULL; info = info->next) {
+      session = open_session(ctx, proto, &info->addr, dst,
+                             identity, identity_len, key, key_len);
+      if (session)
+        break;
+    }
+    coap_free_address_info(info_list);
   } else if (local_port) {
     coap_address_t bind_addr;
 

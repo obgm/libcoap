@@ -809,7 +809,7 @@ coap_session_connected(coap_session_t *session) {
         coap_delete_node(q);
       if (bytes_written < 0)
         break;
-    } else {
+    } else if (q) {
       if (bytes_written <= 0 || (size_t)bytes_written < q->pdu->used_size + q->pdu->hdr_size) {
         q->next = session->delayqueue;
         session->delayqueue = q;
@@ -1944,13 +1944,10 @@ coap_endpoint_str(const coap_endpoint_t *endpoint) {
   if (p + 6 < end) {
     if (endpoint->proto == COAP_PROTO_UDP) {
       strcpy(p, " UDP");
-      p += 4;
     } else if (endpoint->proto == COAP_PROTO_DTLS) {
       strcpy(p, " DTLS");
-      p += 5;
     } else {
       strcpy(p, " NONE");
-      p += 5;
     }
   }
 

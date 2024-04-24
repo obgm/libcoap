@@ -65,13 +65,12 @@
   }
 
 static int
-match(const coap_str_const_t *text, const coap_str_const_t *pattern, int match_prefix,
-      int match_substring
-     ) {
+match(const coap_str_const_t *text, const coap_str_const_t *pattern,
+      int match_prefix, int match_substring) {
   assert(text);
   assert(pattern);
 
-  if (text->length < pattern->length)
+  if (text->length < pattern->length || !pattern->s)
     return 0;
 
   if (match_substring) {
@@ -977,6 +976,7 @@ coap_delete_observers(coap_context_t *context, coap_session_t *session) {
       if (s->session == session) {
         if (context->observe_deleted)
           context->observe_deleted(session, s, context->observe_user_data);
+        assert(resource->subscribers);
         LL_DELETE(resource->subscribers, s);
         coap_session_release(session);
         coap_delete_pdu(s->pdu);

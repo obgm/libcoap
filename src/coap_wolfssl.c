@@ -513,6 +513,7 @@ coap_dgram_write(WOLFSSL *ssl, char *in, int inl, void *ctx) {
   coap_tick_t now;
 
   (void)ssl;
+  assert(data);
   if (data->session) {
     if (!coap_netif_available(data->session)
 #if COAP_SERVER_SUPPORT
@@ -785,6 +786,7 @@ coap_sock_read(WOLFSSL *ssl, char *out, int outl, void *ctx) {
   coap_session_t *session = w_env ? w_env->data.session : NULL;
 
   (void)ssl;
+  assert(session);
   if (w_env && !w_env->done_psk_check && w_env->ssl &&
       w_env->role == COAP_DTLS_ROLE_SERVER) {
     if (wolfSSL_SSL_in_init(w_env->ssl)) {
@@ -823,6 +825,7 @@ coap_sock_write(WOLFSSL *ssl, char *in, int inl, void *ctx) {
   coap_session_t *session = w_env ? w_env->data.session : NULL;
 
   (void)ssl;
+  assert(session);
   ret = (int)session->sock.lfunc[COAP_LAYER_TLS].l_write(session,
                                                          (const uint8_t *)in,
                                                          inl);
@@ -2076,7 +2079,7 @@ coap_dtls_free_session(coap_session_t *session) {
     if (!wolfSSL_SSL_in_init(ssl) && !(wolfSSL_get_shutdown(ssl) & WOLFSSL_SENT_SHUTDOWN)) {
       int r = wolfSSL_shutdown(ssl);
       if (r == 0)
-        r = wolfSSL_shutdown(ssl);
+        wolfSSL_shutdown(ssl);
     }
     w_env->ssl = NULL;
     wolfSSL_free(ssl);
@@ -2558,7 +2561,7 @@ coap_tls_free_session(coap_session_t *session) {
     if (!wolfSSL_SSL_in_init(ssl) && !(wolfSSL_get_shutdown(ssl) & WOLFSSL_SENT_SHUTDOWN)) {
       int r = wolfSSL_shutdown(ssl);
       if (r == 0)
-        r = wolfSSL_shutdown(ssl);
+        wolfSSL_shutdown(ssl);
     }
     wolfSSL_free(ssl);
     w_env->ssl = NULL;

@@ -24,6 +24,10 @@
 #define TEST_PDU_SIZE 120
 #define TEST_URI_LEN    4
 
+#define ReturnIf_CU_ASSERT_PTR_NOT_NULL(value) \
+  CU_ASSERT_PTR_NOT_NULL(value); \
+  if ((void*)value == NULL) return;
+
 static coap_context_t *ctx;       /* Holds the coap context for most tests */
 static coap_pdu_t *pdu;           /* Holds the parsed PDU for most tests */
 static coap_session_t *session;   /* Holds a reference-counted session object
@@ -177,7 +181,7 @@ t_wellknown4(void) {
 
   /* Check for the resource added in t_wellknown2 */
   query = coap_new_string(sizeof("if=one")-1);
-  CU_ASSERT(query != NULL);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(query);
   memcpy(query->s, "if=one", sizeof("if=one")-1);
   result = coap_print_wellknown(ctx, buf, &buflen, 0, query);
   CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0);

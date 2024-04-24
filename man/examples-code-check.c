@@ -187,6 +187,9 @@ check_synopsis(const char *file) {
     exit_code = WEXITSTATUS(status);
     snprintf(buffer, sizeof(buffer), "echo %sc ; cat -n %sc", file_name, file_name);
     status = system(buffer);
+    if (WEXITSTATUS(status)) {
+      printf("Issues with system() call\n");
+    }
     snprintf(buffer, sizeof(buffer), "echo tmp/%s.h ; cat -n tmp/%s.h", file, file);
     status = system(buffer);
     if (WEXITSTATUS(status)) {
@@ -573,13 +576,8 @@ main(int argc, char *argv[]) {
             fpheader = NULL;
             check_synopsis(pdir_ent->d_name);
           }
-          in_name = 0;
-          in_synopsis = 0;
-          in_return = 0;
           dump_name_synopsis_mismatch();
           dump_return_synopsis_mismatch();
-          in_functions = 0;
-          in_examples = 1;
           break;
         }
 
