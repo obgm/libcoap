@@ -1653,7 +1653,6 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now,
           if (final_block > last_payload_block) {
             final_block = last_payload_block;
           }
-          no_blocks += final_block - block;
         }
         /* Ask for the missing blocks */
         block = -1;
@@ -1755,8 +1754,7 @@ coap_send_q_blocks(coap_session_t *session,
   coap_pdu_t *block_pdu = NULL;
   coap_opt_filter_t drop_options;
   coap_mid_t mid = COAP_INVALID_MID;
-  uint64_t token = coap_decode_var_bytes8(pdu->actual_token.s,
-                                          pdu->actual_token.length);
+  uint64_t token;
   const uint8_t *ptoken;
   uint8_t ltoken[8];
   size_t ltoken_length;
@@ -2189,6 +2187,7 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu,
   memcpy(lg_crcv->pdu.token, pdu->token, token_options);
   if (lg_crcv->pdu.data) {
     lg_crcv->pdu.data = lg_crcv->pdu.token + token_options;
+    assert(pdu->data);
     memcpy(lg_crcv->pdu.data, lg_xmit ? lg_xmit->data : pdu->data, data_len);
   }
 
@@ -3121,9 +3120,9 @@ derive_cbor_value(const uint8_t **bp, size_t rem_len) {
     return (uint32_t)-1;
   value = **bp << 24;
   (*bp)++;
-  value = **bp << 16;
+  value |= **bp << 16;
   (*bp)++;
-  value = **bp << 8;
+  value |= **bp << 8;
   (*bp)++;
   value |= **bp;
   (*bp)++;
@@ -3424,8 +3423,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
         uint32_t i;
         uint8_t buf[8];
         coap_pdu_t *pdu;
-        uint64_t token = coap_decode_var_bytes8(rcvd->actual_token.s,
-                                                rcvd->actual_token.length);
+        uint64_t token;
         uint8_t ltoken[8];
         size_t ltoken_length;
 
@@ -4049,7 +4047,6 @@ fail_resp:
         }
 #endif /* COAP_Q_BLOCK_SUPPORT */
         have_block = 1;
-        block_opt = COAP_OPTION_BLOCK2;
         if (block.num != 0) {
           /* Assume random access and just give the single response to app */
           size_t length;
@@ -4065,7 +4062,6 @@ fail_resp:
 #if COAP_Q_BLOCK_SUPPORT
       else if (coap_get_block_b(session, rcvd, COAP_OPTION_Q_BLOCK2, &block)) {
         have_block = 1;
-        block_opt = COAP_OPTION_Q_BLOCK2;
         /* server indicating that it supports Q_BLOCK2 */
         if (!(session->block_mode & COAP_BLOCK_HAS_Q_BLOCK)) {
           set_block_mode_has_q(session->block_mode);

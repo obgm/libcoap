@@ -1599,7 +1599,7 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
                                MBEDTLS_SSL_MINOR_VERSION_3);
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
 
-  if ((ret = mbedtls_ssl_setup(&m_env->ssl, &m_env->conf)) != 0) {
+  if (mbedtls_ssl_setup(&m_env->ssl, &m_env->conf) != 0) {
     goto fail;
   }
   if (proto == COAP_PROTO_DTLS) {
@@ -2181,8 +2181,6 @@ coap_dtls_receive(coap_session_t *c_session,
         if (ret == 1) {
           /* Just connected, so send the data */
           coap_session_connected(c_session);
-        } else {
-          ret = -1;
         }
       }
       ret = -1;
@@ -2625,6 +2623,7 @@ coap_digest_setup(void) {
 #else
     if (mbedtls_sha256_starts(digest_ctx, 0) != 0) {
 #endif /* MBEDTLS_2_X_COMPAT */
+      coap_digest_free(digest_ctx);
       return NULL;
     }
   }

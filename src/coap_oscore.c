@@ -294,15 +294,15 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
   uint8_t nonce_buffer[13];
   coap_bin_const_t aad;
   coap_bin_const_t nonce;
-  oscore_recipient_ctx_t *rcp_ctx = session->recipient_ctx;
-  oscore_ctx_t *osc_ctx = rcp_ctx ? rcp_ctx->osc_ctx : NULL;
+  oscore_recipient_ctx_t *rcp_ctx;
+  oscore_ctx_t *osc_ctx;
   cose_encrypt0_t cose[1];
   uint8_t group_flag = 0;
   int show_pdu = 0;
   int doing_observe = 0;
   uint32_t observe_value = 0;
   oscore_association_t *association = NULL;
-  oscore_sender_ctx_t *snd_ctx = osc_ctx ? osc_ctx->sender_context : NULL;
+  oscore_sender_ctx_t *snd_ctx;
   uint8_t external_aad_buffer[200];
   coap_bin_const_t external_aad;
   uint8_t oscore_option[48];
@@ -337,6 +337,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
     if (rcp_ctx == NULL)
       goto error;
     osc_ctx = rcp_ctx->osc_ctx;
+    assert(osc_ctx);
     snd_ctx = osc_ctx->sender_context;
   } else {
     /*
@@ -1389,7 +1390,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     }
     /* Skip the options */
     coap_option_iterator_init(plain_pdu, &opt_iter, COAP_OPT_ALL);
-    while ((opt = coap_option_next(&opt_iter))) {
+    while (coap_option_next(&opt_iter)) {
     }
     if (opt_iter.length > 0 && opt_iter.next_option &&
         opt_iter.next_option[0] == COAP_PAYLOAD_START) {

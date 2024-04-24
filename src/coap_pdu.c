@@ -1350,7 +1350,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
         outbuflen = sizeof(outbuf);
         obp = outbuf;
         ok = write_prefix(&obp, &outbuflen, "O: ", 3);
-        while (length > 0 && *opt != COAP_PAYLOAD_START) {
+        while (ok && length > 0 && *opt != COAP_PAYLOAD_START) {
           coap_opt_t *opt_last = opt;
           size_t optsize = next_option_safe(&opt, &length, &pdu->max_opt);
           const uint32_t len =
@@ -1374,7 +1374,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
           }
         }
         if (length && *opt == COAP_PAYLOAD_START) {
-          ok = ok && write_char(&obp, &outbuflen, *opt, i);
+          write_char(&obp, &outbuflen, *opt, i);
         }
         /* write_*() always leaves a spare byte to null terminate */
         *obp = '\000';

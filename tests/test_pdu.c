@@ -458,7 +458,7 @@ t_encode_pdu5(void) {
 
   CU_ASSERT(pdu->used_size == 0);
 
-  result = coap_add_token(pdu, 8, (const uint8_t *)"12345678");
+  coap_add_token(pdu, 8, (const uint8_t *)"12345678");
 
   CU_ASSERT(pdu->used_size == 8);
 

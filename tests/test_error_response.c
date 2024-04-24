@@ -19,6 +19,10 @@
 static coap_pdu_t *pdu;          /* Holds the request PDU for most tests */
 static coap_opt_filter_t opts;   /* option filter used for generating responses */
 
+#define ReturnIf_CU_ASSERT_PTR_NOT_NULL(value) \
+  CU_ASSERT_PTR_NOT_NULL(value); \
+  if ((void*)value == NULL) return;
+
 /************************************************************************
  ** PDU decoder
  ************************************************************************/
@@ -41,7 +45,7 @@ t_error_response1(void) {
   coap_option_filter_clear(&opts);
   response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(400), &opts);
 
-  CU_ASSERT_PTR_NOT_NULL(response);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
@@ -71,7 +75,7 @@ t_error_response2(void) {
   coap_option_filter_clear(&opts);
   response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(404), &opts);
 
-  CU_ASSERT_PTR_NOT_NULL(response);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_NON);
@@ -104,7 +108,7 @@ t_error_response3(void) {
   coap_option_filter_set(&opts, 25);
   response = coap_new_error_response(pdu, code, &opts);
 
-  CU_ASSERT_PTR_NOT_NULL(response);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
@@ -143,7 +147,7 @@ t_error_response4(void) {
   coap_option_filter_set(&opts, 25);
   response = coap_new_error_response(pdu, code, &opts);
 
-  CU_ASSERT_PTR_NOT_NULL(response);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
@@ -184,7 +188,7 @@ t_error_response5(void) {
   coap_option_filter_set(&opts, 25);
   response = coap_new_error_response(pdu, code, &opts);
 
-  CU_ASSERT_PTR_NOT_NULL(response);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
@@ -225,7 +229,7 @@ t_error_response6(void) {
   coap_option_filter_set(&opts, 23);
   response = coap_new_error_response(pdu, code, &opts);
 
-  CU_ASSERT_PTR_NOT_NULL(response);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
@@ -267,7 +271,7 @@ t_error_response7(void) {
   coap_option_filter_set(&opts, 23);
   response = coap_new_error_response(pdu, code, &opts);
 
-  CU_ASSERT_PTR_NOT_NULL(response);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);
@@ -308,7 +312,7 @@ t_error_response8(void) {
   coap_option_filter_set(&opts, 1014);
   response = coap_new_error_response(pdu, code, &opts);
 
-  CU_ASSERT_PTR_NOT_NULL(response);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
 
   CU_ASSERT(response->used_size == sizeof(teststr) - 4);
   CU_ASSERT(response->type == COAP_MESSAGE_ACK);

@@ -1334,7 +1334,7 @@ add_ca_to_cert_store(X509_STORE *st, X509 *x509) {
   long e;
 
   /* Flush out existing errors */
-  while ((e = ERR_get_error()) != 0) {
+  while (ERR_get_error() != 0) {
   }
 
   if (!X509_STORE_add_cert(st, x509)) {
@@ -3459,7 +3459,7 @@ coap_dtls_free_session(coap_session_t *session) {
     if (!SSL_in_init(ssl) && !(SSL_get_shutdown(ssl) & SSL_SENT_SHUTDOWN)) {
       int r = SSL_shutdown(ssl);
       if (r == 0)
-        r = SSL_shutdown(ssl);
+        SSL_shutdown(ssl);
     }
     SSL_free(ssl);
     session->tls = NULL;
@@ -3864,7 +3864,7 @@ coap_tls_free_session(coap_session_t *session) {
     if (!SSL_in_init(ssl) && !(SSL_get_shutdown(ssl) & SSL_SENT_SHUTDOWN)) {
       int r = SSL_shutdown(ssl);
       if (r == 0)
-        r = SSL_shutdown(ssl);
+        SSL_shutdown(ssl);
     }
     SSL_free(ssl);
     session->tls = NULL;

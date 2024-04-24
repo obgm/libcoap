@@ -28,6 +28,10 @@
  */
 #define MAX_BITS 8
 
+#define ReturnIf_CU_ASSERT_PTR_NOT_NULL(value) \
+  CU_ASSERT_PTR_NOT_NULL(value); \
+  if ((void*)value == NULL) return;
+
 static coap_context_t *ctx; /* Holds the coap context for most tests */
 static coap_session_t *session; /* Holds a reference-counted session object */
 
@@ -159,8 +163,8 @@ t_session6(void) {
   saddr.addr.sin6.sin6_port = htons(20000);
 
   session = coap_new_client_session(ctx, &saddr, &laddr, COAP_PROTO_UDP);
-  CU_ASSERT_PTR_NOT_NULL(session);
-  CU_ASSERT_PTR_NOT_NULL(ctx->sessions);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(session);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx->sessions);
   CU_ASSERT(session->state == COAP_SESSION_STATE_ESTABLISHED);
   coap_session_release(session);
 }
