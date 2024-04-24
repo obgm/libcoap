@@ -151,10 +151,10 @@ EXAMPLES
  */
 static void
 hnd_get_with_delay(coap_session_t *session,
-              coap_resource_t *resource,
-              coap_pdu_t *request,
-              coap_string_t *query,
-              coap_pdu_t *response) {
+                   coap_resource_t *resource,
+                   coap_pdu_t *request,
+                   coap_string_t *query,
+                   coap_pdu_t *response) {
   unsigned long delay = 5;
   size_t size;
   coap_async_t *async;
@@ -204,7 +204,6 @@ hnd_get_with_delay(coap_session_t *session,
 
   /* async is automatically removed by libcoap on return from this handler */
 }
-
 ----
 
 SEE ALSO

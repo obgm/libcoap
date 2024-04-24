@@ -396,7 +396,7 @@ get_pdu_information(coap_pdu_t *pdu) {
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
   while ((option = coap_option_next(&opt_iter))) {
     coap_log_info("A: Option %d, Length %u\n",
-             opt_iter.number, coap_opt_length(option));
+                  opt_iter.number, coap_opt_length(option));
   }
   /* Iterate through options, some ignored */
   coap_option_filter_clear(&ignore_options);
@@ -404,12 +404,10 @@ get_pdu_information(coap_pdu_t *pdu) {
   coap_option_iterator_init(pdu, &opt_iter, &ignore_options);
   while ((option = coap_option_next(&opt_iter))) {
     coap_log_info("I: Option %d, Length %u\n",
-             opt_iter.number, coap_opt_length(option));
+                  opt_iter.number, coap_opt_length(option));
   }
 
   /* Pull in the payload information */
-  ret = coap_get_data(pdu, &pdu_data_length, &pdu_data);
-    /* or */
   ret = coap_get_data_large(pdu, &pdu_data_length, &pdu_data,
                             &pdu_data_offset, &pdu_data_total_length);
 

@@ -374,7 +374,7 @@ main(int argc, char *argv[]) {
     fd_set readfds = m_readfds;
     int result;
     /* Wait until any i/o takes place */
-    result = select (nfds, &readfds, NULL, NULL, NULL);
+    result = select(nfds, &readfds, NULL, NULL, NULL);
     if (result == -1) {
       if (errno != EAGAIN) {
         coap_log_debug("select: %s (%d)\n", coap_socket_strerror(), errno);
@@ -473,8 +473,7 @@ main(int argc, char *argv[]) {
           /* There is an internal issue */
           break;
         }
-      }
-      else {
+      } else {
         /* Process other events */
       }
     }

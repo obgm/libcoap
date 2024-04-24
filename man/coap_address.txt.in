@@ -277,14 +277,14 @@ static int
 get_address(coap_uri_t *uri, coap_address_t *dst) {
   coap_addr_info_t *info_list;
 
-   info_list = coap_resolve_address_info(&uri->host, uri->port, uri->port,
-                                         uri->port, uri->port,0,
-                                         1 << uri->scheme, COAP_RESOLVE_TYPE_LOCAL);
-   if (info_list == NULL)
-     return 0;
-   memcpy(dst, &info_list->addr, sizeof(*dst));
-   coap_free_address_info(info_list);
-   return 1;
+  info_list = coap_resolve_address_info(&uri->host, uri->port, uri->port,
+                                        uri->port, uri->port,0,
+                                        1 << uri->scheme, COAP_RESOLVE_TYPE_LOCAL);
+  if (info_list == NULL)
+    return 0;
+  memcpy(dst, &info_list->addr, sizeof(*dst));
+  coap_free_address_info(info_list);
+  return 1;
 }
 ----
 
