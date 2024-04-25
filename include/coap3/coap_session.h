@@ -208,10 +208,13 @@ coap_context_t *coap_session_get_context(const coap_session_t *session);
 
 /**
  * Set the session type to client. Typically used in a call-home server.
- * The session needs to be of type COAP_SESSION_TYPE_SERVER.
+ * The session initially needs to be of type COAP_SESSION_TYPE_SERVER,
+ * which is then made COAP_SESSION_TYPE_CLIENT.
  * Note: If this function is successful, the session reference count is
  * incremented and a subsequent coap_session_release() taking the
- * reference count to 0 will cause the session to be freed off.
+ * reference count to 0 will cause the (now client) session to be freed off.
+ * Note: This function will fail for a DTLS server type session if done before
+ * the ClientHello is seen.
  *
  * @param session The CoAP session.
  *
