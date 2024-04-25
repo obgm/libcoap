@@ -127,9 +127,12 @@ get dropped.
 *Function: coap_session_set_type_client()*
 
 The *coap_session_set_type_client*() function is used to convert the _session_
-frrm a session endpoint type of Server to Client.  This typically is used in a
+from a session endpoint type of Server to Client.  This typically is used in a
 Call-Home type environment where the roles have to change following the
-establishment of a session.  The reference count is incremented by 1.
+establishment of a session.  The reference count is incremented by 1 so that
+the now type Client _session_ does not expire until a *coap_session_release*()
+is done. *NOTE:* This function will fail for a DTLS server type session if done
+before the ClientHello is seen.
 
 *Function: coap_session_set_app_data()*
 
