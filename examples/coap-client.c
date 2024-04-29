@@ -915,7 +915,10 @@ set_blocksize(void) {
   unsigned int opt_length;
 
   if (method != COAP_REQUEST_DELETE) {
-    if (method == COAP_REQUEST_GET || method == COAP_REQUEST_FETCH) {
+    block.m = (1ull << (block.szx + 4)) < payload.length;
+
+    if (!block.m &&
+        (method == COAP_REQUEST_GET || method == COAP_REQUEST_FETCH)) {
       if (coap_q_block_is_supported() && block_mode & COAP_BLOCK_TRY_Q_BLOCK)
         opt = COAP_OPTION_Q_BLOCK2;
       else
