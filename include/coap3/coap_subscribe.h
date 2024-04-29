@@ -266,6 +266,22 @@ void coap_persist_stop(coap_context_t *context);
 void coap_persist_set_observe_num(coap_resource_t *resource,
                                   uint32_t observe_num);
 
+/**
+ * Cancel an observe that is being tracked by the client large receive logic.
+ * (coap_context_set_block_mode() has to be called)
+ * This will trigger the sending of an observe cancel pdu to the server.
+ *
+ * @param session  The session that is being used for the observe.
+ * @param token    The original token used to initiate the observation.
+ * @param message_type The COAP_MESSAGE_ type (NON or CON) to send the observe
+ *                 cancel pdu as.
+ *
+ * @return @c 1 if observe cancel transmission initiation is successful,
+ *         else @c 0.
+ */
+int coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
+                        coap_pdu_type_t message_type);
+
 /** @} */
 
 #endif /* COAP_SUBSCRIBE_H_ */

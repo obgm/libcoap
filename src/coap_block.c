@@ -481,6 +481,12 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                            coap_encode_var_safe(buf, sizeof(buf),
                                                 COAP_OBSERVE_CANCEL),
                            buf);
+        if (lg_crcv->o_block_option) {
+          coap_update_option(pdu, lg_crcv->o_block_option,
+                             coap_encode_var_safe(buf, sizeof(buf),
+                                                  lg_crcv->o_blk_size),
+                             buf);
+        }
         if (coap_get_data(&lg_crcv->pdu, &size, &data))
           coap_add_data_large_request(session, pdu, size, data, NULL, NULL);
 
@@ -2134,6 +2140,7 @@ coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual) {
 coap_lg_crcv_t *
 coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu,
                        coap_lg_xmit_t *lg_xmit) {
+  coap_block_b_t block;
   coap_lg_crcv_t *lg_crcv;
   uint64_t state_token = STATE_TOKEN_FULL(++session->tx_token, 1);
   size_t token_options = pdu->data ? (size_t)(pdu->data - pdu->token) :
@@ -2192,8 +2199,12 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu,
       coap_update_token(pdu, new_token->length, new_token->s);
   }
 
-  /* In case it is there - must not be in continuing request PDUs */
-  coap_remove_option(&lg_crcv->pdu, COAP_OPTION_BLOCK1);
+  if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK1, &block)) {
+    /* In case it is there - must not be in continuing request PDUs */
+    lg_crcv->o_block_option = COAP_OPTION_BLOCK1;
+    lg_crcv->o_blk_size = block.aszx;
+    coap_remove_option(&lg_crcv->pdu, COAP_OPTION_BLOCK1);
+  }
 
   return lg_crcv;
 }
@@ -3471,6 +3482,8 @@ lg_xmit_finished:
                         p->b.b1.app_token->s);
     coap_log_debug("Client app version of updated PDU\n");
     coap_show_pdu(COAP_LOG_DEBUG, rcvd);
+  } else {
+    lg_crcv->pdu.lg_xmit = 0;
   }
 
   if (sent) {

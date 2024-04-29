@@ -1235,6 +1235,22 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
       coap_delete_bin_const(session->last_token);
       session->last_token = coap_new_bin_const(pdu->actual_token.s,
                                                pdu->actual_token.length);
+    } else {
+      /* observe_action == COAP_OBSERVE_CANCEL */
+      coap_binary_t tmp;
+      int ret;
+
+      coap_log_debug("coap_send: Using coap_cancel_observe() to do OBSERVE cancellation\n");
+      /* Unfortunately need to change the ptr type to be r/w */
+      memcpy(&tmp.s, &pdu->actual_token.s, sizeof(tmp.s));
+      tmp.length = pdu->actual_token.length;
+      ret = coap_cancel_observe(session, &tmp, pdu->type);
+      if (ret == 1) {
+        /* Observe Cancel successfully sent */
+        coap_delete_pdu(pdu);
+        return ret;
+      }
+      /* Some mismatch somewhere - continue to send original packet */
     }
     if (!coap_check_option(pdu, COAP_OPTION_RTAG, &opt_iter) &&
         (session->block_mode & COAP_BLOCK_NO_PREEMPTIVE_RTAG) == 0 &&
@@ -1381,27 +1397,6 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
     /* See if this token is already in use for large body responses */
     LL_FOREACH(session->lg_crcv, lg_crcv) {
       if (coap_binary_equal(&pdu->actual_token, lg_crcv->app_token)) {
-
-        if (observe_action == COAP_OBSERVE_CANCEL) {
-          uint8_t buf[8];
-          size_t len;
-
-          /* Need to update token to server's version */
-          len = coap_encode_var_safe8(buf, sizeof(lg_crcv->state_token),
-                                      lg_crcv->state_token);
-          if (pdu->code == COAP_REQUEST_CODE_FETCH && lg_crcv->obs_token &&
-              lg_crcv->obs_token[0]) {
-            memcpy(buf, lg_crcv->obs_token[0]->s, lg_crcv->obs_token[0]->length);
-            len = lg_crcv->obs_token[0]->length;
-          }
-          coap_update_token(pdu, len, buf);
-          lg_crcv->initial = 1;
-          lg_crcv->observe_set = 0;
-          /* de-reference lg_crcv as potentially linking in later */
-          LL_DELETE(session->lg_crcv, lg_crcv);
-          goto send_it;
-        }
-
         /* Need to terminate and clean up previous response setup */
         LL_DELETE(session->lg_crcv, lg_crcv);
         coap_block_delete_lg_crcv(session, lg_crcv);
@@ -1430,7 +1425,6 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   if (session->sock.flags & COAP_SOCKET_MULTICAST)
     coap_address_copy(&session->addr_info.remote, &session->sock.mcast_addr);
 
-send_it:
 #if COAP_Q_BLOCK_SUPPORT
   /* See if large xmit using Q-Block1 (but not testing Q-Block1) */
   if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK1, &block)) {

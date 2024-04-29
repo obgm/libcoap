@@ -186,6 +186,8 @@ struct coap_lg_crcv_t {
   coap_bin_const_t **obs_token; /**< Tokens used in setting up Observe
                                   (to handle large FETCH) */
   size_t obs_token_cnt; /**< number of tokens used to set up Observe */
+  uint16_t o_block_option; /**< Block CoAP option used when initiating Observe */
+  uint8_t o_blk_size;      /**< Block size used when initiating Observe */
   uint64_t state_token; /**< state token */
   coap_pdu_t pdu;        /**< skeletal PDU */
   coap_rblock_t rec_blocks; /** < list of received blocks */
