@@ -2113,7 +2113,7 @@ coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual) {
          COAP_PDU_IS_REQUEST(actual));
 
   coap_log_debug("Testing for Q-Block support\n");
-  /* RFC9177 Section 3.1 when checking if available */
+  /* RFC9177 Section 4.1 when checking if available */
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET,
                       coap_new_message_id(session),
                       coap_session_max_pdu_size(session));
@@ -2123,7 +2123,21 @@ coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual) {
 
   coap_session_new_token(session, &token_len, token);
   coap_add_token(pdu, token_len, token);
-  /* M needs to be unset as 'asking' for only the first block */
+  /* Use a resource that the server MUST support (.well-known/core) */
+  coap_add_option(pdu, COAP_OPTION_URI_PATH,
+                  11, (const u_char *)".well-known");
+  coap_add_option(pdu, COAP_OPTION_URI_PATH,
+                  4, (const u_char *)"core");
+  /*
+   * M needs to be unset as 'asking' for only the first block using
+   * Q-Block2 as a test for server support.
+   * See RFC9177 Section 4.4 Using the Q-Block2 Option.
+   *
+   * As the client is asking for 16 byte chunks, it is unlikely that
+   * the .well-known/core response will be 16 bytes or less, so
+   * if the server supports Q-Block, it will be forced to respond with
+   * a Q-Block2, so the client can detect the server Q-Block support.
+   */
   coap_insert_option(pdu, COAP_OPTION_Q_BLOCK2,
                      coap_encode_var_safe(buf, sizeof(buf),
                                           (0 << 4) | (0 << 3) | 0),
