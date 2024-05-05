@@ -25,6 +25,18 @@ jobs:
       with:
         python-version: 3.x
     - uses: pre-commit/action@v3.0.1
+  scan-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup
+        run: |
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags clang-tools
+          ./autogen.sh
+      - name: check
+        run: |
+          ./configure --disable-documentation --disable-doxygen --disable-man --enable-examples --enable-tests --disable-dtls
+          scan-build make V=0
   build-linux:
     runs-on: ubuntu-latest
     strategy:
