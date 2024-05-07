@@ -1240,7 +1240,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
         if (!asn1_priv) {
           return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                         COAP_DEFINE_FAIL_BAD,
-                                        &key, role);
+                                        &key, role, 0);
         }
         asn1_temp = ec_abstract_pkcs8_asn1(asn1_priv->s, asn1_priv->length);
         if (!asn1_temp) {
@@ -1248,7 +1248,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
           coap_delete_binary(asn1_priv);
           return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                         COAP_DEFINE_FAIL_BAD,
-                                        &key, role);
+                                        &key, role, 0);
         }
         coap_delete_binary(asn1_priv);
         asn1_priv = asn1_temp;
@@ -1267,7 +1267,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
             coap_delete_binary(asn1_priv);
             return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                           COAP_DEFINE_FAIL_BAD,
-                                          &key, role);
+                                          &key, role, 0);
           }
           asn1_temp = ec_abstract_pkcs8_asn1(asn1_pub->s, asn1_pub->length);
           if (!asn1_temp) {
@@ -1276,7 +1276,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
             coap_delete_binary(asn1_pub);
             return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                           COAP_DEFINE_FAIL_BAD,
-                                          &key, role);
+                                          &key, role, 0);
           }
           coap_delete_binary(asn1_pub);
           asn1_pub = asn1_temp;
@@ -1294,7 +1294,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
       coap_delete_binary(asn1_pub);
       return 1;
       break;
-    case COAP_PKI_KEY_DEF_ASN1: /* define private key */
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define private key */
       if (key.key.define.private_key_len > 0 &&
           key.key.define.private_key_type == COAP_ASN1_PKEY_EC) {
         const uint8_t *private_key = key.key.define.private_key.u_byte;
@@ -1338,23 +1338,24 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
       } else {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PEM:
     case COAP_PKI_KEY_DEF_PEM_BUF:
     case COAP_PKI_KEY_DEF_DER:
     case COAP_PKI_KEY_DEF_PKCS11:
+    case COAP_PKI_KEY_DEF_PKCS11_RPK:
     case COAP_PKI_KEY_DEF_ENGINE:
     default:
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role);
+                                    &key, role, 0);
     }
   } else {
     return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                   COAP_DEFINE_FAIL_NONE,
-                                  &key, role);
+                                  &key, role, 0);
   }
 
   /*
@@ -1364,18 +1365,19 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
       key.key.define.public_cert.u_byte[0]) {
     switch (key.key.define.public_cert_def) {
     case COAP_PKI_KEY_DEF_RPK_BUF:
-    case COAP_PKI_KEY_DEF_ASN1:
+    case COAP_PKI_KEY_DEF_DER_BUF:
       /* done under private key */
       break;
     case COAP_PKI_KEY_DEF_PEM:
     case COAP_PKI_KEY_DEF_PEM_BUF:
     case COAP_PKI_KEY_DEF_DER:
     case COAP_PKI_KEY_DEF_PKCS11:
+    case COAP_PKI_KEY_DEF_PKCS11_RPK:
     case COAP_PKI_KEY_DEF_ENGINE:
     default:
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role);
+                                    &key, role, 0);
     }
   }
 
@@ -1386,18 +1388,19 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
       key.key.define.ca.u_byte[0]) {
     switch (key.key.define.ca_def) {
     case COAP_PKI_KEY_DEF_RPK_BUF:
-    case COAP_PKI_KEY_DEF_ASN1:
+    case COAP_PKI_KEY_DEF_DER_BUF:
       /* Ignore if set */
       break;
     case COAP_PKI_KEY_DEF_PEM:
     case COAP_PKI_KEY_DEF_PEM_BUF:
     case COAP_PKI_KEY_DEF_DER:
     case COAP_PKI_KEY_DEF_PKCS11:
+    case COAP_PKI_KEY_DEF_PKCS11_RPK:
     case COAP_PKI_KEY_DEF_ENGINE:
     default:
       return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role);
+                                    &key, role, 0);
     }
   }
 

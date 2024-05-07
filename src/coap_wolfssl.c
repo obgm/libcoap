@@ -1062,58 +1062,6 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
-/*
-Note: The returned key type is not actually used in wolfSSL_use_PrivateKey_ASN1.
-The key type is inferred internally by wolfSSL when using wolfSSL_use_PrivateKey_buffer.
-*/
-static int
-map_key_type(int asn1_private_key_type
-            ) {
-  /* some OpenSSL EVP_PKEYs not available in compatibility layer:
-  COAP_ASN1_PKEY_RSA2, COAP_ASN1_PKEY_DSA[1-4], COAP_ASN1_PKEY_DHX
-  and COAP_ASN1_PKEY_TLS1_PRF */
-  switch (asn1_private_key_type) {
-  case COAP_ASN1_PKEY_NONE:
-    return EVP_PKEY_NONE;
-  case COAP_ASN1_PKEY_RSA:
-    return EVP_PKEY_RSA;
-  case COAP_ASN1_PKEY_RSA2:
-    return EVP_PKEY_RSA;
-  case COAP_ASN1_PKEY_DSA:
-    return EVP_PKEY_DSA;
-  case COAP_ASN1_PKEY_DSA1:
-    return EVP_PKEY_DSA;
-  case COAP_ASN1_PKEY_DSA2:
-    return EVP_PKEY_DSA;
-  case COAP_ASN1_PKEY_DSA3:
-    return EVP_PKEY_DSA;
-  case COAP_ASN1_PKEY_DSA4:
-    return EVP_PKEY_DSA;
-  case COAP_ASN1_PKEY_DH:
-    return EVP_PKEY_DH;
-  case COAP_ASN1_PKEY_DHX:
-    return EVP_PKEY_DH;
-  case COAP_ASN1_PKEY_EC:
-    return EVP_PKEY_EC;
-  case COAP_ASN1_PKEY_HMAC:
-    return EVP_PKEY_HMAC;
-#ifdef EVP_PKEY_CMAC
-  case COAP_ASN1_PKEY_CMAC:
-    return EVP_PKEY_CMAC;
-#endif /* EVP_PKEY_CMAC */
-#ifdef EVP_PKEY_HKDF
-  case COAP_ASN1_PKEY_TLS1_PRF:
-    return EVP_PKEY_HKDF;
-  case COAP_ASN1_PKEY_HKDF:
-    return EVP_PKEY_HKDF;
-#endif /* EVP_PKEY_HKDF */
-  default:
-    coap_log_warn("*** setup_pki_ssl: DTLS: Unknown Private Key type %d for ASN1\n",
-                  asn1_private_key_type);
-    break;
-  }
-  return 0;
-}
 #if !COAP_DISABLE_TCP
 static uint8_t coap_alpn[] = { 4, 'c', 'o', 'a', 'p' };
 
@@ -1145,80 +1093,116 @@ server_alpn_callback(WOLFSSL *ssl COAP_UNUSED,
 static int
 setup_pki_ssl(WOLFSSL *ssl,
               coap_dtls_pki_t *setup_data, coap_dtls_role_t role) {
+  coap_dtls_key_t key;
   WOLFSSL_CTX *ctx = wolfSSL_get_SSL_CTX(ssl);
 
-#if !defined(HAVE_RPK) || LIBWOLFSSL_VERSION_HEX < 0x05006004
-  if (setup_data->is_rpk_not_cert) {
-    coap_log_err("RPK Support not available in wolfSSL\n");
-    return 0;
-  }
-#endif /* ! HAVE_RPK || LIBWOLFSSL_VERSION_HEX < 0x05006004 */
-  switch (setup_data->pki_key.key_type) {
-  case COAP_PKI_KEY_PEM:
-    if (setup_data->is_rpk_not_cert) {
-      coap_log_warn("RPK keys cannot be in COAP_PKI_KEY_PEM format\n");
-      return 0;
-    }
-    if (setup_data->pki_key.key.pem.public_cert &&
-        setup_data->pki_key.key.pem.public_cert[0]) {
-      if (!(wolfSSL_use_certificate_file(ssl,
-                                         setup_data->pki_key.key.pem.public_cert,
-                                         WOLFSSL_FILETYPE_PEM))) {
-        coap_log_warn("*** setup_pki_ssl: (D)TLS: %s: Unable to configure "
-                      "%s Certificate\n",
-                      setup_data->pki_key.key.pem.public_cert,
-                      role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-        return 0;
-      }
-    } else if (role == COAP_DTLS_ROLE_SERVER ||
-               (setup_data->pki_key.key.pem.private_key &&
-                setup_data->pki_key.key.pem.private_key[0])) {
-      coap_log_err("*** setup_pki_ssl: (D)TLS: No %s Certificate defined\n",
-                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-      return 0;
-    }
-#if defined(HAVE_RPK) && LIBWOLFSSL_VERSION_HEX >= 0x05006004
-    else {
-      char stype[] = {WOLFSSL_CERT_TYPE_X509, WOLFSSL_CERT_TYPE_RPK};
-      wolfSSL_set_server_cert_type(ssl, stype, sizeof(stype)/sizeof(stype[0]));
-    }
-#endif /* HAVE_RPK && LIBWOLFSSL_VERSION_HEX >= 0x05006004 */
-    if (setup_data->pki_key.key.pem.private_key &&
-        setup_data->pki_key.key.pem.private_key[0]) {
-      if (!(wolfSSL_use_PrivateKey_file(ssl,
-                                        setup_data->pki_key.key.pem.private_key,
-                                        WOLFSSL_FILETYPE_PEM))) {
-        coap_log_warn("*** setup_pki_ssl: (D)TLS: %s: Unable to configure "
-                      "Client Private Key\n",
-                      setup_data->pki_key.key.pem.private_key);
-        return 0;
-      }
-    } else if (role == COAP_DTLS_ROLE_SERVER ||
-               (setup_data->pki_key.key.pem.public_cert &&
-                setup_data->pki_key.key.pem.public_cert[0])) {
-      coap_log_err("*** setup_pki_ssl: (D)TLS: No %s Private Key defined\n",
-                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-      return 0;
-    }
-    if (setup_data->check_common_ca && setup_data->pki_key.key.pem.ca_file &&
-        setup_data->pki_key.key.pem.ca_file[0]) {
-      if (!wolfSSL_CTX_load_verify_locations_ex(ctx,
-                                                setup_data->pki_key.key.pem.ca_file,
-                                                NULL,
-                                                setup_data->allow_expired_certs ?
-                                                WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
-        coap_log_warn("Unable to install CAs (%s)\n",
-                      setup_data->pki_key.key.pem.ca_file);
-        return 0;
-      }
-    }
-    break;
+  /* Map over to the new define format to save code duplication */
+  coap_dtls_map_key_type_to_define(setup_data, &key);
 
-  case COAP_PKI_KEY_PEM_BUF:
-    if (setup_data->pki_key.key.pem_buf.public_cert &&
-        setup_data->pki_key.key.pem_buf.public_cert_len) {
+  assert(key.key_type == COAP_PKI_KEY_DEFINE);
+
+  /*
+   * Configure the Private Key
+   */
+  if (key.key.define.private_key.u_byte &&
+      key.key.define.private_key.u_byte[0]) {
+    switch (key.key.define.private_key_def) {
+    case COAP_PKI_KEY_DEF_PEM: /* define private key */
+      if (!(wolfSSL_use_PrivateKey_file(ssl,
+                                        key.key.define.private_key.s_byte,
+                                        WOLFSSL_FILETYPE_PEM))) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_PEM_BUF: /* define private key */
+      if (!(wolfSSL_use_PrivateKey_buffer(ssl,
+                                          key.key.define.private_key.u_byte,
+                                          (long)key.key.define.private_key_len,
+                                          WOLFSSL_FILETYPE_PEM))) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_RPK_BUF: /* define private key */
 #if defined(HAVE_RPK) && LIBWOLFSSL_VERSION_HEX >= 0x05006004
-      if (setup_data->is_rpk_not_cert) {
+      if (!(wolfSSL_use_PrivateKey_buffer(ssl,
+                                          key.key.define.private_key.u_byte,
+                                          (long)key.key.define.private_key_len,
+                                          WOLFSSL_FILETYPE_PEM))) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+#else /* ! HAVE_RPK || ! LIBWOLFSSL_VERSION_HEX >= 0x05006004 */
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, 0);
+#endif /* ! HAVE_RPK || ! LIBWOLFSSL_VERSION_HEX >= 0x05006004 */
+    case COAP_PKI_KEY_DEF_DER: /* define private key */
+      if (!(wolfSSL_use_PrivateKey_file(ssl,
+                                        key.key.define.private_key.s_byte,
+                                        WOLFSSL_FILETYPE_ASN1))) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define private key */
+      if (!(wolfSSL_use_PrivateKey_buffer(ssl,
+                                          key.key.define.private_key.u_byte,
+                                          (long)key.key.define.private_key_len,
+                                          WOLFSSL_FILETYPE_ASN1))) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_PKCS11: /* define private key */
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define private key */
+    case COAP_PKI_KEY_DEF_ENGINE: /* define private key */
+    default:
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, 0);
+    }
+  } else if (role == COAP_DTLS_ROLE_SERVER ||
+             (key.key.define.public_cert.u_byte &&
+              key.key.define.public_cert.u_byte[0])) {
+    return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                  COAP_DEFINE_FAIL_NONE,
+                                  &key, role, 0);
+  }
+
+  /*
+   * Configure the Public Certificate / Key
+   */
+  if (key.key.define.public_cert.u_byte &&
+      key.key.define.public_cert.u_byte[0]) {
+    switch (key.key.define.public_cert_def) {
+    case COAP_PKI_KEY_DEF_PEM: /* define public cert */
+      if (!(wolfSSL_use_certificate_chain_file(ssl,
+                                               key.key.define.public_cert.s_byte))) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_PEM_BUF: /* define public cert */
+      if (!(wolfSSL_use_certificate_chain_buffer(ssl,
+                                                 key.key.define.private_key.u_byte,
+                                                 (long)key.key.define.private_key_len))) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_RPK_BUF: /* define public cert */
+#if defined(HAVE_RPK) && LIBWOLFSSL_VERSION_HEX >= 0x05006004
+      {
         unsigned char der_buff[512];
         int ret = -1;;
         char ctype[] = {WOLFSSL_CERT_TYPE_RPK};
@@ -1227,178 +1211,160 @@ setup_pki_ssl(WOLFSSL *ssl,
         wolfSSL_set_client_cert_type(ssl, ctype, sizeof(ctype)/sizeof(ctype[0]));
         wolfSSL_set_server_cert_type(ssl, stype, sizeof(stype)/sizeof(stype[0]));
 
-        ret = wolfSSL_PubKeyPemToDer(setup_data->pki_key.key.pem_buf.public_cert,
-                                     (int)setup_data->pki_key.key.pem_buf.public_cert_len,
+        ret = wolfSSL_PubKeyPemToDer(key.key.define.public_cert.u_byte,
+                                     (int)key.key.define.public_cert_len,
                                      der_buff, (int)sizeof(der_buff));
         if (ret <= 0) {
-          ret = wolfSSL_KeyPemToDer(setup_data->pki_key.key.pem_buf.public_cert,
-                                    (int)setup_data->pki_key.key.pem_buf.public_cert_len,
+          ret = wolfSSL_KeyPemToDer(key.key.define.public_cert.u_byte,
+                                    (int)key.key.define.public_cert_len,
                                     der_buff, (int)sizeof(der_buff), NULL);
           if (ret > 0) {
             coap_binary_t *spki = get_asn1_spki(der_buff, ret);
 
             if (!spki) {
-              coap_log_warn("*** setup_pki_ssl: (D)TLS: Unable to find"
-                            "%s RPK SPKI\n",
-                            role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-              break;
+              return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                            COAP_DEFINE_FAIL_BAD,
+                                            &key, role, 0);
             }
             if (!wolfSSL_use_PrivateKey_buffer(ssl, der_buff, ret, WOLFSSL_FILETYPE_ASN1)) {
-              coap_log_warn("*** setup_pki_ssl: (D)TLS: Unable to install "
-                            "%s RPK PEM Private Key\n",
-                            role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+              return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                            COAP_DEFINE_FAIL_BAD,
+                                            &key, role, 0);
             }
             if (!wolfSSL_use_certificate_buffer(ssl, spki->s, spki->length, WOLFSSL_FILETYPE_ASN1)) {
-              coap_log_warn("*** setup_pki_ssl: (D)TLS: Unable to install "
-                            "%s RPK PEM Certificate\n",
-                            role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+              coap_delete_binary(spki);
+              return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                            COAP_DEFINE_FAIL_BAD,
+                                            &key, role, 0);
             }
             coap_delete_binary(spki);
             break;
           }
         }
         if (ret <= 0) {
-          coap_log_warn("*** setup_pki_ssl: (D)TLS: Unable to read "
-                        "%s RPK PEM Certificate\n",
-                        role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-          return 0;
+          return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                        COAP_DEFINE_FAIL_BAD,
+                                        &key, role, 0);
         }
         if (!wolfSSL_use_certificate_buffer(ssl, der_buff, ret, WOLFSSL_FILETYPE_ASN1)) {
-          coap_log_warn("*** setup_pki_ssl: (D)TLS: Unable to install "
-                        "%s RPK PEM Certificate\n",
-                        role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+          return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                        COAP_DEFINE_FAIL_BAD,
+                                        &key, role, 0);
         }
-      } else
-#endif /* HAVE_RPK && LIBWOLFSSL_VERSION_HEX >= 0x05006004 */
-      {
-        WOLFSSL_BIO *bp = wolfSSL_BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.public_cert,
-                                                  (int)setup_data->pki_key.key.pem_buf.public_cert_len);
-        WOLFSSL_X509 *cert = bp ? wolfSSL_PEM_read_bio_X509(bp, NULL, 0, NULL) : NULL;
-
-        if (!cert || !SSL_use_certificate(ssl, cert)) {
-          coap_log_warn("*** setup_pki_ssl: (D)TLS: Unable to configure "
-                        "Client PEM Certificate\n");
-          if (bp)
-            wolfSSL_BIO_free(bp);
-          if (cert)
-            wolfSSL_X509_free(cert);
-          return 0;
-        }
-        if (bp)
-          wolfSSL_BIO_free(bp);
-        if (cert)
-          wolfSSL_X509_free(cert);
       }
-    } else {
-      coap_log_err("*** setup_pki_ssl: (D)TLS: No %s Certificate defined\n",
-                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-      return 0;
-    }
-
-    if (setup_data->pki_key.key.pem_buf.private_key &&
-        setup_data->pki_key.key.pem_buf.private_key_len) {
-      WOLFSSL_BIO *bp = wolfSSL_BIO_new_mem_buf(setup_data->pki_key.key.pem_buf.private_key,
-                                                (int)setup_data->pki_key.key.pem_buf.private_key_len);
-      WOLFSSL_EVP_PKEY *pkey = bp ? wolfSSL_PEM_read_bio_PrivateKey(bp, NULL, 0, NULL) : NULL;
-
-      if (!pkey || !wolfSSL_use_PrivateKey(ssl, pkey)) {
-        coap_log_warn("*** setup_pki_ssl: (D)TLS: Unable to configure "
-                      "%s PEM Private Key\n",
-                      role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-        if (bp)
-          wolfSSL_BIO_free(bp);
-        if (pkey)
-          wolfSSL_EVP_PKEY_free(pkey);
-        return 0;
+      break;
+#else /* ! HAVE_RPK || ! LIBWOLFSSL_VERSION_HEX >= 0x05006004 */
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, 0);
+#endif /* ! HAVE_RPK || ! LIBWOLFSSL_VERSION_HEX >= 0x05006004 */
+    case COAP_PKI_KEY_DEF_DER: /* define public cert */
+      if (!(wolfSSL_use_certificate_file(ssl,
+                                         key.key.define.public_cert.s_byte,
+                                         WOLFSSL_FILETYPE_ASN1))) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
       }
-      if (bp)
-        wolfSSL_BIO_free(bp);
-      if (pkey)
-        wolfSSL_EVP_PKEY_free(pkey);
-    } else {
-      coap_log_err("*** setup_pki_ssl: (D)TLS: No %s Private Key defined\n",
-                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-      return 0;
-    }
-
-    if (setup_data->check_common_ca && setup_data->pki_key.key.pem_buf.ca_cert &&
-        setup_data->pki_key.key.pem_buf.ca_cert_len) {
-      if (!wolfSSL_CTX_load_verify_buffer_ex(ctx,
-                                             setup_data->pki_key.key.pem_buf.ca_cert,
-                                             setup_data->pki_key.key.pem_buf.ca_cert_len,
-                                             SSL_FILETYPE_PEM,
-                                             0,
-                                             setup_data->allow_expired_certs ?
-                                             WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
-        coap_log_warn("Unable to install root CAs\n");
-        return 0;
+      break;
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define public cert */
+      if (!(wolfSSL_use_certificate_buffer(ssl,
+                                           key.key.define.public_cert.u_byte,
+                                           (int)key.key.define.public_cert_len,
+                                           WOLFSSL_FILETYPE_ASN1))) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
       }
+      break;
+    case COAP_PKI_KEY_DEF_PKCS11: /* define public cert */
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define public cert */
+    case COAP_PKI_KEY_DEF_ENGINE: /* define public cert */
+    default:
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, 0);
     }
-    break;
-
-  case COAP_PKI_KEY_ASN1:
-    if (setup_data->pki_key.key.asn1.public_cert &&
-        setup_data->pki_key.key.asn1.public_cert_len > 0) {
-      if (!(wolfSSL_use_certificate_ASN1(ssl,
-                                         setup_data->pki_key.key.asn1.public_cert,
-                                         (int)setup_data->pki_key.key.asn1.public_cert_len))) {
-        coap_log_warn("*** setup_pki_ssl: (D)TLS: ASN1: Unable to configure "
-                      "%s Certificate\n",
-                      role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-        return 0;
-      }
-    } else if (role == COAP_DTLS_ROLE_SERVER ||
-               (setup_data->pki_key.key.asn1.private_key &&
-                setup_data->pki_key.key.asn1.private_key[0])) {
-      coap_log_err("*** setup_pki_ssl: (D)TLS: No %s Certificate defined\n",
-                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-      return 0;
-    }
-    if (setup_data->pki_key.key.asn1.private_key &&
-        setup_data->pki_key.key.asn1.private_key_len > 0) {
-      int pkey_type = map_key_type(setup_data->pki_key.key.asn1.private_key_type);
-      if (!(wolfSSL_use_PrivateKey_ASN1(pkey_type, ssl,
-                                        setup_data->pki_key.key.asn1.private_key,
-                                        (long)setup_data->pki_key.key.asn1.private_key_len))) {
-        coap_log_warn("*** setup_pki_ssl: (D)TLS: ASN1: Unable to configure "
-                      "%s Private Key\n",
-                      role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-        return 0;
-      }
-    } else if (role == COAP_DTLS_ROLE_SERVER ||
-               (setup_data->pki_key.key.asn1.public_cert &&
-                setup_data->pki_key.key.asn1.public_cert_len > 0)) {
-      coap_log_err("*** setup_pki_ssl: (D)TLS: No %s Private Key defined",
-                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
-      return 0;
-    }
-    if (setup_data->check_common_ca && setup_data->pki_key.key.asn1.ca_cert &&
-        setup_data->pki_key.key.asn1.ca_cert_len > 0) {
-      if (!wolfSSL_CTX_load_verify_buffer_ex(ctx,
-                                             setup_data->pki_key.key.asn1.ca_cert,
-                                             setup_data->pki_key.key.asn1.ca_cert_len,
-                                             SSL_FILETYPE_PEM,
-                                             0,
-                                             setup_data->allow_expired_certs ?
-                                             WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
-        coap_log_warn("Unable to install CAs\n");
-        return 0;
-      }
-    }
-    break;
-  case COAP_PKI_KEY_PKCS11:
-    /* TODO: check if this can be implemented*/
-    coap_log_err("PKCS11 Support not available in wolfSSL\n");
-    return 0;
-  case COAP_PKI_KEY_DEFINE:
-    coap_log_err("*** setup_pki: (D)TLS: PKI type DEFINE not (yet) supported\n");
-    break;
-  default:
-    coap_log_err("*** setup_pki_ssl: (D)TLS: Unknown key type %d\n",
-                 setup_data->pki_key.key_type);
-    return 0;
+  } else if (role == COAP_DTLS_ROLE_SERVER ||
+             (key.key.define.private_key.u_byte &&
+              key.key.define.private_key.u_byte[0])) {
+    return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                  COAP_DEFINE_FAIL_NONE,
+                                  &key, role, 0);
   }
+#if defined(HAVE_RPK) && LIBWOLFSSL_VERSION_HEX >= 0x05006004
+  else {
+    char stype[] = {WOLFSSL_CERT_TYPE_X509, WOLFSSL_CERT_TYPE_RPK};
+    wolfSSL_set_server_cert_type(ssl, stype, sizeof(stype)/sizeof(stype[0]));
+  }
+#endif /* HAVE_RPK && LIBWOLFSSL_VERSION_HEX >= 0x05006004 */
 
+  /*
+   * Configure the CA
+   */
+  if (setup_data->check_common_ca && key.key.define.ca.u_byte &&
+      key.key.define.ca.u_byte[0]) {
+    switch (key.key.define.ca_def) {
+    case COAP_PKI_KEY_DEF_PEM:
+      if (!wolfSSL_CTX_load_verify_locations_ex(ctx,
+                                                key.key.define.ca.s_byte,
+                                                NULL,
+                                                setup_data->allow_expired_certs ?
+                                                WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_PEM_BUF: /* define ca */
+      if (!wolfSSL_CTX_load_verify_buffer_ex(ctx,
+                                             key.key.define.ca.u_byte,
+                                             key.key.define.ca_len,
+                                             SSL_FILETYPE_PEM,
+                                             0,
+                                             setup_data->allow_expired_certs ?
+                                             WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_RPK_BUF: /* define ca */
+      /* Ignore if set */
+      break;
+    case COAP_PKI_KEY_DEF_DER: /* define ca */
+      if (!wolfSSL_CTX_load_verify_locations_ex(ctx,
+                                                key.key.define.ca.s_byte,
+                                                NULL,
+                                                setup_data->allow_expired_certs ?
+                                                WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define ca */
+      if (!wolfSSL_CTX_load_verify_buffer_ex(ctx,
+                                             key.key.define.ca.u_byte,
+                                             key.key.define.ca_len,
+                                             SSL_FILETYPE_ASN1,
+                                             0,
+                                             setup_data->allow_expired_certs ?
+                                             WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, 0);
+      }
+      break;
+    case COAP_PKI_KEY_DEF_PKCS11: /* define ca */
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define ca */
+    case COAP_PKI_KEY_DEF_ENGINE: /* define ca */
+    default:
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, 0);
+    }
+  }
   return 1;
 }
 

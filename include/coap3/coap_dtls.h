@@ -281,10 +281,13 @@ typedef enum {
                                  Length required. */
   COAP_PKI_KEY_DEF_DER,     /**< The PKI key type is DER file.
                                  Length ignored, NULL terminated. */
-  COAP_PKI_KEY_DEF_ASN1,    /**< The PKI key type is ASN.1 (DER) buffer.
+  COAP_PKI_KEY_DEF_DER_BUF, /**< The PKI key type is DER buffer (ASN.1).
                                  Length required.
                                  Private Key Type required. */
   COAP_PKI_KEY_DEF_PKCS11,  /**< The PKI key type is PKCS11 (pkcs11:...).
+                                 Length ignored, NULL terminated.
+                                 User Pin optional. */
+  COAP_PKI_KEY_DEF_PKCS11_RPK, /**< The PKI key type is PKCS11 w/ RPK (pkcs11:...).
                                  Length ignored, NULL terminated.
                                  User Pin optional. */
   COAP_PKI_KEY_DEF_ENGINE,  /**< The PKI key type is to be passed to ENGINE.
