@@ -1105,8 +1105,10 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         coap_log_debug("call custom handler for resource '%*.*s' (4)\n",
                        (int)r->uri_path->length, (int)r->uri_path->length,
                        r->uri_path->s);
-        coap_lock_callback(obs->session->context,
-                           h(r, obs->session, obs->pdu, query, response));
+        coap_lock_callback_release(obs->session->context,
+                                   h(r, obs->session, obs->pdu, query, response),
+                                   /* context is being freed off */
+                                   return);
 
         /* Check validity of response code */
         if (!coap_check_code_class(obs->session, response)) {

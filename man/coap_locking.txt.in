@@ -17,7 +17,9 @@ coap_lock_unlock,
 coap_lock_being_freed,
 coap_lock_check_locked,
 coap_lock_callback,
+coap_lock_callback_release,
 coap_lock_callback_ret,
+coap_lock_callback_ret_release,
 coap_lock_invert
 - Work with CoAP thread safe locking
 
@@ -42,6 +44,12 @@ coap_func_t _callback_function_);*
 *void coap_lock_callback_ret(void *_return_value_, coap_context_t *_context_,
 coap_func_t _callback_function_, coap_code_t _failed_statement_);*
 
+*void coap_lock_callback_release(coap_context_t *_context_,
+coap_func_t _callback_function__, coap_code_t _failed_statement_);*
+
+*void coap_lock_callback_ret_release(void *_return_value_, coap_context_t *_context_,
+coap_func_t _callback_function_, coap_code_t _failed_statement_);*
+
 *void coap_lock_invert(coap_context_t *_context_, coap_func_t _locking_function_,
 coap_code_t _failed_statement_);*
 
@@ -62,7 +70,8 @@ what levels of locking has been configured. Locking uses *coap_mutex_*()
 functions.
 
 So, _failed_statement_ is the C code to execute if the
-locking fails for any reason.
+locking fails for any reason. This should only happen when an another
+thread has called *coap_free_context*(3).
 
 Likewise, _callback_function_ is the callback handler function with all of
 its parameters.
@@ -148,6 +157,22 @@ callback handler to be called, along with all of the appropriate parameters.
 The *coap_lock_callback_ret*() function is similar to *coap_lock_callback*(),
 but in addition, it updates the return value from the callback handler function
 in _return_value_.
+
+*Function: coap_lock_callback_release()*
+
+The *coap_lock_callback_release*() function is used whenever a callback handler is
+getting called, instead of calling the function directly. The lock information
+in _context_ is released so that if a public API is called from within the handler,
+it can do its own lock. The intent here is to reduce lock contention.  On return
+from the callback, the lock in _context_ is re-locked, but if there is a failure in
+re-locking, _failed_statement_ is executed. _callback_function_ is the
+callback handler to be called, along with all of the appropriate parameters.
+
+*Function: coap_lock_callback_ret_release()*
+
+The *coap_lock_callback_ret_release*() function is similar to
+*coap_lock_callback_release*(), but in addition, it updates the return value from the
+callback handler function in _return_value_.
 
 *Function: coap_lock_invert()*
 

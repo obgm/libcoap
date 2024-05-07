@@ -85,7 +85,9 @@ const char *define_list[] = {
   "coap_lock_being_freed(",
   "coap_lock_check_locked(",
   "coap_lock_callback(",
+  "coap_lock_callback_release(",
   "coap_lock_callback_ret(",
+  "coap_lock_callback_ret_release(",
   "coap_lock_invert(",
 };
 

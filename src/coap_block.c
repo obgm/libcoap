@@ -3947,9 +3947,11 @@ give_to_app:
                                   p->app_token->s);
               coap_remove_option(sent, p->block_option);
             }
-            coap_lock_callback_ret(ret, session->context,
-                                   context->response_handler(session, sent, rcvd,
-                                                             rcvd->mid));
+            coap_lock_callback_ret_release(ret, session->context,
+                                           context->response_handler(session, sent, rcvd,
+                                                                     rcvd->mid),
+                                           /* context is being freed off */
+                                           assert(0));
             if (ret == COAP_RESPONSE_FAIL) {
               coap_send_rst(session, rcvd);
             } else {
