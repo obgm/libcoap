@@ -505,118 +505,60 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
                       coap_session_t *c_session,
                       coap_dtls_pki_t *setup_data,
                       coap_dtls_role_t role) {
+  coap_dtls_key_t key;
   int ret;
+  int done_private_key = 0;
+  int done_public_cert = 0;
+  uint8_t *buffer;
+  size_t length;
 
-  if (setup_data->is_rpk_not_cert) {
-    coap_log_err("RPK Support not available in Mbed TLS\n");
-    return -1;
-  }
-  switch (setup_data->pki_key.key_type) {
-  case COAP_PKI_KEY_PEM:
+  /* Map over to the new define format to save code duplication */
+  coap_dtls_map_key_type_to_define(setup_data, &key);
+
+  assert(key.key_type == COAP_PKI_KEY_DEFINE);
+
+  /*
+   * Configure the Private Key
+   */
+  if (key.key.define.private_key.u_byte &&
+      key.key.define.private_key.u_byte[0]) {
+    switch (key.key.define.private_key_def) {
+    case COAP_PKI_KEY_DEF_DER: /* define private key */
+    /* Fall Through */
+    case COAP_PKI_KEY_DEF_PEM: /* define private key */
 #if defined(MBEDTLS_FS_IO)
-    if (setup_data->pki_key.key.pem.public_cert &&
-        setup_data->pki_key.key.pem.public_cert[0] &&
-        setup_data->pki_key.key.pem.private_key &&
-        setup_data->pki_key.key.pem.private_key[0]) {
-
-      mbedtls_x509_crt_init(public_cert);
       mbedtls_pk_init(private_key);
-
-      ret = mbedtls_x509_crt_parse_file(public_cert,
-                                        setup_data->pki_key.key.pem.public_cert);
-      if (ret < 0) {
-        coap_log_err("mbedtls_x509_crt_parse_file returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
-      }
-
 #ifdef MBEDTLS_2_X_COMPAT
       ret = mbedtls_pk_parse_keyfile(private_key,
-                                     setup_data->pki_key.key.pem.private_key, NULL);
+                                     key.key.define.private_key.s_byte, NULL);
 #else
       ret = mbedtls_pk_parse_keyfile(private_key,
-                                     setup_data->pki_key.key.pem.private_key,
+                                     key.key.define.private_key.s_byte,
                                      NULL, coap_rng, (void *)&m_env->ctr_drbg);
 #endif /* MBEDTLS_2_X_COMPAT */
       if (ret < 0) {
-        coap_log_err("mbedtls_pk_parse_keyfile returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, ret);
       }
-
-      ret = mbedtls_ssl_conf_own_cert(&m_env->conf, public_cert, private_key);
-      if (ret < 0) {
-        coap_log_err("mbedtls_ssl_conf_own_cert returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
-      }
-    } else if (role == COAP_DTLS_ROLE_SERVER) {
-      coap_log_err("***setup_pki: (D)TLS: No Server Certificate + Private "
-                   "Key defined\n");
-      return -1;
-    }
-
-    if (setup_data->pki_key.key.pem.ca_file &&
-        setup_data->pki_key.key.pem.ca_file[0]) {
-      mbedtls_x509_crt_init(cacert);
-      ret = mbedtls_x509_crt_parse_file(cacert,
-                                        setup_data->pki_key.key.pem.ca_file);
-      if (ret < 0) {
-        coap_log_err("mbedtls_x509_crt_parse returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
-      }
-      mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
-    }
+      done_private_key = 1;
+      break;
 #else /* ! MBEDTLS_FS_IO */
-    (void)m_context;
-    coap_log_err("mbedtls_x509_crt_parse_file: MBEDTLS_FS_IO not set, so cannot handle files\n");
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, -1);
 #endif /* ! MBEDTLS_FS_IO */
-    break;
-  case COAP_PKI_KEY_PEM_BUF:
-    if (setup_data->pki_key.key.pem_buf.public_cert &&
-        setup_data->pki_key.key.pem_buf.public_cert_len &&
-        setup_data->pki_key.key.pem_buf.private_key &&
-        setup_data->pki_key.key.pem_buf.private_key_len) {
-      uint8_t *buffer;
-      size_t length;
-
-      mbedtls_x509_crt_init(public_cert);
+    case COAP_PKI_KEY_DEF_PEM_BUF: /* define private key */
       mbedtls_pk_init(private_key);
-
-      length = setup_data->pki_key.key.pem_buf.public_cert_len;
-      if (setup_data->pki_key.key.pem_buf.public_cert[length-1] != '\000') {
+      length = key.key.define.private_key_len;
+      if (key.key.define.private_key.u_byte[length-1] != '\000') {
         /* Need to allocate memory to add in NULL terminator */
         buffer = mbedtls_malloc(length + 1);
         if (!buffer) {
           coap_log_err("mbedtls_malloc failed\n");
-          return MBEDTLS_ERR_SSL_ALLOC_FAILED;
+          return 0;
         }
-        memcpy(buffer, setup_data->pki_key.key.pem_buf.public_cert, length);
-        buffer[length] = '\000';
-        length++;
-        ret = mbedtls_x509_crt_parse(public_cert, buffer, length);
-        mbedtls_free(buffer);
-      } else {
-        ret = mbedtls_x509_crt_parse(public_cert,
-                                     setup_data->pki_key.key.pem_buf.public_cert,
-                                     setup_data->pki_key.key.pem_buf.public_cert_len);
-      }
-      if (ret < 0) {
-        coap_log_err("mbedtls_x509_crt_parse returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
-      }
-
-      length = setup_data->pki_key.key.pem_buf.private_key_len;
-      if (setup_data->pki_key.key.pem_buf.private_key[length-1] != '\000') {
-        /* Need to allocate memory to add in NULL terminator */
-        buffer = mbedtls_malloc(length + 1);
-        if (!buffer) {
-          coap_log_err("mbedtls_malloc failed\n");
-          return MBEDTLS_ERR_SSL_ALLOC_FAILED;
-        }
-        memcpy(buffer, setup_data->pki_key.key.pem_buf.private_key, length);
+        memcpy(buffer, key.key.define.private_key.u_byte, length);
         buffer[length] = '\000';
         length++;
 #ifdef MBEDTLS_2_X_COMPAT
@@ -629,159 +571,258 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
       } else {
 #ifdef MBEDTLS_2_X_COMPAT
         ret = mbedtls_pk_parse_key(private_key,
-                                   setup_data->pki_key.key.pem_buf.private_key,
-                                   setup_data->pki_key.key.pem_buf.private_key_len, NULL, 0);
+                                   key.key.define.private_key.u_byte,
+                                   key.key.define.private_key_len, NULL, 0);
 #else
         ret = mbedtls_pk_parse_key(private_key,
-                                   setup_data->pki_key.key.pem_buf.private_key,
-                                   setup_data->pki_key.key.pem_buf.private_key_len,
+                                   key.key.define.private_key.u_byte,
+                                   key.key.define.private_key_len,
                                    NULL, 0, coap_rng, (void *)&m_env->ctr_drbg);
 #endif /* MBEDTLS_2_X_COMPAT */
       }
       if (ret < 0) {
-        coap_log_err("mbedtls_pk_parse_key returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, ret);
       }
-
-      ret = mbedtls_ssl_conf_own_cert(&m_env->conf, public_cert, private_key);
+      done_private_key = 1;
+      break;
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define private key */
+      mbedtls_pk_init(private_key);
+#ifdef MBEDTLS_2_X_COMPAT
+      ret = mbedtls_pk_parse_key(private_key,
+                                 key.key.define.private_key.u_byte,
+                                 key.key.define.private_key_len, NULL, 0);
+#else
+      ret = mbedtls_pk_parse_key(private_key,
+                                 key.key.define.private_key.u_byte,
+                                 key.key.define.private_key_len, NULL, 0, coap_rng,
+                                 (void *)&m_env->ctr_drbg);
+#endif /* MBEDTLS_2_X_COMPAT */
       if (ret < 0) {
-        coap_log_err("mbedtls_ssl_conf_own_cert returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, ret);
       }
-    } else if (role == COAP_DTLS_ROLE_SERVER) {
-      coap_log_err("***setup_pki: (D)TLS: No Server Certificate + Private "
-                   "Key defined\n");
-      return -1;
+      done_private_key = 1;
+      break;
+    case COAP_PKI_KEY_DEF_RPK_BUF: /* define private key */
+    case COAP_PKI_KEY_DEF_PKCS11: /* define private key */
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define private key */
+    case COAP_PKI_KEY_DEF_ENGINE: /* define private key */
+    default:
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, -1);
     }
+  } else if (role == COAP_DTLS_ROLE_SERVER ||
+             (key.key.define.public_cert.u_byte &&
+              key.key.define.public_cert.u_byte[0])) {
+    return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                  COAP_DEFINE_FAIL_NONE,
+                                  &key, role, -1);
+  }
 
-    if (setup_data->pki_key.key.pem_buf.ca_cert &&
-        setup_data->pki_key.key.pem_buf.ca_cert_len) {
-      uint8_t *buffer;
-      size_t length;
+  /*
+   * Configure the Public Certificate / Key
+   */
+  if (key.key.define.public_cert.u_byte &&
+      key.key.define.public_cert.u_byte[0]) {
+    switch (key.key.define.public_cert_def) {
+    case COAP_PKI_KEY_DEF_DER: /* define public cert */
+    /* Fall Through */
+    case COAP_PKI_KEY_DEF_PEM: /* define public cert */
+#if defined(MBEDTLS_FS_IO)
+      mbedtls_x509_crt_init(public_cert);
+      ret = mbedtls_x509_crt_parse_file(public_cert,
+                                        key.key.define.public_cert.s_byte);
+      if (ret < 0) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, ret);
+      }
+      done_public_cert = 1;
+      break;
+#else /* ! MBEDTLS_FS_IO */
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, -1);
+#endif /* ! MBEDTLS_FS_IO */
+    case COAP_PKI_KEY_DEF_PEM_BUF: /* define public cert */
+      mbedtls_x509_crt_init(public_cert);
 
-      mbedtls_x509_crt_init(cacert);
-      length = setup_data->pki_key.key.pem_buf.ca_cert_len;
-      if (setup_data->pki_key.key.pem_buf.ca_cert[length-1] != '\000') {
+      length = key.key.define.public_cert_len;
+      if (key.key.define.public_cert.u_byte[length-1] != '\000') {
         /* Need to allocate memory to add in NULL terminator */
         buffer = mbedtls_malloc(length + 1);
         if (!buffer) {
           coap_log_err("mbedtls_malloc failed\n");
-          return MBEDTLS_ERR_SSL_ALLOC_FAILED;
+          return 0;
         }
-        memcpy(buffer, setup_data->pki_key.key.pem_buf.ca_cert, length);
+        memcpy(buffer, key.key.define.public_cert.u_byte, length);
+        buffer[length] = '\000';
+        length++;
+        ret = mbedtls_x509_crt_parse(public_cert, buffer, length);
+        mbedtls_free(buffer);
+      } else {
+        ret = mbedtls_x509_crt_parse(public_cert,
+                                     key.key.define.public_cert.u_byte,
+                                     key.key.define.public_cert_len);
+      }
+      if (ret < 0) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, ret);
+      }
+      done_public_cert = 1;
+      break;
+    case COAP_PKI_KEY_DEF_RPK_BUF: /* define public cert */
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, -1);
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define public cert */
+      mbedtls_x509_crt_init(public_cert);
+      ret = mbedtls_x509_crt_parse(public_cert,
+                                   key.key.define.public_cert.u_byte,
+                                   key.key.define.public_cert_len);
+      if (ret < 0) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, ret);
+      }
+      done_public_cert = 1;
+      break;
+    case COAP_PKI_KEY_DEF_PKCS11: /* define public cert */
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define public cert */
+    case COAP_PKI_KEY_DEF_ENGINE: /* define public cert */
+    default:
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, -1);
+    }
+  } else if (role == COAP_DTLS_ROLE_SERVER ||
+             (key.key.define.private_key.u_byte &&
+              key.key.define.private_key.u_byte[0])) {
+    return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                  COAP_DEFINE_FAIL_NONE,
+                                  &key, role, -1);
+  }
+
+  if (done_private_key && done_public_cert) {
+    ret = mbedtls_ssl_conf_own_cert(&m_env->conf, public_cert, private_key);
+    if (ret < 0) {
+      coap_log_err("mbedtls_ssl_conf_own_cert returned -0x%x: '%s'\n",
+                   -ret, get_error_string(ret));
+      return 0;
+    }
+  }
+
+  /*
+   * Configure the CA
+   */
+  if (setup_data->check_common_ca && key.key.define.ca.u_byte &&
+      key.key.define.ca.u_byte[0]) {
+    switch (key.key.define.ca_def) {
+    case COAP_PKI_KEY_DEF_DER: /* define ca */
+    /* Fall Through */
+    case COAP_PKI_KEY_DEF_PEM:
+#if defined(MBEDTLS_FS_IO)
+      mbedtls_x509_crt_init(cacert);
+      ret = mbedtls_x509_crt_parse_file(cacert,
+                                        key.key.define.ca.s_byte);
+      if (ret < 0) {
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, ret);
+      }
+      mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
+#else /* ! MBEDTLS_FS_IO */
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, -1);
+#endif /* ! MBEDTLS_FS_IO */
+      break;
+    case COAP_PKI_KEY_DEF_PEM_BUF: /* define ca */
+      mbedtls_x509_crt_init(cacert);
+      length = key.key.define.ca_len;
+      if (key.key.define.ca.u_byte[length-1] != '\000') {
+        /* Need to allocate memory to add in NULL terminator */
+        buffer = mbedtls_malloc(length + 1);
+        if (!buffer) {
+          coap_log_err("mbedtls_malloc failed\n");
+          return 0;
+        }
+        memcpy(buffer, key.key.define.ca.u_byte, length);
         buffer[length] = '\000';
         length++;
         ret = mbedtls_x509_crt_parse(cacert, buffer, length);
         mbedtls_free(buffer);
       } else {
         ret = mbedtls_x509_crt_parse(cacert,
-                                     setup_data->pki_key.key.pem_buf.ca_cert,
-                                     setup_data->pki_key.key.pem_buf.ca_cert_len);
+                                     key.key.define.ca.u_byte,
+                                     key.key.define.ca_len);
       }
       if (ret < 0) {
-        coap_log_err("mbedtls_x509_crt_parse returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, ret);
       }
       mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
-    }
-    break;
-  case COAP_PKI_KEY_ASN1:
-    if (setup_data->pki_key.key.asn1.public_cert &&
-        setup_data->pki_key.key.asn1.public_cert_len &&
-        setup_data->pki_key.key.asn1.private_key &&
-        setup_data->pki_key.key.asn1.private_key_len > 0) {
-
-      mbedtls_x509_crt_init(public_cert);
-      mbedtls_pk_init(private_key);
-      ret = mbedtls_x509_crt_parse(public_cert,
-                                   (const unsigned char *)setup_data->pki_key.key.asn1.public_cert,
-                                   setup_data->pki_key.key.asn1.public_cert_len);
-      if (ret < 0) {
-        coap_log_err("mbedtls_x509_crt_parse returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
-      }
-
-#ifdef MBEDTLS_2_X_COMPAT
-      ret = mbedtls_pk_parse_key(private_key,
-                                 (const unsigned char *)setup_data->pki_key.key.asn1.private_key,
-                                 setup_data->pki_key.key.asn1.private_key_len, NULL, 0);
-#else
-      ret = mbedtls_pk_parse_key(private_key,
-                                 (const unsigned char *)setup_data->pki_key.key.asn1.private_key,
-                                 setup_data->pki_key.key.asn1.private_key_len, NULL, 0, coap_rng,
-                                 (void *)&m_env->ctr_drbg);
-#endif /* MBEDTLS_2_X_COMPAT */
-      if (ret < 0) {
-        coap_log_err("mbedtls_pk_parse_key returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
-      }
-
-      ret = mbedtls_ssl_conf_own_cert(&m_env->conf, public_cert, private_key);
-      if (ret < 0) {
-        coap_log_err("mbedtls_ssl_conf_own_cert returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
-      }
-    } else if (role == COAP_DTLS_ROLE_SERVER) {
-      coap_log_err("***setup_pki: (D)TLS: No Server Certificate + Private "
-                   "Key defined\n");
-      return -1;
-    }
-
-    if (setup_data->pki_key.key.asn1.ca_cert &&
-        setup_data->pki_key.key.asn1.ca_cert_len > 0) {
+      break;
+    case COAP_PKI_KEY_DEF_RPK_BUF: /* define ca */
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, -1);
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define ca */
       mbedtls_x509_crt_init(cacert);
       ret = mbedtls_x509_crt_parse(cacert,
-                                   (const unsigned char *)setup_data->pki_key.key.asn1.ca_cert,
-                                   setup_data->pki_key.key.asn1.ca_cert_len);
+                                   key.key.define.ca.u_byte,
+                                   key.key.define.ca_len);
       if (ret < 0) {
-        coap_log_err("mbedtls_x509_crt_parse returned -0x%x: '%s'\n",
-                     -ret, get_error_string(ret));
-        return ret;
+        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                      COAP_DEFINE_FAIL_BAD,
+                                      &key, role, ret);
       }
       mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
+      break;
+    case COAP_PKI_KEY_DEF_PKCS11: /* define ca */
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define ca */
+    case COAP_PKI_KEY_DEF_ENGINE: /* define ca */
+    default:
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                    &key, role, -1);
     }
-    break;
-
-  case COAP_PKI_KEY_PKCS11:
-    coap_log_err("***setup_pki: (D)TLS: PKCS11 not currently supported\n");
-    return -1;
-
-  case COAP_PKI_KEY_DEFINE:
-    coap_log_err("*** setup_pki: (D)TLS: PKI type DEFINE not (yet) supported\n");
-    break;
-  default:
-    coap_log_err("***setup_pki: (D)TLS: Unknown key type %d\n",
-                 setup_data->pki_key.key_type);
-    return -1;
   }
+
+  /* Add in any root CA definitons */
 
 #if defined(MBEDTLS_FS_IO)
   if (m_context->root_ca_file) {
     ret = mbedtls_x509_crt_parse_file(cacert, m_context->root_ca_file);
     if (ret < 0) {
-      coap_log_err("mbedtls_x509_crt_parse returned -0x%x: '%s'\n",
-                   -ret, get_error_string(ret));
-      return ret;
+      key.key.define.ca_def = COAP_PKI_KEY_DEF_PEM;
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_ROOT_CA,
+                                    COAP_DEFINE_FAIL_BAD,
+                                    &key, role, ret);
     }
     mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
   }
   if (m_context->root_ca_path) {
     ret = mbedtls_x509_crt_parse_file(cacert, m_context->root_ca_path);
     if (ret < 0) {
-      coap_log_err("mbedtls_x509_crt_parse returned -0x%x: '%s'\n",
-                   -ret, get_error_string(ret));
-      return ret;
+      key.key.define.ca_def = COAP_PKI_KEY_DEF_PEM;
+      return coap_dtls_define_issue(COAP_DEFINE_KEY_ROOT_CA,
+                                    COAP_DEFINE_FAIL_BAD,
+                                    &key, role, ret);
     }
     mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
   }
 #else /* ! MBEDTLS_FS_IO */
-  coap_log_err("mbedtls_x509_crt_parse_file: MBEDTLS_FS_IO not set, so cannot handle files\n");
+  (void)m_context;
+  return coap_dtls_define_issue(COAP_DEFINE_KEY_ROOT_CA,
+                                COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                &key, role, -1);
 #endif /* ! MBEDTLS_FS_IO */
 
 #if defined(MBEDTLS_SSL_SRV_C)
@@ -800,7 +841,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
   mbedtls_ssl_conf_verify(&m_env->conf,
                           cert_verify_callback_mbedtls, c_session);
 
-  return 0;
+  return 1;
 }
 
 #if defined(MBEDTLS_SSL_SRV_C)
@@ -816,7 +857,6 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
   coap_mbedtls_context_t *m_context =
       (coap_mbedtls_context_t *)c_session->context->dtls_context;
-  int ret = 0;
   char *name;
 
   name = mbedtls_malloc(name_len+1);
@@ -861,13 +901,13 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
     m_context->pki_sni_entry_list[i].pki_key = *new_entry;
     sni_setup_data = m_context->setup_data;
     sni_setup_data.pki_key = *new_entry;
-    if ((ret = setup_pki_credentials(&m_context->pki_sni_entry_list[i].cacert,
-                                     &m_context->pki_sni_entry_list[i].public_cert,
-                                     &m_context->pki_sni_entry_list[i].private_key,
-                                     m_env,
-                                     m_context,
-                                     c_session,
-                                     &sni_setup_data, COAP_DTLS_ROLE_SERVER)) < 0) {
+    if (setup_pki_credentials(&m_context->pki_sni_entry_list[i].cacert,
+                              &m_context->pki_sni_entry_list[i].public_cert,
+                              &m_context->pki_sni_entry_list[i].private_key,
+                              m_env,
+                              m_context,
+                              c_session,
+                              &sni_setup_data, COAP_DTLS_ROLE_SERVER) < 0) {
       mbedtls_free(name);
       return -1;
     }

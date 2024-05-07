@@ -45,6 +45,7 @@
 
 typedef enum {
   COAP_DEFINE_KEY_CA,
+  COAP_DEFINE_KEY_ROOT_CA,
   COAP_DEFINE_KEY_PUBLIC,
   COAP_DEFINE_KEY_PRIVATE
 } coap_define_issue_key_t;
@@ -468,16 +469,18 @@ void coap_dtls_map_key_type_to_define(const coap_dtls_pki_t *setup_data,
  * Report PKI DEFINE type issue
  *
  * @param type The type of key with the issue.
- * @param fail Why the key is failing
+ * @param fail Why the key is failing.
  * @param key The key with the issue.
- * @param role Whether this is for the CLient or Server.
+ * @param role Whether this is for the Client or Server.
+ * @param ret Value to return.
  *
  * @return @c 0 as there is a failure.
  */
 int coap_dtls_define_issue(coap_define_issue_key_t type,
                            coap_define_issue_fail_t fail,
                            coap_dtls_key_t *key,
-                           const coap_dtls_role_t role);
+                           const coap_dtls_role_t role,
+                           int ret);
 /** @} */
 
 #endif /* COAP_DTLS_INTERNAL_H */

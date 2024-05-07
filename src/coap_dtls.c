@@ -49,9 +49,9 @@ coap_dtls_map_key_type_to_define(const coap_dtls_pki_t *setup_data, coap_dtls_ke
 
     key->key.define.private_key_type = setup_data->pki_key.key.asn1.private_key_type;
 
-    key->key.define.public_cert_def = COAP_PKI_KEY_DEF_ASN1;
-    key->key.define.private_key_def = COAP_PKI_KEY_DEF_ASN1;
-    key->key.define.ca_def = COAP_PKI_KEY_DEF_ASN1;
+    key->key.define.public_cert_def = COAP_PKI_KEY_DEF_DER_BUF;
+    key->key.define.private_key_def = COAP_PKI_KEY_DEF_DER_BUF;
+    key->key.define.ca_def = COAP_PKI_KEY_DEF_DER_BUF;
     break;
   case COAP_PKI_KEY_PEM_BUF:
     key->key_type = COAP_PKI_KEY_DEFINE;
@@ -88,19 +88,43 @@ coap_dtls_map_key_type_to_define(const coap_dtls_pki_t *setup_data, coap_dtls_ke
     key->key.define.user_pin = setup_data->pki_key.key.pkcs11.user_pin;
 
     if (strncasecmp(key->key.pkcs11.ca, "pkcs11:", 7) == 0) {
-      key->key.define.ca_def = COAP_PKI_KEY_DEF_PKCS11;
+      if (setup_data->is_rpk_not_cert) {
+        key->key.define.ca_def = COAP_PKI_KEY_DEF_PKCS11_RPK;
+      } else {
+        key->key.define.ca_def = COAP_PKI_KEY_DEF_PKCS11;
+      }
     } else {
-      key->key.define.ca_def = COAP_PKI_KEY_DEF_DER;
+      if (setup_data->is_rpk_not_cert) {
+        key->key.define.ca_def = COAP_PKI_KEY_DEF_RPK_BUF;
+      } else {
+        key->key.define.ca_def = COAP_PKI_KEY_DEF_DER;
+      }
     }
     if (strncasecmp(key->key.pkcs11.public_cert, "pkcs11:", 7) == 0) {
-      key->key.define.public_cert_def = COAP_PKI_KEY_DEF_PKCS11;
+      if (setup_data->is_rpk_not_cert) {
+        key->key.define.public_cert_def = COAP_PKI_KEY_DEF_PKCS11_RPK;
+      } else {
+        key->key.define.public_cert_def = COAP_PKI_KEY_DEF_PKCS11;
+      }
     } else {
-      key->key.define.public_cert_def = COAP_PKI_KEY_DEF_DER;
+      if (setup_data->is_rpk_not_cert) {
+        key->key.define.public_cert_def = COAP_PKI_KEY_DEF_RPK_BUF;
+      } else {
+        key->key.define.public_cert_def = COAP_PKI_KEY_DEF_DER;
+      }
     }
     if (strncasecmp(key->key.pkcs11.private_key, "pkcs11:", 7) == 0) {
-      key->key.define.private_key_def = COAP_PKI_KEY_DEF_PKCS11;
+      if (setup_data->is_rpk_not_cert) {
+        key->key.define.private_key_def = COAP_PKI_KEY_DEF_PKCS11_RPK;
+      } else {
+        key->key.define.private_key_def = COAP_PKI_KEY_DEF_PKCS11;
+      }
     } else {
-      key->key.define.private_key_def = COAP_PKI_KEY_DEF_DER;
+      if (setup_data->is_rpk_not_cert) {
+        key->key.define.private_key_def = COAP_PKI_KEY_DEF_RPK_BUF;
+      } else {
+        key->key.define.private_key_def = COAP_PKI_KEY_DEF_DER;
+      }
     }
     break;
   case COAP_PKI_KEY_DEFINE:
@@ -123,9 +147,11 @@ coap_dtls_get_define_type(coap_pki_define_t def, coap_const_char_ptr_t name) {
     return "RPK_BUF";
   case COAP_PKI_KEY_DEF_DER:
     return name.s_byte;
-  case COAP_PKI_KEY_DEF_ASN1:
-    return "ASN1";
+  case COAP_PKI_KEY_DEF_DER_BUF:
+    return "DER_BUF";
   case COAP_PKI_KEY_DEF_PKCS11:
+    return name.s_byte;
+  case COAP_PKI_KEY_DEF_PKCS11_RPK:
     return name.s_byte;
   case COAP_PKI_KEY_DEF_ENGINE:
     return name.s_byte;
@@ -137,7 +163,7 @@ coap_dtls_get_define_type(coap_pki_define_t def, coap_const_char_ptr_t name) {
 
 int
 coap_dtls_define_issue(coap_define_issue_key_t type, coap_define_issue_fail_t fail,
-                       coap_dtls_key_t *key, const coap_dtls_role_t role) {
+                       coap_dtls_key_t *key, const coap_dtls_role_t role, int ret) {
 #if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_ERR)
   coap_pki_key_define_t define = key->key.define;
   switch (type) {
@@ -155,6 +181,27 @@ coap_dtls_define_issue(coap_define_issue_key_t type, coap_define_issue_fail_t fa
       break;
     case COAP_DEFINE_FAIL_NONE:
       coap_log_err("*** setup_pki: (D)TLS: %s: %s CA not defined\n",
+                   coap_dtls_get_define_type(define.ca_def, define.ca),
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+      break;
+    default:
+      break;
+    }
+    break;
+  case COAP_DEFINE_KEY_ROOT_CA:
+    switch (fail) {
+    case COAP_DEFINE_FAIL_BAD:
+      coap_log_warn("*** setup_pki: (D)TLS: %s: %s Root CA configure failure\n",
+                    coap_dtls_get_define_type(define.ca_def, define.ca),
+                    role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+      break;
+    case COAP_DEFINE_FAIL_NOT_SUPPORTED:
+      coap_log_err("*** setup_pki: (D)TLS: %s: %s Root CA type not supported\n",
+                   coap_dtls_get_define_type(define.ca_def, define.ca),
+                   role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+      break;
+    case COAP_DEFINE_FAIL_NONE:
+      coap_log_err("*** setup_pki: (D)TLS: %s: %s Root CA not defined\n",
                    coap_dtls_get_define_type(define.ca_def, define.ca),
                    role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
       break;
@@ -212,7 +259,7 @@ coap_dtls_define_issue(coap_define_issue_key_t type, coap_define_issue_fail_t fa
   (void)key;
   (void)role;
 #endif /* COAP_MAX_LOGGING_LEVEL < _COAP_LOG_ERR */
-  return 0;
+  return ret;
 }
 
 void

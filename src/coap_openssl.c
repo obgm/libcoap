@@ -1541,7 +1541,7 @@ setup_pki_server(SSL_CTX *ctx,
                                         SSL_FILETYPE_PEM))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define private key */
@@ -1557,7 +1557,7 @@ setup_pki_server(SSL_CTX *ctx,
             EVP_PKEY_free(pkey);
           return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                         COAP_DEFINE_FAIL_BAD,
-                                        &key, COAP_DTLS_ROLE_SERVER);
+                                        &key, COAP_DTLS_ROLE_SERVER, 0);
         }
         if (bp)
           BIO_free(bp);
@@ -1566,23 +1566,23 @@ setup_pki_server(SSL_CTX *ctx,
       } else {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_NONE,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define private key */
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, COAP_DTLS_ROLE_SERVER);
+                                    &key, COAP_DTLS_ROLE_SERVER, 0);
     case COAP_PKI_KEY_DEF_DER: /* define private key */
       if (!(SSL_CTX_use_PrivateKey_file(ctx,
                                         key.key.define.private_key.s_byte,
                                         SSL_FILETYPE_ASN1))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
-    case COAP_PKI_KEY_DEF_ASN1: /* define private key */
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define private key */
       if (key.key.define.private_key_len == 0 ||
           !(SSL_CTX_use_PrivateKey_ASN1(map_key_type(key.key.define.private_key_type),
                                         ctx,
@@ -1590,7 +1590,7 @@ setup_pki_server(SSL_CTX *ctx,
                                         (long)key.key.define.private_key_len))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PKCS11: /* define private key */
@@ -1611,7 +1611,7 @@ setup_pki_server(SSL_CTX *ctx,
                                           key.key.define.private_key.s_byte)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_ENGINE: /* define private key */
@@ -1620,18 +1620,19 @@ setup_pki_server(SSL_CTX *ctx,
                                           key.key.define.private_key.s_byte)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define private key */
     default:
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, COAP_DTLS_ROLE_SERVER);
+                                    &key, COAP_DTLS_ROLE_SERVER, 0);
     }
   } else if (key.key.define.public_cert.u_byte && key.key.define.public_cert.u_byte[0]) {
     return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                   COAP_DEFINE_FAIL_NONE,
-                                  &key, COAP_DTLS_ROLE_SERVER);
+                                  &key, COAP_DTLS_ROLE_SERVER, 0);
   }
 
   /*
@@ -1642,12 +1643,11 @@ setup_pki_server(SSL_CTX *ctx,
       key.key.define.public_cert.u_byte[0]) {
     switch (key.key.define.public_cert_def) {
     case COAP_PKI_KEY_DEF_PEM: /* define public cert */
-      if (!(SSL_CTX_use_certificate_file(ctx,
-                                         key.key.define.public_cert.s_byte,
-                                         SSL_FILETYPE_PEM))) {
+      if (!(SSL_CTX_use_certificate_chain_file(ctx,
+                                               key.key.define.public_cert.s_byte))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define public cert */
@@ -1663,7 +1663,7 @@ setup_pki_server(SSL_CTX *ctx,
             X509_free(cert);
           return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                         COAP_DEFINE_FAIL_BAD,
-                                        &key, COAP_DTLS_ROLE_SERVER);
+                                        &key, COAP_DTLS_ROLE_SERVER, 0);
         }
         if (bp)
           BIO_free(bp);
@@ -1672,30 +1672,30 @@ setup_pki_server(SSL_CTX *ctx,
       } else {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define public cert */
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, COAP_DTLS_ROLE_SERVER);
+                                    &key, COAP_DTLS_ROLE_SERVER, 0);
     case COAP_PKI_KEY_DEF_DER: /* define public cert */
       if (!(SSL_CTX_use_certificate_file(ctx,
                                          key.key.define.public_cert.s_byte,
                                          SSL_FILETYPE_ASN1))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
-    case COAP_PKI_KEY_DEF_ASN1: /* define public cert */
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define public cert */
       if (key.key.define.public_cert_len == 0 ||
           !(SSL_CTX_use_certificate_ASN1(ctx,
                                          (int)key.key.define.public_cert_len,
                                          key.key.define.public_cert.u_byte))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PKCS11: /* define public cert */
@@ -1706,7 +1706,7 @@ setup_pki_server(SSL_CTX *ctx,
                                           key.key.define.public_cert.s_byte)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_ENGINE: /* define public cert */
@@ -1715,19 +1715,20 @@ setup_pki_server(SSL_CTX *ctx,
                                           key.key.define.public_cert.s_byte)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define public cert */
     default:
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, COAP_DTLS_ROLE_SERVER);
+                                    &key, COAP_DTLS_ROLE_SERVER, 0);
     }
   } else if (key.key.define.private_key.u_byte &&
              key.key.define.private_key.u_byte[0]) {
     return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                   COAP_DEFINE_FAIL_NONE,
-                                  &key, COAP_DTLS_ROLE_SERVER);
+                                  &key, COAP_DTLS_ROLE_SERVER, 0);
   }
 
   /*
@@ -1740,7 +1741,7 @@ setup_pki_server(SSL_CTX *ctx,
       if (!load_in_cas_ctx(ctx, key.key.define.ca.s_byte)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define ca */
@@ -1763,23 +1764,23 @@ setup_pki_server(SSL_CTX *ctx,
       } else {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define ca */
       return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, COAP_DTLS_ROLE_SERVER);
+                                    &key, COAP_DTLS_ROLE_SERVER, 0);
     case COAP_PKI_KEY_DEF_DER: /* define ca */
       if (!(SSL_CTX_use_certificate_file(ctx,
                                          key.key.define.ca.s_byte,
                                          SSL_FILETYPE_ASN1))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
-    case COAP_PKI_KEY_DEF_ASN1: /* define ca */
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define ca */
       if (key.key.define.ca_len > 0) {
         /* Need to use a temp variable as it gets incremented*/
         const uint8_t *p = key.key.define.ca.u_byte;
@@ -1790,7 +1791,7 @@ setup_pki_server(SSL_CTX *ctx,
           X509_free(x509);
           return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                         COAP_DEFINE_FAIL_BAD,
-                                        &key, COAP_DTLS_ROLE_SERVER);
+                                        &key, COAP_DTLS_ROLE_SERVER, 0);
         }
 
         /* Add CA to the trusted root CA store */
@@ -1807,7 +1808,7 @@ setup_pki_server(SSL_CTX *ctx,
                                  key.key.define.ca.s_byte)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_ENGINE: /* define ca */
@@ -1816,13 +1817,14 @@ setup_pki_server(SSL_CTX *ctx,
                                  key.key.define.ca.s_byte)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER);
+                                      &key, COAP_DTLS_ROLE_SERVER, 0);
       }
       break;
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define ca */
     default:
       return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, COAP_DTLS_ROLE_SERVER);
+                                    &key, COAP_DTLS_ROLE_SERVER, 0);
     }
   }
 
@@ -1973,7 +1975,7 @@ setup_pki_ssl(SSL *ssl,
                                     SSL_FILETYPE_PEM))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define private key */
@@ -1989,7 +1991,7 @@ setup_pki_ssl(SSL *ssl,
             EVP_PKEY_free(pkey);
           return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                         COAP_DEFINE_FAIL_BAD,
-                                        &key, role);
+                                        &key, role, 0);
         }
         if (bp)
           BIO_free(bp);
@@ -1998,23 +2000,23 @@ setup_pki_ssl(SSL *ssl,
       } else {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_NONE,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define private key */
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role);
+                                    &key, role, 0);
     case COAP_PKI_KEY_DEF_DER: /* define private key */
       if (!(SSL_use_PrivateKey_file(ssl,
                                     key.key.define.private_key.s_byte,
                                     SSL_FILETYPE_ASN1))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
-    case COAP_PKI_KEY_DEF_ASN1: /* define private key */
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define private key */
       if (key.key.define.private_key_len == 0 ||
           !(SSL_use_PrivateKey_ASN1(map_key_type(key.key.define.private_key_type),
                                     ssl,
@@ -2022,7 +2024,7 @@ setup_pki_ssl(SSL *ssl,
                                     (long)key.key.define.private_key_len))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PKCS11: /* define private key */
@@ -2044,7 +2046,7 @@ setup_pki_ssl(SSL *ssl,
                                       role)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_ENGINE: /* define private key */
@@ -2054,20 +2056,21 @@ setup_pki_ssl(SSL *ssl,
                                       role)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define private key */
     default:
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role);
+                                    &key, role, 0);
     }
   } else if (role == COAP_DTLS_ROLE_SERVER ||
              (key.key.define.public_cert.u_byte &&
               key.key.define.public_cert.u_byte[0])) {
     return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                   COAP_DEFINE_FAIL_NONE,
-                                  &key, role);
+                                  &key, role, 0);
   }
 
   /*
@@ -2077,12 +2080,11 @@ setup_pki_ssl(SSL *ssl,
       key.key.define.public_cert.u_byte[0]) {
     switch (key.key.define.public_cert_def) {
     case COAP_PKI_KEY_DEF_PEM: /* define public cert */
-      if (!(SSL_use_certificate_file(ssl,
-                                     key.key.define.public_cert.s_byte,
-                                     SSL_FILETYPE_PEM))) {
+      if (!(SSL_use_certificate_chain_file(ssl,
+                                           key.key.define.public_cert.s_byte))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define public cert */
@@ -2098,7 +2100,7 @@ setup_pki_ssl(SSL *ssl,
             X509_free(cert);
           return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                         COAP_DEFINE_FAIL_BAD,
-                                        &key, role);
+                                        &key, role, 0);
         }
         if (bp)
           BIO_free(bp);
@@ -2107,30 +2109,30 @@ setup_pki_ssl(SSL *ssl,
       } else {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define public cert */
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role);
+                                    &key, role, 0);
     case COAP_PKI_KEY_DEF_DER: /* define public cert */
       if (!(SSL_use_certificate_file(ssl,
                                      key.key.define.public_cert.s_byte,
                                      SSL_FILETYPE_ASN1))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
-    case COAP_PKI_KEY_DEF_ASN1: /* define public cert */
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define public cert */
       if (key.key.define.public_cert_len == 0 ||
           !(SSL_use_certificate_ASN1(ssl,
                                      key.key.define.public_cert.u_byte,
                                      (int)key.key.define.public_cert_len))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PKCS11: /* define public cert */
@@ -2142,7 +2144,7 @@ setup_pki_ssl(SSL *ssl,
                                       role)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_ENGINE: /* define public cert */
@@ -2152,20 +2154,21 @@ setup_pki_ssl(SSL *ssl,
                                       role)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define public cert */
     default:
       return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role);
+                                    &key, role, 0);
     }
   } else if (role == COAP_DTLS_ROLE_SERVER ||
              (key.key.define.private_key.u_byte &&
               key.key.define.private_key.u_byte[0])) {
     return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                   COAP_DEFINE_FAIL_NONE,
-                                  &key, role);
+                                  &key, role, 0);
   }
 
   /*
@@ -2178,7 +2181,7 @@ setup_pki_ssl(SSL *ssl,
       if (!load_in_cas(ssl, key.key.define.ca.s_byte, role)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define ca */
@@ -2202,23 +2205,23 @@ setup_pki_ssl(SSL *ssl,
       } else {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define ca */
       return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role);
+                                    &key, role, 0);
     case COAP_PKI_KEY_DEF_DER: /* define ca */
       if (!(SSL_use_certificate_file(ssl,
                                      key.key.define.ca.s_byte,
                                      SSL_FILETYPE_ASN1))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
-    case COAP_PKI_KEY_DEF_ASN1: /* define ca */
+    case COAP_PKI_KEY_DEF_DER_BUF: /* define ca */
       if (key.key.define.ca_len > 0) {
         /* Need to use a temp variable as it gets incremented*/
         const uint8_t *p = key.key.define.ca.u_byte;
@@ -2231,7 +2234,7 @@ setup_pki_ssl(SSL *ssl,
             X509_free(x509);
             return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                           COAP_DEFINE_FAIL_BAD,
-                                          &key, role);
+                                          &key, role, 0);
           }
         }
 
@@ -2250,7 +2253,7 @@ setup_pki_ssl(SSL *ssl,
                              role)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
     case COAP_PKI_KEY_DEF_ENGINE: /* define ca */
@@ -2260,13 +2263,14 @@ setup_pki_ssl(SSL *ssl,
                              role)) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                       COAP_DEFINE_FAIL_BAD,
-                                      &key, role);
+                                      &key, role, 0);
       }
       break;
+    case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define ca */
     default:
       return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
                                     COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role);
+                                    &key, role, 0);
     }
   }
 
