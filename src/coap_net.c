@@ -3249,8 +3249,10 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_log_debug("call custom handler for resource '%*.*s' (3)\n",
                  (int)resource->uri_path->length, (int)resource->uri_path->length,
                  resource->uri_path->s);
-  coap_lock_callback(context,
-                     h(resource, session, pdu, query, response));
+  coap_lock_callback_release(context,
+                             h(resource, session, pdu, query, response),
+                             /* context is being freed off */
+                             return);
 
   /* Check validity of response code */
   if (!coap_check_code_class(session, response)) {
@@ -3507,9 +3509,11 @@ handle_response(coap_context_t *context, coap_session_t *session,
   if (context->response_handler) {
     coap_response_t ret;
 
-    coap_lock_callback_ret(ret, context,
-                           context->response_handler(session, sent, rcvd,
-                                                     rcvd->mid));
+    coap_lock_callback_ret_release(ret, context,
+                                   context->response_handler(session, sent, rcvd,
+                                                             rcvd->mid),
+                                   /* context is being freed off */
+                                   return);
     if (ret == COAP_RESPONSE_FAIL && rcvd->type != COAP_MESSAGE_ACK) {
       coap_send_rst(session, rcvd);
       session->last_con_handler_res = COAP_RESPONSE_FAIL;

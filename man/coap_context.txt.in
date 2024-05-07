@@ -97,6 +97,14 @@ attached Sessions and Endpoints.
 as other libraries may also call atexit() and clear down some CoAP
 required functionality.
 
+*WARNING:* It is unsafe to call *coap_free_context*() in any libcoap callback
+handlers as set up in *coap_handler*(3).
+
+*WARNING:* In a multi-thread, libcoap thread-safe environment, if other threads
+are using _context_, it is not recommended to call *coap_free_context*() as
+various libcoap APIs will unexpectedly fail. It is best to clear down those other
+threads first before calling *coap_free_context*().
+
 *Function: coap_context_set_max_idle_sessions()*
 
 The *coap_context_set_max_idle_sessions*() function sets the maximum number of
