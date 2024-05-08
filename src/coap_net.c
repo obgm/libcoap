@@ -2286,6 +2286,14 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
     /* Minimum size of CoAP header - ignore runt */
     return -1;
   }
+  if ((msg[0] >> 6) != COAP_DEFAULT_VERSION) {
+    /*
+     * As per https://datatracker.ietf.org/doc/html/rfc7252#section-3,
+     * this MUST be silently ignored.
+     */
+    coap_log_debug("coap_handle_dgram: UDP version not supported\n");
+    return -1;
+  }
 
   /* Need max space incase PDU is updated with updated token etc. */
   pdu = coap_pdu_init(0, 0, 0, coap_session_max_pdu_rcv_size(session));
