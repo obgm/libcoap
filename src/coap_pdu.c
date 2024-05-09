@@ -1279,8 +1279,8 @@ write_char(char **obp, size_t *len, int c, int printable) {
 
 int
 coap_pdu_parse_opt(coap_pdu_t *pdu) {
-
   int good = 1;
+
   /* sanity checks */
   if (pdu->code == 0) {
     if (pdu->used_size != 0 || pdu->e_token_length) {
@@ -1350,7 +1350,10 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
         outbuflen = sizeof(outbuf);
         obp = outbuf;
         ok = write_prefix(&obp, &outbuflen, "O: ", 3);
-        while (ok && length > 0 && *opt != COAP_PAYLOAD_START) {
+        /*
+         * Not safe to check for 'ok' here as a lot of variables may get
+         * partially changed due to lack of outbuflen */
+        while (length > 0 && *opt != COAP_PAYLOAD_START) {
           coap_opt_t *opt_last = opt;
           size_t optsize = next_option_safe(&opt, &length, &pdu->max_opt);
           const uint32_t len =
