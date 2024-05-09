@@ -204,7 +204,6 @@ coap_client_init(coap_context_t *ctx)
         goto fail;
     }
 
-
     if (uri.scheme == COAP_URI_SCHEME_COAP) {
         session = coap_new_client_session(ctx, NULL, &dst,
                                           COAP_PROTO_UDP);

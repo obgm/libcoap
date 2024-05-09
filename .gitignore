@@ -90,6 +90,7 @@ examples/coap-server-*
 examples/coap-tiny
 examples/oscore-interop-server
 examples/*.exe
+examples/riot/pkg_libcoap/patches
 
 # the include/ folder
 include/coap3/coap.h
