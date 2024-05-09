@@ -409,7 +409,7 @@ coap_context_set_max_block_size(coap_context_t *context, size_t max_block_size) 
   coap_lock_check_locked(context);
   max_block_size = (coap_fls((uint32_t)max_block_size >> 4) - 1) & 0x07;
   context->block_mode &= ~COAP_BLOCK_MAX_SIZE_MASK;
-  context->block_mode |= COAP_BLOCK_MAX_SIZE_SET(max_block_size);
+  context->block_mode |= COAP_BLOCK_MAX_SIZE_SET((uint32_t)max_block_size);
   return 1;
 }
 
