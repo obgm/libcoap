@@ -1080,6 +1080,33 @@ static int *psk_ciphers = NULL;
 static int *pki_ciphers = NULL;
 static int processed_ciphers = 0;
 
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
+static int
+coap_ssl_ciphersuite_uses_psk(const mbedtls_ssl_ciphersuite_t *info) {
+#if MBEDTLS_VERSION_NUMBER >= 0x03060000
+  switch (info->key_exchange) {
+  case MBEDTLS_KEY_EXCHANGE_PSK:
+  case MBEDTLS_KEY_EXCHANGE_RSA_PSK:
+  case MBEDTLS_KEY_EXCHANGE_DHE_PSK:
+  case MBEDTLS_KEY_EXCHANGE_ECDHE_PSK:
+    return 1;
+  case MBEDTLS_KEY_EXCHANGE_NONE:
+  case MBEDTLS_KEY_EXCHANGE_RSA:
+  case MBEDTLS_KEY_EXCHANGE_DHE_RSA:
+  case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA:
+  case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
+  case MBEDTLS_KEY_EXCHANGE_ECDH_RSA:
+  case MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA:
+  case MBEDTLS_KEY_EXCHANGE_ECJPAKE:
+  default:
+    return 0;
+  }
+#else /* MBEDTLS_VERSION_NUMBER < 0x03060000 */
+  return mbedtls_ssl_ciphersuite_uses_psk(info);
+#endif /* MBEDTLS_VERSION_NUMBER < 0x03060000 */
+}
+#endif /* defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED) */
+
 static void
 set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
   if (!processed_ciphers) {
@@ -1106,7 +1133,7 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
         }
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
-        else if (mbedtls_ssl_ciphersuite_uses_psk(cur)) {
+        else if (coap_ssl_ciphersuite_uses_psk(cur)) {
           psk_count++;
         }
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
@@ -1149,7 +1176,7 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
         }
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
-        else if (mbedtls_ssl_ciphersuite_uses_psk(cur)) {
+        else if (coap_ssl_ciphersuite_uses_psk(cur)) {
           *psk_list = *list;
           psk_list++;
         }
