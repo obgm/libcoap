@@ -865,40 +865,58 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
 #endif /* COAP_CLIENT_SUPPORT */
 
   coap_lock_check_locked(session->context);
-  if (reason == COAP_NACK_ICMP_ISSUE) {
-    if (session->context->nack_handler) {
-      int sent_nack = 0;
-      coap_queue_t *q = session->context->sendqueue;
-      while (q) {
-        if (q->session == session) {
-          /* Take the first one */
-          coap_bin_const_t token = q->pdu->actual_token;
+  if (session->context->nack_handler) {
+    int sent_nack = 0;
+    coap_queue_t *q = session->context->sendqueue;
 
+    while (q) {
+      if (q->session == session) {
+        /* Take the first one */
+        coap_bin_const_t token = q->pdu->actual_token;
+
+        coap_check_update_token(session, q->pdu);
+        coap_lock_callback(session->context,
+                           session->context->nack_handler(session, q->pdu, reason, q->id));
+        coap_update_token(q->pdu, token.length, token.s);
+        sent_nack = 1;
+        break;
+      }
+      q = q->next;
+    }
+
+    if (reason != COAP_NACK_ICMP_ISSUE) {
+      while (session->delayqueue) {
+        q = session->delayqueue;
+        session->delayqueue = q->next;
+        q->next = NULL;
+        coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
+                       coap_session_str(session), q->id);
+        if (q->pdu->type == COAP_MESSAGE_CON) {
           coap_check_update_token(session, q->pdu);
           coap_lock_callback(session->context,
                              session->context->nack_handler(session, q->pdu, reason, q->id));
-          coap_update_token(q->pdu, token.length, token.s);
           sent_nack = 1;
-          break;
         }
-        q = q->next;
-      }
-#if COAP_CLIENT_SUPPORT
-      if (!sent_nack && session->lg_crcv) {
-        /* Take the first one */
-        coap_lock_callback(session->context,
-                           session->context->nack_handler(session, &session->lg_crcv->pdu, reason,
-                                                          session->lg_crcv->pdu.mid));
-        sent_nack = 1;
-      }
-#endif /* COAP_CLIENT_SUPPORT */
-      if (!sent_nack) {
-        /* Unable to determine which request ICMP issue was for */
-        coap_lock_callback(session->context,
-                           session->context->nack_handler(session, NULL, reason, 0));
+        coap_delete_node(q);
       }
     }
-    coap_log_debug("***%s: session issue (%s)\n",
+#if COAP_CLIENT_SUPPORT
+    if (!sent_nack && session->lg_crcv) {
+      /* Take the first one */
+      coap_lock_callback(session->context,
+                         session->context->nack_handler(session, &session->lg_crcv->pdu, reason,
+                                                        session->lg_crcv->pdu.mid));
+      sent_nack = 1;
+    }
+#endif /* COAP_CLIENT_SUPPORT */
+    if (!sent_nack) {
+      /* Unable to determine which request disconnection was for */
+      coap_lock_callback(session->context,
+                         session->context->nack_handler(session, NULL, reason, 0));
+    }
+  }
+  if (reason == COAP_NACK_ICMP_ISSUE) {
+    coap_log_debug("***%s: session ICMP issue (%s)\n",
                    coap_session_str(session), coap_nack_name(reason));
     return;
   }
@@ -921,20 +939,14 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
   }
   session->partial_read = 0;
 
+  /* Not done if nack handler called above */
   while (session->delayqueue) {
     coap_queue_t *q = session->delayqueue;
     session->delayqueue = q->next;
     q->next = NULL;
     coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
                    coap_session_str(session), q->id);
-    if (q && q->pdu->type == COAP_MESSAGE_CON
-        && session->context->nack_handler) {
-      coap_check_update_token(session, q->pdu);
-      coap_lock_callback(session->context,
-                         session->context->nack_handler(session, q->pdu, reason, q->id));
-    }
-    if (q)
-      coap_delete_node(q);
+    coap_delete_node(q);
   }
 
 #if COAP_CLIENT_SUPPORT
