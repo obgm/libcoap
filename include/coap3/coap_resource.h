@@ -492,18 +492,6 @@ coap_print_status_t coap_print_link(const coap_resource_t *resource,
 /** @} */
 
 /**
- * Returns the resource identified by the unique string @p uri_path. If no
- * resource was found, this function returns @c NULL.
- *
- * @param context  The context to look for this resource.
- * @param uri_path  The unique string uri of the resource.
- *
- * @return         A pointer to the resource or @c NULL if not found.
- */
-coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
-                                                 coap_str_const_t *uri_path);
-
-/**
  * @deprecated use coap_resource_notify_observers() instead.
  */
 COAP_DEPRECATED int coap_resource_set_dirty(coap_resource_t *r,

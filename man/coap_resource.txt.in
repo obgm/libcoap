@@ -22,7 +22,8 @@ coap_resource_set_mode,
 coap_resource_set_userdata,
 coap_resource_get_userdata,
 coap_resource_release_userdata_handler,
-coap_resource_get_uri_path
+coap_resource_get_uri_path,
+coap_get_resource_from_uri_path
 - Work with CoAP resources
 
 SYNOPSIS
@@ -61,6 +62,9 @@ coap_resource_t *_resource_);*
 coap_resource_release_userdata_handler_t _callback_);*
 
 *coap_str_const_t *coap_resource_get_uri_path(coap_resource_t *_resource_);*
+
+*coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *_context_,
+coap_str_const_t *_uri_path_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -283,6 +287,12 @@ needs to be freed off.
 The *coap_resource_get_uri_path*() function is used to obtain the UriPath of
 the _resource_ definion.
 
+*Function: coap_get_resource_from_uri_path()*
+
+The *coap_get_resource_from_uri_path*() function is used to return the resource
+identified by the unique string _uri_path_ associated with _context_.
+
+
 RETURN VALUES
 -------------
 *coap_resource_init*(), *coap_resource_unknown_init*(),
@@ -298,6 +308,9 @@ by the *coap_resource_set_userdata*() function or NULL.
 
 *coap_resource_get_uri_path*() returns the uri_path or NULL if
 there was a failure.
+
+*coap_get_resource_from_uri_path*() returns the resource or NULL
+if not found.
 
 EXAMPLES
 --------
