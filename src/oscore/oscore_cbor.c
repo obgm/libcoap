@@ -238,11 +238,9 @@ oscore_cbor_get_next_element(const uint8_t **buffer, size_t *buf_len) {
 
 size_t
 oscore_cbor_get_element_size(const uint8_t **buffer, size_t *buf_len) {
-  uint8_t control = get_byte(buffer, buf_len) & 0x1f;
+  uint8_t control = get_byte_inc(buffer, buf_len) & 0x1f;
   size_t size;
 
-  /* Move to data payload, or extended count */
-  get_byte_inc(buffer, buf_len);
   if (control < 0x18) {
     size = (uint64_t)control;
   } else {
