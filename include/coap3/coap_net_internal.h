@@ -222,6 +222,17 @@ int coap_insert_node(coap_queue_t **queue, coap_queue_t *node);
 int coap_delete_node(coap_queue_t *node);
 
 /**
+ * Destroys specified @p node.
+ *
+ * Note: Needs to be called in a locked state if node->session is set.
+ *
+ * @param node Node entry to remove.
+ *
+ * @return @c 1 node deleted from queue, @c 0 failure.
+ */
+int coap_delete_node_locked(coap_queue_t *node);
+
+/**
  * Removes all items from given @p queue and frees the allocated storage.
  *
  * Internal function.
@@ -435,7 +446,203 @@ coap_mid_t coap_send_internal(coap_session_t *session, coap_pdu_t *pdu);
  */
 int coap_client_delay_first(coap_session_t *session);
 
+/**
+ * CoAP stack context must be released with coap_free_context_locked(). This
+ * function  clears all entries from the receive queue and send queue and deletes the
+ * resources that have been registered with @p context, and frees the attached
+ * endpoints.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context The current coap_context_t object to free off.
+ */
+void coap_free_context_locked(coap_context_t *context);
+
 /** @} */
+
+/**
+ * @ingroup internal_api
+ * @defgroup app_io_internal Application I/O Handling
+ * Internal API for Application Input / Output checking
+ * @{
+ */
+
+/**
+ * Processes any outstanding read, write, accept or connect I/O as indicated
+ * in the coap_socket_t structures (COAP_SOCKET_CAN_xxx set) embedded in
+ * endpoints or sessions associated with @p ctx.
+ *
+ * Note: If epoll support is compiled into libcoap, coap_io_do_epoll_locked() must
+ * be used instead of coap_io_do_io_locked().
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx The CoAP context
+ * @param now Current time
+ */
+void coap_io_do_io_locked(coap_context_t *ctx, coap_tick_t now);
+
+/**
+ * Process all the epoll events
+ *
+ * Note: If epoll support is compiled into libcoap, coap_io_do_epoll_locked() must
+ * be used instead of coap_io_do_io_locked().
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx    The current CoAP context.
+ * @param events The list of events returned from an epoll_wait() call.
+ * @param nevents The number of events.
+ *
+ */
+void coap_io_do_epoll_locked(coap_context_t *ctx, struct epoll_event *events,
+                             size_t nevents);
+
+/**
+ * Check to see if there is any i/o pending for the @p context.
+ *
+ * This includes Observe active (client) and partial large block transfers.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * coap_io_process() is called internally to try to send outstanding
+ * data as well as process any packets just received.
+ *
+ * @param context The CoAP context.
+ *
+ * @return @c 1 I/O still pending, @c 0 no I/O pending.
+ */
+int coap_io_pending_locked(coap_context_t *context);
+
+/**
+ * Any now timed out delayed packet is transmitted, along with any packets
+ * associated with requested observable response.
+ *
+ * In addition, it returns when the next expected I/O is expected to take place
+ * (e.g. a packet retransmit).
+ *
+ * Note: If epoll support is compiled into libcoap, coap_io_prepare_epoll_locked()
+ * must  be used instead of coap_io_prepare_io_locked().
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx The CoAP context
+ * @param now Current time.
+ *
+ * @return timeout Maxmimum number of milliseconds that can be used by a
+ *                 epoll_wait() to wait for network events or 0 if wait should be
+ *                 forever.
+ */
+unsigned int coap_io_prepare_epoll_locked(coap_context_t *ctx, coap_tick_t now);
+
+/**
+ * Iterates through all the coap_socket_t structures embedded in endpoints or
+ * sessions associated with the @p ctx to determine which are wanting any
+ * read, write, accept or connect I/O (COAP_SOCKET_WANT_xxx is set). If set,
+ * the coap_socket_t is added to the @p sockets.
+ *
+ * Any now timed out delayed packet is transmitted, along with any packets
+ * associated with requested observable response.
+ *
+ * In addition, it returns when the next expected I/O is expected to take place
+ * (e.g. a packet retransmit).
+ *
+ * Prior to calling coap_io_do_io_locked(), the @p sockets must be tested to see
+ * if any of the COAP_SOCKET_WANT_xxx have the appropriate information and if
+ * so, COAP_SOCKET_CAN_xxx is set. This typically will be done after using a
+ * select() call.
+ *
+ * Note: If epoll support is compiled into libcoap, coap_io_prepare_epoll_locked()
+ * must be used instead of coap_io_prepare_io_locked().
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx The CoAP context
+ * @param sockets Array of socket descriptors, filled on output
+ * @param max_sockets Size of socket array.
+ * @param num_sockets Pointer to the number of valid entries in the socket
+ *                    arrays on output.
+ * @param now Current time.
+ *
+ * @return timeout Maxmimum number of milliseconds that can be used by a
+ *                 select() to wait for network events or 0 if wait should be
+ *                 forever.
+ */
+unsigned int coap_io_prepare_io_locked(coap_context_t *ctx,
+                                       coap_socket_t *sockets[],
+                                       unsigned int max_sockets,
+                                       unsigned int *num_sockets,
+                                       coap_tick_t now
+                                      );
+
+/**
+ * The main I/O processing function.  All pending network I/O is completed,
+ * and then optionally waits for the next input packet.
+ *
+ * This internally calls coap_io_prepare_io(), then select() for the appropriate
+ * sockets, updates COAP_SOCKET_CAN_xxx where appropriate and then calls
+ * coap_io_do_io() before returning with the time spent in the function.
+ *
+ * Alternatively, if libcoap is compiled with epoll support, this internally
+ * calls coap_io_prepare_epoll(), then epoll_wait() for waiting for any file
+ * descriptors that have (internally) been set up with epoll_ctl() and
+ * finally coap_io_do_epoll() before returning with the time spent in the
+ * function.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx The CoAP context
+ * @param timeout_ms Minimum number of milliseconds to wait for new packets
+ *                   before returning after doing any processing.
+ *                   If COAP_IO_WAIT, the call will block until the next
+ *                   internal action (e.g. packet retransmit) if any, or block
+ *                   until the next packet is received whichever is the sooner
+ *                   and do the necessary processing.
+ *                   If COAP_IO_NO_WAIT, the function will return immediately
+ *                   after processing without waiting for any new input
+ *                   packets to arrive.
+ *
+ * @return Number of milliseconds spent in function or @c -1 if there was
+ *         an error
+ */
+int coap_io_process_locked(coap_context_t *ctx, uint32_t timeout_ms);
+
+#if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
+/**
+ * The main message processing loop with additional fds for internal select.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx The CoAP context
+ * @param timeout_ms Minimum number of milliseconds to wait for new packets
+ *                   before returning after doing any processing.
+ *                   If COAP_IO_WAIT, the call will block until the next
+ *                   internal action (e.g. packet retransmit) if any, or block
+ *                   until the next packet is received whichever is the sooner
+ *                   and do the necessary processing.
+ *                   If COAP_IO_NO_WAIT, the function will return immediately
+ *                   after processing without waiting for any new input
+ *                   packets to arrive.
+ * @param nfds      The maximum FD set in readfds, writefds or exceptfds
+ *                  plus one,
+ * @param readfds   Read FDs to additionally check for in internal select()
+ *                  or NULL if not required.
+ * @param writefds  Write FDs to additionally check for in internal select()
+ *                  or NULL if not required.
+ * @param exceptfds Except FDs to additionally check for in internal select()
+ *                  or NULL if not required.
+ *
+ *
+ * @return Number of milliseconds spent in coap_io_process_with_fds, or @c -1
+ *         if there was an error.  If defined, readfds, writefds, exceptfds
+ *         are updated as returned by the internal select() call.
+ */
+int coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
+                                    int nfds, fd_set *readfds, fd_set *writefds,
+                                    fd_set *exceptfds);
+#endif /* ! RIOT_VERSION && ! WITH_CONTIKI */
+
+/**@}*/
 
 extern int coap_started;
 

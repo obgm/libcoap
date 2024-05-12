@@ -61,7 +61,7 @@ prepare_io(coap_context_t *ctx) {
   unsigned next_io;
 
   coap_ticks(&now);
-  next_io = coap_io_prepare_io(ctx, sockets, max_sockets, &num_sockets, now);
+  next_io = coap_io_prepare_io_locked(ctx, sockets, max_sockets, &num_sockets, now);
   if (next_io) {
     coap_update_io_timer(ctx, next_io);
   }
@@ -84,7 +84,7 @@ PROCESS_THREAD(libcoap_io_process, ev, data) {
 
         coap_socket->flags |= COAP_SOCKET_CAN_READ;
         coap_ticks(&now);
-        coap_io_do_io(coap_socket->context, now);
+        coap_io_do_io_locked(coap_socket->context, now);
       }
     }
     if (ev == PROCESS_EVENT_POLL) {
@@ -236,19 +236,19 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
 }
 
 int
-coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
+coap_io_process_locked(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_tick_t before, now;
 
   coap_lock_check_locked(ctx);
   if (timeout_ms != COAP_IO_NO_WAIT) {
-    coap_log_err("coap_io_process must be called with COAP_IO_NO_WAIT\n");
+    coap_log_err("coap_io_process_locked() must be called with COAP_IO_NO_WAIT\n");
     return -1;
   }
 
   coap_ticks(&before);
   PROCESS_CONTEXT_BEGIN(&libcoap_io_process);
   prepare_io(ctx);
-  coap_io_do_io(ctx, before);
+  coap_io_do_io_locked(ctx, before);
   PROCESS_CONTEXT_END(&libcoap_io_process);
   coap_ticks(&now);
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
