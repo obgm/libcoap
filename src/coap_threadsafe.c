@@ -13,6 +13,16 @@
  * @brief CoAP multithreading safe functions
  */
 
+/*
+ * Public API functions are being migrated across to just ahead of where
+ * the _locked() functions are for ease of maintenance, debugging and
+ * documentation.
+ *
+ * The internal equivalent of the public API function will get _locked appended
+ * to the function name, and all calls to this function within the libcoap
+ * library have the function updated with the _locked suffix. Appropriate
+ * entries for this function are removed from coap_threadsafe_internal.h.
+ */
 #include "coap_config.h"
 
 #if COAP_THREAD_SAFE
@@ -502,97 +512,6 @@ coap_delete_oscore_recipient(coap_context_t *context,
   coap_lock_unlock(context);
   return ret;
 }
-
-void
-coap_free_context(coap_context_t *context) {
-  if (!context)
-    return;
-  /*
-   * Note there is an immediate unlock to release any other 'context' waiters
-   * So that their coap_lock_lock() will fail as 'context' is realy no more.
-   */
-  coap_lock_being_freed(context, return);
-  coap_free_context_locked(context);
-  /* No need to unlock as context is no longer there */
-}
-
-void
-coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents) {
-  coap_lock_lock(ctx, return);
-  coap_io_do_epoll_locked(ctx, events, nevents);
-  coap_lock_unlock(ctx);
-}
-
-void
-coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
-  coap_lock_lock(ctx, return);
-  coap_io_do_io(ctx, now);
-  coap_lock_unlock(ctx);
-}
-
-int
-coap_io_pending(coap_context_t *context) {
-  int ret;
-
-  coap_lock_lock(context, return 0);
-  ret = coap_io_pending_locked(context);
-  coap_lock_unlock(context);
-  return ret;
-}
-
-unsigned int
-coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
-  unsigned int ret;
-
-  coap_lock_lock(ctx, return 0);
-  ret = coap_io_prepare_epoll(ctx, now);
-  coap_lock_unlock(ctx);
-  return ret;
-}
-
-/*
- * return  0 No i/o pending
- *       +ve millisecs to next i/o activity
- */
-unsigned int
-coap_io_prepare_io(coap_context_t *ctx,
-                   coap_socket_t *sockets[],
-                   unsigned int max_sockets,
-                   unsigned int *num_sockets,
-                   coap_tick_t now) {
-  unsigned int ret;
-  coap_lock_lock(ctx, return 0);
-  ret = coap_io_prepare_io_locked(ctx, sockets, max_sockets, num_sockets, now);
-  coap_lock_unlock(ctx);
-  return ret;
-}
-
-int
-coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
-  int ret;
-
-  coap_lock_lock(ctx, return 0);
-  ret = coap_io_process_locked(ctx, timeout_ms);
-  coap_lock_unlock(ctx);
-  return ret;
-}
-
-#if !defined(WITH_LWIP)
-#ifdef HAVE_SYS_SELECT_H
-int
-coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
-                         int enfds, fd_set *ereadfds, fd_set *ewritefds,
-                         fd_set *eexceptfds) {
-  int ret;
-
-  coap_lock_lock(ctx, return 0);
-  ret = coap_io_process_with_fds_locked(ctx, timeout_ms, enfds, ereadfds, ewritefds,
-                                        eexceptfds);
-  coap_lock_unlock(ctx);
-  return ret;
-}
-#endif /* HAVE_SYS_SELECT_H */
-#endif /* WITH_LWIP */
 
 uint16_t
 coap_new_message_id(coap_session_t *session) {

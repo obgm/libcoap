@@ -43,18 +43,8 @@
 #define coap_find_async(s,t)                            coap_find_async_locked(s,t)
 #define coap_delete_oscore_recipient(s,r)               coap_delete_oscore_recipient_locked(s,r)
 #define coap_delete_resource(c,r)                       coap_delete_resource_locked(c,r)
-#define coap_free_context(c)                            coap_free_context_locked(c)
 #define coap_free_endpoint(e)                           coap_free_endpoint_locked(e)
 #define coap_get_resource_from_uri_path(c,u)            coap_get_resource_from_uri_path_locked(c,u)
-#define coap_io_do_epoll(c,e,n)                         coap_io_do_epoll_locked(c,e,n)
-#define coap_io_do_io(c,n)                              coap_io_do_io_locked(c,n)
-#define coap_io_pending(c)                              coap_io_pending_locked(c)
-#define coap_io_prepare_epoll(c,n)                      coap_io_prepare_epoll_locked(c,n)
-#define coap_io_prepare_io(c,s,m,n,t)                   coap_io_prepare_io_locked(c,s,m,n,t)
-#define coap_io_process(s,t)                            coap_io_process_locked(s,t)
-#ifdef HAVE_SYS_SELECT_H
-#define coap_io_process_with_fds(s,t,n,r,w,e)           coap_io_process_with_fds_locked(s,t,n,r,w,e)
-#endif /* HAVE_SYS_SELECT_H */
 #define coap_join_mcast_group_intf(c,g,i)               coap_join_mcast_group_intf_locked(c,g,i)
 #define coap_new_cache_entry(s,p,r,b,i)                 coap_new_cache_entry_locked(s,p,r,b,i)
 #define coap_new_client_session(c,l,s,p)                coap_new_client_session_locked(c,l,s,p)
@@ -142,20 +132,9 @@ int                  coap_delete_oscore_recipient_locked(coap_context_t *context
                                                          coap_bin_const_t *recipient_id);
 int                  coap_delete_resource_locked(coap_context_t *context, coap_resource_t *resource);
 coap_async_t        *coap_find_async_locked(coap_session_t *session, coap_bin_const_t token);
-void                 coap_free_context_locked(coap_context_t *context);
 void                 coap_free_endpoint_locked(coap_endpoint_t *ep);
 coap_resource_t     *coap_get_resource_from_uri_path_locked(coap_context_t *context,
                                                             coap_str_const_t *uri_path);
-void                 coap_io_do_epoll_locked(coap_context_t *ctx, struct epoll_event *events,
-                                             size_t nevents);
-void                 coap_io_do_io_locked(coap_context_t *ctx, coap_tick_t now);
-int                  coap_io_pending_locked(coap_context_t *context);
-unsigned int         coap_io_prepare_epoll_locked(coap_context_t *ctx, coap_tick_t now);
-unsigned int         coap_io_prepare_io_locked(coap_context_t *ctx,
-                                               coap_socket_t *sockets[],
-                                               unsigned int max_sockets,
-                                               unsigned int *num_sockets,
-                                               coap_tick_t now);
 int                  coap_join_mcast_group_intf_locked(coap_context_t *ctx, const char *group_name,
                                                        const char *ifname);
 coap_subscription_t *coap_persist_observe_add_locked(coap_context_t *context,
@@ -170,12 +149,6 @@ int                  coap_persist_startup_locked(coap_context_t *context,
                                                  const char *obs_cnt_save_file,
                                                  uint32_t save_freq);
 void                 coap_persist_stop_locked(coap_context_t *context);
-int                  coap_io_process_locked(coap_context_t *ctx, uint32_t timeout_ms);
-#ifdef HAVE_SYS_SELECT_H
-int                  coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
-                                                     int nfds, fd_set *readfds, fd_set *writefds,
-                                                     fd_set *exceptfds);
-#endif /* HAVE_SYS_SELECT_H */
 coap_async_t        *coap_register_async_locked(coap_session_t *session, const coap_pdu_t *request,
                                                 coap_tick_t delay);
 size_t               coap_session_max_pdu_size_locked(const coap_session_t *session);

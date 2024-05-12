@@ -320,15 +320,12 @@ t_sendqueue_tests_create(void) {
 static int
 t_sendqueue_tests_remove(void) {
   size_t n;
-  /* As coap_delete_node() is not in the Public API, need to lock */
-  coap_lock_lock(ctx, return 1);
   for (n = 0; n < sizeof(node)/sizeof(coap_queue_t *); n++) {
     if (node[n]) {
       coap_delete_node(node[n]);
       node[n] = NULL;
     }
   }
-  coap_lock_unlock(ctx);
   coap_free_context(ctx);
   ctx = NULL;
   return 0;

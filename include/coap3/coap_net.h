@@ -672,15 +672,6 @@ int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
  */
 int coap_io_pending(coap_context_t *context);
 
-/**@}*/
-
-/**
- * @ingroup internal_api
- * @defgroup app_io_internal Application I/O Handling
- * Internal API for Application Input / Output checking
- * @{
- */
-
 /**
 * Iterates through all the coap_socket_t structures embedded in endpoints or
 * sessions associated with the @p ctx to determine which are wanting any
@@ -870,8 +861,7 @@ coap_write(coap_context_t *ctx,
            coap_socket_t *sockets[],
            unsigned int max_sockets,
            unsigned int *num_sockets,
-           coap_tick_t now
-          ) {
+           coap_tick_t now) {
   return coap_io_prepare_io(ctx, sockets, max_sockets, num_sockets, now);
 }
 
@@ -886,8 +876,7 @@ coap_write(coap_context_t *ctx,
  * @param now Current time
  */
 COAP_STATIC_INLINE COAP_DEPRECATED void
-coap_read(coap_context_t *ctx, coap_tick_t now
-         ) {
+coap_read(coap_context_t *ctx, coap_tick_t now) {
   coap_io_do_io(ctx, now);
 }
 

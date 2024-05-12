@@ -57,7 +57,17 @@ coap_io_process_timeout(void *arg) {
 }
 
 int
-coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
+coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
+  int ret;
+
+  coap_lock_lock(ctx, return 0);
+  ret = coap_io_process_locked(ctx, timeout_ms);
+  coap_lock_unlock(ctx);
+  return ret;
+}
+
+int
+coap_io_process_locked(coap_context_t *context, uint32_t timeout_ms) {
   coap_tick_t before;
   coap_tick_t now;
   unsigned int num_sockets;
@@ -65,7 +75,7 @@ coap_io_process(coap_context_t *context, uint32_t timeout_ms) {
 
   coap_lock_check_locked(context);
   coap_ticks(&before);
-  timeout = coap_io_prepare_io(context, NULL, 0, &num_sockets, before);
+  timeout = coap_io_prepare_io_locked(context, NULL, 0, &num_sockets, before);
   if (timeout == 0 || (timeout_ms != COAP_IO_WAIT && timeout_ms < timeout))
     timeout = timeout_ms;
 

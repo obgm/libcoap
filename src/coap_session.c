@@ -481,7 +481,7 @@ coap_session_mfree(coap_session_t *session) {
 
         while (queue) {
           if (queue->session == session) {
-            coap_delete_node(queue);
+            coap_delete_node_locked(queue);
             break;
           }
           queue = queue->next;
@@ -522,7 +522,7 @@ coap_session_mfree(coap_session_t *session) {
                                                         COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE,
                                                         q->id));
     }
-    coap_delete_node(q);
+    coap_delete_node_locked(q);
   }
   LL_FOREACH_SAFE(session->lg_xmit, lq, ltmp) {
     LL_DELETE(session->lg_xmit, lq);
@@ -806,7 +806,7 @@ coap_session_connected(coap_session_t *session) {
     }
     if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (q)
-        coap_delete_node(q);
+        coap_delete_node_locked(q);
       if (bytes_written < 0)
         break;
     } else if (q) {
@@ -817,7 +817,7 @@ coap_session_connected(coap_session_t *session) {
           session->partial_write = (size_t)bytes_written;
         break;
       } else {
-        coap_delete_node(q);
+        coap_delete_node_locked(q);
       }
     }
   }
@@ -897,7 +897,7 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
                              session->context->nack_handler(session, q->pdu, reason, q->id));
           sent_nack = 1;
         }
-        coap_delete_node(q);
+        coap_delete_node_locked(q);
       }
     }
 #if COAP_CLIENT_SUPPORT
@@ -946,7 +946,7 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
     q->next = NULL;
     coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
                    coap_session_str(session), q->id);
-    coap_delete_node(q);
+    coap_delete_node_locked(q);
   }
 
 #if COAP_CLIENT_SUPPORT
