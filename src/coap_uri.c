@@ -132,7 +132,7 @@ coap_split_uri_sub(const uint8_t *str_var,
     }
     break;
   case COAP_URI_SCHEME_COAPS_TCP:
-    if (!coap_tcp_is_supported()) {
+    if (!coap_tls_is_supported()) {
       coap_log_err("coaps+tcp URI scheme not supported in this version of libcoap\n");
       return -1;
     }
@@ -151,6 +151,8 @@ coap_split_uri_sub(const uint8_t *str_var,
     break;
   case COAP_URI_SCHEME_HTTP:
   case COAP_URI_SCHEME_HTTPS:
+    /* Not proxy, caught above.  For proxy, assume app is doing CoAP <> HTTP mapping. */
+    break;
   case COAP_URI_SCHEME_LAST:
   default:
     coap_log_warn("Unsupported URI type %d\n", uri->scheme);

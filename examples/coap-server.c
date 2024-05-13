@@ -1052,7 +1052,9 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
   if (uri.scheme == COAP_URI_SCHEME_COAP ||
       uri.scheme == COAP_URI_SCHEME_COAPS ||
       uri.scheme == COAP_URI_SCHEME_COAP_TCP ||
-      uri.scheme == COAP_URI_SCHEME_COAPS_TCP) {
+      uri.scheme == COAP_URI_SCHEME_COAPS_TCP ||
+      uri.scheme == COAP_URI_SCHEME_COAP_WS ||
+      uri.scheme == COAP_URI_SCHEME_COAPS_WS) {
     coap_pdu_code_t req_code = coap_pdu_get_code(request);
     coap_pdu_type_t req_type = coap_pdu_get_type(request);
 
@@ -1167,7 +1169,7 @@ add_in:
     goto cleanup;
   } else {
     /* TODO http & https */
-    coap_log_err("Proxy-Uri scheme %d unknown\n", uri.scheme);
+    coap_log_err("Proxy-Uri scheme %d not currently supported\n", uri.scheme);
   }
 cleanup:
   coap_delete_string(uri_path);
