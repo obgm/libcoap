@@ -1643,8 +1643,9 @@ setup_pki_server(SSL_CTX *ctx,
       key.key.define.public_cert.u_byte[0]) {
     switch (key.key.define.public_cert_def) {
     case COAP_PKI_KEY_DEF_PEM: /* define public cert */
-      if (!(SSL_CTX_use_certificate_chain_file(ctx,
-                                               key.key.define.public_cert.s_byte))) {
+      if (!(SSL_CTX_use_certificate_file(ctx,
+                                         key.key.define.public_cert.s_byte,
+                                         SSL_FILETYPE_PEM))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
                                       &key, COAP_DTLS_ROLE_SERVER, 0);
@@ -2080,8 +2081,9 @@ setup_pki_ssl(SSL *ssl,
       key.key.define.public_cert.u_byte[0]) {
     switch (key.key.define.public_cert_def) {
     case COAP_PKI_KEY_DEF_PEM: /* define public cert */
-      if (!(SSL_use_certificate_chain_file(ssl,
-                                           key.key.define.public_cert.s_byte))) {
+      if (!(SSL_use_certificate_file(ssl,
+                                     key.key.define.public_cert.s_byte,
+                                     SSL_FILETYPE_PEM))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
                                       &key, role, 0);
