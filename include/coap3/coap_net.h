@@ -397,6 +397,8 @@ uint16_t coap_new_message_id(coap_session_t *session);
 void coap_free_context(coap_context_t *context);
 
 /**
+ * @deprecated Use coap_context_set_app_data() instead.
+ *
  * Stores @p data with the given CoAP context. This function
  * overwrites any value that has previously been stored with @p
  * context.
@@ -408,6 +410,8 @@ void coap_free_context(coap_context_t *context);
 void coap_set_app_data(coap_context_t *context, void *data);
 
 /**
+ * @deprecated Use coap_context_get_app_data() instead.
+ *
  * Returns any application-specific data that has been stored with @p
  * context using the function coap_set_app_data(). This function will
  * return @c NULL if no data has been stored.
@@ -582,6 +586,26 @@ int coap_mcast_set_hops(coap_session_t *session, size_t hops);
  * @param context The current context.
  */
 void coap_mcast_per_resource(coap_context_t *context);
+
+/**
+ * Stores @p data with the given context. This function overwrites any value
+ * that has previously been stored with @p context.
+ *
+ * @param context The CoAP context.
+ * @param data The pointer to the data to store.
+ */
+void coap_context_set_app_data(coap_context_t *context, void *data);
+
+/**
+ * Returns any application-specific data that has been stored with @p
+ * context using the function coap_context_set_app_data(). This function will
+ * return @c NULL if no data has been stored.
+ *
+ * @param context The CoAP context.
+ *
+ * @return Pointer to the stored data or @c NULL.
+ */
+void *coap_context_get_app_data(const coap_context_t *context);
 
 /**@}*/
 

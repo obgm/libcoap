@@ -21,7 +21,9 @@ coap_context_set_session_timeout,
 coap_context_get_session_timeout,
 coap_context_set_csm_timeout_ms,
 coap_context_get_csm_timeout_ms,
-coap_context_set_max_token_size
+coap_context_set_max_token_size,
+coap_context_set_app_data,
+coap_context_get_app_data
 - Work with CoAP contexts
 
 SYNOPSIS
@@ -57,6 +59,10 @@ unsigned int _csm_timeout_ms_);*
 
 *void coap_context_set_max_token_size(coap_context_t *_context_,
 size_t _max_token_size_);*
+
+*void coap_context_set_app_data(coap_context_t *_context_, void *_app_data_);*
+
+*void *coap_context_get_app_data(const coap_context_t *_context_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -167,6 +173,16 @@ bytes, else 8 to disable https://rfc-editor.org/rfc/rfc8974[RFC8974]
 supports the requested extended token size as per
 "https://rfc-editor.org/rfc/rfc8974.html#section-2.2.2[RFC8794 Section 2.2.2]"
 
+*Function: coap_context_set_app_data()*
+
+The *coap_context_set_app_data*() function is used to define a _app_data_
+pointer for the _context_ which can then be retrieved at a later date.
+
+*Function: coap_context_get_app_data()*
+
+The *coap_context_get_app_data*() function is used to retrieve the app_data
+pointer previously defined by *coap_context_set_app_data*().
+
 RETURN VALUES
 -------------
 *coap_new_context*() returns a newly created context or
@@ -183,6 +199,8 @@ out an idle server session.
 
 *coap_context_get_csm_timeout_ms*() returns the milliseconds to wait for a
 (TCP) CSM negotiation response from the peer.
+
+*coap_context_get_app_data*() returns a previously defined pointer.
 
 SEE ALSO
 --------

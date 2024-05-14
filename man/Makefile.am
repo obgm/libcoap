@@ -119,6 +119,10 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_set_csm_timeout_ms.3
 	@echo ".so man3/coap_context.3" > coap_context_get_csm_timeout_ms.3
 	@echo ".so man3/coap_context.3" > coap_context_set_max_token_size.3
+	@echo ".so man3/coap_context.3" > coap_context_set_app_data.3
+	@echo ".so man3/coap_context.3" > coap_context_get_app_data.3
+	@echo ".so man3/coap_deprecated.3" > coap_set_app_data.3
+	@echo ".so man3/coap_deprecated.3" > coap_get_app_data.3
 	@echo ".so man3/coap_deprecated.3" > coap_option_setb.3
 	@echo ".so man3/coap_deprecated.3" > coap_read.3
 	@echo ".so man3/coap_deprecated.3" > coap_register_handler.3
