@@ -483,6 +483,18 @@ coap_context_get_coap_fd(const coap_context_t *context) {
 #endif /* ! COAP_EPOLL_SUPPORT */
 }
 
+void
+coap_context_set_app_data(coap_context_t *context, void *app_data) {
+  assert(context);
+  context->app = app_data;
+}
+
+void *
+coap_context_get_app_data(const coap_context_t *context) {
+  assert(context);
+  return context->app;
+}
+
 coap_context_t *
 coap_new_context(const coap_address_t *listen_addr) {
   coap_context_t *c;
