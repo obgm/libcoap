@@ -1858,6 +1858,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
     SESSIONS_ITER_SAFE(ep->sessions, session, rtmp) {
       assert(session->ref == 0);
       if (session->ref == 0) {
+        coap_handle_event(ep->context, COAP_EVENT_SERVER_SESSION_DEL, session);
         coap_session_free(session);
       }
     }
