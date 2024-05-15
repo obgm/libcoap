@@ -40,4 +40,3 @@ Optional Tests
 [-] TD_COAP_OBS_03 Client detection of deregistration (Max-Age)
 [-] TD_COAP_OBS_04 Server detection of deregistration (client OFF)
 [-] TD_COAP_OBS_05 Server detection of deregistration (explicit RST)
-

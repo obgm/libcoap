@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/igrr/astyle_py.git
-    rev: v1.0.4
+    rev: v1.0.5
     hooks:
     -   id: astyle_py
         files: '^.*\.(c|cpp|cxx|h|h.in|h.riot|h.riot.in|h.windows|h.windows.in|h.contiki|hpp|inc)$'
@@ -27,7 +27,5 @@ repos:
     rev: v4.3.0
     hooks:
     -   id: trailing-whitespace
-        types_or: [c, c++]
     -   id: end-of-file-fixer
-        types_or: [c, c++]
     -   id: check-merge-conflict
