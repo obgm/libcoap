@@ -379,4 +379,3 @@ dist-local: update-map-file
 ## Finaly some phony targets, just to ensure those targets are always buildable
 ## no matter if the user has created same called files.
 .PHONY: update-map-file check_ctags
-

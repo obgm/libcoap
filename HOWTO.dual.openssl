@@ -47,4 +47,3 @@ PKG_CONFIG_PATH=/opt/openssl/lib/pkgconfig ./configure --libdir=/usr/lib64 \
 make
 sudo make install
 cd ..
-

@@ -96,4 +96,3 @@ include open-source software with their respective licensing terms.
 Please refer to
 [LICENSE](https://raw.githubusercontent.com/obgm/libcoap/develop/LICENSE)
 for further details.
-

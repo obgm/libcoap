@@ -5,5 +5,3 @@ The provided code is the same as used to build the installed binaries
 coap-client and coap-server.
 
 Simply 'cd' into this directory and then run 'make' to build the executables.
-
-
