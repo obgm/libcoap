@@ -198,6 +198,9 @@ struct coap_session_t {
   coap_ws_state_t *ws;            /**< WS state */
   coap_str_const_t *ws_host;      /**< Host to use in WS Request */
 #endif /* COAP_WS_SUPPORT */
+#if COAP_OSCORE_SUPPORT
+  uint8_t done_b_1_2;             /**< Have sent initial request */
+#endif /* COAP_OSCORE_SUPPORT */
   volatile uint8_t max_token_checked; /**< Check for max token size
                                            coap_ext_token_check_t */
   coap_mid_t remote_test_mid;     /**< mid used for checking remote

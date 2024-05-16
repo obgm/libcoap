@@ -366,6 +366,7 @@ coap_add_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
 int
 coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   size_t bias = 0;
+  size_t old_len;
 
   /* must allow for pdu == NULL as callers may rely on this */
   if (!pdu)
@@ -374,6 +375,9 @@ coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   if (pdu->used_size == 0) {
     return coap_add_token(pdu, len, data);
   }
+
+  old_len = pdu->e_token_length;
+
   if (len < COAP_TOKEN_EXT_1B_BIAS) {
     bias = 0;
   } else if (len < COAP_TOKEN_EXT_2B_BIAS) {
@@ -428,6 +432,10 @@ coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
       break;
     }
   }
+  if (old_len != pdu->e_token_length && pdu->hdr_size && pdu->session)
+    /* Need to fix up the header */
+    if (!coap_pdu_encode_header(pdu, pdu->session->proto))
+      return 0;
   return 1;
 }
 

@@ -86,6 +86,28 @@ coap_pdu_t *coap_oscore_new_pdu_encrypted(coap_session_t *session,
                                           oscore_partial_iv_t send_partial_iv);
 
 /**
+ * Encrypts the specified @p pdu when OSCORE encryption is required
+ * on @p session. This function returns the encrypted PDU or @c NULL
+ * on error.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The session that will handle the transport of the
+ *                specified @p pdu.
+ * @param pdu     The PDU to encrypt if necessary.
+ * @param kid_context Optional kid context to use or NULL.
+ * @param send_partial_iv @c OSCORE_SEND_PARTIAL_IV if partial_iv is always to
+ *                        be added, else @c OSCORE_SEND_NO_IV if not to be
+ *                        added for a response if not required.
+ *
+ * @return The OSCORE encrypted version of @p pdu, or @c NULL on error.
+ */
+coap_pdu_t *coap_oscore_new_pdu_encrypted_locked(coap_session_t *session,
+                                                 coap_pdu_t *pdu,
+                                                 coap_bin_const_t *kid_context,
+                                                 oscore_partial_iv_t send_partial_iv);
+
+/**
  * Decrypts the OSCORE-encrypted parts of @p pdu when OSCORE is used.
  * This function returns the decrypted PDU or @c NULL on error.
  *
