@@ -902,7 +902,7 @@ setup_dtls_context(coap_wolfssl_context_t *w_context) {
     wolfSSL_SetIORecv(w_context->dtls.ctx, coap_dgram_read);
     wolfSSL_SetIOSend(w_context->dtls.ctx, coap_dgram_write);
 #ifdef WOLFSSL_DTLS_MTU
-    wolfSSL_dtls_set_mtu(context->dtls.ssl, COAP_DEFAULT_MTU);
+    wolfSSL_CTX_dtls_set_mtu(w_context->dtls.ctx, COAP_DEFAULT_MTU);
 #endif /* WOLFSSL_DTLS_MTU */
     if (w_context->root_ca_file || w_context->root_ca_dir) {
       if (!wolfSSL_CTX_load_verify_locations_ex(w_context->dtls.ctx,
@@ -2187,7 +2187,6 @@ coap_dtls_hello(coap_session_t *session,
                 const uint8_t *data, size_t data_len) {
   coap_wolfssl_env_t *w_env = (coap_wolfssl_env_t *)session->tls;
   coap_ssl_data_t *ssl_data;
-  int r;
 
   if (!w_env) {
     w_env = coap_dtls_new_wolfssl_env(session, COAP_DTLS_ROLE_SERVER);
@@ -2198,10 +2197,6 @@ coap_dtls_hello(coap_session_t *session,
       return -1;
     }
   }
-#ifdef WOLFSSL_DTLS_MTU
-  coap_dtls_context_t *dtls = &((coap_wolfssl_context_t *)session->context->dtls_context)->dtls;
-  wolfSSL_dtls_set_mtu(dtls->ssl, (long)session->mtu);
-#endif /* WOLFSSL_DTLS_MTU */
 
   ssl_data = w_env ? &w_env->data : NULL;
   assert(ssl_data != NULL);
@@ -2214,9 +2209,8 @@ coap_dtls_hello(coap_session_t *session,
   ssl_data->session = session;
   ssl_data->pdu = data;
   ssl_data->pdu_len = (unsigned)data_len;
-  r=1;
 
-  return r;
+  return 1;
 }
 
 #endif /* COAP_SERVER_SUPPORT */
