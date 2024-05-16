@@ -76,11 +76,20 @@ COAP_REQUEST_IPATCH
 The request handler function prototype is defined as:
 [source, c]
 ----
+/**
+ * Definition of message handler function
+ *
+ * @param resource The resource being requested.
+ * @param session The CoAP session.
+ * @param request The request PDU.
+ * @param query The query string for the resource.
+ * @param response The pre-populated response PDU.
+ */
 typedef void (*coap_method_handler_t)(coap_resource_t *resource,
                                       coap_session_t *session,
-                                      const coap_pdu_t *incoming_pdu,
+                                      const coap_pdu_t *request,
                                       const coap_string_t *query,
-                                      coap_pdu_t *response_pdu);
+                                      coap_pdu_t *response);
 ----
 
 In _handler_, data from _incoming_pdu_ can be abstracted as described in
@@ -128,10 +137,21 @@ typedef enum coap_response_t {
   COAP_RESPONSE_OK    /* Response is fine */
 } coap_response_t;
 
+/**
+ * Response handler that is used as callback in coap_context_t.
+ *
+ * @param session CoAP session.
+ * @param sent The PDU that was transmitted.
+ * @param received The PDU that was received.
+ * @param mid CoAP transaction ID.
+ *
+ * @return @c COAP_RESPONSE_OK if successful, else @c COAP_RESPONSE_FAIL which
+ *         triggers sending a RST packet if the received PDU is a CON or NON.
+ */
 typedef coap_response_t (*coap_response_handler_t)(coap_session_t *session,
                                                    const coap_pdu_t *sent,
                                                    const coap_pdu_t *received,
-                                                   const coap_mid_t id);
+                                                   const coap_mid_t mid);
 ----
 
 In _handler_, data from _received_ (and optionally _sent_ if set) can be
@@ -161,6 +181,14 @@ _context_.  If _handler_ is NULL, then the handler is de-registered.
 The nack handler function prototype is defined as:
 [source, c]
 ----
+/**
+ * Negative Acknowedge handler that is used as callback in coap_context_t.
+ *
+ * @param session CoAP session.
+ * @param sent The PDU that was transmitted.
+ * @param reason The reason for the NACK.
+ * @param mid CoAP message ID.
+ */
 typedef void (*coap_nack_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *sent,
                                     const coap_nack_reason_t reason,
@@ -168,12 +196,17 @@ typedef void (*coap_nack_handler_t)(coap_session_t *session,
 ----
 NACK _reason_ can be one of the following
 ----
-COAP_NACK_TOO_MANY_RETRIES
-COAP_NACK_NOT_DELIVERABLE
-COAP_NACK_RST
-COAP_NACK_TLS_FAILED
-COAP_NACK_ICMP_ISSUE
-COAP_NACK_BAD_RESPONSE
+typedef enum {
+  COAP_NACK_TOO_MANY_RETRIES,
+  COAP_NACK_NOT_DELIVERABLE,
+  COAP_NACK_RST,
+  COAP_NACK_TLS_FAILED,
+  COAP_NACK_ICMP_ISSUE,
+  COAP_NACK_BAD_RESPONSE,
+  COAP_NACK_TLS_LAYER_FAILED,
+  COAP_NACK_WS_LAYER_FAILED,
+  COAP_NACK_WS_FAILED
+} coap_nack_reason_t;
 ----
 
 _sent_ can be NULL.  _mid_ can be used for determining which is the transmitting
@@ -189,6 +222,13 @@ client and server side.
 The ping handler function prototype is defined as:
 [source, c]
 ----
+/**
+ * Received Ping handler that is used as callback in coap_context_t.
+ *
+ * @param session CoAP session.
+ * @param received The PDU that was received.
+ * @param mid CoAP message ID.
+ */
 typedef void (*coap_ping_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *received,
                                     const coap_mid_t mid);
@@ -204,6 +244,13 @@ client and server side.
 The pong handler function prototype is defined as:
 [source, c]
 ----
+/**
+ * Received Pong handler that is used as callback in coap_context_t.
+ *
+ * @param session CoAP session.
+ * @param received The PDU that was received.
+ * @param mid CoAP message ID.
+ */
 typedef void (*coap_pong_handler_t)(coap_session_t *session,
                                     const coap_pdu_t *received,
                                     const coap_mid_t mid);
@@ -219,64 +266,126 @@ side.
 The event handler function prototype is defined as:
 [source, c]
 ----
-typedef void (*coap_event_handler_t)(coap_session_t *session,
-                                     const coap_event_t event);
+/**
+ * Type for event handler functions that can be registered with a CoAP
+ * context using the function coap_set_event_handler().
+ *
+ * @param session The current CoAP session.
+ * @param event The event type that has occurred.
+ *
+ * @return @c 0 No further action required by libcoap
+ *         @c 1 Depending from where called, libcoap may take further
+ *              action (reserved for future use)
+ */
+typedef int (*coap_event_handler_t)(coap_session_t *session,
+                                    const coap_event_t event);
 ----
 Events can be one of the following
 ----
 /**
- * (D)TLS events for COAP_PROTO_DTLS and COAP_PROTO_TLS
+ * Scalar type to represent different events, e.g. DTLS events or
+ * retransmission timeouts.
  */
-COAP_EVENT_DTLS_CLOSED        0x0000
-COAP_EVENT_DTLS_CONNECTED     0x01DE
-COAP_EVENT_DTLS_RENEGOTIATE   0x01DF
-COAP_EVENT_DTLS_ERROR         0x0200
-/**
- * TCP events for COAP_PROTO_TCP and COAP_PROTO_TLS
- */
-COAP_EVENT_TCP_CONNECTED      0x1001
-COAP_EVENT_TCP_CLOSED         0x1002
-COAP_EVENT_TCP_FAILED         0x1003
-/**
- * CSM exchange events for reliable protocols only
- */
-COAP_EVENT_SESSION_CONNECTED  0x2001
-COAP_EVENT_SESSION_CLOSED     0x2002
-COAP_EVENT_SESSION_FAILED     0x2003
-/**
- * (Q-)BLOCK events
- */
-COAP_EVENT_PARTIAL_BLOCK      0x3001
-COAP_EVENT_XMIT_BLOCK_FAIL    0x3002
-/**
- * Server session state management events
- */
-COAP_EVENT_SERVER_SESSION_NEW 0x4001
-COAP_EVENT_SERVER_SESSION_DEL 0x4002
-/**
- * Message receive and transmit events
- */
-COAP_EVENT_BAD_PACKET         0x5001
-COAP_EVENT_MSG_RETRANSMITTED  0x5002
-/**
- * OSCORE events
- */
-COAP_EVENT_OSCORE_DECRYPTION_FAILURE   0x6001
-COAP_EVENT_OSCORE_NOT_ENABLED          0x6002
-COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD 0x6003
-COAP_EVENT_OSCORE_NO_SECURITY          0x6004
-COAP_EVENT_OSCORE_INTERNAL_ERROR       0x6005
-COAP_EVENT_OSCORE_DECODE_ERROR         0x6006
-/**
- * WebSocket events
- */
-COAP_EVENT_WS_PACKET_SIZE     0x7001
-COAP_EVENT_WS_CONNECTED       0x7002
-COAP_EVENT_WS_CLOSE           0x7003
-/**
- * Keepalive events
- */
-COAP_EVENT_KEEPALIVE_FAILURE  0x8001
+typedef enum {
+  /*
+   * (D)TLS events for COAP_PROTO_DTLS and COAP_PROTO_TLS
+   */
+  /** Triggerred when (D)TLS session closed */
+  COAP_EVENT_DTLS_CLOSED       = 0x0000,
+  /** Triggered when (D)TLS session connected */
+  COAP_EVENT_DTLS_CONNECTED    = 0x01DE,
+  /** Triggered when (D)TLS session renegotiated */
+  COAP_EVENT_DTLS_RENEGOTIATE  = 0x01DF,
+  /** Triggered when (D)TLS error occurs */
+  COAP_EVENT_DTLS_ERROR        = 0x0200,
+
+  /*
+   * TCP events for COAP_PROTO_TCP and COAP_PROTO_TLS
+   */
+  /** Triggered when TCP layer connects */
+  COAP_EVENT_TCP_CONNECTED     = 0x1001,
+  /** Triggered when TCP layer is closed */
+  COAP_EVENT_TCP_CLOSED        = 0x1002,
+  /** Triggered when TCP layer fails for some reason */
+  COAP_EVENT_TCP_FAILED        = 0x1003,
+
+  /*
+   * CSM exchange events for reliable protocols only
+   */
+  /** Triggered when TCP layer completes exchange of CSM information */
+  COAP_EVENT_SESSION_CONNECTED = 0x2001,
+  /** Triggered when TCP layer closes following exchange of CSM information */
+  COAP_EVENT_SESSION_CLOSED    = 0x2002,
+  /** Triggered when TCP layer fails  following exchange of CSM information */
+  COAP_EVENT_SESSION_FAILED    = 0x2003,
+
+  /*
+   * (Q-)Block errors
+   */
+  /** Triggered when not all of a large body has been received */
+  COAP_EVENT_PARTIAL_BLOCK     = 0x3001,
+  /** Triggered when not all of a large body has been transmitted */
+  COAP_EVENT_XMIT_BLOCK_FAIL   = 0x3002,
+
+  /*
+   * Server session events
+   */
+  /**
+   * Called in the CoAP IO loop if a new *server-side* session is created due
+   * to an incoming connection.
+   *
+   * Note that the session might not be a fully established connection yet,
+   * it might also refer to, e.g., a DTLS session in a handshake stage.
+   */
+  COAP_EVENT_SERVER_SESSION_NEW = 0x4001,
+
+  /**
+   * Called in the CoAP IO loop if a server session is deleted (e.g., due to
+   * inactivity or because the maximum number of idle sessions was exceeded).
+   *
+   * The session will still contain valid data when the event handler is
+   * called.
+   */
+  COAP_EVENT_SERVER_SESSION_DEL = 0x4002,
+
+  /*
+   * Message receive and transmit events
+   */
+  /** Triggered when badly formatted packet received */
+  COAP_EVENT_BAD_PACKET         = 0x5001,
+  /** Triggered when a message is retransmitted */
+  COAP_EVENT_MSG_RETRANSMITTED  = 0x5002,
+
+  /*
+   * OSCORE events
+   */
+  /** Triggered when there is an OSCORE decryption failure */
+  COAP_EVENT_OSCORE_DECRYPTION_FAILURE = 0x6001,
+  /** Triggered when trying to use OSCORE to decrypt, but it is not enabled */
+  COAP_EVENT_OSCORE_NOT_ENABLED,
+  /** Triggered when there is no OSCORE encrypted payload provided */
+  COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD,
+  /** Triggered when there is no OSCORE security definition found */
+  COAP_EVENT_OSCORE_NO_SECURITY,
+  /** Triggered when there is an OSCORE internal error i.e malloc failed */
+  COAP_EVENT_OSCORE_INTERNAL_ERROR,
+  /** Triggered when there is an OSCORE decode of OSCORE option failure */
+  COAP_EVENT_OSCORE_DECODE_ERROR,
+  /*
+   * WebSocket events
+   */
+  /** Triggered when there is an oversize WebSockets packet */
+  COAP_EVENT_WS_PACKET_SIZE = 0x7001,
+  /** Triggered when the WebSockets layer is up */
+  COAP_EVENT_WS_CONNECTED,
+  /** Triggered when the WebSockets layer is closed */
+  COAP_EVENT_WS_CLOSED,
+  /*
+   * Keepalive events
+   */
+  /** Triggered when no response to a keep alive (ping) packet */
+  COAP_EVENT_KEEPALIVE_FAILURE = 0x8001,
+} coap_event_t;
 ----
 
 EXAMPLES

@@ -315,7 +315,7 @@ information about the received data by updating _length_ with the length of
 data available, and _data_ with a pointer to where the data is located.
 
 *NOTE:* This function has been updated by *coap_get_data_large*() when large
-transfers may take place.  See coap_block(3).
+transfers may take place.  See *coap_block*(3).
 
 RETURN VALUES
 -------------
