@@ -447,6 +447,7 @@ t_oscore_c_4(void) {
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
   FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
+  session->context = ctx;
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;
@@ -512,6 +513,7 @@ t_oscore_c_5(void) {
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
   FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
+  session->context = ctx;
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;
@@ -579,6 +581,7 @@ t_oscore_c_6(void) {
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
   FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
+  session->context = ctx;
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;
@@ -661,6 +664,7 @@ t_oscore_c_7(void) {
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
   FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
+  session->context = ctx;
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_SERVER;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;
@@ -765,6 +769,7 @@ t_oscore_c_7_2(void) {
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
   FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
+  session->context = ctx;
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;
@@ -871,6 +876,7 @@ t_oscore_c_8(void) {
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
   FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
+  session->context = ctx;
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_SERVER;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;
@@ -976,6 +982,7 @@ t_oscore_c_8_2(void) {
   session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
   FailIf_CU_ASSERT_PTR_NOT_NULL(session);
   memset(session, 0, sizeof(coap_session_t));
+  session->context = ctx;
   session->proto = COAP_PROTO_UDP;
   session->type = COAP_SESSION_TYPE_CLIENT;
   session->recipient_ctx = ctx->p_osc_ctx->recipient_chain;

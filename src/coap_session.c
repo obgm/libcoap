@@ -569,6 +569,7 @@ coap_session_free(coap_session_t *session) {
     }
 #endif /* COAP_CLIENT_SUPPORT */
   coap_delete_bin_const(session->last_token);
+  coap_delete_bin_const(session->echo);
   coap_log_debug("***%s: session %p: closed\n", coap_session_str(session),
                  (void *)session);
 

@@ -1668,8 +1668,8 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
   if (session->oscore_encryption &&
       !(pdu->type == COAP_MESSAGE_ACK && pdu->code == COAP_EMPTY_CODE)) {
     /* Refactor PDU as appropriate RFC8613 */
-    coap_pdu_t *osc_pdu = coap_oscore_new_pdu_encrypted(session, pdu, NULL,
-                                                        0);
+    coap_pdu_t *osc_pdu = coap_oscore_new_pdu_encrypted_locked(session, pdu, NULL,
+                                                               0);
 
     if (osc_pdu == NULL) {
       coap_log_warn("OSCORE: PDU could not be encrypted\n");
@@ -3490,6 +3490,9 @@ fail_response:
 static void
 handle_response(coap_context_t *context, coap_session_t *session,
                 coap_pdu_t *sent, coap_pdu_t *rcvd) {
+
+  /* Set in case there is a later call to coap_update_token() */
+  rcvd->session = session;
 
   /* In a lossy context, the ACK of a separate response may have
    * been lost, so we need to stop retransmitting requests with the

@@ -268,15 +268,29 @@ dump_cose(cose_encrypt0_t *cose, const char *message) {
 #endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_OSCORE */
 }
 
-/*
- * Take current PDU, create a new one approriately separated as per RFC8613
- * and then encrypt / integrity check the OSCORE data
- */
 coap_pdu_t *
 coap_oscore_new_pdu_encrypted(coap_session_t *session,
                               coap_pdu_t *pdu,
                               coap_bin_const_t *kid_context,
                               oscore_partial_iv_t send_partial_iv) {
+  coap_pdu_t *ret_pdu;
+
+  coap_lock_lock(session->context, return NULL);
+  ret_pdu = coap_oscore_new_pdu_encrypted_locked(session, pdu, kid_context, send_partial_iv);
+  coap_lock_unlock(session->context);
+
+  return ret_pdu;
+}
+
+/*
+ * Take current PDU, create a new one approriately separated as per RFC8613
+ * and then encrypt / integrity check the OSCORE data
+ */
+coap_pdu_t *
+coap_oscore_new_pdu_encrypted_locked(coap_session_t *session,
+                                     coap_pdu_t *pdu,
+                                     coap_bin_const_t *kid_context,
+                                     oscore_partial_iv_t send_partial_iv) {
   uint8_t coap_request = COAP_PDU_IS_REQUEST(pdu) || COAP_PDU_IS_PING(pdu);
   coap_pdu_code_t code =
       coap_request ? COAP_REQUEST_CODE_POST : COAP_RESPONSE_CODE(204);
@@ -555,7 +569,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
       /*
        * Should have already been caught by doing
        * coap_rebuild_pdu_for_proxy() before calling
-       * coap_oscore_new_pdu_encrypted()
+       * coap_oscore_new_pdu_encrypted_locked()
        */
       assert(0);
       break;
@@ -631,9 +645,10 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
   /*
    * If this is a response ACK with data, make it a separate response
    * by sending an Empty ACK and changing osc_pdu's MID and type.  This
-   * then allows lost response ACK with data to be recovered.
+   * then allows lost response ACK (now CON) with data to be recovered.
    */
   if (coap_request == 0 && osc_pdu->type == COAP_MESSAGE_ACK &&
+      COAP_RESPONSE_CLASS(pdu->code) == 2 &&
       COAP_PROTO_NOT_RELIABLE(session->proto)) {
     coap_pdu_t *empty = coap_pdu_init(COAP_MESSAGE_ACK,
                                       0,
@@ -677,7 +692,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
         goto error;
       association->recipient_ctx = rcp_ctx;
       coap_delete_pdu(association->sent_pdu);
-      if (session->b_2_step != COAP_OSCORE_B_2_NONE) {
+      if (session->b_2_step != COAP_OSCORE_B_2_NONE && !session->done_b_1_2) {
         size_t size;
 
         association->sent_pdu = coap_pdu_duplicate(pdu, session,
@@ -692,7 +707,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
         association->sent_pdu = NULL;
       }
     } else if (!oscore_new_association(session,
-                                       session->b_2_step != COAP_OSCORE_B_2_NONE ? pdu : NULL,
+                                       pdu,
                                        &pdu_token,
                                        rcp_ctx,
                                        &cose->aad,
@@ -701,6 +716,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
                                        doing_observe)) {
       goto error;
     }
+    session->done_b_1_2 = 1;
   }
   return osc_pdu;
 
@@ -751,8 +767,8 @@ build_and_send_error_pdu(coap_session_t *session,
     coap_pdu_t *osc_pdu;
 
     osc_pdu =
-        coap_oscore_new_pdu_encrypted(session, err_pdu, kid_context,
-                                      echo_data ? 1 : 0);
+        coap_oscore_new_pdu_encrypted_locked(session, err_pdu, kid_context,
+                                             echo_data ? 1 : 0);
     if (!osc_pdu)
       goto fail_resp;
     session->oscore_encryption = 0;
