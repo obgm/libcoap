@@ -31,13 +31,18 @@
 
 /**
  * Definition of message handler function
+ *
+ * @param resource The resource being requested.
+ * @param session The CoAP session.
+ * @param request The request PDU.
+ * @param query The query string for the resource.
+ * @param response The pre-populated response PDU.
  */
-typedef void (*coap_method_handler_t)
-(coap_resource_t *,
- coap_session_t *,
- const coap_pdu_t * /* request */,
- const coap_string_t * /* query string */,
- coap_pdu_t * /* response */);
+typedef void (*coap_method_handler_t)(coap_resource_t *resource,
+                                      coap_session_t *session,
+                                      const coap_pdu_t *request,
+                                      const coap_string_t *query,
+                                      coap_pdu_t *response);
 
 #define COAP_ATTR_FLAGS_RELEASE_NAME  0x1
 #define COAP_ATTR_FLAGS_RELEASE_VALUE 0x2

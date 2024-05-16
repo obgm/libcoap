@@ -205,10 +205,14 @@ but the old data will not get freed off.
 The _callback_ handler function prototype is defined as:
 [source, c]
 ----
+/**
+ * Callback to free off the app data when the cache-entry is
+ * being deleted / freed off.
+ *
+ * @param data  The app data to be freed off.
+ */
 typedef void (*coap_cache_app_data_free_callback_t)(void *data);
 ----
-where _data_ is passed into the callback function whenever the Cache Entry is
-deleted.
 
 *Function: coap_cache_get_app_data()*
 

@@ -81,9 +81,18 @@ CALLBACK HANDLER
 The coap_oscore_save_seq_num_t method handler function prototype is defined as:
 [source, c]
 ----
+/**
+ * Definition of the function used to save the current Sender Sequence Number
+ *
+ * @param sender_seq_num The Sender Sequence Number to save in non-volatile
+ *                      memory.
+ * @param param The save_seq_num_func_param provided to
+ *              coap_new_oscore_context().
+ *
+ * @return @c 1 if success, else @c 0 if a failure of some sort.
+ */
 typedef int (*coap_oscore_save_seq_num_t)(uint64_t sender_seq_num, void *param);
 ----
-and returns 0 on failure, 1 on succes.
 
 FUNCTIONS
 ---------

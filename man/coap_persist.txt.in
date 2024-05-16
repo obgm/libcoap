@@ -117,6 +117,24 @@ The _observe_added_ callback function prototype, called when a client
 subscribes to a resource for observation, is defined as:
 [source, c]
 ----
+/**
+ * Callback handler definition called when a new observe has been set up,
+ * as defined in coap_persist_track_funcs().
+ *
+ * @param session The current session.
+ * @param observe_key The pointer to the subscription.
+ * @param e_proto The CoAP protocol in use for the session / endpoint.
+ * @param e_listen_addr The IP/port that the endpoint is listening on.
+ * @param s_addr_info Local / Remote IP addresses. ports etc. of session.
+ * @param raw_packet L7 packet as seen on the wire (could be concatenated if
+ *                   Block1 FETCH is being used).
+ * @param oscore_info Has OSCORE information if OSCORE is protecting the
+ *                    session or NULL if OSCORE is not in use.
+ * @param user_data Application provided information from
+ *                  coap_persist_track_funcs().
+ *
+ * @return @c 1 if success else @c 0.
+ */
 typedef int (*coap_observe_added_t)(coap_session_t *session,
                                     coap_subscription_t *observe_key,
                                     coap_proto_t e_proto,
@@ -131,6 +149,17 @@ The _observe_deleted_ callback function prototype, called when a client
 removes the subscription to a resource for observation, is defined as:
 [source, c]
 ----
+/**
+ * Callback handler definition called when an observe is being removed,
+ * as defined in coap_persist_track_funcs().
+ *
+ * @param session The current session.
+ * @param observe_key The pointer to the subscription.
+ * @param user_data Application provided information from
+ *                  coap_persist_track_funcs().
+ *
+ * @return @c 1 if success else @c 0.
+ */
 typedef int (*coap_observe_deleted_t)(coap_session_t *session,
                                       coap_subscription_t *observe_key,
                                       void *user_data);
@@ -140,6 +169,21 @@ The _track_observe_value_ callback function prototype, called when a new
 unsolicited observe response is went (every _save_freq_), is defined as:
 [source, c]
 ----
+/**
+ * Callback handler definition called when an observe unsolicited response is
+ * being sent, as defined in coap_persist_track_funcs().
+ *
+ * Note: This will only get called every save_freq as defined by
+ * coap_persist_track_funcs().
+ *
+ * @param context The current CoAP context.
+ * @param resource_name The uri path name of the resource.
+ * @param observe_num The current observe value just sent.
+ * @param user_data Application provided information from
+ *                  coap_persist_track_funcs().
+ *
+ * @return @c 1 if success else @c 0.
+ */
 typedef int (*coap_track_observe_value_t)(coap_context_t *context,
                                           coap_str_const_t *resource_name,
                                           uint32_t observe_num,
@@ -151,6 +195,19 @@ resource is created from a request that is calling the resource unknown
 handler, is defined as:
 [source, c]
 ----
+/**
+ * Callback handler definition called when a dynamic resource is getting
+ * created, as defined in coap_persist_track_funcs().
+ *
+ * @param session The current CoAP session.
+ * @param resource_name The uri path name of the resource.
+ * @param raw_packet L7 packet as seen on the wire (could be concatenated if
+ *                   Block1 PUT/POST/FETCH used to create resource).
+ * @param user_data Application provided information from
+ *                  coap_persist_track_funcs().
+ *
+ * @return @c 1 if success else @c 0.
+ */
 typedef int (*coap_dyn_resource_added_t)(coap_session_t *session,
                                          coap_str_const_t *resource_name,
                                          coap_bin_const_t *raw_packet,
@@ -161,6 +218,20 @@ The _resource_deleted_ callback function prototype, called whenever a
 resource is deleted, is defined as:
 [source, c]
 ----
+/**
+ * Callback handler definition called when resource is removed,
+ * as defined in coap_persist_track_funcs().
+ *
+ * This will remove any dynamic resources that are being tracked as well
+ * as any observe value tracking.
+ *
+ * @param context The current CoAP context.
+ * @param resource_name The uri path name of the resource.
+ * @param user_data Application provided information from
+ *                  coap_persist_track_funcs().
+ *
+ * @return @c 1 if success else @c 0.
+ */
 typedef int (*coap_resource_deleted_t)(coap_context_t *context,
                                        coap_str_const_t *resource_name,
                                        void *user_data);
