@@ -702,7 +702,7 @@ coap_lock_lock_func(coap_lock_t *lock, const char *file, int line) {
         /* This is called from within an app callback */
         lock->lock_count++;
         assert(lock->in_callback == lock->lock_count);
-        return 1;
+        goto being_freed_check;
       } else {
         coap_log_alert("Thread Deadlock: Last %s: %u, this %s: %u\n",
                        lock->lock_file, lock->lock_line, file, line);
@@ -712,11 +712,15 @@ coap_lock_lock_func(coap_lock_t *lock, const char *file, int line) {
     /* Wait for the other thread to unlock */
     coap_mutex_lock(&lock->mutex);
   }
-  /* Just got the lock, so should not be in a locked callback */
-  assert(!lock->in_callback);
   lock->pid = coap_thread_pid;
   lock->lock_file = file;
   lock->lock_line = line;
+  if (lock->in_callback) {
+    /* This is when called from within an app callback and context is going away */
+    lock->lock_count++;
+    assert(lock->in_callback == lock->lock_count);
+  }
+being_freed_check:
   if (lock->being_freed) {
     /* context is in the process of being deleted */
     coap_lock_unlock_func(lock, file, line);
@@ -746,13 +750,19 @@ coap_lock_lock_func(coap_lock_t *lock) {
    * cannot use that here and have to rely on lock-pid being stable
    */
   if (lock->in_callback && coap_thread_pid == lock->pid) {
+    if (lock->being_freed) {
+      return 0;
+    }
     lock->lock_count++;
     assert(lock->in_callback == lock->lock_count);
   } else {
     coap_mutex_lock(&lock->mutex);
-    /* Just got the lock, so should not be in a locked callback */
-    assert(!lock->in_callback);
     lock->pid = coap_thread_pid;
+    if (lock->in_callback) {
+      /* This is when called from within an app callback and context is going away */
+      lock->lock_count++;
+      assert(lock->in_callback == lock->lock_count);
+    }
     if (lock->being_freed) {
       coap_lock_unlock_func(lock);
       return 0;
