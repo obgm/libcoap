@@ -37,6 +37,20 @@ jobs:
         run: |
           ./configure --disable-documentation --disable-doxygen --disable-man --enable-examples --enable-tests --disable-dtls
           scan-build make V=0
+  check-missing-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup
+        run: |
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags clang-tools
+          ./autogen.sh
+      - name: configure
+        run: |
+          ./configure --disable-documentation --disable-doxygen --disable-man --enable-examples --enable-tests --disable-dtls
+      - name: check
+        run: |
+          scripts/check-missing-updates.sh
   build-linux:
     runs-on: ubuntu-latest
     strategy:
