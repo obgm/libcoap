@@ -78,6 +78,9 @@ Else please copy the output from (do from within the libcoap directory) :-
 git describe --tags --dirty --always
 ```
 
+If using a non-standard TLS library build, please also provide the ./configure
+options or equivalent to aid troubleshooting.
+
 ## Problem Description
 
 // Detailed problem description goes here.
