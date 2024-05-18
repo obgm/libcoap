@@ -1879,6 +1879,10 @@ coap_dtls_new_server_session(coap_session_t *session) {
       }
     }
   }
+  if (w_context->psk_pki_enabled & IS_PKI) {
+    if (!setup_pki_ssl(ssl, &w_context->setup_data, COAP_DTLS_ROLE_SERVER))
+      goto error;
+  }
 
 #if defined(WOLFSSL_DTLS_CH_FRAG) && defined(WOLFSSL_DTLS13)
   if (wolfSSL_dtls13_allow_ch_frag(ssl, 1) != WOLFSSL_SUCCESS) {
@@ -2476,6 +2480,8 @@ coap_tls_new_server_session(coap_session_t *session) {
   wolfSSL_SetIOReadCtx(ssl, w_env);
   wolfSSL_set_app_data(ssl, session);
 
+  wolfSSL_set_cipher_list(ssl, "ALL");
+
   if (w_context->psk_pki_enabled & IS_PSK) {
     psk_hint = coap_get_session_server_psk_hint(session);
     if (psk_hint != NULL && psk_hint->length) {
@@ -2491,6 +2497,10 @@ coap_tls_new_server_session(coap_session_t *session) {
       }
     }
   }
+  if (w_context->psk_pki_enabled & IS_PKI) {
+    if (!setup_pki_ssl(ssl, &w_context->setup_data, COAP_DTLS_ROLE_SERVER))
+      goto error;
+  }
 #if defined(HAVE_RPK) && LIBWOLFSSL_VERSION_HEX >= 0x05006004
   if (w_context->setup_data.is_rpk_not_cert) {
     char stype[] = {WOLFSSL_CERT_TYPE_RPK};
@@ -2503,8 +2513,6 @@ coap_tls_new_server_session(coap_session_t *session) {
   w_env->last_timeout = now;
   w_env->ssl = ssl;
   w_env->data.session = session;
-
-  wolfSSL_set_cipher_list(ssl, "ALL");
 
   r = wolfSSL_accept(ssl);
   if (r == -1) {
