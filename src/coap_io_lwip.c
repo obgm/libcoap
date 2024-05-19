@@ -213,12 +213,12 @@ coap_udp_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   coap_pdu_t *pdu = NULL;
   coap_session_t *session = NULL;
   coap_tick_t now;
-  coap_packet_t *packet;
+  coap_packet_t *packet = NULL;
   int result = -1;
 
   if (p->len < 4) {
     /* Minimum size of CoAP header - ignore runt */
-    return;
+    goto error_free_pbuf;
   }
 
   packet = coap_malloc_type(COAP_PACKET, sizeof(coap_packet_t));
@@ -238,10 +238,10 @@ coap_udp_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 
   coap_ticks(&now);
 
-  coap_lock_lock(ep->context, return);
+  coap_lock_lock(ep->context, goto error_free_pbuf);
   session = coap_endpoint_get_session(ep, packet, now);
   if (!session)
-    goto error;
+    goto error_free_pbuf;
   LWIP_ASSERT("Proto not supported for LWIP", COAP_PROTO_NOT_RELIABLE(session->proto));
 
   coap_log_debug("*  %s: lwip:  recv %4d bytes\n",
@@ -271,12 +271,15 @@ coap_udp_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   coap_lock_unlock(ep->context);
   return;
 
+error_free_pbuf:
+  pbuf_free(p);
+
 error:
   /*
    * https://rfc-editor.org/rfc/rfc7252#section-4.2 MUST send RST
    * https://rfc-editor.org/rfc/rfc7252#section-4.3 MAY send RST
    */
-  if (session)
+  if (session && pdu)
     coap_send_rst(session, pdu);
   coap_delete_pdu(pdu);
   coap_free_packet(packet);
