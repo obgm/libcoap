@@ -14,7 +14,7 @@
  * @brief LwIP specific functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 #include <lwip/udp.h>
 #include <lwip/timeouts.h>
 #include <lwip/tcpip.h>

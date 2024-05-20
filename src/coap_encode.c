@@ -13,7 +13,7 @@
  * @brief Encoding and decoding Coap data types functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 /* Carsten suggested this when fls() is not available: */
 #ifndef HAVE_FLS

@@ -13,7 +13,7 @@
  * @brief CoAP Cache handling
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #if COAP_SERVER_SUPPORT
 /* Determines if the given option_type denotes an option type that can

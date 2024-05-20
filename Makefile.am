@@ -94,6 +94,7 @@ EXTRA_DIST = \
   examples/riot/tests_pkg_libcoap/tests/01-run.py \
   examples/riot/README \
   Makefile.libcoap \
+  include/coap$(LIBCOAP_API_VERSION)/coap_libcoap_build.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_riot.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_asn1_internal.h \

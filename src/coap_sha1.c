@@ -63,7 +63,7 @@
  * Reformatted as appropriate.
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #if COAP_WS_SUPPORT && !defined(COAP_WITH_LIBOPENSSL) && !defined(COAP_WITH_LIBGNUTLS) && !defined(COAP_WITH_LIBMBEDTLS) && !defined(COAP_WITH_LIBWOLFSSL)
 /*

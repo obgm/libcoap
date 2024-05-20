@@ -15,7 +15,7 @@
  * @brief CoAP WebSocket handling functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #if COAP_WS_SUPPORT
 #include <stdio.h>

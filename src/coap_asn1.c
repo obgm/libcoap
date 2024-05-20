@@ -13,7 +13,7 @@
  * @brief CoAP specific ASN.1 handling
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 size_t
 asn1_len(const uint8_t **ptr) {

@@ -14,7 +14,7 @@
  * @brief Event handling
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 /*
  * This replaces coap_set_event_handler() so that handler registration is

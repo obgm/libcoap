@@ -15,7 +15,7 @@
  * @brief CoAP (D)TLS handling functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #ifdef _WIN32
 #define strcasecmp _stricmp

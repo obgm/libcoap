@@ -13,7 +13,7 @@
  * @brief Layer Handling
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 /*
  * Layer index table.  A whole protocol chunk gets copied into coap_socket_t.

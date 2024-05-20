@@ -43,7 +43,7 @@
  *
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 #include "stdio.h"
 
 struct cose_curve_desc {

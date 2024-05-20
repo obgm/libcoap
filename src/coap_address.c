@@ -13,7 +13,7 @@
  * @brief Handling of network addresses
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP) && !defined(RIOT_VERSION)
 #ifdef HAVE_ARPA_INET_H
