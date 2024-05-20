@@ -13,7 +13,7 @@
  * @brief CoAP Block handling
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))

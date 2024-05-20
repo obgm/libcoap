@@ -13,7 +13,7 @@
  * @brief Server resource handling functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #if COAP_SERVER_SUPPORT
 #include <stdio.h>

@@ -13,7 +13,7 @@
  * @brief RIOT specific I/O functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #include "net/gnrc.h"
 #include "net/gnrc/ipv6.h"

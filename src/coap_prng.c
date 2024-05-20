@@ -14,7 +14,7 @@
  * @brief Pseudo Random Number functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #ifdef HAVE_GETRANDOM
 #include <sys/random.h>

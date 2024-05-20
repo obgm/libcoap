@@ -14,7 +14,7 @@
  * @brief Contiki-NG-specific functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 #include "contiki-net.h"
 
 static void prepare_io(coap_context_t *ctx);

@@ -13,7 +13,7 @@
  * @brief Memory handling functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #ifndef WITH_LWIP
 #if COAP_MEMORY_TYPE_TRACK

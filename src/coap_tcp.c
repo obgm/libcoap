@@ -14,7 +14,7 @@
  * @brief CoAP TCP handling functions
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 int
 coap_tcp_is_supported(void) {

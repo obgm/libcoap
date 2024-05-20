@@ -18,7 +18,7 @@
  * @brief CoAP OSCORE handling
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #if COAP_OSCORE_SUPPORT
 #include <ctype.h>

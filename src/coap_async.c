@@ -13,7 +13,7 @@
  * @brief State handling for asynchronous messages
  */
 
-#include "coap3/coap_internal.h"
+#include "coap3/coap_libcoap_build.h"
 
 #if COAP_ASYNC_SUPPORT
 #include <stdio.h>
