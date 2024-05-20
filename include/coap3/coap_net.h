@@ -394,7 +394,7 @@ uint16_t coap_new_message_id(coap_session_t *session);
  *
  * @param context The current coap_context_t object to free off.
  */
-void coap_free_context(coap_context_t *context);
+COAP_API void coap_free_context(coap_context_t *context);
 
 /**
  * @deprecated Use coap_context_set_app_data() instead.
@@ -647,7 +647,7 @@ void *coap_context_get_app_data(const coap_context_t *context);
  * @return Number of milliseconds spent in function or @c -1 if there was
  *         an error
  */
-int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms);
+COAP_API int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms);
 
 #if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
 /**
@@ -677,9 +677,9 @@ int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms);
  *         if there was an error.  If defined, readfds, writefds, exceptfds
  *         are updated as returned by the internal select() call.
  */
-int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
-                             int nfds, fd_set *readfds, fd_set *writefds,
-                             fd_set *exceptfds);
+COAP_API int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
+                                      int nfds, fd_set *readfds, fd_set *writefds,
+                                      fd_set *exceptfds);
 #endif /* ! RIOT_VERSION && ! WITH_CONTIKI */
 
 /**
@@ -694,7 +694,7 @@ int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
  *
  * @return @c 1 I/O still pending, @c 0 no I/O pending.
  */
-int coap_io_pending(coap_context_t *context);
+COAP_API int coap_io_pending(coap_context_t *context);
 
 /**
 * Iterates through all the coap_socket_t structures embedded in endpoints or
@@ -729,12 +729,12 @@ int coap_io_pending(coap_context_t *context);
 *                 select() to wait for network events or 0 if wait should be
 *                 forever.
 */
-unsigned int coap_io_prepare_io(coap_context_t *ctx,
-                                coap_socket_t *sockets[],
-                                unsigned int max_sockets,
-                                unsigned int *num_sockets,
-                                coap_tick_t now
-                               );
+COAP_API unsigned int coap_io_prepare_io(coap_context_t *ctx,
+                                         coap_socket_t *sockets[],
+                                         unsigned int max_sockets,
+                                         unsigned int *num_sockets,
+                                         coap_tick_t now
+                                        );
 
 /**
  * Processes any outstanding read, write, accept or connect I/O as indicated
@@ -749,7 +749,7 @@ unsigned int coap_io_prepare_io(coap_context_t *ctx,
  * @param ctx The CoAP context
  * @param now Current time
  */
-void coap_io_do_io(coap_context_t *ctx, coap_tick_t now);
+COAP_API void coap_io_do_io(coap_context_t *ctx, coap_tick_t now);
 
 /**
  * Any now timed out delayed packet is transmitted, along with any packets
@@ -770,7 +770,7 @@ void coap_io_do_io(coap_context_t *ctx, coap_tick_t now);
  *                 epoll_wait() to wait for network events or 0 if wait should be
  *                 forever.
  */
-unsigned int coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now);
+COAP_API unsigned int coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now);
 
 struct epoll_event;
 
@@ -787,8 +787,8 @@ struct epoll_event;
  * @param nevents The number of events.
  *
  */
-void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events,
-                      size_t nevents);
+COAP_API void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events,
+                               size_t nevents);
 
 /**@}*/
 
@@ -857,10 +857,7 @@ void coap_lwip_set_input_wait_handler(coap_context_t *context,
  * @return Number of milliseconds spent in function or @c -1 if there was
  *         an error
  */
-COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_run_once(coap_context_t *ctx, uint32_t timeout_ms) {
-  return coap_io_process(ctx, timeout_ms);
-}
+#define coap_run_once(ctx, timeout_ms) coap_io_process(ctx, timeout_ms)
 
 /**
 * @deprecated Use coap_io_prepare_io() instead.
@@ -880,14 +877,8 @@ coap_run_once(coap_context_t *ctx, uint32_t timeout_ms) {
 *                 select() to wait for network events or 0 if wait should be
 *                 forever.
 */
-COAP_STATIC_INLINE COAP_DEPRECATED unsigned int
-coap_write(coap_context_t *ctx,
-           coap_socket_t *sockets[],
-           unsigned int max_sockets,
-           unsigned int *num_sockets,
-           coap_tick_t now) {
-  return coap_io_prepare_io(ctx, sockets, max_sockets, num_sockets, now);
-}
+#define coap_write(ctx, sockets, max_sockets, num_sockets, now) \
+  coap_io_prepare_io(ctx, sockets, max_sockets, num_sockets, now)
 
 /**
  * @deprecated Use coap_io_do_io() instead.
@@ -899,10 +890,7 @@ coap_write(coap_context_t *ctx,
  * @param ctx The CoAP context
  * @param now Current time
  */
-COAP_STATIC_INLINE COAP_DEPRECATED void
-coap_read(coap_context_t *ctx, coap_tick_t now) {
-  coap_io_do_io(ctx, now);
-}
+#define coap_read(ctx, now) coap_io_do_io(ctx, now)
 
 /* Old definitions which may be hanging around in old code - be helpful! */
 #define COAP_RUN_NONBLOCK COAP_RUN_NONBLOCK_deprecated_use_COAP_IO_NO_WAIT

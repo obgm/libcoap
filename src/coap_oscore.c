@@ -268,7 +268,7 @@ dump_cose(cose_encrypt0_t *cose, const char *message) {
 #endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_OSCORE */
 }
 
-coap_pdu_t *
+COAP_API coap_pdu_t *
 coap_oscore_new_pdu_encrypted(coap_session_t *session,
                               coap_pdu_t *pdu,
                               coap_bin_const_t *kid_context,
@@ -276,7 +276,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
   coap_pdu_t *ret_pdu;
 
   coap_lock_lock(session->context, return NULL);
-  ret_pdu = coap_oscore_new_pdu_encrypted_locked(session, pdu, kid_context, send_partial_iv);
+  ret_pdu = coap_oscore_new_pdu_encrypted_lkd(session, pdu, kid_context, send_partial_iv);
   coap_lock_unlock(session->context);
 
   return ret_pdu;
@@ -287,10 +287,10 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
  * and then encrypt / integrity check the OSCORE data
  */
 coap_pdu_t *
-coap_oscore_new_pdu_encrypted_locked(coap_session_t *session,
-                                     coap_pdu_t *pdu,
-                                     coap_bin_const_t *kid_context,
-                                     oscore_partial_iv_t send_partial_iv) {
+coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
+                                  coap_pdu_t *pdu,
+                                  coap_bin_const_t *kid_context,
+                                  oscore_partial_iv_t send_partial_iv) {
   uint8_t coap_request = COAP_PDU_IS_REQUEST(pdu) || COAP_PDU_IS_PING(pdu);
   coap_pdu_code_t code =
       coap_request ? COAP_REQUEST_CODE_POST : COAP_RESPONSE_CODE(204);
@@ -569,7 +569,7 @@ coap_oscore_new_pdu_encrypted_locked(coap_session_t *session,
       /*
        * Should have already been caught by doing
        * coap_rebuild_pdu_for_proxy() before calling
-       * coap_oscore_new_pdu_encrypted_locked()
+       * coap_oscore_new_pdu_encrypted_lkd()
        */
       assert(0);
       break;
@@ -767,8 +767,8 @@ build_and_send_error_pdu(coap_session_t *session,
     coap_pdu_t *osc_pdu;
 
     osc_pdu =
-        coap_oscore_new_pdu_encrypted_locked(session, err_pdu, kid_context,
-                                             echo_data ? 1 : 0);
+        coap_oscore_new_pdu_encrypted_lkd(session, err_pdu, kid_context,
+                                          echo_data ? 1 : 0);
     if (!osc_pdu)
       goto fail_resp;
     session->oscore_encryption = 0;

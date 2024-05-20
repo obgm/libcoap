@@ -172,6 +172,19 @@ extern coap_mutex_t m_persist_add;
  *
  * So the initial support for thread safe is done at the context level.
  *
+ * New model, simplifying debugging and better documentation.
+ *
+ * Any public API call needs to potentially lock context, as there may be
+ * multiple contexts. If a public API needs thread safe protection, the
+ * coap_X() function locks the context lock, calls the coap_X_lkd() function
+ * that does all the work and on return unlocks the context before returning
+ * to the caller of coap_X().
+ *
+ * Any internal libcoap calls that are to the public API coap_X() must call
+ * coap_X_lkd() if the calling code is already locked.
+ *
+ * Old, equivalent model
+ *
  * Any public API call needs to potentially lock context, as there may be
  * multiple contexts. If a public API needs thread safe protection, a
  * locking wrapper for coap_X() is added to src/coap_threadsafe.c which then

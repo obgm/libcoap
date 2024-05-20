@@ -33,13 +33,13 @@ coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   int ret;
 
   coap_lock_lock(ctx, return 0);
-  ret = coap_io_process_locked(ctx, timeout_ms);
+  ret = coap_io_process_lkd(ctx, timeout_ms);
   coap_lock_unlock(ctx);
   return ret;
 }
 
 int
-coap_io_process_locked(coap_context_t *ctx, uint32_t timeout_ms) {
+coap_io_process_lkd(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_tick_t before, now;
   uint32_t timeout;
   coap_socket_t *sockets[1];
@@ -52,7 +52,7 @@ coap_io_process_locked(coap_context_t *ctx, uint32_t timeout_ms) {
 
   coap_ticks(&before);
   /* Use the common logic */
-  timeout = coap_io_prepare_io_locked(ctx, sockets, max_sockets, &num_sockets, before);
+  timeout = coap_io_prepare_io_lkd(ctx, sockets, max_sockets, &num_sockets, before);
 
   if (timeout_ms == COAP_IO_NO_WAIT) {
     timeout = 0;
@@ -83,7 +83,7 @@ coap_io_process_locked(coap_context_t *ctx, uint32_t timeout_ms) {
   }
 
   coap_ticks(&now);
-  coap_io_do_io_locked(ctx, now);
+  coap_io_do_io_lkd(ctx, now);
 
 #if COAP_SERVER_SUPPORT
   coap_expire_cache_entries(ctx);

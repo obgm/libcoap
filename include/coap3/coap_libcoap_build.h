@@ -29,6 +29,19 @@
 
 #include "coap_config.h"
 
+/*
+ * This is here to to catch any code within libcoap that is not
+ * calling the _lkd version of the Public API function when
+ * compiling. This is to try and catch all the locking dead-locks.
+ */
+#if !defined(COAP_API)
+#  ifdef __GNUC__
+#    define COAP_API __attribute__((deprecated))
+#  else /* __GNUC__ */
+#    define COAP_API
+#  endif /* __GNUC__ */
+#endif
+
 #include "coap_internal.h"
 
 #endif /* COAP_LIBCOAP_BUILD_H_ */

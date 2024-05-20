@@ -1179,22 +1179,22 @@ error:
 }
 #endif /* ! WITH_LWIP && ! WITH_CONTIKI && ! RIOT_VERSION */
 
-unsigned int
+COAP_API unsigned int
 coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
   unsigned int ret;
 
   coap_lock_lock(ctx, return 0);
-  ret = coap_io_prepare_epoll_locked(ctx, now);
+  ret = coap_io_prepare_epoll_lkd(ctx, now);
   coap_lock_unlock(ctx);
   return ret;
 }
 
 unsigned int
-coap_io_prepare_epoll_locked(coap_context_t *ctx, coap_tick_t now) {
+coap_io_prepare_epoll_lkd(coap_context_t *ctx, coap_tick_t now) {
 #ifndef COAP_EPOLL_SUPPORT
   (void)ctx;
   (void)now;
-  coap_log_emerg("coap_io_prepare_epoll_locked() requires libcoap compiled for using epoll\n");
+  coap_log_emerg("coap_io_prepare_epoll_lkd() requires libcoap compiled for using epoll\n");
   return 0;
 #else /* COAP_EPOLL_SUPPORT */
   coap_socket_t *sockets[1];
@@ -1204,7 +1204,7 @@ coap_io_prepare_epoll_locked(coap_context_t *ctx, coap_tick_t now) {
 
   coap_lock_check_locked(ctx);
   /* Use the common logic */
-  timeout = coap_io_prepare_io_locked(ctx, sockets, max_sockets, &num_sockets, now);
+  timeout = coap_io_prepare_io_lkd(ctx, sockets, max_sockets, &num_sockets, now);
   /* Save when the next expected I/O is to take place */
   ctx->next_timeout = timeout ? now + timeout : 0;
   if (ctx->eptimerfd != -1) {
@@ -1228,7 +1228,7 @@ coap_io_prepare_epoll_locked(coap_context_t *ctx, coap_tick_t now) {
     ret = timerfd_settime(ctx->eptimerfd, 0, &new_value, NULL);
     if (ret == -1) {
       coap_log_err("%s: timerfd_settime failed: %s (%d)\n",
-                   "coap_io_prepare_epoll_locked",
+                   "coap_io_prepare_epoll_lkd",
                    coap_socket_strerror(), errno);
     }
   }
@@ -1240,7 +1240,7 @@ coap_io_prepare_epoll_locked(coap_context_t *ctx, coap_tick_t now) {
  * return  0 No i/o pending
  *       +ve millisecs to next i/o activity
  */
-unsigned int
+COAP_API unsigned int
 coap_io_prepare_io(coap_context_t *ctx,
                    coap_socket_t *sockets[],
                    unsigned int max_sockets,
@@ -1249,7 +1249,7 @@ coap_io_prepare_io(coap_context_t *ctx,
   unsigned int ret;
 
   coap_lock_lock(ctx, return 0);
-  ret = coap_io_prepare_io_locked(ctx, sockets, max_sockets, num_sockets, now);
+  ret = coap_io_prepare_io_lkd(ctx, sockets, max_sockets, num_sockets, now);
   coap_lock_unlock(ctx);
   return ret;
 }
@@ -1259,11 +1259,11 @@ coap_io_prepare_io(coap_context_t *ctx,
  *       +ve millisecs to next i/o activity
  */
 unsigned int
-coap_io_prepare_io_locked(coap_context_t *ctx,
-                          coap_socket_t *sockets[],
-                          unsigned int max_sockets,
-                          unsigned int *num_sockets,
-                          coap_tick_t now) {
+coap_io_prepare_io_lkd(coap_context_t *ctx,
+                       coap_socket_t *sockets[],
+                       unsigned int max_sockets,
+                       unsigned int *num_sockets,
+                       coap_tick_t now) {
   coap_queue_t *nextpdu;
   coap_session_t *s, *rtmp;
   coap_tick_t timeout = 0;
@@ -1512,38 +1512,38 @@ release_2:
 }
 
 #if !defined(WITH_LWIP) && !defined(CONTIKI) && !defined(RIOT_VERSION)
-int
+COAP_API int
 coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   int ret;
 
   coap_lock_lock(ctx, return 0);
-  ret = coap_io_process_locked(ctx, timeout_ms);
+  ret = coap_io_process_lkd(ctx, timeout_ms);
   coap_lock_unlock(ctx);
   return ret;
 }
 
 int
-coap_io_process_locked(coap_context_t *ctx, uint32_t timeout_ms) {
-  return coap_io_process_with_fds_locked(ctx, timeout_ms, 0, NULL, NULL, NULL);
+coap_io_process_lkd(coap_context_t *ctx, uint32_t timeout_ms) {
+  return coap_io_process_with_fds_lkd(ctx, timeout_ms, 0, NULL, NULL, NULL);
 }
 
-int
+COAP_API int
 coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                          int enfds, fd_set *ereadfds, fd_set *ewritefds,
                          fd_set *eexceptfds) {
   int ret;
 
   coap_lock_lock(ctx, return 0);
-  ret = coap_io_process_with_fds_locked(ctx, timeout_ms, enfds, ereadfds, ewritefds,
-                                        eexceptfds);
+  ret = coap_io_process_with_fds_lkd(ctx, timeout_ms, enfds, ereadfds, ewritefds,
+                                     eexceptfds);
   coap_lock_unlock(ctx);
   return ret;
 }
 
 int
-coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
-                                int enfds, fd_set *ereadfds, fd_set *ewritefds,
-                                fd_set *eexceptfds) {
+coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
+                             int enfds, fd_set *ereadfds, fd_set *ewritefds,
+                             fd_set *eexceptfds) {
   coap_fd_t nfds = 0;
   coap_tick_t before, now;
   unsigned int timeout;
@@ -1558,9 +1558,9 @@ coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
 
 #ifndef COAP_EPOLL_SUPPORT
 
-  timeout = coap_io_prepare_io_locked(ctx, ctx->sockets,
-                                      (sizeof(ctx->sockets) / sizeof(ctx->sockets[0])),
-                                      &ctx->num_sockets, before);
+  timeout = coap_io_prepare_io_lkd(ctx, ctx->sockets,
+                                   (sizeof(ctx->sockets) / sizeof(ctx->sockets[0])),
+                                   &ctx->num_sockets, before);
 
   if (ereadfds) {
     ctx->readfds = *ereadfds;
@@ -1664,7 +1664,7 @@ coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
   }
 
   coap_ticks(&now);
-  coap_io_do_io_locked(ctx, now);
+  coap_io_do_io_lkd(ctx, now);
 
 #else /* COAP_EPOLL_SUPPORT */
   (void)ereadfds;
@@ -1672,7 +1672,7 @@ coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
   (void)eexceptfds;
   (void)enfds;
 
-  timeout = coap_io_prepare_epoll_locked(ctx, before);
+  timeout = coap_io_prepare_epoll_lkd(ctx, before);
 
   do {
     struct epoll_event events[COAP_MAX_EPOLL_EVENTS];
@@ -1684,7 +1684,7 @@ coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
       etimeout = 0;
     } else if (timeout == 0 && timeout_ms == COAP_IO_WAIT) {
       /*
-       * Nothing found in coap_io_prepare_epoll_locked() and COAP_IO_WAIT set,
+       * Nothing found in coap_io_prepare_epoll_lkd() and COAP_IO_WAIT set,
        * so wait forever in epoll_wait().
        */
       etimeout = -1;
@@ -1728,7 +1728,7 @@ coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
 #endif /* COAP_THREAD_SAFE */
     coap_lock_lock(ctx, return -1);
 
-    coap_io_do_epoll_locked(ctx, events, nfds);
+    coap_io_do_epoll_lkd(ctx, events, nfds);
 
     /*
      * reset to COAP_IO_NO_WAIT (which causes etimeout to become 0)
@@ -1756,12 +1756,12 @@ coap_io_process_with_fds_locked(coap_context_t *ctx, uint32_t timeout_ms,
 }
 #endif /* ! WITH_LWIP && ! WITH_CONTIKI && ! RIOT_VERSION*/
 
-int
+COAP_API int
 coap_io_pending(coap_context_t *context) {
   int ret;
 
   coap_lock_lock(context, return 0);
-  ret = coap_io_pending_locked(context);
+  ret = coap_io_pending_lkd(context);
   coap_lock_unlock(context);
   return ret;
 }
@@ -1771,7 +1771,7 @@ coap_io_pending(coap_context_t *context) {
  *        0  No I/O pending
  */
 int
-coap_io_pending_locked(coap_context_t *context) {
+coap_io_pending_lkd(coap_context_t *context) {
   coap_session_t *s, *rtmp;
 #if COAP_SERVER_SUPPORT
   coap_endpoint_t *ep;
@@ -1780,7 +1780,7 @@ coap_io_pending_locked(coap_context_t *context) {
   if (!context)
     return 0;
   coap_lock_check_locked(context);
-  if (coap_io_process_locked(context, COAP_IO_NO_WAIT) < 0)
+  if (coap_io_process_lkd(context, COAP_IO_NO_WAIT) < 0)
     return 0;
 
   if (context->sendqueue)
