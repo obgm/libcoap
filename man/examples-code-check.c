@@ -60,9 +60,6 @@ const char *inline_list[] = {
   "coap_option_clrb(",
   "coap_option_getb(",
   "coap_option_setb(",
-  "coap_read(",
-  "coap_run_once(",
-  "coap_write(",
 };
 
 const char *define_list[] = {

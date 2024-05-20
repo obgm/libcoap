@@ -80,10 +80,10 @@ typedef enum oscore_partial_iv_t {
  *
  * @return The OSCORE encrypted version of @p pdu, or @c NULL on error.
  */
-coap_pdu_t *coap_oscore_new_pdu_encrypted(coap_session_t *session,
-                                          coap_pdu_t *pdu,
-                                          coap_bin_const_t *kid_context,
-                                          oscore_partial_iv_t send_partial_iv);
+COAP_API coap_pdu_t *coap_oscore_new_pdu_encrypted(coap_session_t *session,
+                                                   coap_pdu_t *pdu,
+                                                   coap_bin_const_t *kid_context,
+                                                   oscore_partial_iv_t send_partial_iv);
 
 /**
  * Encrypts the specified @p pdu when OSCORE encryption is required
@@ -102,10 +102,10 @@ coap_pdu_t *coap_oscore_new_pdu_encrypted(coap_session_t *session,
  *
  * @return The OSCORE encrypted version of @p pdu, or @c NULL on error.
  */
-coap_pdu_t *coap_oscore_new_pdu_encrypted_locked(coap_session_t *session,
-                                                 coap_pdu_t *pdu,
-                                                 coap_bin_const_t *kid_context,
-                                                 oscore_partial_iv_t send_partial_iv);
+coap_pdu_t *coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
+                                              coap_pdu_t *pdu,
+                                              coap_bin_const_t *kid_context,
+                                              oscore_partial_iv_t send_partial_iv);
 
 /**
  * Decrypts the OSCORE-encrypted parts of @p pdu when OSCORE is used.

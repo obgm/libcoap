@@ -210,20 +210,20 @@ coap_delete_node(coap_queue_t *node) {
   if (!node)
     return 0;
   if (!node->session)
-    return coap_delete_node_locked(node);
+    return coap_delete_node_lkd(node);
 
 #if COAP_THREAD_SAFE
   /* Keep copy as node will be going away */
   context = node->session->context;
 #endif /* COAP_THREAD_SAFE */
   coap_lock_lock(context, return 0);
-  ret = coap_delete_node_locked(node);
+  ret = coap_delete_node_lkd(node);
   coap_lock_unlock(context);
   return ret;
 }
 
 int
-coap_delete_node_locked(coap_queue_t *node) {
+coap_delete_node_lkd(coap_queue_t *node) {
   if (!node)
     return 0;
 
@@ -248,7 +248,7 @@ coap_delete_all(coap_queue_t *queue) {
     return;
 
   coap_delete_all(queue->next);
-  coap_delete_node_locked(queue);
+  coap_delete_node_lkd(queue);
 }
 
 coap_queue_t *
@@ -580,7 +580,7 @@ coap_new_context(const coap_address_t *listen_addr) {
     c->dtls_context = coap_dtls_new_context(c);
     if (!c->dtls_context) {
       coap_log_emerg("coap_init: no DTLS context available\n");
-      coap_free_context_locked(c);
+      coap_free_context_lkd(c);
       return NULL;
     }
   }
@@ -622,7 +622,7 @@ coap_get_app_data(const coap_context_t *ctx) {
   return ctx->app;
 }
 
-void
+COAP_API void
 coap_free_context(coap_context_t *context) {
   if (!context)
     return;
@@ -631,12 +631,12 @@ coap_free_context(coap_context_t *context) {
    * So that their coap_lock_lock() will fail as 'context' is realy no more.
    */
   coap_lock_being_freed(context, return);
-  coap_free_context_locked(context);
+  coap_free_context_lkd(context);
   /* No need to unlock as context is no longer there */
 }
 
 void
-coap_free_context_locked(coap_context_t *context) {
+coap_free_context_lkd(coap_context_t *context) {
   if (!context)
     return;
 
@@ -1078,7 +1078,7 @@ coap_client_delay_first(coap_session_t *session) {
      */
     coap_session_reference(session);
     while (session->doing_first != 0) {
-      int result = coap_io_process_locked(session->context, 1000);
+      int result = coap_io_process_lkd(session->context, 1000);
 
       if (result < 0) {
         session->doing_first = 0;
@@ -1087,7 +1087,7 @@ coap_client_delay_first(coap_session_t *session) {
         return 0;
       }
 
-      /* coap_io_process_locked() may have updated session state */
+      /* coap_io_process_lkd() may have updated session state */
       if (session->state == COAP_SESSION_STATE_CSM &&
           current_state != COAP_SESSION_STATE_CSM) {
         /* Update timeout and restart the clock for CSM timeout */
@@ -1668,8 +1668,8 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
   if (session->oscore_encryption &&
       !(pdu->type == COAP_MESSAGE_ACK && pdu->code == COAP_EMPTY_CODE)) {
     /* Refactor PDU as appropriate RFC8613 */
-    coap_pdu_t *osc_pdu = coap_oscore_new_pdu_encrypted_locked(session, pdu, NULL,
-                                                               0);
+    coap_pdu_t *osc_pdu = coap_oscore_new_pdu_encrypted_lkd(session, pdu, NULL,
+                                                            0);
 
     if (osc_pdu == NULL) {
       coap_log_warn("OSCORE: PDU could not be encrypted\n");
@@ -1777,7 +1777,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 
     if (node->is_mcast) {
       coap_session_connected(node->session);
-      coap_delete_node_locked(node);
+      coap_delete_node_lkd(node);
       return COAP_INVALID_MID;
     }
     if (bytes_written == COAP_PDU_DELAYED) {
@@ -1812,7 +1812,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
        * coap_session_connected() is called.
        * However, there is the possibility coap_wait_ack() may be called for
        * this node (queue) and re-added to context->sendqueue.
-       * coap_delete_node_locked(node) called shortly will handle this and
+       * coap_delete_node_lkd(node) called shortly will handle this and
        * remove it.
        */
       coap_session_connected(node->session);
@@ -1826,7 +1826,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
                        context->nack_handler(node->session, node->pdu,
                                              COAP_NACK_TOO_MANY_RETRIES, node->id));
   }
-  coap_delete_node_locked(node);
+  coap_delete_node_lkd(node);
   return COAP_INVALID_MID;
 }
 
@@ -1895,7 +1895,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
     }
     session->delayqueue = q->next;
     session->partial_write = 0;
-    coap_delete_node_locked(q);
+    coap_delete_node_lkd(q);
   }
 }
 
@@ -2160,19 +2160,19 @@ coap_accept_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint,
 #endif /* !COAP_DISABLE_TCP */
 #endif /* COAP_SERVER_SUPPORT */
 
-void
+COAP_API void
 coap_io_do_io(coap_context_t *ctx, coap_tick_t now) {
   coap_lock_lock(ctx, return);
-  coap_io_do_io_locked(ctx, now);
+  coap_io_do_io_lkd(ctx, now);
   coap_lock_unlock(ctx);
 }
 
 void
-coap_io_do_io_locked(coap_context_t *ctx, coap_tick_t now) {
+coap_io_do_io_lkd(coap_context_t *ctx, coap_tick_t now) {
 #ifdef COAP_EPOLL_SUPPORT
   (void)ctx;
   (void)now;
-  coap_log_emerg("coap_io_do_io_locked() requires libcoap not compiled for using epoll\n");
+  coap_log_emerg("coap_io_do_io_lkd() requires libcoap not compiled for using epoll\n");
 #else /* ! COAP_EPOLL_SUPPORT */
   coap_session_t *s, *rtmp;
 
@@ -2221,24 +2221,24 @@ coap_io_do_io_locked(coap_context_t *ctx, coap_tick_t now) {
 #endif /* ! COAP_EPOLL_SUPPORT */
 }
 
-void
+COAP_API void
 coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events, size_t nevents) {
   coap_lock_lock(ctx, return);
-  coap_io_do_epoll_locked(ctx, events, nevents);
+  coap_io_do_epoll_lkd(ctx, events, nevents);
   coap_lock_unlock(ctx);
 }
 
 /*
- * While this code in part replicates coap_io_do_io_locked(), doing the functions
+ * While this code in part replicates coap_io_do_io_lkd(), doing the functions
  * directly saves having to iterate through the endpoints / sessions.
  */
 void
-coap_io_do_epoll_locked(coap_context_t *ctx, struct epoll_event *events, size_t nevents) {
+coap_io_do_epoll_lkd(coap_context_t *ctx, struct epoll_event *events, size_t nevents) {
 #ifndef COAP_EPOLL_SUPPORT
   (void)ctx;
   (void)events;
   (void)nevents;
-  coap_log_emerg("coap_io_do_epoll_locked() requires libcoap compiled for using epoll\n");
+  coap_log_emerg("coap_io_do_epoll_lkd() requires libcoap compiled for using epoll\n");
 #else /* COAP_EPOLL_SUPPORT */
   coap_tick_t now;
   size_t j;
@@ -2333,7 +2333,7 @@ coap_io_do_epoll_locked(coap_context_t *ctx, struct epoll_event *events, size_t 
   }
   /* And update eptimerfd as to when to next trigger */
   coap_ticks(&now);
-  coap_io_prepare_epoll_locked(ctx, now);
+  coap_io_prepare_epoll_lkd(ctx, now);
 #endif /* COAP_EPOLL_SUPPORT */
 }
 
@@ -2442,7 +2442,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
       coap_lock_callback(context,
                          context->nack_handler(session, q->pdu, reason, q->id));
     }
-    coap_delete_node_locked(q);
+    coap_delete_node_lkd(q);
   }
 
   if (!context->sendqueue)
@@ -2461,7 +2461,7 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
         coap_lock_callback(context,
                            context->nack_handler(session, q->pdu, reason, q->id));
       }
-      coap_delete_node_locked(q);
+      coap_delete_node_lkd(q);
       q = p->next;
     } else {
       p = q;
@@ -2495,7 +2495,7 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
           /* Flush out any entries on session->delayqueue */
           coap_session_connected(session);
       }
-      coap_delete_node_locked(q);
+      coap_delete_node_lkd(q);
     } else {
       p = &(q->next);
     }
@@ -3424,7 +3424,7 @@ skip_handler:
         goto drop_it_no_debug;
       }
       if (!coap_pdu_encode_header(response, session->proto)) {
-        coap_delete_node_locked(node);
+        coap_delete_node_lkd(node);
         goto drop_it_no_debug;
       }
 
@@ -3809,7 +3809,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
             session->recipient_ctx->initial_state == 0) {
           coap_log_warn("OSCORE: PDU could not be decrypted\n");
         }
-        coap_delete_node_locked(sent);
+        coap_delete_node_lkd(sent);
         return;
       } else {
         session->oscore_encryption = 1;
@@ -4072,7 +4072,7 @@ cleanup:
       coap_handle_event(context, COAP_EVENT_BAD_PACKET, session);
     }
   }
-  coap_delete_node_locked(sent);
+  coap_delete_node_lkd(sent);
 #if COAP_OSCORE_SUPPORT
   coap_delete_pdu(dec_pdu);
 #endif /* COAP_OSCORE_SUPPORT */
