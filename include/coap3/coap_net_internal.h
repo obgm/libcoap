@@ -180,9 +180,9 @@ struct coap_context_t {
 #else /* ! COAP_EPOLL_SUPPORT */
 #if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
   fd_set readfds, writefds, exceptfds; /**< Used for select call
-                                            in coap_io_process_with_fds() */
+                                            in coap_io_process_with_fds_lkd() */
   coap_socket_t *sockets[64];      /**< Track different socket information
-                                        in coap_io_process_with_fds */
+                                        in coap_io_process_with_fds_lkd() */
   unsigned int num_sockets;        /**< Number of sockets being tracked */
 #endif /* ! RIOT_VERSION && ! WITH_CONTIKI */
 #endif /* ! COAP_EPOLL_SUPPORT */
@@ -458,6 +458,36 @@ int coap_client_delay_first(coap_session_t *session);
  */
 void coap_free_context_lkd(coap_context_t *context);
 
+/**
+ * Invokes the event handler of @p context for the given @p event and
+ * @p data.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context The CoAP context whose event handler is to be called.
+ * @param event   The event to deliver.
+ * @param session The session related to @p event.
+ * @return The result from the associated event handler or 0 if none was
+ * registered.
+ */
+int coap_handle_event_lkd(coap_context_t *context,
+                          coap_event_t event,
+                          coap_session_t *session);
+
+/**
+ * Returns 1 if there are no messages to send or to dispatch in the context's
+ * queues.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context The CoAP context to check.
+ *
+ * @return @c 0 if there are still pending transmits else @c 1 if nothing
+ *         queued for transmission.  Note that @c 0 does not mean there has
+ *         been a response to a transmitted request.
+ */
+int coap_can_exit_lkd(coap_context_t *context);
+
 /** @} */
 
 /**
@@ -505,7 +535,7 @@ void coap_io_do_epoll_lkd(coap_context_t *ctx, struct epoll_event *events,
  *
  * Note: This function must be called in the locked state.
  *
- * coap_io_process() is called internally to try to send outstanding
+ * coap_io_process_lkd() is called internally to try to send outstanding
  * data as well as process any packets just received.
  *
  * @param context The CoAP context.
@@ -579,14 +609,15 @@ unsigned int coap_io_prepare_io_lkd(coap_context_t *ctx,
  * The main I/O processing function.  All pending network I/O is completed,
  * and then optionally waits for the next input packet.
  *
- * This internally calls coap_io_prepare_io(), then select() for the appropriate
- * sockets, updates COAP_SOCKET_CAN_xxx where appropriate and then calls
- * coap_io_do_io() before returning with the time spent in the function.
+ * This internally calls coap_io_prepare_io_lkd(), then select() for the
+ * appropriate sockets, updates COAP_SOCKET_CAN_xxx where appropriate and then
+ * calls coap_io_do_io_lkd() before returning with the time spent in the
+ * function.
  *
  * Alternatively, if libcoap is compiled with epoll support, this internally
- * calls coap_io_prepare_epoll(), then epoll_wait() for waiting for any file
+ * calls coap_io_prepare_epoll_lkd(), then epoll_wait() for waiting for any file
  * descriptors that have (internally) been set up with epoll_ctl() and
- * finally coap_io_do_epoll() before returning with the time spent in the
+ * finally coap_io_do_epoll_lkd() before returning with the time spent in the
  * function.
  *
  * Note: This function must be called in the locked state.
@@ -633,7 +664,7 @@ int coap_io_process_lkd(coap_context_t *ctx, uint32_t timeout_ms);
  *                  or NULL if not required.
  *
  *
- * @return Number of milliseconds spent in coap_io_process_with_fds, or @c -1
+ * @return Number of milliseconds spent in coap_io_process_with_fds_lkd, or @c -1
  *         if there was an error.  If defined, readfds, writefds, exceptfds
  *         are updated as returned by the internal select() call.
  */

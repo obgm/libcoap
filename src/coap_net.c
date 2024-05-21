@@ -1291,7 +1291,7 @@ coap_send(coap_session_t *session, coap_pdu_t *pdu) {
       /* Unfortunately need to change the ptr type to be r/w */
       memcpy(&tmp.s, &pdu->actual_token.s, sizeof(tmp.s));
       tmp.length = pdu->actual_token.length;
-      ret = coap_cancel_observe(session, &tmp, pdu->type);
+      ret = coap_cancel_observe_lkd(session, &tmp, pdu->type);
       if (ret == 1) {
         /* Observe Cancel successfully sent */
         coap_delete_pdu(pdu);
@@ -1739,7 +1739,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     coap_tick_t next_delay;
 
     node->retransmit_cnt++;
-    coap_handle_event(context, COAP_EVENT_MSG_RETRANSMITTED, node->session);
+    coap_handle_event_lkd(context, COAP_EVENT_MSG_RETRANSMITTED, node->session);
 
     next_delay = (coap_tick_t)node->timeout << node->retransmit_cnt;
     if (context->ping_timeout &&
@@ -1861,10 +1861,10 @@ coap_connect_session(coap_session_t *session, coap_tick_t now) {
 #else /* !COAP_DISABLE_TCP */
   if (coap_netif_strm_connect2(session)) {
     session->last_rx_tx = now;
-    coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_TCP_CONNECTED, session);
     session->sock.lfunc[COAP_LAYER_SESSION].l_establish(session);
   } else {
-    coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_TCP_FAILED, session);
     coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
   }
 #endif /* !COAP_DISABLE_TCP */
@@ -1959,7 +1959,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       }
 
       if (!coap_pdu_parse(session->proto, packet->payload, bytes_read, pdu)) {
-        coap_handle_event(session->context, COAP_EVENT_BAD_PACKET, session);
+        coap_handle_event_lkd(session->context, COAP_EVENT_BAD_PACKET, session);
         coap_log_warn("discard malformed PDU\n");
         coap_delete_pdu(pdu);
 #if COAP_CONSTRAINED_STACK
@@ -2172,7 +2172,7 @@ coap_io_do_io_lkd(coap_context_t *ctx, coap_tick_t now) {
 #ifdef COAP_EPOLL_SUPPORT
   (void)ctx;
   (void)now;
-  coap_log_emerg("coap_io_do_io_lkd() requires libcoap not compiled for using epoll\n");
+  coap_log_emerg("coap_io_do_io() requires libcoap not compiled for using epoll\n");
 #else /* ! COAP_EPOLL_SUPPORT */
   coap_session_t *s, *rtmp;
 
@@ -2238,7 +2238,7 @@ coap_io_do_epoll_lkd(coap_context_t *ctx, struct epoll_event *events, size_t nev
   (void)ctx;
   (void)events;
   (void)nevents;
-  coap_log_emerg("coap_io_do_epoll_lkd() requires libcoap compiled for using epoll\n");
+  coap_log_emerg("coap_io_do_epoll() requires libcoap compiled for using epoll\n");
 #else /* COAP_EPOLL_SUPPORT */
   coap_tick_t now;
   size_t j;
@@ -2363,7 +2363,7 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
     goto error;
 
   if (!coap_pdu_parse(session->proto, msg, msg_len, pdu)) {
-    coap_handle_event(session->context, COAP_EVENT_BAD_PACKET, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_BAD_PACKET, session);
     coap_log_warn("discard malformed PDU\n");
     goto error;
   }
@@ -2687,13 +2687,13 @@ hnd_get_wellknown(coap_resource_t *resource,
         goto error;
       }
       free_wellknown_response(session, data_string);
-    } else if (!coap_add_data_large_response(resource, session, request,
-                                             response, query,
-                                             COAP_MEDIATYPE_APPLICATION_LINK_FORMAT,
-                                             -1, 0, data_string->length,
-                                             data_string->s,
-                                             free_wellknown_response,
-                                             data_string)) {
+    } else if (!coap_add_data_large_response_lkd(resource, session, request,
+                                                 response, query,
+                                                 COAP_MEDIATYPE_APPLICATION_LINK_FORMAT,
+                                                 -1, 0, data_string->length,
+                                                 data_string->s,
+                                                 free_wellknown_response,
+                                                 data_string)) {
       goto error_released;
     }
   }
@@ -2933,7 +2933,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
   }
 #if COAP_ASYNC_SUPPORT
-  async = coap_find_async(session, pdu->actual_token);
+  async = coap_find_async_lkd(session, pdu->actual_token);
   if (async) {
     coap_tick_t now;
 
@@ -3068,7 +3068,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   if (!is_proxy_uri && !is_proxy_scheme) {
     /* try to find the resource from the request URI */
     coap_str_const_t uri_path_c = { uri_path->length, uri_path->s };
-    resource = coap_get_resource_from_uri_path(context, &uri_path_c);
+    resource = coap_get_resource_from_uri_path_lkd(context, &uri_path_c);
   }
 
   if ((resource == NULL) || (resource->is_unknown == 1) ||
@@ -4069,7 +4069,7 @@ cleanup:
                                                  COAP_NACK_BAD_RESPONSE, sent->id));
       }
     } else {
-      coap_handle_event(context, COAP_EVENT_BAD_PACKET, session);
+      coap_handle_event_lkd(context, COAP_EVENT_BAD_PACKET, session);
     }
   }
   coap_delete_node_lkd(sent);
@@ -4141,7 +4141,19 @@ coap_event_name(coap_event_t event) {
 #endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
 
 int
-coap_handle_event(coap_context_t *context, coap_event_t event, coap_session_t *session) {
+coap_handle_event(coap_context_t *context, coap_event_t event,
+                  coap_session_t *session) {
+  int ret;
+
+  coap_lock_lock(context, return 0);
+  ret = coap_handle_event_lkd(context, event, session);
+  coap_lock_unlock(context);
+  return ret;
+}
+
+int
+coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
+                      coap_session_t *session) {
   coap_log_debug("***EVENT: %s\n", coap_event_name(event));
 
   if (context->handle_event) {
@@ -4149,13 +4161,22 @@ coap_handle_event(coap_context_t *context, coap_event_t event, coap_session_t *s
 
     coap_lock_callback_ret(ret, context, context->handle_event(session, event));
     return ret;
-  } else {
-    return 0;
   }
+  return 0;
+}
+
+COAP_API int
+coap_can_exit(coap_context_t *context) {
+  int ret;
+
+  coap_lock_lock(context, return 0);
+  ret = coap_can_exit_lkd(context);
+  coap_lock_unlock(context);
+  return ret;
 }
 
 int
-coap_can_exit(coap_context_t *context) {
+coap_can_exit_lkd(coap_context_t *context) {
   coap_session_t *s, *rtmp;
   if (!context)
     return 1;
@@ -4197,7 +4218,7 @@ coap_check_async(coap_context_t *context, coap_tick_t now) {
       handle_request(context, async->session, async->pdu);
 
       /* Remove this async entry as it has now fired */
-      coap_free_async(async->session, async);
+      coap_free_async_lkd(async->session, async);
     } else {
       if (next_due == 0 || next_due > async->delay - now)
         next_due = async->delay - now;

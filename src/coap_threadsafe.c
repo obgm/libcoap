@@ -34,34 +34,6 @@
 
 /* Client only wrapper functions */
 
-int
-coap_add_data_large_request(coap_session_t *session,
-                            coap_pdu_t *pdu,
-                            size_t length,
-                            const uint8_t *data,
-                            coap_release_large_data_t release_func,
-                            void *app_ptr
-                           ) {
-  int ret;
-
-  coap_lock_lock(session->context, return 0);
-  ret = coap_add_data_large_request_locked(session, pdu, length, data,
-                                           release_func, app_ptr);
-  coap_lock_unlock(session->context);
-  return ret;
-}
-
-int
-coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
-                    coap_pdu_type_t type) {
-  int ret;
-
-  coap_lock_lock(session->context, return 0);
-  ret = coap_cancel_observe_locked(session, token, type);
-  coap_lock_unlock(session->context);
-  return ret;
-}
-
 coap_session_t *
 coap_new_client_session(coap_context_t *ctx,
                         const coap_address_t *local_if,
@@ -170,92 +142,6 @@ coap_new_client_session_psk2(coap_context_t *ctx,
 /* Server only wrapper functions */
 
 int
-coap_add_data_large_response(coap_resource_t *resource,
-                             coap_session_t *session,
-                             const coap_pdu_t *request,
-                             coap_pdu_t *response,
-                             const coap_string_t *query,
-                             uint16_t media_type,
-                             int maxage,
-                             uint64_t etag,
-                             size_t length,
-                             const uint8_t *data,
-                             coap_release_large_data_t release_func,
-                             void *app_ptr
-                            ) {
-  int ret;
-
-  coap_lock_lock(session->context, return 0);
-  ret = coap_add_data_large_response_locked(resource, session, request,
-                                            response, query, media_type, maxage, etag,
-                                            length, data, release_func, app_ptr);
-  coap_lock_unlock(session->context);
-  return ret;
-}
-
-void
-coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
-  coap_lock_lock(context, return);
-  coap_add_resource_locked(context, resource);
-  coap_lock_unlock(context);
-}
-
-void
-coap_async_trigger(coap_async_t *async) {
-  coap_lock_lock(async->session->context, return);
-  coap_async_trigger_locked(async);
-  coap_lock_unlock(async->session->context);
-}
-
-void
-coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
-  coap_lock_lock(async->session->context, return);
-  coap_async_set_delay_locked(async, delay);
-  coap_lock_unlock(async->session->context);
-}
-
-coap_cache_entry_t *
-coap_cache_get_by_key(coap_context_t *ctx, const coap_cache_key_t *cache_key) {
-  coap_cache_entry_t *cache;
-
-  coap_lock_lock(ctx, return NULL);
-  cache = coap_cache_get_by_key_locked(ctx, cache_key);
-  coap_lock_unlock(ctx);
-  return cache;
-}
-
-coap_cache_entry_t *
-coap_cache_get_by_pdu(coap_session_t *session,
-                      const coap_pdu_t *request,
-                      coap_cache_session_based_t session_based) {
-  coap_cache_entry_t *entry;
-
-  coap_lock_lock(session->context, return NULL);
-  entry = coap_cache_get_by_pdu_locked(session, request, session_based);
-  coap_lock_unlock(session->context);
-  return entry;
-}
-
-int
-coap_cache_ignore_options(coap_context_t *ctx,
-                          const uint16_t *options,
-                          size_t count) {
-  int ret;
-
-  coap_lock_lock(ctx, return 0);
-  ret = coap_cache_ignore_options_locked(ctx, options, count);
-  coap_lock_unlock(ctx);
-  return ret;
-}
-
-void
-coap_check_notify(coap_context_t *context) {
-  coap_lock_lock(context, return);
-  coap_check_notify_locked(context);
-  coap_lock_unlock(context);
-}
-
-int
 coap_context_oscore_server(coap_context_t *context,
                            coap_oscore_conf_t *oscore_conf) {
   int ret;
@@ -300,34 +186,6 @@ coap_context_set_psk2(coap_context_t *ctx, coap_dtls_spsk_t *setup_data) {
   return ret;
 }
 
-int
-coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
-  int ret;
-
-  if (!resource)
-    return 0;
-
-  context = resource->context;
-  if (context) {
-    coap_lock_lock(context, return 0);
-    ret = coap_delete_resource_locked(context, resource);
-    coap_lock_unlock(context);
-  } else {
-    ret = coap_delete_resource_locked(context, resource);
-  }
-  return ret;
-}
-
-coap_async_t *
-coap_find_async(coap_session_t *session, coap_bin_const_t token) {
-  coap_async_t *tmp;
-
-  coap_lock_lock(session->context, return NULL);
-  tmp = coap_find_async_locked(session, token);
-  coap_lock_unlock(session->context);
-  return tmp;
-}
-
 void
 coap_free_endpoint(coap_endpoint_t *ep) {
   if (ep) {
@@ -340,17 +198,6 @@ coap_free_endpoint(coap_endpoint_t *ep) {
   }
 }
 
-coap_resource_t *
-coap_get_resource_from_uri_path(coap_context_t *context, coap_str_const_t *uri_path) {
-  coap_resource_t *result;
-
-  coap_lock_lock(context, return NULL);
-  result = coap_get_resource_from_uri_path_locked(context, uri_path);
-  coap_lock_unlock(context);
-
-  return result;
-}
-
 int
 coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
                            const char *ifname) {
@@ -360,20 +207,6 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
   ret = coap_join_mcast_group_intf_locked(ctx, group_name, ifname);
   coap_lock_unlock(ctx);
   return ret;
-}
-
-coap_cache_entry_t *
-coap_new_cache_entry(coap_session_t *session, const coap_pdu_t *pdu,
-                     coap_cache_record_pdu_t record_pdu,
-                     coap_cache_session_based_t session_based,
-                     unsigned int idle_timeout) {
-  coap_cache_entry_t *cache;
-
-  coap_lock_lock(session->context, return NULL);
-  cache = coap_new_cache_entry_locked(session, pdu, record_pdu, session_based,
-                                      idle_timeout);
-  coap_lock_unlock(session->context);
-  return cache;
 }
 
 coap_endpoint_t *
@@ -433,41 +266,9 @@ coap_persist_stop(coap_context_t *context) {
   coap_lock_unlock(context);
 }
 
-coap_async_t *
-coap_register_async(coap_session_t *session,
-                    const coap_pdu_t *request, coap_tick_t delay) {
-  coap_async_t *async;
-
-  coap_lock_lock(session->context, return NULL);
-  async = coap_register_async_locked(session, request, delay);
-  coap_lock_unlock(session->context);
-  return async;
-}
-
-int
-coap_resource_notify_observers(coap_resource_t *r,
-                               const coap_string_t *query) {
-  int ret;
-
-  coap_lock_lock(r->context, return 0);
-  ret = coap_resource_notify_observers_locked(r, query);
-  coap_lock_unlock(r->context);
-  return ret;
-}
-
 #endif /* COAP_SERVER_SUPPORT */
 
 /* Both Client and Server wrapper functions */
-
-int
-coap_can_exit(coap_context_t *context) {
-  int ret;
-
-  coap_lock_lock(context, return 0);
-  ret = coap_can_exit_locked(context);
-  coap_lock_unlock(context);
-  return ret;
-}
 
 void
 coap_context_set_block_mode(coap_context_t *context,

@@ -467,7 +467,7 @@ coap_free_resource(coap_resource_t *resource) {
   assert(resource);
 
   if (!resource->context->observe_no_clear) {
-    coap_resource_notify_observers(resource, NULL);
+    coap_resource_notify_observers_lkd(resource, NULL);
     coap_notify_observers(resource->context, resource, COAP_DELETING_RESOURCE);
   }
 
@@ -506,8 +506,15 @@ coap_free_resource(coap_resource_t *resource) {
   coap_free_type(COAP_RESOURCE, resource);
 }
 
-void
+COAP_API void
 coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
+  coap_lock_lock(context, return);
+  coap_add_resource_lkd(context, resource);
+  coap_lock_unlock(context);
+}
+
+void
+coap_add_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
   coap_lock_check_locked(context);
   if (resource->is_unknown) {
     if (context->unknown_resource)
@@ -518,14 +525,14 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
       coap_free_resource(context->proxy_uri_resource);
     context->proxy_uri_resource = resource;
   } else {
-    coap_resource_t *r = coap_get_resource_from_uri_path(context,
-                                                         resource->uri_path);
+    coap_resource_t *r = coap_get_resource_from_uri_path_lkd(context,
+                                                             resource->uri_path);
 
     if (r) {
       coap_log_warn("coap_add_resource: Duplicate uri_path '%*.*s', old resource deleted\n",
                     (int)resource->uri_path->length, (int)resource->uri_path->length,
                     resource->uri_path->s);
-      coap_delete_resource(context, r);
+      coap_delete_resource_lkd(context, r);
     }
     RESOURCES_ADD(context->resources, resource);
 #if COAP_WITH_OBSERVE_PERSIST
@@ -546,11 +553,29 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
   resource->context = context;
 }
 
+COAP_API int
+coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
+  int ret;
+
+  if (!resource)
+    return 0;
+
+  context = resource->context;
+  if (context) {
+    coap_lock_lock(context, return 0);
+    ret = coap_delete_resource_lkd(context, resource);
+    coap_lock_unlock(context);
+  } else {
+    ret = coap_delete_resource_lkd(context, resource);
+  }
+  return ret;
+}
+
 /*
  * Input context is ignored, but param left there to keep API consistent
  */
 int
-coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
+coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
   if (!resource)
     return 0;
 
@@ -603,9 +628,20 @@ coap_delete_all_resources(coap_context_t *context) {
   }
 }
 
+COAP_API coap_resource_t *
+coap_get_resource_from_uri_path(coap_context_t *context, coap_str_const_t *uri_path) {
+  coap_resource_t *result;
+
+  coap_lock_lock(context, return NULL);
+  result = coap_get_resource_from_uri_path_lkd(context, uri_path);
+  coap_lock_unlock(context);
+
+  return result;
+}
+
 coap_resource_t *
-coap_get_resource_from_uri_path(coap_context_t *context,
-                                coap_str_const_t *uri_path) {
+coap_get_resource_from_uri_path_lkd(coap_context_t *context,
+                                    coap_str_const_t *uri_path) {
   coap_resource_t *result;
 
   coap_lock_check_locked(context);
@@ -1183,14 +1219,30 @@ finish:
   r->dirty = 0;
 }
 
-int
+COAP_API int
 coap_resource_set_dirty(coap_resource_t *r, const coap_string_t *query) {
-  return coap_resource_notify_observers(r, query);
+  int ret;
+
+  coap_lock_lock(r->context, return 0);
+  ret = coap_resource_notify_observers_lkd(r, query);
+  coap_lock_unlock(r->context);
+  return ret;
+}
+
+COAP_API int
+coap_resource_notify_observers(coap_resource_t *r,
+                               const coap_string_t *query) {
+  int ret;
+
+  coap_lock_lock(r->context, return 0);
+  ret = coap_resource_notify_observers_lkd(r, query);
+  coap_lock_unlock(r->context);
+  return ret;
 }
 
 int
-coap_resource_notify_observers(coap_resource_t *r,
-                               const coap_string_t *query COAP_UNUSED) {
+coap_resource_notify_observers_lkd(coap_resource_t *r,
+                                   const coap_string_t *query COAP_UNUSED) {
   coap_lock_check_locked(r->context);
   if (!r->observable)
     return 0;
@@ -1251,8 +1303,15 @@ coap_resource_get_uri_path(coap_resource_t *resource) {
   return NULL;
 }
 
-void
+COAP_API void
 coap_check_notify(coap_context_t *context) {
+  coap_lock_lock(context, return);
+  coap_check_notify_lkd(context);
+  coap_lock_unlock(context);
+}
+
+void
+coap_check_notify_lkd(coap_context_t *context) {
 
   coap_lock_check_locked(context);
   if (context->observe_pending) {

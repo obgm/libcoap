@@ -446,7 +446,7 @@ do_tcp_err(void *arg, err_t err) {
 
   (void)err;
 
-  coap_handle_event(session->context, COAP_EVENT_TCP_FAILED, session);
+  coap_handle_event_lkd(session->context, COAP_EVENT_TCP_FAILED, session);
   /*
    * as per tcp_err() documentation, the corresponding pcb is already freed
    * when this callback is called.  So, stop a double free when

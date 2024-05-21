@@ -35,9 +35,20 @@ coap_async_is_supported(void) {
   return 1;
 }
 
-coap_async_t *
+COAP_API coap_async_t *
 coap_register_async(coap_session_t *session,
                     const coap_pdu_t *request, coap_tick_t delay) {
+  coap_async_t *async;
+
+  coap_lock_lock(session->context, return NULL);
+  async = coap_register_async_lkd(session, request, delay);
+  coap_lock_unlock(session->context);
+  return async;
+}
+
+coap_async_t *
+coap_register_async_lkd(coap_session_t *session,
+                        const coap_pdu_t *request, coap_tick_t delay) {
   coap_async_t *s;
   size_t len;
   const uint8_t *data;
@@ -81,7 +92,7 @@ coap_register_async(coap_session_t *session,
   s->pdu = coap_pdu_duplicate(request, session, request->actual_token.length,
                               request->actual_token.s, NULL);
   if (s->pdu == NULL) {
-    coap_free_async(session, s);
+    coap_free_async_lkd(session, s);
     coap_log_crit("coap_register_async: insufficient memory\n");
     return NULL;
   }
@@ -92,13 +103,20 @@ coap_register_async(coap_session_t *session,
 
   s->session = coap_session_reference(session);
 
-  coap_async_set_delay(s, delay);
+  coap_async_set_delay_lkd(s, delay);
 
   return s;
 }
 
-void
+COAP_API void
 coap_async_trigger(coap_async_t *async) {
+  coap_lock_lock(async->session->context, return);
+  coap_async_trigger_lkd(async);
+  coap_lock_unlock(async->session->context);
+}
+
+void
+coap_async_trigger_lkd(coap_async_t *async) {
   assert(async != NULL);
   coap_lock_check_locked(async->session->context);
   coap_ticks(&async->delay);
@@ -108,9 +126,15 @@ coap_async_trigger(coap_async_t *async) {
   coap_update_io_timer(async->session->context, 0);
 }
 
+COAP_API void
+coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
+  coap_lock_lock(async->session->context, return);
+  coap_async_set_delay_lkd(async, delay);
+  coap_lock_unlock(async->session->context);
+}
 
 void
-coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
+coap_async_set_delay_lkd(coap_async_t *async, coap_tick_t delay) {
   coap_tick_t now;
 
   coap_lock_check_locked(async->session->context);
@@ -132,8 +156,18 @@ coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
   }
 }
 
-coap_async_t *
+COAP_API coap_async_t *
 coap_find_async(coap_session_t *session, coap_bin_const_t token) {
+  coap_async_t *tmp;
+
+  coap_lock_lock(session->context, return NULL);
+  tmp = coap_find_async_lkd(session, token);
+  coap_lock_unlock(session->context);
+  return tmp;
+}
+
+coap_async_t *
+coap_find_async_lkd(coap_session_t *session, coap_bin_const_t token) {
   coap_async_t *tmp;
 
   coap_lock_check_locked(session->context);
@@ -160,8 +194,15 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
 }
 
 void
-coap_free_async(coap_session_t *session, coap_async_t *s) {
-  coap_free_async_sub(session->context, s);
+coap_free_async(coap_session_t *session, coap_async_t *async) {
+  coap_lock_lock(session->context, return);
+  coap_free_async_lkd(session, async);
+  coap_lock_unlock(session->context);
+}
+
+void
+coap_free_async_lkd(coap_session_t *session, coap_async_t *async) {
+  coap_free_async_sub(session->context, async);
 }
 
 void

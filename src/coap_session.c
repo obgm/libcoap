@@ -475,7 +475,7 @@ coap_session_mfree(coap_session_t *session) {
   LL_FOREACH_SAFE(session->lg_crcv, lg_crcv, etmp) {
     if (lg_crcv->observe_set && session->no_observe_cancel == 0) {
       /* Need to close down observe */
-      if (coap_cancel_observe(session, lg_crcv->app_token, COAP_MESSAGE_NON)) {
+      if (coap_cancel_observe_lkd(session, lg_crcv->app_token, COAP_MESSAGE_NON)) {
         /* Need to delete node we set up for NON */
         coap_queue_t *queue = session->context->sendqueue;
 
@@ -769,7 +769,7 @@ coap_session_connected(coap_session_t *session) {
     coap_log_debug("***%s: session connected\n",
                    coap_session_str(session));
     if (session->state == COAP_SESSION_STATE_CSM) {
-      coap_handle_event(session->context, COAP_EVENT_SESSION_CONNECTED, session);
+      coap_handle_event_lkd(session->context, COAP_EVENT_SESSION_CONNECTED, session);
       if (session->doing_first)
         session->doing_first = 0;
     }
@@ -972,14 +972,14 @@ coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
 #if !COAP_DISABLE_TCP
   if (COAP_PROTO_RELIABLE(session->proto)) {
     if (coap_netif_available(session)) {
-      coap_handle_event(session->context,
-                        state == COAP_SESSION_STATE_CONNECTING ?
-                        COAP_EVENT_TCP_FAILED : COAP_EVENT_TCP_CLOSED, session);
+      coap_handle_event_lkd(session->context,
+                            state == COAP_SESSION_STATE_CONNECTING ?
+                            COAP_EVENT_TCP_FAILED : COAP_EVENT_TCP_CLOSED, session);
     }
     if (state != COAP_SESSION_STATE_NONE) {
-      coap_handle_event(session->context,
-                        state == COAP_SESSION_STATE_ESTABLISHED ?
-                        COAP_EVENT_SESSION_CLOSED : COAP_EVENT_SESSION_FAILED, session);
+      coap_handle_event_lkd(session->context,
+                            state == COAP_SESSION_STATE_ESTABLISHED ?
+                            COAP_EVENT_SESSION_CLOSED : COAP_EVENT_SESSION_FAILED, session);
     }
     if (session->doing_first)
       session->doing_first = 0;
@@ -1051,12 +1051,12 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
 
   if (endpoint->context->max_idle_sessions > 0 &&
       num_idle >= endpoint->context->max_idle_sessions) {
-    coap_handle_event(oldest->context, COAP_EVENT_SERVER_SESSION_DEL, oldest);
+    coap_handle_event_lkd(oldest->context, COAP_EVENT_SERVER_SESSION_DEL, oldest);
     coap_session_free(oldest);
   } else if (oldest_hs) {
     coap_log_warn("***%s: Incomplete session timed out\n",
                   coap_session_str(oldest_hs));
-    coap_handle_event(oldest_hs->context, COAP_EVENT_SERVER_SESSION_DEL, oldest_hs);
+    coap_handle_event_lkd(oldest_hs->context, COAP_EVENT_SERVER_SESSION_DEL, oldest_hs);
     coap_session_free(oldest_hs);
   }
 
@@ -1126,7 +1126,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     SESSIONS_ADD(endpoint->sessions, session);
     coap_log_debug("***%s: session %p: new incoming session\n",
                    coap_session_str(session), (void *)session);
-    coap_handle_event(session->context, COAP_EVENT_SERVER_SESSION_NEW, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_SERVER_SESSION_NEW, session);
   }
   return session;
 }
@@ -1584,8 +1584,8 @@ coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep, void *extra) {
   if (session) {
     coap_log_debug("***%s: session %p: new incoming session\n",
                    coap_session_str(session), (void *)session);
-    coap_handle_event(session->context, COAP_EVENT_TCP_CONNECTED, session);
-    coap_handle_event(session->context, COAP_EVENT_SERVER_SESSION_NEW, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_TCP_CONNECTED, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_SERVER_SESSION_NEW, session);
     session->state = COAP_SESSION_STATE_CONNECTING;
     session->sock.lfunc[COAP_LAYER_SESSION].l_establish(session);
   }
@@ -1859,7 +1859,7 @@ coap_free_endpoint(coap_endpoint_t *ep) {
     SESSIONS_ITER_SAFE(ep->sessions, session, rtmp) {
       assert(session->ref == 0);
       if (session->ref == 0) {
-        coap_handle_event(ep->context, COAP_EVENT_SERVER_SESSION_DEL, session);
+        coap_handle_event_lkd(ep->context, COAP_EVENT_SERVER_SESSION_DEL, session);
         coap_session_free(session);
       }
     }

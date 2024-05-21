@@ -335,12 +335,12 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
  *
  * @return @c 1 if addition is successful, else @c 0.
  */
-int coap_add_data_large_request(coap_session_t *session,
-                                coap_pdu_t *pdu,
-                                size_t length,
-                                const uint8_t *data,
-                                coap_release_large_data_t release_func,
-                                void *app_ptr);
+COAP_API int coap_add_data_large_request(coap_session_t *session,
+                                         coap_pdu_t *pdu,
+                                         size_t length,
+                                         const uint8_t *data,
+                                         coap_release_large_data_t release_func,
+                                         void *app_ptr);
 
 /**
  * Associates given data with the @p response pdu that is passed as fourth
@@ -392,18 +392,18 @@ int coap_add_data_large_request(coap_session_t *session,
  *
  * @return @c 1 if addition is successful, else @c 0.
  */
-int coap_add_data_large_response(coap_resource_t *resource,
-                                 coap_session_t *session,
-                                 const coap_pdu_t *request,
-                                 coap_pdu_t *response,
-                                 const coap_string_t *query,
-                                 uint16_t media_type,
-                                 int maxage,
-                                 uint64_t etag,
-                                 size_t length,
-                                 const uint8_t *data,
-                                 coap_release_large_data_t release_func,
-                                 void *app_ptr);
+COAP_API int coap_add_data_large_response(coap_resource_t *resource,
+                                          coap_session_t *session,
+                                          const coap_pdu_t *request,
+                                          coap_pdu_t *response,
+                                          const coap_string_t *query,
+                                          uint16_t media_type,
+                                          int maxage,
+                                          uint64_t etag,
+                                          size_t length,
+                                          const uint8_t *data,
+                                          coap_release_large_data_t release_func,
+                                          void *app_ptr);
 
 /**
  * Set the context level CoAP block handling bits for handling RFC7959.

@@ -421,9 +421,20 @@ full_match(const uint8_t *a, size_t alen,
 
 #if COAP_CLIENT_SUPPORT
 
-int
+COAP_API int
 coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                     coap_pdu_type_t type) {
+  int ret;
+
+  coap_lock_lock(session->context, return 0);
+  ret = coap_cancel_observe_lkd(session, token, type);
+  coap_lock_unlock(session->context);
+  return ret;
+}
+
+int
+coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
+                        coap_pdu_type_t type) {
   coap_lg_crcv_t *lg_crcv, *q;
 
   assert(session);
@@ -488,7 +499,7 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                              buf);
         }
         if (coap_get_data(&lg_crcv->pdu, &size, &data))
-          coap_add_data_large_request(session, pdu, size, data, NULL, NULL);
+          coap_add_data_large_request_lkd(session, pdu, size, data, NULL, NULL);
 
         /*
          * Need to fix lg_xmit stateless token as using tokens from
@@ -706,7 +717,7 @@ coap_add_data_large_internal(coap_session_t *session,
         LL_DELETE(session->lg_xmit, lg_xmit);
         coap_block_delete_lg_xmit(session, lg_xmit);
         lg_xmit = NULL;
-        coap_handle_event(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
+        coap_handle_event_lkd(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
         break;
       }
     }
@@ -738,7 +749,7 @@ coap_add_data_large_internal(coap_session_t *session,
       LL_DELETE(session->lg_xmit, lg_xmit);
       coap_block_delete_lg_xmit(session, lg_xmit);
       lg_xmit = NULL;
-      coap_handle_event(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
+      coap_handle_event_lkd(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
     }
 #endif /* COAP_SERVER_SUPPORT */
   }
@@ -1064,13 +1075,30 @@ fail:
 }
 
 #if COAP_CLIENT_SUPPORT
-int
+COAP_API int
 coap_add_data_large_request(coap_session_t *session,
                             coap_pdu_t *pdu,
                             size_t length,
                             const uint8_t *data,
                             coap_release_large_data_t release_func,
-                            void *app_ptr) {
+                            void *app_ptr
+                           ) {
+  int ret;
+
+  coap_lock_lock(session->context, return 0);
+  ret = coap_add_data_large_request_lkd(session, pdu, length, data,
+                                        release_func, app_ptr);
+  coap_lock_unlock(session->context);
+  return ret;
+}
+
+int
+coap_add_data_large_request_lkd(coap_session_t *session,
+                                coap_pdu_t *pdu,
+                                size_t length,
+                                const uint8_t *data,
+                                coap_release_large_data_t release_func,
+                                void *app_ptr) {
   /*
    * Delay if session->doing_first is set.
    * E.g. Reliable and CSM not in yet for checking block support
@@ -1086,7 +1114,7 @@ coap_add_data_large_request(coap_session_t *session,
 #endif /* ! COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
-int
+COAP_API int
 coap_add_data_large_response(coap_resource_t *resource,
                              coap_session_t *session,
                              const coap_pdu_t *request,
@@ -1100,6 +1128,30 @@ coap_add_data_large_response(coap_resource_t *resource,
                              coap_release_large_data_t release_func,
                              void *app_ptr
                             ) {
+  int ret;
+
+  coap_lock_lock(session->context, return 0);
+  ret = coap_add_data_large_response_lkd(resource, session, request,
+                                         response, query, media_type, maxage, etag,
+                                         length, data, release_func, app_ptr);
+  coap_lock_unlock(session->context);
+  return ret;
+}
+
+int
+coap_add_data_large_response_lkd(coap_resource_t *resource,
+                                 coap_session_t *session,
+                                 const coap_pdu_t *request,
+                                 coap_pdu_t *response,
+                                 const coap_string_t *query,
+                                 uint16_t media_type,
+                                 int maxage,
+                                 uint64_t etag,
+                                 size_t length,
+                                 const uint8_t *data,
+                                 coap_release_large_data_t release_func,
+                                 void *app_ptr
+                                ) {
   unsigned char buf[4];
   coap_block_b_t block;
   int block_requested = 0;
@@ -1241,7 +1293,7 @@ coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now,
         /* Expire this entry */
         LL_DELETE(session->lg_xmit, p);
         coap_block_delete_lg_xmit(session, p);
-        coap_handle_event(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
+        coap_handle_event_lkd(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
       } else {
         /* Delay until the lg_xmit needs to expire */
         if (*tim_rem > p->last_sent + partial_timeout - now) {
@@ -2330,7 +2382,7 @@ add_block_send(uint32_t num, int is_continue, send_track *out_blocks,
  * multiple Q-Block2 in the request, as well as  the 'Continue' Q-Block2
  * request.
  *
- * This is set up using coap_add_data_large_response()
+ * This is set up using coap_add_data_large_response_lkd()
  *
  * Server is sending a large data response to GET / observe (Block2)
  *
@@ -2933,7 +2985,7 @@ coap_handle_request_put_block(coap_context_t *context,
     if (!check_if_received_block(&p->rec_blocks, block.num)) {
       /* Update list of blocks received */
       if (!update_received_blocks(&p->rec_blocks, block.num)) {
-        coap_handle_event(context, COAP_EVENT_PARTIAL_BLOCK, session);
+        coap_handle_event_lkd(context, COAP_EVENT_PARTIAL_BLOCK, session);
         coap_add_data(response, sizeof("Too many missing blocks")-1,
                       (const uint8_t *)"Too many missing blocks");
         response->code = COAP_RESPONSE_CODE(408);
@@ -3232,7 +3284,7 @@ track_echo(coap_session_t *session, coap_pdu_t *rcvd) {
  *
  * Client receives large data acknowledgement from server (Block1)
  *
- * This is set up using coap_add_data_large_request()
+ * This is set up using coap_add_data_large_request_lkd()
  *
  * Client is using GET etc.
  *
@@ -3473,7 +3525,7 @@ fail_cbor:
   return 0;
 
 fail_body:
-  coap_handle_event(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
+  coap_handle_event_lkd(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
   /* There has been an internal error of some sort */
   rcvd->code = COAP_RESPONSE_CODE(500);
 lg_xmit_finished:
@@ -3718,7 +3770,7 @@ reinit:
 
             coap_log_warn("Data body updated during receipt - new request started\n");
             if (!(session->block_mode & COAP_BLOCK_SINGLE_BODY))
-              coap_handle_event(context, COAP_EVENT_PARTIAL_BLOCK, session);
+              coap_handle_event_lkd(context, COAP_EVENT_PARTIAL_BLOCK, session);
 
             p->initial = 1;
             coap_free_type(COAP_STRING, p->body_data);
@@ -3788,7 +3840,7 @@ reinit:
 #endif /* COAP_Q_BLOCK_SUPPORT */
             /* Update list of blocks received */
             if (!update_received_blocks(&p->rec_blocks, block.num)) {
-              coap_handle_event(context, COAP_EVENT_PARTIAL_BLOCK, session);
+              coap_handle_event_lkd(context, COAP_EVENT_PARTIAL_BLOCK, session);
               goto fail_resp;
             }
             updated_block = 1;
