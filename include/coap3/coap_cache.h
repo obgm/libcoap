@@ -123,8 +123,8 @@ void coap_delete_cache_key(coap_cache_key_t *cache_key);
  *
  * @return          @return @c 1 if successful, else @c 0.
  */
-int coap_cache_ignore_options(coap_context_t *context,
-                              const uint16_t *options, size_t count);
+COAP_API int coap_cache_ignore_options(coap_context_t *context,
+                                       const uint16_t *options, size_t count);
 
 /**
  * Create a new cache-entry hash keyed by cache-key derived from the PDU.
@@ -149,11 +149,11 @@ int coap_cache_ignore_options(coap_context_t *context,
  *
  * @return          The returned cache-key or @c NULL if failure.
  */
-coap_cache_entry_t *coap_new_cache_entry(coap_session_t *session,
-                                         const coap_pdu_t *pdu,
-                                         coap_cache_record_pdu_t record_pdu,
-                                         coap_cache_session_based_t session_based,
-                                         unsigned int idle_time);
+COAP_API coap_cache_entry_t *coap_new_cache_entry(coap_session_t *session,
+                                                  const coap_pdu_t *pdu,
+                                                  coap_cache_record_pdu_t record_pdu,
+                                                  coap_cache_session_based_t session_based,
+                                                  unsigned int idle_time);
 
 /**
  * Remove a cache-entry from the hash list and free off all the appropriate
@@ -175,8 +175,8 @@ void coap_delete_cache_entry(coap_context_t *context,
  *
  * @return The cache-entry for @p cache_key or @c NULL if not found.
  */
-coap_cache_entry_t *coap_cache_get_by_key(coap_context_t *context,
-                                          const coap_cache_key_t *cache_key);
+COAP_API coap_cache_entry_t *coap_cache_get_by_key(coap_context_t *context,
+                                                   const coap_cache_key_t *cache_key);
 
 /**
  * Searches for a cache-entry corresponding to @p pdu. This
@@ -190,9 +190,9 @@ coap_cache_entry_t *coap_cache_get_by_key(coap_context_t *context,
  *
  * @return The cache-entry for @p request or @c NULL if not found.
  */
-coap_cache_entry_t *coap_cache_get_by_pdu(coap_session_t *session,
-                                          const coap_pdu_t *pdu,
-                                          coap_cache_session_based_t session_based);
+COAP_API coap_cache_entry_t *coap_cache_get_by_pdu(coap_session_t *session,
+                                                   const coap_pdu_t *pdu,
+                                                   coap_cache_session_based_t session_based);
 
 /**
  * Returns the PDU information stored in the @p coap_cache entry.

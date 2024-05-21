@@ -139,8 +139,8 @@ coap_persist_observe_add(coap_context_t *context,
   if (!uri_path)
     goto malformed;
 
-  r = coap_get_resource_from_uri_path(session->context,
-                                      (coap_str_const_t *)uri_path);
+  r = coap_get_resource_from_uri_path_lkd(session->context,
+                                          (coap_str_const_t *)uri_path);
   if (r == NULL) {
     coap_log_warn("coap_persist_observe_add: resource '%s' not defined\n",
                   uri_path->s);
@@ -677,7 +677,7 @@ coap_op_obs_cnt_load_disk(coap_context_t *context) {
                   context->observe_save_freq - 1;
     resource_key.s = (uint8_t *)buf;
     resource_key.length = strlen(buf);
-    r = coap_get_resource_from_uri_path(context, &resource_key);
+    r = coap_get_resource_from_uri_path_lkd(context, &resource_key);
     if (r) {
       coap_log_debug("persist: Initial observe number being updated\n");
       coap_persist_set_observe_num(r, observe_num);
@@ -915,7 +915,7 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
   while (1) {
     if (!coap_op_dyn_resource_read(fp_orig, &e_proto, &name, &raw_packet))
       break;
-    r = coap_get_resource_from_uri_path(ctx, (coap_str_const_t *)name);
+    r = coap_get_resource_from_uri_path_lkd(ctx, (coap_str_const_t *)name);
     if (!r) {
       /* Create the new resource using the application logic */
 

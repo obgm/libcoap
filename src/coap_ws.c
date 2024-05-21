@@ -613,12 +613,12 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
       session->sock.lfunc[COAP_LAYER_WS].l_write(session, (uint8_t *)buf,
                                                  strlen(buf));
 
-      coap_handle_event(session->context, COAP_EVENT_WS_CONNECTED, session);
+      coap_handle_event_lkd(session->context, COAP_EVENT_WS_CONNECTED, session);
       coap_log_debug("WS: established\n");
     } else {
       /* TODO Process the GET response - error on failure */
 
-      coap_handle_event(session->context, COAP_EVENT_WS_CONNECTED, session);
+      coap_handle_event_lkd(session->context, COAP_EVENT_WS_CONNECTED, session);
     }
     session->sock.lfunc[COAP_LAYER_WS].l_establish(session);
     if (session->ws->hdr_ofs == 0)
@@ -695,7 +695,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
     if ((size_t)bytes_size > datalen) {
       coap_log_err("coap_ws_read: packet size bigger than provided data space"
                    " (%zu > %zu)\n", bytes_size, datalen);
-      coap_handle_event(session->context, COAP_EVENT_WS_PACKET_SIZE, session);
+      coap_handle_event_lkd(session->context, COAP_EVENT_WS_PACKET_SIZE, session);
       session->ws->close_reason = 1009;
       coap_ws_close(session);
       return 0;
@@ -910,7 +910,7 @@ coap_ws_close(coap_session_t *session) {
       count --;
     }
 #endif /* ! WITH_LWIP && ! WITH_CONTIKI */
-    coap_handle_event(session->context, COAP_EVENT_WS_CLOSED, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_WS_CLOSED, session);
   }
   session->sock.lfunc[COAP_LAYER_WS].l_close(session);
 }

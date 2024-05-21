@@ -2088,7 +2088,7 @@ coap_dtls_free_session(coap_session_t *session) {
     w_env->ssl = NULL;
     wolfSSL_free(ssl);
     if (session->context)
-      coap_handle_event(session->context, COAP_EVENT_DTLS_CLOSED, session);
+      coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CLOSED, session);
   }
   coap_dtls_free_wolfssl_env(w_env);
 }
@@ -2124,7 +2124,7 @@ coap_dtls_send(coap_session_t *session,
   if (session->dtls_event >= 0) {
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
     if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event(session->context, session->dtls_event, session);
+      coap_handle_event_lkd(session->context, session->dtls_event, session);
     if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
@@ -2252,7 +2252,7 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
       if (in_init && wolfSSL_is_init_finished(ssl)) {
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                       coap_session_str(session), wolfSSL_get_cipher((ssl)));
-        coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+        coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         session->sock.lfunc[COAP_LAYER_TLS].l_establish(session);
       }
       r = 0;
@@ -2287,7 +2287,7 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
     if (session->dtls_event >= 0) {
       /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
       if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-        coap_handle_event(session->context, session->dtls_event, session);
+        coap_handle_event_lkd(session->context, session->dtls_event, session);
       if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
           session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
         coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
@@ -2439,7 +2439,7 @@ coap_tls_new_client_session(coap_session_t *session) {
   coap_ticks(&now);
   w_env->last_timeout = now;
   if (wolfSSL_is_init_finished(ssl)) {
-    coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     session->sock.lfunc[COAP_LAYER_TLS].l_establish(session);
   }
 
@@ -2540,7 +2540,7 @@ coap_tls_new_server_session(coap_session_t *session) {
 
   session->tls = w_env;
   if (wolfSSL_is_init_finished(ssl)) {
-    coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     session->sock.lfunc[COAP_LAYER_TLS].l_establish(session);
   }
 
@@ -2568,7 +2568,7 @@ coap_tls_free_session(coap_session_t *session) {
     wolfSSL_free(ssl);
     w_env->ssl = NULL;
     if (session->context)
-      coap_handle_event(session->context, COAP_EVENT_DTLS_CLOSED, session);
+      coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CLOSED, session);
   }
   coap_dtls_free_wolfssl_env(w_env);
 }
@@ -2597,7 +2597,7 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
       if (in_init && wolfSSL_is_init_finished(ssl)) {
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                       coap_session_str(session), wolfSSL_get_cipher((ssl)));
-        coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+        coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         session->sock.lfunc[COAP_LAYER_TLS].l_establish(session);
       }
       if (err == WOLFSSL_ERROR_WANT_READ)
@@ -2625,14 +2625,14 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
   } else if (in_init && wolfSSL_is_init_finished(ssl)) {
     coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                   coap_session_str(session), wolfSSL_get_cipher((ssl)));
-    coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     session->sock.lfunc[COAP_LAYER_TLS].l_establish(session);
   }
 
   if (session->dtls_event >= 0) {
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
     if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event(session->context, session->dtls_event, session);
+      coap_handle_event_lkd(session->context, session->dtls_event, session);
     if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
@@ -2676,7 +2676,7 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
       if (in_init && wolfSSL_is_init_finished(ssl)) {
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                       coap_session_str(session), wolfSSL_get_cipher((ssl)));
-        coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+        coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         session->sock.lfunc[COAP_LAYER_TLS].l_establish(session);
       }
       if (err == WOLFSSL_ERROR_WANT_READ)
@@ -2715,14 +2715,14 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
   } else if (in_init && wolfSSL_is_init_finished(ssl)) {
     coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                   coap_session_str(session), wolfSSL_get_cipher((ssl)));
-    coap_handle_event(session->context, COAP_EVENT_DTLS_CONNECTED, session);
+    coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CONNECTED, session);
     session->sock.lfunc[COAP_LAYER_TLS].l_establish(session);
   }
 
   if (session->dtls_event >= 0) {
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
     if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event(session->context, session->dtls_event, session);
+      coap_handle_event_lkd(session->context, session->dtls_event, session);
     if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(session, COAP_NACK_TLS_FAILED);

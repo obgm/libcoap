@@ -759,7 +759,7 @@ coap_dtls_free_session(coap_session_t *coap_session) {
     coap_log_debug("***removed session %p\n", coap_session->tls);
     coap_free_type(COAP_DTLS_SESSION, coap_session->tls);
     coap_session->tls = NULL;
-    coap_handle_event(coap_session->context, COAP_EVENT_DTLS_CLOSED, coap_session);
+    coap_handle_event_lkd(coap_session->context, COAP_EVENT_DTLS_CLOSED, coap_session);
   }
 }
 
@@ -788,7 +788,7 @@ coap_dtls_send(coap_session_t *session,
   if (coap_event_dtls >= 0) {
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
     if (coap_event_dtls != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event(session->context, coap_event_dtls, session);
+      coap_handle_event_lkd(session->context, coap_event_dtls, session);
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
       coap_session_connected(session);
     else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
@@ -857,7 +857,7 @@ coap_dtls_receive(coap_session_t *session,
   if (coap_event_dtls >= 0) {
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
     if (coap_event_dtls != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event(session->context, coap_event_dtls, session);
+      coap_handle_event_lkd(session->context, coap_event_dtls, session);
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
       coap_session_connected(session);
     else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR) {

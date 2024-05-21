@@ -528,9 +528,9 @@ coap_mid_t coap_send(coap_session_t *session, coap_pdu_t *pdu);
  * @return The result from the associated event handler or 0 if none was
  * registered.
  */
-int coap_handle_event(coap_context_t *context,
-                      coap_event_t event,
-                      coap_session_t *session);
+COAP_API int coap_handle_event(coap_context_t *context,
+                               coap_event_t event,
+                               coap_session_t *session);
 /**
  * Returns 1 if there are no messages to send or to dispatch in the context's
  * queues.
@@ -541,7 +541,7 @@ int coap_handle_event(coap_context_t *context,
  *         queued for transmission.  Note that @c 0 does not mean there has
  *         been a response to a transmitted request.
  */
-int coap_can_exit(coap_context_t *context);
+COAP_API int coap_can_exit(coap_context_t *context);
 
 /**
  * Returns the current value of an internal tick counter. The counter counts \c

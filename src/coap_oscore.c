@@ -828,18 +828,18 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   if (session->context->p_osc_ctx == NULL) {
     coap_log_warn("OSCORE: Not enabled\n");
     if (!coap_request)
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_NOT_ENABLED,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_NOT_ENABLED,
+                            session);
     return NULL;
   }
 
   if (pdu->data == NULL) {
     coap_log_warn("OSCORE: No protected payload\n");
     if (!coap_request)
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD,
+                            session);
     return NULL;
   }
 
@@ -853,9 +853,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       coap_pdu_init(pdu->type, 0, pdu->mid, pdu->used_size);
   if (decrypt_pdu == NULL) {
     if (!coap_request)
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                            session);
     goto error;
   }
 
@@ -898,9 +898,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                     coap_opt_length(opt),
                                     coap_opt_value(opt))) {
         if (!coap_request)
-          coap_handle_event(session->context,
-                            COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                            session);
+          coap_handle_event_lkd(session->context,
+                                COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                                session);
         goto error;
       }
       break;
@@ -1035,9 +1035,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
      */
     if (oscore_decode_option_value(osc_value, osc_size, cose) == 0) {
       coap_log_warn("OSCORE: OSCORE Option cannot be decoded.\n");
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_DECODE_ERROR,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_DECODE_ERROR,
+                            session);
       goto error;
     }
     association = oscore_find_association(session, &pdu_token);
@@ -1066,9 +1066,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                               osc_ctx->id_context->length);
 
           if (kc == NULL) {
-            coap_handle_event(session->context,
-                              COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                              session);
+            coap_handle_event_lkd(session->context,
+                                  COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                                  session);
             goto error;
           }
 
@@ -1088,9 +1088,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
 #endif /* COAP_CLIENT_SUPPORT */
     } else {
       coap_log_crit("OSCORE: Security Context association not found\n");
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_NO_SECURITY,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_NO_SECURITY,
+                            session);
       goto error;
     }
   }
@@ -1299,9 +1299,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   if (encrypt_len <= 0) {
     coap_log_warn("OSCORE: No protected payload\n");
     if (!coap_request)
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD,
+                            session);
     goto error;
   }
   cose_encrypt0_set_key(cose, rcp_ctx->recipient_key);
@@ -1312,18 +1312,18 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   plain_pdu = coap_pdu_init(0, 0, 0, encrypt_len /* - tag_len */);
   if (plain_pdu == NULL) {
     if (!coap_request)
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                            session);
     goto error;
   }
 
   /* need the tag_len on the end for TinyDTLS to do its work - yuk */
   if (!coap_pdu_resize(plain_pdu, encrypt_len /* - tag_len */)) {
     if (!coap_request)
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                            session);
     goto error;
   }
 
@@ -1350,9 +1350,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       oscore_roll_back_seq(rcp_ctx);
       goto error_no_ack;
     } else {
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_DECRYPTION_FAILURE,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_DECRYPTION_FAILURE,
+                            session);
     }
     goto error;
   }
@@ -1368,9 +1368,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
 
     if (kc == NULL) {
       if (!coap_request)
-        coap_handle_event(session->context,
-                          COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                          session);
+        coap_handle_event_lkd(session->context,
+                              COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                              session);
       goto error;
     }
 
@@ -1422,9 +1422,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
 
     if (kc == NULL) {
       if (!coap_request)
-        coap_handle_event(session->context,
-                          COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                          session);
+        coap_handle_event_lkd(session->context,
+                              COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                              session);
       goto error;
     }
     memcpy(kc->s, cose->kid_context.s, cose->kid_context.length);
@@ -1519,9 +1519,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                 opt_iter.number,
                 len,
                 cose->partial_iv.s ? &cose->partial_iv.s[bias] : NULL)) {
-          coap_handle_event(session->context,
-                            COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                            session);
+          coap_handle_event_lkd(session->context,
+                                COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                                session);
           goto error;
         }
         break;
@@ -1538,9 +1538,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                               coap_opt_length(opt),
                               coap_opt_value(opt))) {
         if (!coap_request)
-          coap_handle_event(session->context,
-                            COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                            session);
+          coap_handle_event_lkd(session->context,
+                                COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                                session);
         goto error;
       }
       break;
@@ -1555,9 +1555,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                        (plain_pdu->data - plain_pdu->token),
                        plain_pdu->data)) {
       if (!coap_request)
-        coap_handle_event(session->context,
-                          COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                          session);
+        coap_handle_event_lkd(session->context,
+                              COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                              session);
       goto error;
     }
   }
@@ -1567,9 +1567,9 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   /* Make sure headers are correctly set up */
   if (!coap_pdu_encode_header(decrypt_pdu, session->proto)) {
     if (!coap_request)
-      coap_handle_event(session->context,
-                        COAP_EVENT_OSCORE_INTERNAL_ERROR,
-                        session);
+      coap_handle_event_lkd(session->context,
+                            COAP_EVENT_OSCORE_INTERNAL_ERROR,
+                            session);
     goto error;
   }
 

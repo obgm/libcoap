@@ -513,7 +513,7 @@ coap_update_io_timer(coap_context_t *context, coap_tick_t delay) {
       ret = timerfd_settime(context->eptimerfd, 0, &new_value, NULL);
       if (ret == -1) {
         coap_log_err("%s: timerfd_settime failed: %s (%d)\n",
-                     "coap_resource_notify_observers",
+                     "coap_update_io_timer",
                      coap_socket_strerror(), errno);
       }
 #ifdef COAP_DEBUG_WAKEUP_TIMES
@@ -1194,7 +1194,7 @@ coap_io_prepare_epoll_lkd(coap_context_t *ctx, coap_tick_t now) {
 #ifndef COAP_EPOLL_SUPPORT
   (void)ctx;
   (void)now;
-  coap_log_emerg("coap_io_prepare_epoll_lkd() requires libcoap compiled for using epoll\n");
+  coap_log_emerg("coap_io_prepare_epoll() requires libcoap compiled for using epoll\n");
   return 0;
 #else /* COAP_EPOLL_SUPPORT */
   coap_socket_t *sockets[1];
@@ -1228,7 +1228,7 @@ coap_io_prepare_epoll_lkd(coap_context_t *ctx, coap_tick_t now) {
     ret = timerfd_settime(ctx->eptimerfd, 0, &new_value, NULL);
     if (ret == -1) {
       coap_log_err("%s: timerfd_settime failed: %s (%d)\n",
-                   "coap_io_prepare_epoll_lkd",
+                   "coap_io_prepare_epoll",
                    coap_socket_strerror(), errno);
     }
   }
@@ -1281,7 +1281,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
 
 #if COAP_SERVER_SUPPORT
   /* Check to see if we need to send off any Observe requests */
-  coap_check_notify(ctx);
+  coap_check_notify_lkd(ctx);
 
 #if COAP_ASYNC_SUPPORT
   /* Check to see if we need to send off any Async requests */
@@ -1340,7 +1340,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
           s->delayqueue == NULL &&
           (s->last_rx_tx + session_timeout <= now ||
            s->state == COAP_SESSION_STATE_NONE)) {
-        coap_handle_event(ctx, COAP_EVENT_SERVER_SESSION_DEL, s);
+        coap_handle_event_lkd(ctx, COAP_EVENT_SERVER_SESSION_DEL, s);
         coap_session_free(s);
       } else {
         if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
@@ -1419,7 +1419,7 @@ release_1:
           /* Some issue - not safe to continue processing */
           continue;
         if (s->last_ping > 0 && s->last_pong < s->last_ping) {
-          coap_handle_event(s->context, COAP_EVENT_KEEPALIVE_FAILURE, s);
+          coap_handle_event_lkd(s->context, COAP_EVENT_KEEPALIVE_FAILURE, s);
         }
         s->last_rx_tx = now;
         s->last_ping = now;

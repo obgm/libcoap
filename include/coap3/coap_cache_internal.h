@@ -58,6 +58,87 @@ struct coap_cache_entry_t {
  */
 void coap_expire_cache_entries(coap_context_t *context);
 
+/**
+ * Searches for a cache-entry identified by @p cache_key. This
+ * function returns the corresponding cache-entry or @c NULL
+ * if not found.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context    The context to use.
+ * @param cache_key  The cache-key to get the hashed coap-entry.
+ *
+ * @return The cache-entry for @p cache_key or @c NULL if not found.
+ */
+coap_cache_entry_t *coap_cache_get_by_key_lkd(coap_context_t *context,
+                                              const coap_cache_key_t *cache_key);
+
+/**
+ * Searches for a cache-entry corresponding to @p pdu. This
+ * function returns the corresponding cache-entry or @c NULL if not
+ * found.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session    The session to use.
+ * @param pdu        The CoAP request to search for.
+ * @param session_based COAP_CACHE_IS_SESSION_BASED if session based
+ *                     cache-key to be used, else COAP_CACHE_NOT_SESSION_BASED.
+ *
+ * @return The cache-entry for @p request or @c NULL if not found.
+ */
+coap_cache_entry_t *coap_cache_get_by_pdu_lkd(coap_session_t *session,
+                                              const coap_pdu_t *pdu,
+                                              coap_cache_session_based_t session_based);
+
+/**
+ * Define the CoAP options that are not to be included when calculating
+ * the cache-key. Options that are defined as Non-Cache and the Observe
+ * option are always ignored.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context   The context to save the ignored options information in.
+ * @param options   The array of options to ignore.
+ * @param count     The number of options to ignore.  Use 0 to reset the
+ *                  options matching.
+ *
+ * @return          @return @c 1 if successful, else @c 0.
+ */
+int coap_cache_ignore_options_lkd(coap_context_t *context,
+                                  const uint16_t *options, size_t count);
+
+/**
+ * Create a new cache-entry hash keyed by cache-key derived from the PDU.
+ *
+ * If @p session_based is set, then this cache-entry will get deleted when
+ * the session is freed off.
+ * If @p record_pdu is set, then the copied PDU will get freed off when
+ * this cache-entry is deleted.
+ *
+ * The cache-entry is maintained on a context hash list.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session   The session to use to derive the context from.
+ * @param pdu       The pdu to use to generate the cache-key.
+ * @param record_pdu COAP_CACHE_RECORD_PDU if to take a copy of the PDU for
+ *                   later use, else COAP_CACHE_NOT_RECORD_PDU.
+ * @param session_based COAP_CACHE_IS_SESSION_BASED if to associate this
+ *                      cache-entry with the the session (which is embedded
+ *                      in the cache-entry), else COAP_CACHE_NOT_SESSION_BASED.
+ * @param idle_time Idle time in seconds before cache-entry is expired.
+ *                  If set to 0, it does not expire (but will get
+ *                  deleted if the session is deleted and it is session_based).
+ *
+ * @return          The returned cache-key or @c NULL if failure.
+ */
+coap_cache_entry_t *coap_new_cache_entry_lkd(coap_session_t *session,
+                                             const coap_pdu_t *pdu,
+                                             coap_cache_record_pdu_t record_pdu,
+                                             coap_cache_session_based_t session_based,
+                                             unsigned int idle_time);
+
 typedef void coap_digest_ctx_t;
 
 /**

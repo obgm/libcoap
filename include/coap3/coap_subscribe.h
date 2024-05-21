@@ -60,8 +60,8 @@ void coap_resource_set_get_observable(coap_resource_t *resource, int mode);
  *
  * @return         @c 1 if the Observe has been triggered, @c 0 otherwise.
  */
-int coap_resource_notify_observers(coap_resource_t *resource,
-                                   const coap_string_t *query);
+COAP_API int coap_resource_notify_observers(coap_resource_t *resource,
+                                            const coap_string_t *query);
 
 /**
  * Checks all known resources to see if they are dirty and then notifies
@@ -69,7 +69,7 @@ int coap_resource_notify_observers(coap_resource_t *resource,
  *
  * @param context The context to check for dirty resources.
  */
-void coap_check_notify(coap_context_t *context);
+COAP_API void coap_check_notify(coap_context_t *context);
 
 /**
  * Callback handler definition called when a new observe has been set up,
@@ -279,8 +279,8 @@ void coap_persist_set_observe_num(coap_resource_t *resource,
  * @return @c 1 if observe cancel transmission initiation is successful,
  *         else @c 0.
  */
-int coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
-                        coap_pdu_type_t message_type);
+COAP_API int coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
+                                 coap_pdu_type_t message_type);
 
 /** @} */
 

@@ -112,6 +112,33 @@ struct coap_resource_t {
 };
 
 /**
+ * Registers the given @p resource for @p context. The resource must have been
+ * created by coap_resource_init() or coap_resource_unknown_init(), the
+ * storage allocated for the resource will be released by coap_delete_resource_lkd().
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context  The context to use.
+ * @param resource The resource to store.
+ */
+void coap_add_resource_lkd(coap_context_t *context, coap_resource_t *resource);
+
+/**
+ * Deletes a resource identified by @p resource. The storage allocated for that
+ * resource is freed, and removed from the context.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context  This parameter is ignored, but kept for backward
+ *                 compatibility.
+ * @param resource The resource to delete.
+ *
+ * @return         @c 1 if the resource was found (and destroyed),
+ *                 @c 0 otherwise.
+ */
+int coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource);
+
+/**
  * Deletes all resources from given @p context and frees their storage.
  *
  * @param context The CoAP context with the resources to be deleted.
@@ -131,6 +158,20 @@ void coap_delete_all_resources(coap_context_t *context);
 #define RESOURCES_FIND(r, k, res) {                     \
     HASH_FIND(hh, (r), (k)->s, (k)->length, (res)); \
   }
+
+/**
+ * Returns the resource identified by the unique string @p uri_path. If no
+ * resource was found, this function returns @c NULL.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context  The context to look for this resource.
+ * @param uri_path  The unique string uri of the resource.
+ *
+ * @return         A pointer to the resource or @c NULL if not found.
+ */
+coap_resource_t *coap_get_resource_from_uri_path_lkd(coap_context_t *context,
+                                                     coap_str_const_t *uri_path);
 
 /**
  * Deletes an attribute.

@@ -1974,7 +1974,7 @@ coap_dtls_free_session(coap_session_t *c_session) {
   if (c_session && c_session->context && c_session->tls) {
     coap_dtls_free_mbedtls_env(c_session->tls);
     c_session->tls = NULL;
-    coap_handle_event(c_session->context, COAP_EVENT_DTLS_CLOSED, c_session);
+    coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CLOSED, c_session);
   }
   return;
 }
@@ -2041,7 +2041,7 @@ coap_dtls_send(coap_session_t *c_session,
   if (c_session->dtls_event >= 0) {
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
     if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event(c_session->context, c_session->dtls_event, c_session);
+      coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
@@ -2165,8 +2165,8 @@ coap_dtls_receive(coap_session_t *c_session,
 #endif /* COAP_CONSTRAINED_STACK */
 
     if (c_session->state == COAP_SESSION_STATE_HANDSHAKE) {
-      coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                        c_session);
+      coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
+                            c_session);
       c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
     }
 
@@ -2216,7 +2216,7 @@ coap_dtls_receive(coap_session_t *c_session,
   if (c_session->dtls_event >= 0) {
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
     if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event(c_session->context, c_session->dtls_event, c_session);
+      coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
@@ -2349,7 +2349,7 @@ coap_tls_new_client_session(coap_session_t *c_session) {
   c_session->tls = m_env;
   ret = do_mbedtls_handshake(c_session, m_env);
   if (ret == 1) {
-    coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
+    coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
     c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
   }
   return m_env;
@@ -2380,7 +2380,7 @@ coap_tls_new_server_session(coap_session_t *c_session) {
   c_session->tls = m_env;
   ret = do_mbedtls_handshake(c_session, m_env);
   if (ret == 1) {
-    coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
+    coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
     c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
   }
   return m_env;
@@ -2448,8 +2448,8 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
   } else {
     ret = do_mbedtls_handshake(c_session, m_env);
     if (ret == 1) {
-      coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                        c_session);
+      coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
+                            c_session);
       c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
     } else {
       ret = -1;
@@ -2459,7 +2459,7 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
   if (c_session->dtls_event >= 0) {
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
     if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event(c_session->context, c_session->dtls_event, c_session);
+      coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);
@@ -2498,8 +2498,8 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
   if (!m_env->established && !m_env->sent_alert) {
     ret = do_mbedtls_handshake(c_session, m_env);
     if (ret == 1) {
-      coap_handle_event(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                        c_session);
+      coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
+                            c_session);
       c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
     }
   }
@@ -2537,7 +2537,7 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
   if (c_session->dtls_event >= 0) {
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
     if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event(c_session->context, c_session->dtls_event, c_session);
+      coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected(c_session, COAP_NACK_TLS_FAILED);

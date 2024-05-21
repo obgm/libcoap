@@ -288,8 +288,8 @@ coap_resource_t *coap_resource_proxy_uri_init2(coap_method_handler_t handler,
  *
  * @return         A pointer to the resource or @c NULL if not found.
  */
-coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
-                                                 coap_str_const_t *uri_path);
+COAP_API coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *context,
+                                                          coap_str_const_t *uri_path);
 
 /**
  * Get the uri_path from a @p resource.
@@ -354,7 +354,7 @@ void coap_resource_release_userdata_handler(coap_context_t *context,
  * @param context  The context to use.
  * @param resource The resource to store.
  */
-void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
+COAP_API void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
 
 /**
  * Deletes a resource identified by @p resource. The storage allocated for that
@@ -367,7 +367,7 @@ void coap_add_resource(coap_context_t *context, coap_resource_t *resource);
  * @return         @c 1 if the resource was found (and destroyed),
  *                 @c 0 otherwise.
  */
-int coap_delete_resource(coap_context_t *context, coap_resource_t *resource);
+COAP_API int coap_delete_resource(coap_context_t *context, coap_resource_t *resource);
 
 /**
  * Registers the specified @p handler as message handler for the request type
@@ -499,7 +499,7 @@ coap_print_status_t coap_print_link(const coap_resource_t *resource,
 /**
  * @deprecated use coap_resource_notify_observers() instead.
  */
-COAP_DEPRECATED int coap_resource_set_dirty(coap_resource_t *r,
-                                            const coap_string_t *query);
+COAP_DEPRECATED COAP_API int coap_resource_set_dirty(coap_resource_t *r,
+                                                     const coap_string_t *query);
 
 #endif /* COAP_RESOURCE_H_ */

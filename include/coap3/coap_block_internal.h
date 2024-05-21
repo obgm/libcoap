@@ -305,6 +305,72 @@ coap_lg_xmit_t *coap_find_lg_xmit_response(const coap_session_t *session,
                                            const coap_pdu_t *request,
                                            const coap_resource_t *resource,
                                            const coap_string_t *query);
+
+/**
+ * Associates given data with the @p response pdu that is passed as fourth
+ * parameter.
+ *
+ * This function will fail if data has already been added to the @p pdu.
+ *
+ * If all the data can be transmitted in a single PDU, this is functionally
+ * the same as coap_add_data() except @p release_func (if not NULL) will get
+ * invoked after data transmission. The Content-Format, Max-Age and ETag
+ * options may be added in as appropriate.
+ *
+ * Used by a server request handler to create the response.
+ *
+ * If the data spans multiple PDUs, then the data will get transmitted using
+ * (Q-)Block2 (response) option with the addition of the Size2 and ETag
+ * options. The underlying library will handle the transmission of the
+ * individual blocks. Once the body of data has been transmitted (or a
+ * failure occurred), then @p release_func (if not NULL) will get called so the
+ * application can de-allocate the @p data based on @p app_data. It is the
+ * responsibility of the application not to change the contents of @p data
+ * until the data transfer has completed.
+ *
+ * There is no need for the application to include the (Q-)Block2 option in the
+ * @p pdu.
+ *
+ * coap_add_data_large_response_lkd() (or the alternative coap_add_data_large_*()
+ * functions) must be called only once per PDU and must be the last PDU update
+ * before returning from the request handler function.
+ *
+ * Note: COAP_BLOCK_USE_LIBCOAP must be set by coap_context_set_block_mode()
+ * for libcoap to work correctly when using this function.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param resource   The resource the data is associated with.
+ * @param session    The coap session.
+ * @param request    The requesting pdu.
+ * @param response   The response pdu.
+ * @param query      The query taken from the (original) requesting pdu.
+ * @param media_type The content format of the data.
+ * @param maxage     The maxmimum life of the data. If @c -1, then there
+ *                   is no maxage.
+ * @param etag       ETag to use if not 0.
+ * @param length     The total length of the data.
+ * @param data       The entire data block to transmit.
+ * @param release_func The function to call to de-allocate @p data or NULL if
+ *                   the function is not required.
+ * @param app_ptr    A Pointer that the application can provide for when
+ *                   release_func() is called.
+ *
+ * @return @c 1 if addition is successful, else @c 0.
+ */
+int coap_add_data_large_response_lkd(coap_resource_t *resource,
+                                     coap_session_t *session,
+                                     const coap_pdu_t *request,
+                                     coap_pdu_t *response,
+                                     const coap_string_t *query,
+                                     uint16_t media_type,
+                                     int maxage,
+                                     uint64_t etag,
+                                     size_t length,
+                                     const uint8_t *data,
+                                     coap_release_large_data_t release_func,
+                                     void *app_ptr);
+
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
@@ -339,7 +405,7 @@ int coap_block_drop_resp_q_block2_crcv(coap_session_t *session,
 
 /**
  * The function checks that the code in a newly formed lg_xmit created by
- * coap_add_data_large_response() is updated.
+ * coap_add_data_large_response_lkd() is updated.
  *
  * @param session  The session.
  * @param request  The request PDU to to check.
@@ -354,6 +420,57 @@ void coap_check_code_lg_xmit(const coap_session_t *session,
                              const coap_string_t *query);
 
 #if COAP_CLIENT_SUPPORT
+/**
+ * Associates given data with the @p pdu that is passed as second parameter.
+ *
+ * This function will fail if data has already been added to the @p pdu.
+ *
+ * If all the data can be transmitted in a single PDU, this is functionally
+ * the same as coap_add_data_lkd() except @p release_func (if not NULL) will get
+ * invoked after data transmission.
+ *
+ * Used for a client request.
+ *
+ * If the data spans multiple PDUs, then the data will get transmitted using
+ * (Q-)Block1 option with the addition of the Size1 and Request-Tag options.
+ * The underlying library will handle the transmission of the individual blocks.
+ * Once the body of data has been transmitted (or a failure occurred), then
+ * @p release_func (if not NULL) will get called so the application can
+ * de-allocate the @p data based on @p app_data. It is the responsibility of
+ * the application not to change the contents of @p data until the data
+ * transfer has completed.
+ *
+ * There is no need for the application to include the (Q-)Block1 option in the
+ * @p pdu.
+ *
+ * coap_add_data_large_request_lkd() (or the alternative coap_add_data_large_*()
+ * functions) must be called only once per PDU and must be the last PDU update
+ * before the PDU is transmitted. The (potentially) initial data will get
+ * transmitted when coap_send() is invoked.
+ *
+ * Note: COAP_BLOCK_USE_LIBCOAP must be set by coap_context_set_block_mode()
+ * for libcoap to work correctly when using this function.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session  The session to associate the data with.
+ * @param pdu      The PDU to associate the data with.
+ * @param length   The length of data to transmit.
+ * @param data     The data to transmit.
+ * @param release_func The function to call to de-allocate @p data or @c NULL
+ *                 if the function is not required.
+ * @param app_ptr  A Pointer that the application can provide for when
+ *                 release_func() is called.
+ *
+ * @return @c 1 if addition is successful, else @c 0.
+ */
+int coap_add_data_large_request_lkd(coap_session_t *session,
+                                    coap_pdu_t *pdu,
+                                    size_t length,
+                                    const uint8_t *data,
+                                    coap_release_large_data_t release_func,
+                                    void *app_ptr);
+
 /**
  * The function checks if the token needs to be updated before PDU is
  * presented to the application (only relevant to clients).

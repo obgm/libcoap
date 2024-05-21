@@ -148,13 +148,59 @@ int coap_delete_observer(coap_resource_t *resource,
 void coap_delete_observers(coap_context_t *context, coap_session_t *session);
 
 /**
+ * Initiate the sending of an Observe packet for all observers of @p resource,
+ * optionally matching @p query if not NULL
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param resource The CoAP resource to use.
+ * @param query    The Query to match against or NULL
+ *
+ * @return         @c 1 if the Observe has been triggered, @c 0 otherwise.
+ */
+int coap_resource_notify_observers_lkd(coap_resource_t *resource,
+                                       const coap_string_t *query);
+
+/**
+ * Checks all known resources to see if they are dirty and then notifies
+ * subscribed observers.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context The context to check for dirty resources.
+ */
+void coap_check_notify_lkd(coap_context_t *context);
+
+/**
  * Close down persist tracking, releasing any memory used.
  *
  * @param context The current CoAP context.
  */
 void coap_persist_cleanup(coap_context_t *context);
 
-/** @} */
-
 #endif /* COAP_SERVER_SUPPORT */
+
+#if COAP_CLIENT_SUPPORT
+
+/**
+ * Cancel an observe that is being tracked by the client large receive logic.
+ * (coap_context_set_block_mode() has to be called)
+ * This will trigger the sending of an observe cancel pdu to the server.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session  The session that is being used for the observe.
+ * @param token    The original token used to initiate the observation.
+ * @param message_type The COAP_MESSAGE_ type (NON or CON) to send the observe
+ *                 cancel pdu as.
+ *
+ * @return @c 1 if observe cancel transmission initiation is successful,
+ *         else @c 0.
+ */
+int coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
+                            coap_pdu_type_t message_type);
+
+#endif /* COAP_CLIENT_SUPPORT */
+
+/** @} */
 #endif /* COAP_SUBSCRIBE_INTERNAL_H_ */
