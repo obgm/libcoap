@@ -34,8 +34,13 @@ typedef pthread_mutex_t coap_mutex_t;
 #define coap_mutex_lock(a)    pthread_mutex_lock(a)
 #define coap_mutex_trylock(a) pthread_mutex_trylock(a)
 #define coap_mutex_unlock(a)  pthread_mutex_unlock(a)
+#if defined(ESPIDF_VERSION)
+#define coap_thread_pid_t     TaskHandle_t
+#define coap_thread_pid       xTaskGetCurrentTaskHandle()
+#else /* !ESPIDF_VERSION */
 #define coap_thread_pid_t     pthread_t
 #define coap_thread_pid       pthread_self()
+#endif /* !ESPIDF_VERSION */
 
 #elif defined(RIOT_VERSION)
 /* use RIOT's mutex API */
