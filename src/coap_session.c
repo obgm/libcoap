@@ -750,7 +750,7 @@ coap_session_send_ping(coap_session_t *session) {
       session->con_active)
     return COAP_INVALID_MID;
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
-    uint16_t mid = coap_new_message_id(session);
+    uint16_t mid = coap_new_message_id_lkd(session);
     ping = coap_pdu_init(COAP_MESSAGE_CON, 0, mid, 0);
   }
 #if !COAP_DISABLE_TCP
@@ -1302,11 +1302,24 @@ coap_session_establish(coap_session_t *session) {
 }
 
 #if COAP_CLIENT_SUPPORT
-coap_session_t *
+COAP_API coap_session_t *
 coap_new_client_session(coap_context_t *ctx,
                         const coap_address_t *local_if,
                         const coap_address_t *server,
                         coap_proto_t proto) {
+  coap_session_t *session;
+
+  coap_lock_lock(ctx, return NULL);
+  session = coap_new_client_session_lkd(ctx, local_if, server, proto);
+  coap_lock_unlock(ctx);
+  return session;
+}
+
+coap_session_t *
+coap_new_client_session_lkd(coap_context_t *ctx,
+                            const coap_address_t *local_if,
+                            const coap_address_t *server,
+                            coap_proto_t proto) {
   coap_session_t *session;
 
   coap_lock_check_locked(ctx);
@@ -1320,12 +1333,26 @@ coap_new_client_session(coap_context_t *ctx,
   return session;
 }
 
-coap_session_t *
+COAP_API coap_session_t *
 coap_new_client_session_psk(coap_context_t *ctx,
                             const coap_address_t *local_if,
                             const coap_address_t *server,
                             coap_proto_t proto, const char *identity,
                             const uint8_t *key, unsigned key_len) {
+  coap_session_t *session;
+
+  coap_lock_lock(ctx, return NULL);
+  session = coap_new_client_session_psk_lkd(ctx, local_if, server, proto, identity, key, key_len);
+  coap_lock_unlock(ctx);
+  return session;
+}
+
+coap_session_t *
+coap_new_client_session_psk_lkd(coap_context_t *ctx,
+                                const coap_address_t *local_if,
+                                const coap_address_t *server,
+                                coap_proto_t proto, const char *identity,
+                                const uint8_t *key, unsigned key_len) {
   coap_dtls_cpsk_t setup_data;
 
   coap_lock_check_locked(ctx);
@@ -1342,16 +1369,30 @@ coap_new_client_session_psk(coap_context_t *ctx,
     setup_data.psk_info.key.length = key_len;
   }
 
-  return coap_new_client_session_psk2(ctx, local_if, server,
-                                      proto, &setup_data);
+  return coap_new_client_session_psk2_lkd(ctx, local_if, server,
+                                          proto, &setup_data);
 }
 
-coap_session_t *
+COAP_API coap_session_t *
 coap_new_client_session_psk2(coap_context_t *ctx,
                              const coap_address_t *local_if,
                              const coap_address_t *server,
                              coap_proto_t proto,
                              coap_dtls_cpsk_t *setup_data) {
+  coap_session_t *session;
+
+  coap_lock_lock(ctx, return NULL);
+  session = coap_new_client_session_psk2_lkd(ctx, local_if, server, proto, setup_data);
+  coap_lock_unlock(ctx);
+  return session;
+}
+
+coap_session_t *
+coap_new_client_session_psk2_lkd(coap_context_t *ctx,
+                                 const coap_address_t *local_if,
+                                 const coap_address_t *server,
+                                 coap_proto_t proto,
+                                 coap_dtls_cpsk_t *setup_data) {
   coap_session_t *session;
 
   coap_lock_check_locked(ctx);
@@ -1518,12 +1559,26 @@ coap_session_get_psk_key(const coap_session_t *session) {
 }
 
 #if COAP_CLIENT_SUPPORT
-coap_session_t *
+COAP_API coap_session_t *
 coap_new_client_session_pki(coap_context_t *ctx,
                             const coap_address_t *local_if,
                             const coap_address_t *server,
                             coap_proto_t proto,
                             coap_dtls_pki_t *setup_data) {
+  coap_session_t *session;
+
+  coap_lock_lock(ctx, return NULL);
+  session = coap_new_client_session_pki_lkd(ctx, local_if, server, proto, setup_data);
+  coap_lock_unlock(ctx);
+  return session;
+}
+
+coap_session_t *
+coap_new_client_session_pki_lkd(coap_context_t *ctx,
+                                const coap_address_t *local_if,
+                                const coap_address_t *server,
+                                coap_proto_t proto,
+                                coap_dtls_pki_t *setup_data) {
   coap_session_t *session;
 
   coap_lock_check_locked(ctx);
@@ -1623,8 +1678,18 @@ coap_session_new_token(coap_session_t *session, size_t *len,
                                sizeof(session->tx_token), ++session->tx_token);
 }
 
-uint16_t
+COAP_API uint16_t
 coap_new_message_id(coap_session_t *session) {
+  uint16_t mid;
+
+  coap_lock_lock(session->context, return 0);
+  mid = coap_new_message_id_lkd(session);
+  coap_lock_unlock(session->context);
+  return mid;
+}
+
+uint16_t
+coap_new_message_id_lkd(coap_session_t *session) {
   coap_lock_check_locked(session->context);
   if (COAP_PROTO_NOT_RELIABLE(session->proto))
     return ++session->tx_mid;
@@ -1742,8 +1807,19 @@ coap_proto_name(coap_proto_t proto) {
 }
 
 #if COAP_SERVER_SUPPORT
-coap_endpoint_t *
+COAP_API coap_endpoint_t *
 coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
+  coap_endpoint_t *endpoint;
+
+  coap_lock_lock(context, return NULL);
+  endpoint = coap_new_endpoint_lkd(context, listen_addr, proto);
+  coap_lock_unlock(context);
+  return endpoint;
+}
+
+coap_endpoint_t *
+coap_new_endpoint_lkd(coap_context_t *context, const coap_address_t *listen_addr,
+                      coap_proto_t proto) {
   coap_endpoint_t *ep = NULL;
 
   assert(context);

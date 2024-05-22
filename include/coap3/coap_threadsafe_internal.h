@@ -22,27 +22,14 @@
 /* *INDENT-OFF* */
 #ifndef COAP_THREAD_IGNORE_LOCKED_MAPPING
 
-#define coap_context_oscore_server(c,o)                 coap_context_oscore_server_locked(c,o)
 #define coap_context_set_block_mode(c,b)                coap_context_set_block_mode_locked(c,b)
 #define coap_context_set_max_block_size(c,m)            coap_context_set_max_block_size_locked(c,m)
 #define coap_context_set_pki(c,s)                       coap_context_set_pki_locked(c,s)
 #define coap_context_set_pki_root_cas(c,f,d)            coap_context_set_pki_root_cas_locked(c,f,d)
 #define coap_context_set_psk(c,h,k,l)                   coap_context_set_psk_locked(c,h,k,l)
 #define coap_context_set_psk2(c,s)                      coap_context_set_psk2_locked(c,s)
-#define coap_delete_oscore_recipient(s,r)               coap_delete_oscore_recipient_locked(s,r)
 #define coap_free_endpoint(e)                           coap_free_endpoint_locked(e)
 #define coap_join_mcast_group_intf(c,g,i)               coap_join_mcast_group_intf_locked(c,g,i)
-#define coap_new_client_session(c,l,s,p)                coap_new_client_session_locked(c,l,s,p)
-#define coap_new_client_session_oscore(c,l,s,p,o)       coap_new_client_session_oscore_locked(c,l,s,p,o)
-#define coap_new_client_session_oscore_pki(c,l,s,p,d,o) coap_new_client_session_oscore_pki_locked(c,l,s,p,d,o)
-#define coap_new_client_session_oscore_psk(c,l,s,p,d,o) coap_new_client_session_oscore_psk_locked(c,l,s,p,d,o)
-#define coap_new_client_session_pki(c,l,s,p,d)          coap_new_client_session_pki_locked(c,l,s,p,d)
-#define coap_new_client_session_psk(c,l,s,p,i,k,m)      coap_new_client_session_psk_locked(c,l,s,p,i,k,m)
-#define coap_new_client_session_psk2(c,l,s,p,d)         coap_new_client_session_psk2_locked(c,l,s,p,d)
-#define coap_new_endpoint(c,l,t)                        coap_new_endpoint_locked(c,l,t)
-#define coap_new_message_id(s)                          coap_new_message_id_locked(s)
-#define coap_new_oscore_recipient(c,r)                  coap_new_oscore_recipient_locked(c,r)
-#define coap_new_pdu(t,c,s)                             coap_new_pdu_locked(t,c,s)
 #define coap_persist_observe_add(c,p,l,a,r,o)           coap_persist_observe_add_locked(c,p,l,a,r,o)
 #define coap_persist_startup(c,d,o,m,s)                 coap_persist_startup_locked(c,d,o,m,s)
 #define coap_persist_stop(c)                            coap_persist_stop_locked(c)
@@ -63,8 +50,6 @@
 
 /* Locked equivalend functions */
 
-int                  coap_context_oscore_server_locked(coap_context_t *context,
-                                                       coap_oscore_conf_t *oscore_conf);
 void                 coap_context_set_block_mode_locked(coap_context_t *context,
                                                         uint32_t block_mode);
 int                  coap_context_set_max_block_size_locked(coap_context_t *context,
@@ -77,8 +62,6 @@ int                  coap_context_set_psk_locked(coap_context_t *ctx, const char
                                                  const uint8_t *key, size_t key_len);
 int                  coap_context_set_psk2_locked(coap_context_t *ctx,
                                                   coap_dtls_spsk_t *setup_data);
-int                  coap_delete_oscore_recipient_locked(coap_context_t *context,
-                                                         coap_bin_const_t *recipient_id);
 void                 coap_free_endpoint_locked(coap_endpoint_t *ep);
 int                  coap_join_mcast_group_intf_locked(coap_context_t *ctx, const char *group_name,
                                                        const char *ifname);
@@ -95,50 +78,6 @@ int                  coap_persist_startup_locked(coap_context_t *context,
                                                  uint32_t save_freq);
 void                 coap_persist_stop_locked(coap_context_t *context);
 size_t               coap_session_max_pdu_size_locked(const coap_session_t *session);
-coap_session_t      *coap_new_client_session_locked(coap_context_t *ctx,
-                                                    const coap_address_t *local_if,
-                                                    const coap_address_t *server,
-                                                    coap_proto_t proto);
-coap_session_t      *coap_new_client_session_oscore_locked(coap_context_t *ctx,
-                                                           const coap_address_t *local_if,
-                                                           const coap_address_t *server,
-                                                           coap_proto_t proto,
-                                                           coap_oscore_conf_t *oscore_conf);
-coap_session_t      *coap_new_client_session_oscore_pki_locked(coap_context_t *ctx,
-                                                               const coap_address_t *local_if,
-                                                               const coap_address_t *server,
-                                                               coap_proto_t proto,
-                                                               coap_dtls_pki_t *pki_data,
-                                                               coap_oscore_conf_t *oscore_conf);
-coap_session_t      *coap_new_client_session_oscore_psk_locked(coap_context_t *ctx,
-                                                               const coap_address_t *local_if,
-                                                               const coap_address_t *server,
-                                                               coap_proto_t proto,
-                                                               coap_dtls_cpsk_t *psk_data,
-                                                               coap_oscore_conf_t *oscore_conf);
-coap_session_t      *coap_new_client_session_pki_locked(coap_context_t *ctx,
-                                                        const coap_address_t *local_if,
-                                                        const coap_address_t *server,
-                                                        coap_proto_t proto,
-                                                        coap_dtls_pki_t *setup_data);
-coap_session_t      *coap_new_client_session_psk_locked(coap_context_t *ctx,
-                                                        const coap_address_t *local_if,
-                                                        const coap_address_t *server,
-                                                        coap_proto_t proto, const char *identity,
-                                                        const uint8_t *key, unsigned key_len);
-coap_session_t      *coap_new_client_session_psk2_locked(coap_context_t *ctx,
-                                                         const coap_address_t *local_if,
-                                                         const coap_address_t *server,
-                                                         coap_proto_t proto,
-                                                         coap_dtls_cpsk_t *setup_data);
-coap_endpoint_t     *coap_new_endpoint_locked(coap_context_t *context,
-                                              const coap_address_t *listen_addr,
-                                              coap_proto_t proto);
-uint16_t             coap_new_message_id_locked(coap_session_t *session);
-int                  coap_new_oscore_recipient_locked(coap_context_t *context,
-                                                      coap_bin_const_t *recipient_id);
-coap_pdu_t          *coap_new_pdu_locked(coap_pdu_type_t type, coap_pdu_code_t code,
-                                         coap_session_t *session);
 coap_pdu_t          *coap_pdu_duplicate_locked(const coap_pdu_t *old_pdu,
                                                coap_session_t *session,
                                                size_t token_length,

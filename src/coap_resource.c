@@ -1092,7 +1092,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         continue;
       }
 
-      obs->pdu->mid = response->mid = coap_new_message_id(obs->session);
+      obs->pdu->mid = response->mid = coap_new_message_id_lkd(obs->session);
       /* A lot of the reliable code assumes type is CON */
       if (COAP_PROTO_NOT_RELIABLE(obs->session->proto) &&
           (r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) == 0 &&

@@ -591,7 +591,7 @@ coap_new_context(const coap_address_t *listen_addr) {
 
 #if COAP_SERVER_SUPPORT
   if (listen_addr) {
-    coap_endpoint_t *endpoint = coap_new_endpoint(c, listen_addr, COAP_PROTO_UDP);
+    coap_endpoint_t *endpoint = coap_new_endpoint_lkd(c, listen_addr, COAP_PROTO_UDP);
     if (endpoint == NULL) {
       goto onerror;
     }
@@ -1033,7 +1033,7 @@ coap_send_test_extended_token(coap_session_t *session) {
   coap_log_debug("Testing for Extended Token support\n");
   /* https://rfc-editor.org/rfc/rfc8974#section-2.2.2 */
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET,
-                      coap_new_message_id(session),
+                      coap_new_message_id_lkd(session),
                       coap_session_max_pdu_size(session));
   if (!pdu)
     return COAP_INVALID_MID;

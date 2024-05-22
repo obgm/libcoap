@@ -30,127 +30,9 @@
 
 #include "coap3/coap_internal.h"
 
-#if COAP_CLIENT_SUPPORT
-
-/* Client only wrapper functions */
-
-coap_session_t *
-coap_new_client_session(coap_context_t *ctx,
-                        const coap_address_t *local_if,
-                        const coap_address_t *server,
-                        coap_proto_t proto) {
-  coap_session_t *session;
-
-  coap_lock_lock(ctx, return NULL);
-  session = coap_new_client_session_locked(ctx, local_if, server, proto);
-  coap_lock_unlock(ctx);
-  return session;
-}
-
-
-coap_session_t *
-coap_new_client_session_oscore(coap_context_t *ctx,
-                               const coap_address_t *local_if,
-                               const coap_address_t *server,
-                               coap_proto_t proto,
-                               coap_oscore_conf_t *oscore_conf) {
-  coap_session_t *session;
-
-  coap_lock_lock(ctx, return NULL);
-  session = coap_new_client_session_oscore_locked(ctx, local_if, server, proto, oscore_conf);
-  coap_lock_unlock(ctx);
-  return session;
-}
-
-coap_session_t *
-coap_new_client_session_oscore_pki(coap_context_t *ctx,
-                                   const coap_address_t *local_if,
-                                   const coap_address_t *server,
-                                   coap_proto_t proto,
-                                   coap_dtls_pki_t *pki_data,
-                                   coap_oscore_conf_t *oscore_conf) {
-  coap_session_t *session;
-
-  coap_lock_lock(ctx, return NULL);
-  session = coap_new_client_session_oscore_pki_locked(ctx, local_if, server, proto, pki_data,
-                                                      oscore_conf);
-  coap_lock_unlock(ctx);
-  return session;
-}
-
-coap_session_t *
-coap_new_client_session_oscore_psk(coap_context_t *ctx,
-                                   const coap_address_t *local_if,
-                                   const coap_address_t *server,
-                                   coap_proto_t proto,
-                                   coap_dtls_cpsk_t *psk_data,
-                                   coap_oscore_conf_t *oscore_conf) {
-  coap_session_t *session;
-
-  coap_lock_lock(ctx, return NULL);
-  session = coap_new_client_session_oscore_psk_locked(ctx, local_if, server, proto, psk_data,
-                                                      oscore_conf);
-  coap_lock_unlock(ctx);
-  return session;
-}
-
-coap_session_t *
-coap_new_client_session_pki(coap_context_t *ctx,
-                            const coap_address_t *local_if,
-                            const coap_address_t *server,
-                            coap_proto_t proto,
-                            coap_dtls_pki_t *setup_data) {
-  coap_session_t *session;
-
-  coap_lock_lock(ctx, return NULL);
-  session = coap_new_client_session_pki_locked(ctx, local_if, server, proto, setup_data);
-  coap_lock_unlock(ctx);
-  return session;
-}
-
-coap_session_t *
-coap_new_client_session_psk(coap_context_t *ctx,
-                            const coap_address_t *local_if,
-                            const coap_address_t *server,
-                            coap_proto_t proto, const char *identity,
-                            const uint8_t *key, unsigned key_len) {
-  coap_session_t *session;
-
-  coap_lock_lock(ctx, return NULL);
-  session = coap_new_client_session_psk_locked(ctx, local_if, server, proto, identity, key, key_len);
-  coap_lock_unlock(ctx);
-  return session;
-}
-
-coap_session_t *
-coap_new_client_session_psk2(coap_context_t *ctx,
-                             const coap_address_t *local_if,
-                             const coap_address_t *server,
-                             coap_proto_t proto,
-                             coap_dtls_cpsk_t *setup_data) {
-  coap_session_t *session;
-
-  coap_lock_lock(ctx, return NULL);
-  session = coap_new_client_session_psk2_locked(ctx, local_if, server, proto, setup_data);
-  coap_lock_unlock(ctx);
-  return session;
-}
-#endif /* COAP_CLIENT_SUPPORT */
-
 #if COAP_SERVER_SUPPORT
 
 /* Server only wrapper functions */
-
-int
-coap_context_oscore_server(coap_context_t *context,
-                           coap_oscore_conf_t *oscore_conf) {
-  int ret;
-
-  coap_lock_lock(context, return 0);
-  ret = coap_context_oscore_server_locked(context, oscore_conf);
-  coap_lock_unlock(context);
-  return ret;
-}
 
 int
 coap_context_set_pki(coap_context_t *ctx,
@@ -207,16 +89,6 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
   ret = coap_join_mcast_group_intf_locked(ctx, group_name, ifname);
   coap_lock_unlock(ctx);
   return ret;
-}
-
-coap_endpoint_t *
-coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
-  coap_endpoint_t *endpoint;
-
-  coap_lock_lock(context, return NULL);
-  endpoint = coap_new_endpoint_locked(context, listen_addr, proto);
-  coap_lock_unlock(context);
-  return endpoint;
 }
 
 coap_subscription_t *
@@ -299,51 +171,6 @@ coap_context_set_pki_root_cas(coap_context_t *ctx,
   ret = coap_context_set_pki_root_cas_locked(ctx, ca_file, ca_dir);
   coap_lock_unlock(ctx);
   return ret;
-}
-
-int
-coap_delete_oscore_recipient(coap_context_t *context,
-                             coap_bin_const_t *recipient_id) {
-  int ret;
-
-  if (!context || !recipient_id)
-    return 0;
-  coap_lock_lock(context, return 0);
-  ret = coap_delete_oscore_recipient_locked(context, recipient_id);
-  coap_lock_unlock(context);
-  return ret;
-}
-
-uint16_t
-coap_new_message_id(coap_session_t *session) {
-  uint16_t mid;
-
-  coap_lock_lock(session->context, return 0);
-  mid = coap_new_message_id_locked(session);
-  coap_lock_unlock(session->context);
-  return mid;
-}
-
-int
-coap_new_oscore_recipient(coap_context_t *context,
-                          coap_bin_const_t *recipient_id) {
-  int ret;
-
-  coap_lock_lock(context, return 0);
-  ret = coap_new_oscore_recipient_locked(context, recipient_id);
-  coap_lock_unlock(context);
-  return ret;
-}
-
-coap_pdu_t *
-coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
-             coap_session_t *session) {
-  coap_pdu_t *pdu;
-
-  coap_lock_lock(session->context, return NULL);
-  pdu = coap_new_pdu_locked(type, code, session);
-  coap_lock_unlock(session->context);
-  return pdu;
 }
 
 coap_pdu_t *

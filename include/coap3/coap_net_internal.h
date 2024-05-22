@@ -339,6 +339,19 @@ void coap_cancel_session_messages(coap_context_t *context,
                                   coap_nack_reason_t reason);
 
 /**
+ * Returns a new message id and updates @p session->tx_mid accordingly. The
+ * message id is returned in network byte order to make it easier to read in
+ * tracing tools.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The current coap_session_t object.
+ *
+ * @return        Incremented message id in network byte order.
+ */
+uint16_t coap_new_message_id_lkd(coap_session_t *session);
+
+/**
  * Dispatches the PDUs from the receive queue in given context.
  */
 void coap_dispatch(coap_context_t *context, coap_session_t *session,
