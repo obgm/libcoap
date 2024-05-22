@@ -176,6 +176,8 @@ OPTIONS - PSK
 *-k* key::
    Pre-shared key to use for inbound connections. This cannot be empty if
    defined. +
+   If the key begins with 0x, then the hex text (two [0-9a-f] per byte) is
+   converted to binary data. +
    Note: if *-c cafile* is defined, you need to define *-k key* as well to
    have the server support both PSK and PKI.
 

@@ -586,7 +586,9 @@ usage(const char *program, const char *version) {
           "\t       \t\t hint_to_match,use_user,with_key\n"
           "\t       \t\tNote: -k and -u still need to be defined for the default\n"
           "\t       \t\tin case there is no match\n"
-          "\t-k key \t\tPre-shared key for the specified user identity\n"
+          "\t-k key \t\tPre-shared key for the specified user identityt. If the\n"
+          "\t       \t\tkey begins with 0x, then the hex text (two [0-9a-f] per\n"
+          "\t       \t\tbyte) is converted to binary data\n"
           "\t-u user\t\tUser identity to send for pre-shared key mode\n"
           "PKI Options (if supported by underlying (D)TLS library)\n"
           "\tNote: If any one of '-c certfile', '-j keyfile' or '-C cafile' is in\n"
@@ -1258,6 +1260,12 @@ static ssize_t
 cmdline_read_key(char *arg, unsigned char **buf, size_t maxlen) {
   size_t len = strnlen(arg, maxlen);
   if (len) {
+    /* read hex string alternative when arg starts with "0x" */
+    if (len >= 4 && arg[0] == '0' && arg[1] == 'x') {
+      /* As the command line option is part of our environment we can do
+       * the conversion in place. */
+      len = convert_hex_string(arg + 2, (uint8_t *)arg);
+    }
     *buf = (unsigned char *)arg;
     return len;
   }

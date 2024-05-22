@@ -210,7 +210,9 @@ OPTIONS - PSK
    case there is no match.
 
 *-k* key::
-   Pre-shared key for the specified user identity (*-u* option also required).
+   Pre-shared key for the specified user identity (*-u* option also required). +
+   If the key begins with 0x, then the hex text (two [0-9a-f] per byte) is
+   converted to binary data.
 
 *-u* user::
    User identity to send for pre-shared key mode (*-k* option also required).
