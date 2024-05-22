@@ -384,7 +384,7 @@ unsigned int coap_context_get_max_handshake_sessions(const coap_context_t *conte
  *
  * @return        Incremented message id in network byte order.
  */
-uint16_t coap_new_message_id(coap_session_t *session);
+COAP_API uint16_t coap_new_message_id(coap_session_t *session);
 
 /**
  * CoAP stack context must be released with coap_free_context(). This function

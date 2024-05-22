@@ -356,6 +356,21 @@ int coap_update_token(coap_pdu_t *pdu,
  */
 int coap_option_check_repeatable(coap_option_num_t number);
 
+/**
+ * Creates a new CoAP PDU.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param type The type of the PDU (one of COAP_MESSAGE_CON, COAP_MESSAGE_NON,
+ *             COAP_MESSAGE_ACK, COAP_MESSAGE_RST).
+ * @param code The message code of the PDU.
+ * @param session The session that will be using this PDU
+ *
+ * @return The skeletal PDU or @c NULL if failure.
+ */
+coap_pdu_t *coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
+                             coap_session_t *session);
+
 /** @} */
 
 #endif /* COAP_COAP_PDU_INTERNAL_H_ */

@@ -151,13 +151,24 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
   return pdu;
 }
 
-coap_pdu_t *
+COAP_API coap_pdu_t *
 coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
              coap_session_t *session) {
   coap_pdu_t *pdu;
 
+  coap_lock_lock(session->context, return NULL);
+  pdu = coap_new_pdu_lkd(type, code, session);
+  coap_lock_unlock(session->context);
+  return pdu;
+}
+
+coap_pdu_t *
+coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
+                 coap_session_t *session) {
+  coap_pdu_t *pdu;
+
   coap_lock_check_locked(session->context);
-  pdu = coap_pdu_init(type, code, coap_new_message_id(session),
+  pdu = coap_pdu_init(type, code, coap_new_message_id_lkd(session),
                       coap_session_max_pdu_size(session));
   if (!pdu)
     coap_log_crit("coap_new_pdu: cannot allocate memory for new PDU\n");
@@ -198,7 +209,7 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
    */
   session->doing_first = 0;
   pdu = coap_pdu_init(old_pdu->type, old_pdu->code,
-                      coap_new_message_id(session),
+                      coap_new_message_id_lkd(session),
                       max(old_pdu->max_size,
                           coap_session_max_pdu_size(session)));
   /* Restore any pending waits */

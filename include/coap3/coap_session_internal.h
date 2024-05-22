@@ -362,6 +362,22 @@ ssize_t coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
  */
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
                                           const coap_packet_t *packet, coap_tick_t now);
+
+/**
+ * Create a new endpoint for communicating with peers.
+ *
+ * @param context     The coap context that will own the new endpoint,
+ * @param listen_addr Address the endpoint will listen for incoming requests
+ *                    on or originate outgoing requests from. Use NULL to
+ *                    specify that no incoming request will be accepted and
+ *                    use a random endpoint.
+ * @param proto       Protocol used on this endpoint,
+ *
+ * @return The new endpoint or @c NULL on failure.
+ */
+coap_endpoint_t *coap_new_endpoint_lkd(coap_context_t *context, const coap_address_t *listen_addr,
+                                       coap_proto_t proto);
+
 #endif /* COAP_SERVER_SUPPORT */
 
 /**
@@ -371,6 +387,110 @@ coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
  * @return maximum PDU size, not including header (but including token).
  */
 size_t coap_session_max_pdu_rcv_size(const coap_session_t *session);
+
+/**
+ * Creates a new client session to the designated server.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx The CoAP context.
+ * @param local_if Address of local interface. It is recommended to use NULL to let
+ *                 the operating system choose a suitable local interface. If an
+ *                 address is specified, the port number should be zero, which means
+ *                 that a free port is automatically selected.
+ * @param server The server's address. If the port number is zero, the default port
+ *               for the protocol will be used.
+ * @param proto Protocol.
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+ */
+coap_session_t *coap_new_client_session_lkd(
+    coap_context_t *ctx,
+    const coap_address_t *local_if,
+    const coap_address_t *server,
+    coap_proto_t proto
+);
+
+/**
+ * Creates a new client session to the designated server with PKI credentials
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx The CoAP context.
+ * @param local_if Address of local interface. It is recommended to use NULL to
+ *                 let the operating system choose a suitable local interface.
+ *                 If an address is specified, the port number should be zero,
+ *                 which means that a free port is automatically selected.
+ * @param server The server's address. If the port number is zero, the default
+ *               port for the protocol will be used.
+ * @param proto CoAP Protocol.
+ * @param setup_data PKI parameters.
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release()
+ *         to free.
+ */
+coap_session_t *coap_new_client_session_pki_lkd(coap_context_t *ctx,
+                                                const coap_address_t *local_if,
+                                                const coap_address_t *server,
+                                                coap_proto_t proto,
+                                                coap_dtls_pki_t *setup_data
+                                               );
+
+/**
+ * Creates a new client session to the designated server with PSK credentials
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @deprecated Use coap_new_client_session_psk2_lkd() instead.
+ *
+ * @param ctx The CoAP context.
+ * @param local_if Address of local interface. It is recommended to use NULL to let
+ *                 the operating system choose a suitable local interface. If an
+ *                 address is specified, the port number should be zero, which means
+ *                 that a free port is automatically selected.
+ * @param server The server's address. If the port number is zero, the default port
+ *               for the protocol will be used.
+ * @param proto Protocol.
+ * @param identity PSK client identity
+ * @param key PSK shared key
+ * @param key_len PSK shared key length
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+ */
+coap_session_t *coap_new_client_session_psk_lkd(coap_context_t *ctx,
+                                                const coap_address_t *local_if,
+                                                const coap_address_t *server,
+                                                coap_proto_t proto,
+                                                const char *identity,
+                                                const uint8_t *key,
+                                                unsigned key_len
+                                               );
+
+/**
+ * Creates a new client session to the designated server with PSK credentials
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx The CoAP context.
+ * @param local_if Address of local interface. It is recommended to use NULL to
+ *                 let the operating system choose a suitable local interface.
+ *                 If an address is specified, the port number should be zero,
+ *                 which means that a free port is automatically selected.
+ * @param server The server's address. If the port number is zero, the default
+ *               port for the protocol will be used.
+ * @param proto CoAP Protocol.
+ * @param setup_data PSK parameters.
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release()
+ *         to free.
+ */
+coap_session_t *coap_new_client_session_psk2_lkd(coap_context_t *ctx,
+                                                 const coap_address_t *local_if,
+                                                 const coap_address_t *server,
+                                                 coap_proto_t proto,
+                                                 coap_dtls_cpsk_t *setup_data
+                                                );
+
 
 /**
  * Create a new DTLS session for the @p session.

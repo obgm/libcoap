@@ -1508,7 +1508,7 @@ pdu_408_build(coap_session_t *session, coap_lg_srcv_t *p) {
 
   pdu = coap_pdu_init(COAP_MESSAGE_NON,
                       COAP_RESPONSE_CODE(408),
-                      coap_new_message_id(session),
+                      coap_new_message_id_lkd(session),
                       coap_session_max_pdu_size(session));
   if (!pdu)
     return NULL;
@@ -1769,7 +1769,7 @@ expire:
 
         pdu = coap_pdu_init(COAP_MESSAGE_NON,
                             COAP_RESPONSE_CODE(408),
-                            coap_new_message_id(session),
+                            coap_new_message_id_lkd(session),
                             coap_session_max_pdu_size(session));
         if (pdu) {
           if (p->last_token)
@@ -2165,7 +2165,7 @@ coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual) {
   coap_log_debug("Testing for Q-Block support\n");
   /* RFC9177 Section 4.1 when checking if available */
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET,
-                      coap_new_message_id(session),
+                      coap_new_message_id_lkd(session),
                       coap_session_max_pdu_size(session));
   if (!pdu) {
     return COAP_INVALID_MID;

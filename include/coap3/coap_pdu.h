@@ -396,8 +396,8 @@ coap_pdu_t *coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code,
  *
  * @return The skeletal PDU or @c NULL if failure.
  */
-coap_pdu_t *coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
-                         coap_session_t *session);
+COAP_API coap_pdu_t *coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
+                                  coap_session_t *session);
 
 /**
  * Dispose of an CoAP PDU and frees associated storage.

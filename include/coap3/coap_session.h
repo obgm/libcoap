@@ -241,15 +241,19 @@ void coap_session_set_mtu(coap_session_t *session, unsigned mtu);
 size_t coap_session_max_pdu_size(const coap_session_t *session);
 
 /**
-* Creates a new client session to the designated server.
-* @param ctx The CoAP context.
-* @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
-* @param server The server's address. If the port number is zero, the default port for the protocol will be used.
-* @param proto Protocol.
-*
-* @return A new CoAP session or NULL if failed. Call coap_session_release to free.
-*/
-coap_session_t *coap_new_client_session(
+ * Creates a new client session to the designated server.
+ * @param ctx The CoAP context.
+ * @param local_if Address of local interface. It is recommended to use NULL to let
+ *                 the operating system choose a suitable local interface. If an
+ *                 address is specified, the port number should be zero, which means
+ *                 that a free port is automatically selected.
+ * @param server The server's address. If the port number is zero, the default port
+ *               for the protocol will be used.
+ * @param proto Protocol.
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+ */
+COAP_API coap_session_t *coap_new_client_session(
     coap_context_t *ctx,
     const coap_address_t *local_if,
     const coap_address_t *server,
@@ -257,52 +261,54 @@ coap_session_t *coap_new_client_session(
 );
 
 /**
-* Creates a new client session to the designated server with PSK credentials
+ * Creates a new client session to the designated server with PSK credentials
  *
  * @deprecated Use coap_new_client_session_psk2() instead.
  *
-* @param ctx The CoAP context.
-* @param local_if Address of local interface. It is recommended to use NULL to let the operating system choose a suitable local interface. If an address is specified, the port number should be zero, which means that a free port is automatically selected.
-* @param server The server's address. If the port number is zero, the default port for the protocol will be used.
-* @param proto Protocol.
-* @param identity PSK client identity
-* @param key PSK shared key
-* @param key_len PSK shared key length
-*
-* @return A new CoAP session or NULL if failed. Call coap_session_release to free.
-*/
-coap_session_t *coap_new_client_session_psk(
-    coap_context_t *ctx,
-    const coap_address_t *local_if,
-    const coap_address_t *server,
-    coap_proto_t proto,
-    const char *identity,
-    const uint8_t *key,
-    unsigned key_len
-);
+ * @param ctx The CoAP context.
+ * @param local_if Address of local interface. It is recommended to use NULL to let
+ *                 the operating system choose a suitable local interface. If an
+ *                 address is specified, the port number should be zero, which means
+ *                 that a free port is automatically selected.
+ * @param server The server's address. If the port number is zero, the default port
+ *               for the protocol will be used.
+ * @param proto Protocol.
+ * @param identity PSK client identity
+ * @param key PSK shared key
+ * @param key_len PSK shared key length
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+ */
+COAP_API coap_session_t *coap_new_client_session_psk(coap_context_t *ctx,
+                                                     const coap_address_t *local_if,
+                                                     const coap_address_t *server,
+                                                     coap_proto_t proto,
+                                                     const char *identity,
+                                                     const uint8_t *key,
+                                                     unsigned key_len
+                                                    );
 
 /**
-* Creates a new client session to the designated server with PSK credentials
-* @param ctx The CoAP context.
-* @param local_if Address of local interface. It is recommended to use NULL to
-*                 let the operating system choose a suitable local interface.
-*                 If an address is specified, the port number should be zero,
-*                 which means that a free port is automatically selected.
-* @param server The server's address. If the port number is zero, the default
-*               port for the protocol will be used.
-* @param proto CoAP Protocol.
-* @param setup_data PSK parameters.
-*
-* @return A new CoAP session or NULL if failed. Call coap_session_release()
-*         to free.
-*/
-coap_session_t *coap_new_client_session_psk2(
-    coap_context_t *ctx,
-    const coap_address_t *local_if,
-    const coap_address_t *server,
-    coap_proto_t proto,
-    coap_dtls_cpsk_t *setup_data
-);
+ * Creates a new client session to the designated server with PSK credentials
+ * @param ctx The CoAP context.
+ * @param local_if Address of local interface. It is recommended to use NULL to
+ *                 let the operating system choose a suitable local interface.
+ *                 If an address is specified, the port number should be zero,
+ *                 which means that a free port is automatically selected.
+ * @param server The server's address. If the port number is zero, the default
+ *               port for the protocol will be used.
+ * @param proto CoAP Protocol.
+ * @param setup_data PSK parameters.
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release()
+ *         to free.
+ */
+coap_session_t *coap_new_client_session_psk2(coap_context_t *ctx,
+                                             const coap_address_t *local_if,
+                                             const coap_address_t *server,
+                                             coap_proto_t proto,
+                                             coap_dtls_cpsk_t *setup_data
+                                            );
 
 /**
  * Get the server session's current Identity Hint (PSK).
@@ -334,27 +340,26 @@ const coap_bin_const_t *coap_session_get_psk_key(
     const coap_session_t *session);
 
 /**
-* Creates a new client session to the designated server with PKI credentials
-* @param ctx The CoAP context.
-* @param local_if Address of local interface. It is recommended to use NULL to
-*                 let the operating system choose a suitable local interface.
-*                 If an address is specified, the port number should be zero,
-*                 which means that a free port is automatically selected.
-* @param server The server's address. If the port number is zero, the default
-*               port for the protocol will be used.
-* @param proto CoAP Protocol.
-* @param setup_data PKI parameters.
-*
-* @return A new CoAP session or NULL if failed. Call coap_session_release()
-*         to free.
-*/
-coap_session_t *coap_new_client_session_pki(
-    coap_context_t *ctx,
-    const coap_address_t *local_if,
-    const coap_address_t *server,
-    coap_proto_t proto,
-    coap_dtls_pki_t *setup_data
-);
+ * Creates a new client session to the designated server with PKI credentials
+ * @param ctx The CoAP context.
+ * @param local_if Address of local interface. It is recommended to use NULL to
+ *                 let the operating system choose a suitable local interface.
+ *                 If an address is specified, the port number should be zero,
+ *                 which means that a free port is automatically selected.
+ * @param server The server's address. If the port number is zero, the default
+ *               port for the protocol will be used.
+ * @param proto CoAP Protocol.
+ * @param setup_data PKI parameters.
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release()
+ *         to free.
+ */
+COAP_API coap_session_t *coap_new_client_session_pki(coap_context_t *ctx,
+                                                     const coap_address_t *local_if,
+                                                     const coap_address_t *server,
+                                                     coap_proto_t proto,
+                                                     coap_dtls_pki_t *setup_data
+                                                    );
 
 /**
  * Initializes the token value to use as a starting point.
@@ -399,8 +404,9 @@ const char *coap_session_str(const coap_session_t *session);
  *
  * @return The new endpoint or @c NULL on failure.
  */
-coap_endpoint_t *coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr,
-                                   coap_proto_t proto);
+COAP_API coap_endpoint_t *coap_new_endpoint(coap_context_t *context,
+                                            const coap_address_t *listen_addr,
+                                            coap_proto_t proto);
 
 /**
  * Set the endpoint's default MTU. This is the maximum message size that can be
