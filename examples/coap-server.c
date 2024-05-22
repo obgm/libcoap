@@ -2233,7 +2233,9 @@ usage(const char *program, const char *version) {
           "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
           "\t       \t\tto be available. This cannot be empty if defined.\n"
           "\t       \t\tNote that both -c and -k need to be defined for both\n"
-          "\t       \t\tPSK and PKI to be concurrently supported\n"
+          "\t       \t\tPSK and PKI to be concurrently supported. If the\n"
+          "\t       \t\tkey begins with 0x, then the hex text (two [0-9a-f] per\n"
+          "\t       \t\tbyte) is converted to binary data\n"
           "\t-s match_psk_sni_file\n"
           "\t       \t\tThis is a file that contains one or more lines of\n"
           "\t       \t\treceived Subject Name Identifier (SNI) to match to use\n"
@@ -2512,10 +2514,59 @@ cmdline_tls_engine(char *arg) {
   return 1;
 }
 
+/**
+ * Utility function to convert a hex digit to its corresponding
+ * numerical value.
+ *
+ * param c  The hex digit to convert. Must be in [0-9A-Fa-f].
+ *
+ * return The numerical representation of @p c.
+ */
+static uint8_t
+hex2char(char c) {
+  assert(isxdigit(c));
+  if ('a' <= c && c <= 'f')
+    return c - 'a' + 10;
+  else if ('A' <= c && c <= 'F')
+    return c - 'A' + 10;
+  else
+    return c - '0';
+}
+
+/**
+ * Converts the sequence of hex digits in src to a sequence of bytes.
+ *
+ * This function returns the number of bytes that have been written to
+ * @p dst.
+ *
+ * param[in]  src  The null-terminated hex string to convert.
+ * param[out] dst  Conversion result.
+ *
+ * return The length of @p dst.
+ */
+static size_t
+convert_hex_string(const char *src, uint8_t *dst) {
+  uint8_t *p = dst;
+  while (isxdigit((int)src[0]) && isxdigit((int)src[1])) {
+    *p++ = (hex2char(src[0]) << 4) + hex2char(src[1]);
+    src += 2;
+  }
+  if (src[0] != '\0') { /* error in hex input */
+    coap_log_warn("invalid hex string in option '%s'\n", src);
+  }
+  return p - dst;
+}
+
 static ssize_t
 cmdline_read_key(char *arg, unsigned char **buf, size_t maxlen) {
   size_t len = strnlen(arg, maxlen);
   if (len) {
+    /* read hex string alternative when arg starts with "0x" */
+    if (len >= 4 && arg[0] == '0' && arg[1] == 'x') {
+      /* As the command line option is part of our environment we can do
+       * the conversion in place. */
+      len = convert_hex_string(arg + 2, (uint8_t *)arg);
+    }
     *buf = (unsigned char *)arg;
     return len;
   }
