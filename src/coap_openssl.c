@@ -1222,6 +1222,9 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
     SSL_set_options(o_context->dtls.ssl, SSL_OP_COOKIE_EXCHANGE);
     SSL_set_mtu(o_context->dtls.ssl, COAP_DEFAULT_MTU);
   }
+  if (setup_data->ec_jpake) {
+    coap_log_warn("OpenSSL has no EC-JPAKE support\n");
+  }
   o_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
@@ -1254,6 +1257,9 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
     SSL_set_app_data(o_context->dtls.ssl, NULL);
     SSL_set_options(o_context->dtls.ssl, SSL_OP_COOKIE_EXCHANGE);
     SSL_set_mtu(o_context->dtls.ssl, COAP_DEFAULT_MTU);
+  }
+  if (setup_data->ec_jpake) {
+    coap_log_warn("OpenSSL has no EC-JPAKE support\n");
   }
   o_context->psk_pki_enabled |= IS_PSK;
   return 1;

@@ -105,6 +105,7 @@
 
 #define IS_PSK (1 << 0)
 #define IS_PKI (1 << 1)
+#define IS_ECJPAKE (1 << 2)
 #define IS_CLIENT (1 << 6)
 #define IS_SERVER (1 << 7)
 
@@ -165,6 +166,7 @@ typedef struct coap_mbedtls_context_t {
 typedef enum coap_enc_method_t {
   COAP_ENC_PSK,
   COAP_ENC_PKI,
+  COAP_ENC_ECJPAKE,
 } coap_enc_method_t;
 
 #ifndef MBEDTLS_2_X_COMPAT
@@ -1100,6 +1102,7 @@ fail:
 #if COAP_CLIENT_SUPPORT
 static int *psk_ciphers = NULL;
 static int *pki_ciphers = NULL;
+static int *ecjpake_ciphers = NULL;
 static int processed_ciphers = 0;
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
@@ -1136,6 +1139,10 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
     const int *base = list;
     int *psk_list;
     int *pki_list;
+#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
+    int *ecjpake_list;
+    int ecjpake_count = 1;
+#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
     int psk_count = 1; /* account for empty terminator */
     int pki_count = 1;
 
@@ -1143,17 +1150,21 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
       const mbedtls_ssl_ciphersuite_t *cur =
           mbedtls_ssl_ciphersuite_from_id(*list);
 
-#if MBEDTLS_VERSION_NUMBER >= 0x03020000
       if (cur) {
+#if MBEDTLS_VERSION_NUMBER >= 0x03020000
         if (cur->max_tls_version < MBEDTLS_SSL_VERSION_TLS1_2) {
           /* Minimum of TLS1.2 required - skip */
         }
 #else
-      if (cur) {
         if (cur->max_minor_ver < MBEDTLS_SSL_MINOR_VERSION_3) {
           /* Minimum of TLS1.2 required - skip */
         }
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
+#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
+        else if (cur->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE) {
+          ecjpake_count++;
+        }
+#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 #if MBEDTLS_VERSION_NUMBER >= 0x03060000
         else if (cur->min_tls_version >= MBEDTLS_SSL_VERSION_TLS1_3) {
           psk_count++;
@@ -1185,24 +1196,43 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
       psk_ciphers = NULL;
       return;
     }
+#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
+    ecjpake_ciphers = mbedtls_malloc(ecjpake_count * sizeof(ecjpake_ciphers[0]));
+    if (ecjpake_ciphers == NULL) {
+      coap_log_err("set_ciphers: mbedtls_malloc with count %d failed\n", pki_count);
+      mbedtls_free(psk_ciphers);
+      mbedtls_free(pki_ciphers);
+      psk_ciphers = NULL;
+      pki_ciphers = NULL;
+      return;
+    }
+#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
     psk_list = psk_ciphers;
     pki_list = pki_ciphers;
+#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
+    ecjpake_list = ecjpake_ciphers;
+#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
     while (*list) {
       const mbedtls_ssl_ciphersuite_t *cur =
           mbedtls_ssl_ciphersuite_from_id(*list);
-#if MBEDTLS_VERSION_NUMBER >= 0x03020000
       if (cur) {
+#if MBEDTLS_VERSION_NUMBER >= 0x03020000
         if (cur->max_tls_version < MBEDTLS_SSL_VERSION_TLS1_2) {
           /* Minimum of TLS1.2 required - skip */
         }
 #else
-      if (cur) {
         if (cur->max_minor_ver < MBEDTLS_SSL_MINOR_VERSION_3) {
           /* Minimum of TLS1.2 required - skip */
         }
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
+#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
+        else if (cur->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE) {
+          *ecjpake_list = *list;
+          ecjpake_list++;
+        }
+#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 #if MBEDTLS_VERSION_NUMBER >= 0x03060000
         else if (cur->min_tls_version >= MBEDTLS_SSL_VERSION_TLS1_3) {
           *psk_list = *list;
@@ -1229,7 +1259,20 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
     *pki_list = 0;
     processed_ciphers = 1;
   }
-  mbedtls_ssl_conf_ciphersuites(conf, method == COAP_ENC_PSK ? psk_ciphers : pki_ciphers);
+  switch (method) {
+  case COAP_ENC_PSK:
+    mbedtls_ssl_conf_ciphersuites(conf, psk_ciphers);
+    break;
+  case COAP_ENC_PKI:
+    mbedtls_ssl_conf_ciphersuites(conf, pki_ciphers);
+    break;
+  case COAP_ENC_ECJPAKE:
+    mbedtls_ssl_conf_ciphersuites(conf, ecjpake_ciphers);
+    break;
+  default:
+    assert(0);
+    break;
+  }
 }
 
 static int
@@ -1292,7 +1335,18 @@ setup_client_ssl_session(coap_session_t *c_session,
     }
     /* Identity Hint currently not supported in Mbed TLS so code removed */
 
+#ifdef MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+    if (m_context->psk_pki_enabled & IS_ECJPAKE) {
+      set_ciphersuites(&m_env->conf, COAP_ENC_ECJPAKE);
+#if MBEDTLS_VERSION_NUMBER >= 0x03020000
+      mbedtls_ssl_conf_max_tls_version(&m_env->conf, MBEDTLS_SSL_VERSION_TLS1_2);
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
+    } else {
+      set_ciphersuites(&m_env->conf, COAP_ENC_PSK);
+    }
+#else /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
     set_ciphersuites(&m_env->conf, COAP_ENC_PSK);
+#endif /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 #else /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
     coap_log_warn("PSK not enabled in Mbed TLS library\n");
 #endif /* ! MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
@@ -1470,6 +1524,16 @@ fail:
                 get_error_string(ret));
 reset:
   mbedtls_ssl_session_reset(&m_env->ssl);
+#ifdef MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+  coap_mbedtls_context_t *m_context =
+      ((coap_mbedtls_context_t *)c_session->context->dtls_context);
+  if (m_context->psk_pki_enabled & IS_PSK &&
+      m_context->psk_pki_enabled & (IS_SERVER | IS_ECJPAKE)) {
+    const coap_bin_const_t *psk_key;
+    psk_key = coap_get_session_server_psk_key(c_session);
+    mbedtls_ssl_set_hs_ecjpake_password(&m_env->ssl, psk_key->s, psk_key->length);
+  }
+#endif /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
   return -1;
 }
 
@@ -1692,6 +1756,16 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
                         coap_sock_read, NULL);
   }
 #endif /* ! COAP_DISABLE_TCP */
+#ifdef MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+  coap_mbedtls_context_t *m_context =
+      ((coap_mbedtls_context_t *)c_session->context->dtls_context);
+  if ((m_context->psk_pki_enabled & IS_PSK) &&
+      (role != COAP_DTLS_ROLE_CLIENT || m_context->psk_pki_enabled & IS_ECJPAKE)) {
+    const coap_bin_const_t *psk_key;
+    psk_key = coap_get_session_server_psk_key(c_session);
+    mbedtls_ssl_set_hs_ecjpake_password(&m_env->ssl, psk_key->s, psk_key->length);
+  }
+#endif /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
   mbedtls_ssl_set_timer_cb(&m_env->ssl, &m_env->timer,
                            mbedtls_timing_set_delay,
                            mbedtls_timing_get_delay);
@@ -1799,6 +1873,13 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
   if (!m_context || !setup_data)
     return 0;
 
+  if (setup_data->ec_jpake) {
+#ifdef MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+    m_context->psk_pki_enabled |= IS_ECJPAKE;
+#else /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
+    coap_log_warn("Mbed TLS not compiled for EC-JPAKE support\n");
+#endif /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
+  }
   m_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
@@ -1830,6 +1911,13 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
 
   if (setup_data->validate_ih_call_back) {
     coap_log_warn("CoAP Client with Mbed TLS does not support Identity Hint selection\n");
+  }
+  if (setup_data->ec_jpake) {
+#ifdef MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
+    m_context->psk_pki_enabled |= IS_ECJPAKE;
+#else /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
+    coap_log_warn("Mbed TLS not compiled for EC-JPAKE support\n");
+#endif /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
   }
   m_context->psk_pki_enabled |= IS_PSK;
   return 1;
@@ -2600,8 +2688,10 @@ coap_dtls_shutdown(void) {
 #if COAP_CLIENT_SUPPORT
   mbedtls_free(psk_ciphers);
   mbedtls_free(pki_ciphers);
+  mbedtls_free(ecjpake_ciphers);
   psk_ciphers = NULL;
   pki_ciphers = NULL;
+  ecjpake_ciphers = NULL;
   processed_ciphers = 0;
 #endif /* COAP_CLIENT_SUPPORT */
   coap_dtls_set_log_level(COAP_LOG_EMERG);

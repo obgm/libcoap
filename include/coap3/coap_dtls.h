@@ -451,9 +451,11 @@ typedef struct coap_dtls_cpsk_t {
                        to support this version of the struct */
 
   /* Options to enable different TLS functionality in libcoap */
-  uint8_t reserved[7];             /**< Reserved - must be set to 0 for
-                                        future compatibility */
-  /* Size of 7 chosen to align to next
+  uint8_t ec_jpake;        /**< Set to 1 if EC-JPAKE is to be used.
+                                Currently Mbed TLS only */
+  uint8_t reserved[6];     /**< Reserved - must be set to 0 for
+                                future compatibility */
+  /* Size of 6 chosen to align to next
    * parameter, so if newly defined option
    * it can use one of the reserverd slot so
    * no need to change
@@ -539,9 +541,11 @@ typedef struct coap_dtls_spsk_t {
                        to support this version of the struct */
 
   /* Options to enable different TLS functionality in libcoap */
-  uint8_t reserved[7];             /**< Reserved - must be set to 0 for
-                                        future compatibility */
-  /* Size of 7 chosen to align to next
+  uint8_t ec_jpake;        /**< Set to 1 if EC-JPAKE can be used.
+                                Currently Mbed TLS only */
+  uint8_t reserved[6];     /**< Reserved - must be set to 0 for
+                                future compatibility */
+  /* Size of 6 chosen to align to next
    * parameter, so if newly defined option
    * it can use one of the reserverd slot so
    * no need to change
