@@ -154,6 +154,7 @@ static coap_oscore_conf_t *oscore_conf = NULL;
 static int doing_oscore = 0;
 static int doing_tls_engine = 0;
 static char *tls_engine_conf = NULL;
+static int ec_jpake = 0;
 
 static int quit = 0;
 
@@ -509,7 +510,7 @@ usage(const char *program, const char *version) {
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
           "\t\t[-T token] [-U]  [-V num] [-X size]\n"
-          "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
+          "\t\t[[-h match_hint_file] [-k key] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
           "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]] URI\n"
           "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
@@ -590,6 +591,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tkey begins with 0x, then the hex text (two [0-9a-f] per\n"
           "\t       \t\tbyte) is converted to binary data\n"
           "\t-u user\t\tUser identity to send for pre-shared key mode\n"
+          "\t-2     \t\tUse EC-JPAKE negotiation (if supported)\n"
           "PKI Options (if supported by underlying (D)TLS library)\n"
           "\tNote: If any one of '-c certfile', '-j keyfile' or '-C cafile' is in\n"
           "\tPKCS11 URI naming format (pkcs11: prefix), then any remaining non\n"
@@ -1467,6 +1469,7 @@ setup_psk(const uint8_t *identity,
 
   memset(&dtls_psk, 0, sizeof(dtls_psk));
   dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
+  dtls_psk.ec_jpake = ec_jpake;
   if (valid_ihs.count) {
     dtls_psk.validate_ih_call_back = verify_ih_callback;
   }
@@ -1663,7 +1666,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:")) != -1) {
+                       "a:b:c:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:2")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1815,6 +1818,9 @@ main(int argc, char **argv) {
     case 'q':
       tls_engine_conf = optarg;
       doing_tls_engine = 1;
+      break;
+    case '2':
+      ec_jpake = 1;
       break;
     default:
       usage(argv[0], LIBCOAP_PACKAGE_VERSION);

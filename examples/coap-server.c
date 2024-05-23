@@ -75,6 +75,7 @@ static coap_oscore_conf_t *oscore_conf;
 static int doing_oscore = 0;
 static int doing_tls_engine = 0;
 static char *tls_engine_conf = NULL;
+static int ec_jpake = 0;
 
 /* set to 1 to request clean server shutdown */
 static int quit = 0;
@@ -2079,6 +2080,7 @@ setup_spsk(void) {
 
   memset(&dtls_spsk, 0, sizeof(dtls_spsk));
   dtls_spsk.version = COAP_DTLS_SPSK_SETUP_VERSION;
+  dtls_spsk.ec_jpake = ec_jpake;
   dtls_spsk.validate_id_call_back = valid_ids.count ?
                                     verify_id_callback : NULL;
   dtls_spsk.validate_sni_call_back = valid_psk_snis.count ?
@@ -2145,7 +2147,7 @@ usage(const char *program, const char *version) {
           "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
-          "\t\t[-s match_psk_sni_file] [-u user]]\n"
+          "\t\t[-s match_psk_sni_file] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
           "\t\t[-J pkcs11_pin] [-M rpk_file] [-R trust_casfile]\n"
           "\t\t[-S match_pki_sni_file]]\n"
@@ -2252,6 +2254,7 @@ usage(const char *program, const char *version) {
           "\t       \t\t-s followed by -i\n"
           "\t-u user\t\tUser identity for pre-shared key mode (only used if\n"
           "\t       \t\toption -P is set)\n"
+          "\t-2     \t\tUse EC-JPAKE negotiation (if supported)\n"
          );
   fprintf(stderr,
           "PKI Options (if supported by underlying (D)TLS library)\n"
@@ -2850,7 +2853,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:eg:h:i:j:k:l:mnp:q:rs:tu:v:w:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:")) != -1) {
+                       "a:b:c:d:eg:h:i:j:k:l:mnp:q:rs:tu:v:w:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:2")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -3015,6 +3018,9 @@ main(int argc, char **argv) {
       break;
     case 'X':
       csm_max_message_size = strtol(optarg, NULL, 10);
+      break;
+    case '2':
+      ec_jpake = 1;
       break;
     default:
       usage(argv[0], LIBCOAP_PACKAGE_VERSION);

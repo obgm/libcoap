@@ -27,7 +27,7 @@ SYNOPSIS
               [*-P* scheme://addr[:port],[name1[,name2..]]]
               [*-T* max_token_size] [*-U* type] [*-V* num] [*-X* size]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
-              [*-s* match_psk_sni_file] [*-u* user]]
+              [*-s* match_psk_sni_file] [*-u* user] [*-2*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]
               [*-S* match_pki_sni_file]]
@@ -195,6 +195,9 @@ OPTIONS - PSK
 
 *-u* user ::
    User identity for pre-shared key mode (only used if option *-P* is set).
+
+*-2* ::
+   Use EC-JPAKE negotiation (if supported).
 
 OPTIONS - PKI
 -------------

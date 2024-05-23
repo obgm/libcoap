@@ -1473,6 +1473,9 @@ coap_dtls_context_set_cpsk(coap_context_t *coap_context COAP_UNUSED,
     return 0;
 
 #ifdef DTLS_PSK
+  if (setup_data->ec_jpake) {
+    coap_log_warn("TinyDTLS has no EC-JPAKE support\n");
+  }
   return 1;
 #else /* ! DTLS_PSK */
   coap_log_warn("TinyDTLS not compiled with PSK support\n");
@@ -1494,6 +1497,9 @@ coap_dtls_context_set_spsk(coap_context_t *coap_context COAP_UNUSED,
     coap_log_warn("CoAP Server with TinyDTLS does not support SNI selection\n");
   }
 
+  if (setup_data->ec_jpake) {
+    coap_log_warn("TinyDTLS has no EC-JPAKE support\n");
+  }
   return 1;
 #else /* ! DTLS_PSK */
   coap_log_warn("TinyDTLS not compiled with PSK support\n");

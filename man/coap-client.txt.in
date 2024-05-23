@@ -27,7 +27,7 @@ SYNOPSIS
               [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-T* token] [*-U*] [*-V* num]
               [*-X* size]
-              [[*-h* match_hint_file] [*-k* key] [*-u* user]]
+              [[*-h* match_hint_file] [*-k* key] [*-u* user] [*-2*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
 
@@ -216,6 +216,9 @@ OPTIONS - PSK
 
 *-u* user::
    User identity to send for pre-shared key mode (*-k* option also required).
+
+*-2* ::
+   Use EC-JPAKE negotiation (if supported).
 
 OPTIONS - PKI
 -------------

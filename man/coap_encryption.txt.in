@@ -140,7 +140,11 @@ typedef struct coap_dtls_cpsk_t {
                        to support the version of the struct */
 
   /* Options to enable different TLS functionality in libcoap */
-  uint8_t reserved[7];             /* Reserved - must be set to 0 for
+  uint8_t ec_jpake;        /* Set to 1 if DC-JPAKE is to be used.
+                              Currently Mbed TLS only */
+
+  /* Options to enable different TLS functionality in libcoap */
+  uint8_t reserved[6];             /* Reserved - must be set to 0 for
                                       future compatibility */
 
   /** Identity Hint check callback function.
@@ -177,6 +181,11 @@ definition.
 
 *version* is set to COAP_DTLS_CPSK_SETUP_VERSION.  This will then allow
 support for different versions of the coap_dtls_cpsk_t structure in the future.
+
+*SECTION: PSK Server: coap_dtls_spsk_t: ec_jpake*
+
+*ec_jpake* Set to 1 if EC-JPAKE negotiation is to be used. Currently only
+supported by suitably compiled Mbed TLS library.
 
 *SECTION: PSK Client: coap_dtls_cpsk_t: Reserved*
 
@@ -262,11 +271,15 @@ environment.
 [source, c]
 ----
 typedef struct coap_dtls_spsk_t {
-  uint8_t version; /** Set to COAP_DTLS_SPSK_SETUP_VERSION
+  uint8_t version; /* Set to COAP_DTLS_SPSK_SETUP_VERSION
                        to support the version of the struct */
 
   /* Options to enable different TLS functionality in libcoap */
-  uint8_t reserved[7];             /* Reserved - must be set to 0 for
+  uint8_t ec_jpake;        /* Set to 1 if DC-JPAKE can be used.
+                              Currently Mbed TLS only */
+
+  /* Options to enable different TLS functionality in libcoap */
+  uint8_t reserved[6];             /* Reserved - must be set to 0 for
                                       future compatibility */
 
   /** Identity check callback function.
@@ -303,6 +316,11 @@ definition.
 
 *version* is set to COAP_DTLS_SPSK_SETUP_VERSION.  This will then allow
 support for different versions of the coap_dtls_spsk_t structure in the future.
+
+*SECTION: PSK Server: coap_dtls_spsk_t: ec_jpake*
+
+*ec_jpake* Set to 1 if EC-JPAKE negotiation can be used. Currently only
+supported by suitably compiled Mbed TLS library.
 
 *SECTION: PSK Server: coap_dtls_spsk_t: Reserved*
 

@@ -394,6 +394,9 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
   if (!g_context || !setup_data)
     return 0;
 
+  if (setup_data->ec_jpake) {
+    coap_log_warn("GnuTLS has no EC-JPAKE support\n");
+  }
   g_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
@@ -414,6 +417,9 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
   if (!g_context || !setup_data)
     return 0;
 
+  if (setup_data->ec_jpake) {
+    coap_log_warn("GnuTLS has no EC-JPAKE support\n");
+  }
   g_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }

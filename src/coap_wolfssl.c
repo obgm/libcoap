@@ -1044,6 +1044,9 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
                                                psk_tls_server_name_call_back);
 #endif /* !COAP_DISABLE_TCP */
   }
+  if (setup_data->ec_jpake) {
+    coap_log_warn("wolfSSL has no EC-JPAKE support\n");
+  }
   w_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
@@ -1060,6 +1063,9 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
   if (!setup_data || !w_context)
     return 0;
 
+  if (setup_data->ec_jpake) {
+    coap_log_warn("wolfSSL has no EC-JPAKE support\n");
+  }
   w_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
