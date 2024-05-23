@@ -344,15 +344,35 @@ coap_session_get_non_receive_timeout(const coap_session_t *session) {
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
 }
 
-coap_session_t *
+COAP_API coap_session_t *
 coap_session_reference(coap_session_t *session) {
-  coap_lock_check_locked(session->context);
+  coap_lock_lock(session->context, return NULL);
+  coap_session_reference_lkd(session);
+  coap_lock_unlock(session->context);
+  return session;
+}
+
+coap_session_t *
+coap_session_reference_lkd(coap_session_t *session) {
   ++session->ref;
   return session;
 }
 
-void
+COAP_API void
 coap_session_release(coap_session_t *session) {
+  if (session) {
+#if COAP_THREAD_SAFE
+    coap_context_t *context = session->context;
+#endif /* COAP_THREAD_SAFE */
+
+    coap_lock_lock(context, return);
+    coap_session_release_lkd(session);
+    coap_lock_unlock(context);
+  }
+}
+
+void
+coap_session_release_lkd(coap_session_t *session) {
   if (session) {
     coap_lock_check_locked(session->context);
 #ifndef __COVERITY__
@@ -554,7 +574,7 @@ coap_session_free(coap_session_t *session) {
   if (session->ref)
     return;
   /* Make sure nothing gets deleted under our feet */
-  coap_session_reference(session);
+  coap_session_reference_lkd(session);
   coap_session_mfree(session);
 #if COAP_SERVER_SUPPORT
   if (session->endpoint) {
@@ -610,8 +630,24 @@ coap_session_max_pdu_rcv_size(const coap_session_t *session) {
                                             (size_t)(session->mtu - session->tls_overhead));
 }
 
-size_t
+COAP_API size_t
 coap_session_max_pdu_size(const coap_session_t *session) {
+  size_t size;
+  coap_session_t *session_rw;
+
+  /*
+   * Need to do this to not get a compiler warning about const parameters
+   * but need to maintain source code backward compatibility
+   */
+  memcpy(&session_rw, &session, sizeof(session_rw));
+  coap_lock_lock(session_rw->context, return 0);
+  size = coap_session_max_pdu_size_lkd(session_rw);
+  coap_lock_unlock(session_rw->context);
+  return size;
+}
+
+size_t
+coap_session_max_pdu_size_lkd(const coap_session_t *session) {
   size_t max_with_header;
 
   coap_lock_check_locked(session->context);
@@ -660,7 +696,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     coap_queue_t *removed = NULL;
     coap_remove_from_queue(&session->context->sendqueue, session, node->id, &removed);
     assert(removed == node);
-    coap_session_release(node->session);
+    coap_session_release_lkd(node->session);
     node->session = NULL;
     node->t = 0;
   } else {
@@ -720,14 +756,14 @@ coap_session_send_csm(coap_session_t *session) {
                                    buf) == 0)
       || coap_pdu_encode_header(pdu, session->proto) == 0
      ) {
-    coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+    coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
   } else {
     ssize_t bytes_written;
 
     pdu->session = session;
     bytes_written = coap_session_send_pdu(session, pdu);
     if (bytes_written != (ssize_t)pdu->used_size + pdu->hdr_size) {
-      coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+      coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
     } else {
       session->csm_rcv_mtu = session->context->csm_max_message_size;
       if (session->csm_rcv_mtu > COAP_BERT_BASE)
@@ -741,8 +777,18 @@ coap_session_send_csm(coap_session_t *session) {
 }
 #endif /* !COAP_DISABLE_TCP */
 
-coap_mid_t
+COAP_API coap_mid_t
 coap_session_send_ping(coap_session_t *session) {
+  coap_mid_t mid;
+
+  coap_lock_lock(session->context, return COAP_INVALID_MID);
+  mid = coap_session_send_ping_lkd(session);
+  coap_lock_unlock(session->context);
+  return mid;
+}
+
+coap_mid_t
+coap_session_send_ping_lkd(coap_session_t *session) {
   coap_pdu_t *ping = NULL;
 
   coap_lock_check_locked(session->context);
@@ -852,8 +898,15 @@ coap_nack_name(coap_nack_reason_t reason) {
 }
 #endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
 
-void
+COAP_API void
 coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
+  coap_lock_lock(session->context, return);
+  coap_session_disconnected_lkd(session, reason);
+  coap_lock_unlock(session->context);
+}
+
+void
+coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason) {
 #if !COAP_DISABLE_TCP
   coap_session_state_t state = session->state;
 #endif /* !COAP_DISABLE_TCP */
@@ -1204,7 +1257,7 @@ coap_session_create_client(coap_context_t *ctx,
   if (!session)
     goto error;
 
-  coap_session_reference(session);
+  coap_session_reference_lkd(session);
   session->sock.session = session;
   memcpy(&session->sock.lfunc, coap_layers_coap[proto],
          sizeof(session->sock.lfunc));
@@ -1258,12 +1311,12 @@ coap_session_create_client(coap_context_t *ctx,
 
 error:
   /*
-   * Need to add in the session as coap_session_release()
+   * Need to add in the session as coap_session_release_lkd()
    * will call SESSIONS_DELETE in coap_session_free().
    */
   if (session)
     SESSIONS_ADD(ctx->sessions, session);
-  coap_session_release(session);
+  coap_session_release_lkd(session);
   return NULL;
 }
 
@@ -1408,12 +1461,12 @@ coap_new_client_session_psk2_lkd(coap_context_t *ctx,
                            setup_data->psk_info.identity.length);
     if (!session->psk_identity) {
       coap_log_warn("Cannot store session Identity (PSK)\n");
-      coap_session_release(session);
+      coap_session_release_lkd(session);
       return NULL;
     }
   } else if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     coap_log_warn("Identity (PSK) not defined\n");
-    coap_session_release(session);
+    coap_session_release_lkd(session);
     return NULL;
   }
 
@@ -1422,18 +1475,18 @@ coap_new_client_session_psk2_lkd(coap_context_t *ctx,
                                           setup_data->psk_info.key.length);
     if (!session->psk_key) {
       coap_log_warn("Cannot store session pre-shared key (PSK)\n");
-      coap_session_release(session);
+      coap_session_release_lkd(session);
       return NULL;
     }
   } else if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     coap_log_warn("Pre-shared key (PSK) not defined\n");
-    coap_session_release(session);
+    coap_session_release_lkd(session);
     return NULL;
   }
 
   if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     if (!coap_dtls_context_set_cpsk(ctx, setup_data)) {
-      coap_session_release(session);
+      coap_session_release_lkd(session);
       return NULL;
     }
   }
@@ -1602,7 +1655,7 @@ coap_new_client_session_pki_lkd(coap_context_t *ctx,
   if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     /* we know that setup_data is not NULL */
     if (!coap_dtls_context_set_pki(ctx, setup_data, COAP_DTLS_ROLE_CLIENT)) {
-      coap_session_release(session);
+      coap_session_release_lkd(session);
       return NULL;
     }
   }
@@ -1648,7 +1701,7 @@ coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep, void *extra) {
 
 error:
   /*
-   * Need to add in the session as coap_session_release()
+   * Need to add in the session as coap_session_release_lkd()
    * will call SESSIONS_DELETE in coap_session_free().
    */
   if (session) {
@@ -1749,7 +1802,7 @@ int
 coap_session_set_type_client(coap_session_t *session) {
 #if COAP_SERVER_SUPPORT
   if (session && session->type == COAP_SESSION_TYPE_SERVER) {
-    coap_session_reference(session);
+    coap_session_reference_lkd(session);
     session->type = COAP_SESSION_TYPE_CLIENT;
     return 1;
   }
@@ -1916,7 +1969,7 @@ coap_new_endpoint_lkd(coap_context_t *context, const coap_address_t *listen_addr
   return ep;
 
 error:
-  coap_free_endpoint(ep);
+  coap_free_endpoint_lkd(ep);
   return NULL;
 }
 
@@ -1925,8 +1978,22 @@ coap_endpoint_set_default_mtu(coap_endpoint_t *ep, unsigned mtu) {
   ep->default_mtu = (uint16_t)mtu;
 }
 
-void
+COAP_API void
 coap_free_endpoint(coap_endpoint_t *ep) {
+  if (ep) {
+    coap_context_t *context = ep->context;
+    if (context) {
+      coap_lock_lock(context, return);
+    }
+    coap_free_endpoint_lkd(ep);
+    if (context) {
+      coap_lock_unlock(context);
+    }
+  }
+}
+
+void
+coap_free_endpoint_lkd(coap_endpoint_t *ep) {
   if (ep) {
     coap_session_t *session, *rtmp;
 

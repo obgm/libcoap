@@ -84,8 +84,8 @@ typedef ssize_t (*coap_layer_write_t)(coap_session_t *session,
  *   session->lfunc[_this_layer_].l_establish(session)
  * (or done at any point when layer is established).
  * If the establishment of a layer fails, then
- *   coap_session_disconnected(session, COAP_NACK_xxx_LAYER_FAILED) must be
- *   called.
+ *   coap_session_disconnected_lkd(session, COAP_NACK_xxx_LAYER_FAILED) must
+ *   be called.
  *
  * @param session Session being established
  */

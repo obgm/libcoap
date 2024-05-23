@@ -489,7 +489,7 @@ coap_free_resource(coap_resource_t *resource) {
     if (resource->context->observe_deleted)
       resource->context->observe_deleted(obs->session, obs,
                                          resource->context->observe_user_data);
-    coap_session_release(obs->session);
+    coap_session_release_lkd(obs->session);
     coap_delete_pdu(obs->pdu);
     coap_delete_cache_key(obs->cache_key);
     coap_free_type(COAP_SUBSCRIPTION, obs);
@@ -822,8 +822,8 @@ coap_add_observer(coap_resource_t *resource,
   }
 
   coap_subscription_init(s);
-  s->pdu = coap_pdu_duplicate(request, session, token->length,
-                              token->s, NULL);
+  s->pdu = coap_pdu_duplicate_lkd(request, session, token->length,
+                                  token->s, NULL);
   if (s->pdu == NULL) {
     coap_delete_cache_key(cache_key);
     coap_free_type(COAP_SUBSCRIPTION, s);
@@ -847,7 +847,7 @@ coap_add_observer(coap_resource_t *resource,
     }
   }
   s->cache_key = cache_key;
-  s->session = coap_session_reference(session);
+  s->session = coap_session_reference_lkd(session);
 
   /* add subscriber to resource */
   LL_PREPEND(resource->subscribers, s);
@@ -995,7 +995,7 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
 
   if (resource->subscribers && s) {
     LL_DELETE(resource->subscribers, s);
-    coap_session_release(session);
+    coap_session_release_lkd(session);
     coap_delete_pdu(s->pdu);
     coap_delete_cache_key(s->cache_key);
     coap_free_type(COAP_SUBSCRIPTION, s);
@@ -1014,7 +1014,7 @@ coap_delete_observers(coap_context_t *context, coap_session_t *session) {
           context->observe_deleted(session, s, context->observe_user_data);
         assert(resource->subscribers);
         LL_DELETE(resource->subscribers, s);
-        coap_session_release(session);
+        coap_session_release_lkd(session);
         coap_delete_pdu(s->pdu);
         coap_delete_cache_key(s->cache_key);
         coap_free_type(COAP_SUBSCRIPTION, s);
@@ -1071,7 +1071,8 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       coap_mid_t mid = COAP_INVALID_MID;
       obs->dirty = 0;
       /* initialize response */
-      response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0, coap_session_max_pdu_size(obs->session));
+      response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0,
+                               coap_session_max_pdu_size_lkd(obs->session));
       if (!response) {
         obs->dirty = 1;
         r->partiallydirty = 1;

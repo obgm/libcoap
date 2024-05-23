@@ -213,12 +213,12 @@ void coap_persist_track_funcs(coap_context_t *context,
  *
  * @return ptr to subscription if success else @c NULL.
  */
-coap_subscription_t *coap_persist_observe_add(coap_context_t *context,
-                                              coap_proto_t e_proto,
-                                              const coap_address_t *e_listen_addr,
-                                              const coap_addr_tuple_t *s_addr_info,
-                                              const coap_bin_const_t *raw_packet,
-                                              const coap_bin_const_t *oscore_info);
+COAP_API coap_subscription_t *coap_persist_observe_add(coap_context_t *context,
+                                                       coap_proto_t e_proto,
+                                                       const coap_address_t *e_listen_addr,
+                                                       const coap_addr_tuple_t *s_addr_info,
+                                                       const coap_bin_const_t *raw_packet,
+                                                       const coap_bin_const_t *oscore_info);
 
 /**
  * Start up persist tracking using the libcoap module. If the files already
@@ -237,11 +237,11 @@ coap_subscription_t *coap_persist_observe_add(coap_context_t *context,
  *
  * @return  @c 1 if success else @c 0.
  */
-int coap_persist_startup(coap_context_t *context,
-                         const char *dyn_resource_save_file,
-                         const char *observe_save_file,
-                         const char *obs_cnt_save_file,
-                         uint32_t save_freq);
+COAP_API int coap_persist_startup(coap_context_t *context,
+                                  const char *dyn_resource_save_file,
+                                  const char *observe_save_file,
+                                  const char *obs_cnt_save_file,
+                                  uint32_t save_freq);
 
 /**
  * Stop tracking persist information, leaving the current persist information
@@ -255,7 +255,7 @@ int coap_persist_startup(coap_context_t *context,
  *
  * @param context The context that tracking information is to be stopped on.
  */
-void coap_persist_stop(coap_context_t *context);
+COAP_API void coap_persist_stop(coap_context_t *context);
 
 /**
  * Sets the current observe number value.

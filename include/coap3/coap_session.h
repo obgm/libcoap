@@ -66,7 +66,7 @@ typedef enum coap_session_state_t {
  * @param session The CoAP session.
  * @return same as session
  */
-coap_session_t *coap_session_reference(coap_session_t *session);
+COAP_API coap_session_t *coap_session_reference(coap_session_t *session);
 
 /**
  * Decrement reference counter on a session.
@@ -75,7 +75,7 @@ coap_session_t *coap_session_reference(coap_session_t *session);
  *
  * @param session The CoAP session.
  */
-void coap_session_release(coap_session_t *session);
+COAP_API void coap_session_release(coap_session_t *session);
 
 /**
  * Notify session that it has failed.  This cleans up any outstanding / queued
@@ -84,8 +84,8 @@ void coap_session_release(coap_session_t *session);
  * @param session The CoAP session.
  * @param reason The reason why the session was disconnected.
  */
-void coap_session_disconnected(coap_session_t *session,
-                               coap_nack_reason_t reason);
+COAP_API void coap_session_disconnected(coap_session_t *session,
+                                        coap_nack_reason_t reason);
 
 /**
  * Stores @p data with the given session. This function overwrites any value
@@ -238,7 +238,7 @@ void coap_session_set_mtu(coap_session_t *session, unsigned mtu);
  *
  * @return maximum PDU size, not including header (but including token).
  */
-size_t coap_session_max_pdu_size(const coap_session_t *session);
+COAP_API size_t coap_session_max_pdu_size(const coap_session_t *session);
 
 /**
  * Creates a new client session to the designated server.
@@ -422,7 +422,7 @@ void coap_endpoint_set_default_mtu(coap_endpoint_t *endpoint, unsigned mtu);
  *
  * @param endpoint The endpoint to release.
  */
-void coap_free_endpoint(coap_endpoint_t *endpoint);
+COAP_API void coap_free_endpoint(coap_endpoint_t *endpoint);
 
 /**
  * Get the session associated with the specified @p remote_addr and @p index.
@@ -795,13 +795,14 @@ coap_fixed_point_t coap_session_get_non_receive_timeout(
     const coap_session_t *session);
 
 /** @} */
+
 /**
  * Send a ping message for the session.
  * @param session The CoAP session.
  *
  * @return COAP_INVALID_MID if there is an error
  */
-coap_mid_t coap_session_send_ping(coap_session_t *session);
+COAP_API coap_mid_t coap_session_send_ping(coap_session_t *session);
 
 /**
  * Disable client automatically sending observe cancel on session close

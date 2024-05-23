@@ -419,6 +419,45 @@ void coap_check_code_lg_xmit(const coap_session_t *session,
                              const coap_resource_t *resource,
                              const coap_string_t *query);
 
+/**
+ * Set the context level CoAP block handling bits for handling RFC7959.
+ * These bits flow down to a session when a session is created and if the peer
+ * does not support something, an appropriate bit may get disabled in the
+ * session block_mode.
+ * The session block_mode then flows down into coap_crcv_t or coap_srcv_t where
+ * again an appropriate bit may get disabled.
+ *
+ * Note: This function must be called before the session is set up.
+ *
+ * Note: COAP_BLOCK_USE_LIBCOAP must be set if libcoap is to do all the
+ * block tracking and requesting, otherwise the application will have to do
+ * all of this work (the default if coap_context_set_block_mode() is not
+ * called).
+ *
+ * @param context        The coap_context_t object.
+ * @param block_mode     Zero or more COAP_BLOCK_ or'd options
+ */
+void coap_context_set_block_mode_lkd(coap_context_t *context,
+                                     uint32_t block_mode);
+
+/**
+ * Set the context level maximum block size that the server supports when sending
+ * or receiving packets with Block1 or Block2 options.
+ * This maximum block size flows down to a session when a session is created.
+ *
+ * Note: This function must be called before the session is set up.
+ *
+ * Note: This function must be called before the session is set up.
+ *
+ * Note: COAP_BLOCK_USE_LIBCOAP must be set using coap_context_set_block_mode()
+ * if libcoap is to do this work.
+ *
+ * @param context        The coap_context_t object.
+ * @param max_block_size The maximum block size a server supports.  Can be 0
+ *                       (reset), or must be 16, 32, 64, 128, 256, 512 or 1024.
+ */
+int coap_context_set_max_block_size_lkd(coap_context_t *context, size_t max_block_size);
+
 #if COAP_CLIENT_SUPPORT
 /**
  * Associates given data with the @p pdu that is passed as second parameter.

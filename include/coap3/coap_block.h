@@ -423,8 +423,8 @@ COAP_API int coap_add_data_large_response(coap_resource_t *resource,
  * @param context        The coap_context_t object.
  * @param block_mode     Zero or more COAP_BLOCK_ or'd options
  */
-void coap_context_set_block_mode(coap_context_t *context,
-                                 uint32_t block_mode);
+COAP_API void coap_context_set_block_mode(coap_context_t *context,
+                                          uint32_t block_mode);
 
 /**
  * Set the context level maximum block size that the server supports when sending
@@ -440,7 +440,7 @@ void coap_context_set_block_mode(coap_context_t *context,
  * @param max_block_size The maximum block size a server supports.  Can be 0
  *                       (reset), or must be 16, 32, 64, 128, 256, 512 or 1024.
  */
-int coap_context_set_max_block_size(coap_context_t *context, size_t max_block_size);
+COAP_API int coap_context_set_max_block_size(coap_context_t *context, size_t max_block_size);
 
 /**@}*/
 

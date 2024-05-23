@@ -275,7 +275,7 @@ coap_dtls_establish(coap_session_t *session) {
 #endif /* COAP_SERVER_SUPPORT */
 
   if (!session->tls) {
-    coap_session_disconnected(session, COAP_NACK_TLS_LAYER_FAILED);
+    coap_session_disconnected_lkd(session, COAP_NACK_TLS_LAYER_FAILED);
     return;
   }
   coap_ticks(&session->last_rx_tx);
@@ -304,7 +304,7 @@ coap_tls_establish(coap_session_t *session) {
 #endif /* COAP_SERVER_SUPPORT */
 
   if (!session->tls) {
-    coap_session_disconnected(session, COAP_NACK_TLS_LAYER_FAILED);
+    coap_session_disconnected_lkd(session, COAP_NACK_TLS_LAYER_FAILED);
     return;
   }
   coap_ticks(&session->last_rx_tx);

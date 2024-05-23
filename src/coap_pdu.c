@@ -169,7 +169,7 @@ coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
 
   coap_lock_check_locked(session->context);
   pdu = coap_pdu_init(type, code, coap_new_message_id_lkd(session),
-                      coap_session_max_pdu_size(session));
+                      coap_session_max_pdu_size_lkd(session));
   if (!pdu)
     coap_log_crit("coap_new_pdu: cannot allocate memory for new PDU\n");
   return pdu;
@@ -188,21 +188,40 @@ coap_delete_pdu(coap_pdu_t *pdu) {
   }
 }
 
-/*
- * Note: This does not include any data, just the token and options
- */
-coap_pdu_t *
+COAP_API coap_pdu_t *
 coap_pdu_duplicate(const coap_pdu_t *old_pdu,
                    coap_session_t *session,
                    size_t token_length,
                    const uint8_t *token,
                    coap_opt_filter_t *drop_options) {
+  coap_pdu_t *new_pdu;
+
+  coap_lock_lock(session->context, return NULL);
+  new_pdu = coap_pdu_duplicate_lkd(old_pdu,
+                                   session,
+                                   token_length,
+                                   token,
+                                   drop_options);
+  coap_lock_unlock(session->context);
+  return new_pdu;
+}
+
+
+/*
+ * Note: This does not include any data, just the token and options
+ */
+coap_pdu_t *
+coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
+                       coap_session_t *session,
+                       size_t token_length,
+                       const uint8_t *token,
+                       coap_opt_filter_t *drop_options) {
   uint8_t doing_first = session->doing_first;
   coap_pdu_t *pdu;
 
   coap_lock_check_locked(session->context);
   /*
-   * Need to make sure that coap_session_max_pdu_size() immediately
+   * Need to make sure that coap_session_max_pdu_size_lkd() immediately
    * returns, rather than wait for the first CSM response from remote
    * that indicates BERT size (TCP/TLS only) as this may be called early
    * the OSCORE logic.
@@ -211,7 +230,7 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
   pdu = coap_pdu_init(old_pdu->type, old_pdu->code,
                       coap_new_message_id_lkd(session),
                       max(old_pdu->max_size,
-                          coap_session_max_pdu_size(session)));
+                          coap_session_max_pdu_size_lkd(session)));
   /* Restore any pending waits */
   session->doing_first = doing_first;
   if (pdu == NULL)

@@ -178,6 +178,74 @@ void coap_check_notify_lkd(coap_context_t *context);
  */
 void coap_persist_cleanup(coap_context_t *context);
 
+/**
+ * Set up an active subscription for an observe that was previously active
+ * over a coap-server inadvertant restart.
+ *
+ * Only UDP sessions currently supported.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context The context that the session is to be associated with.
+ * @param e_proto The CoAP protocol in use for the session / endpoint.
+ * @param e_listen_addr The IP/port that the endpoint is listening on.
+ * @param s_addr_info Local / Remote IP addresses. ports etc. of previous
+ *                    session.
+ * @param raw_packet L7 packet as seen on the wire (could be concatenated if
+ *                   Block1 FETCH is being used).
+ * @param oscore_info Has OSCORE information if OSCORE is protecting the
+ *                    session or NULL if OSCORE is not in use.
+ *
+ * @return ptr to subscription if success else @c NULL.
+ */
+coap_subscription_t *coap_persist_observe_add_lkd(coap_context_t *context,
+                                                  coap_proto_t e_proto,
+                                                  const coap_address_t *e_listen_addr,
+                                                  const coap_addr_tuple_t *s_addr_info,
+                                                  const coap_bin_const_t *raw_packet,
+                                                  const coap_bin_const_t *oscore_info);
+
+/**
+ * Start up persist tracking using the libcoap module. If the files already
+ * exist with saved data, then this information is used in building back
+ * up the persist information.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context The current CoAP context.
+ * @param dyn_resource_save_file File where dynamically created resource
+ *                               information is stored or NULL if not required.
+ * @param observe_save_file File where observe information is stored or NULL
+ *                          if not required.
+ * @param obs_cnt_save_file File where resource observe counter information
+ *                          is stored or NULL if not required.
+ * @param save_freq Frequency of change of observe value for calling
+ *                  the save observe counter logic.
+ *
+ * @return  @c 1 if success else @c 0.
+ */
+int coap_persist_startup_lkd(coap_context_t *context,
+                             const char *dyn_resource_save_file,
+                             const char *observe_save_file,
+                             const char *obs_cnt_save_file,
+                             uint32_t save_freq);
+
+/**
+ * Stop tracking persist information, leaving the current persist information
+ * in the files defined in coap_persist_startup(). It is then safe to call
+ * coap_free_context() to close the application down cleanly.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * Alternatively, if coap_persist_track_funcs() was called, then this will
+ * disable all the callbacks, as well as making sure that no 4.04 is sent out
+ * for any active observe subscriptions when the resource is deleted after
+ * subsequently calling coap_free_context().
+ *
+ * @param context The context that tracking information is to be stopped on.
+ */
+void coap_persist_stop_lkd(coap_context_t *context);
+
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
