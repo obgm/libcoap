@@ -1,3 +1,28 @@
+2024-05-23  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.3.5:
+
+        * Support for wolfSSL TLS library.
+        * Support for DTLS1.3 (using wolfSSL).
+        * Support for Mbed TLS 3.6.0.
+        * TinyDTLS version update.
+        * Support for RIOT using SOCK i/f.
+        * Support for LwIP using NO_SYS set to 0.
+        * Support for (Posix based) Zephyr.
+        * Support for QNX builds.
+        * Support for ESP32 xtensa builds.
+        * Updated Contiki-NG support.
+        * Support for multi-thread safe libcoap usage.
+        * Support for defining binary PSK for coap-client and coap-server.
+        * Added new define types for defining PKI parameters.
+        * Support for user definable ENGINE for OpenSSL.
+        * Support for using noTLS and TindyDTLS with WebSockets.
+        * Additional scan-build and pre-commit checks in build tests.
+        * Updated CI build tests to use latest action versions.
+        * Fixes CVE-2023-35862.
+        * Reported bugs fixed.
+        * Documentation added and updated (Doxygen and man).
+
 2023-09-18  Olaf Bergmann  <bergmann@tzi.org>
 
 	Change summary for version 4.3.4:

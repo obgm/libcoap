@@ -15,11 +15,18 @@
 # defined later.
 m4_define([libcoap_major_version], [4])
 m4_define([libcoap_minor_version], [3])
-m4_define([libcoap_micro_version], [4])
+m4_define([libcoap_micro_version], [5])
 
 # define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
-m4_define([libcoap_release_state], [])
+m4_define([libcoap_release_state], [rc1])
+
+# Define the previous full libcoap software release version here.
+# Used if libcoap_release_state is not empty for LIBCOAP_VERSION and LIBCOAP_PACKAGE_BASE.
+# Set to libcoap software version when libcoap_release_state is reset to empty.
+m4_define([libcoap_pre_major_version], [4])
+m4_define([libcoap_pre_minor_version], [3])
+m4_define([libcoap_pre_micro_version], [4])
 
 # concatenate the full libcoap version string
 m4_define([libcoap_version], [m4_format([%s.%s.%s%s], libcoap_major_version, libcoap_minor_version, libcoap_micro_version, libcoap_release_state)])
@@ -162,23 +169,45 @@ LIBCOAP_ABI_VERSION=$LT_TEMP.$LT_LIBCOAP_AGE.$LT_LIBCOAP_REVISION
 AC_SUBST(LIBCOAP_ABI_VERSION)
 AC_SUBST(LIBCOAP_API_VERSION)
 
-# Define a numeric version string
-m4_define([version_number],
-          [m4_format([%u%03u%03u],
-                     libcoap_major_version,
-                     libcoap_minor_version,
-                     libcoap_micro_version)])
-LIBCOAP_VERSION=version_number
-AC_SUBST(LIBCOAP_VERSION)
+LT_TEMP=libcoap_release_state
+if test "x$LT_TEMP" = "x"; then
+    # Define a numeric version string
+    m4_define([version_number],
+              [m4_format([%u%03u%03u],
+                         libcoap_major_version,
+                         libcoap_minor_version,
+                         libcoap_micro_version)])
+    LIBCOAP_VERSION=version_number
+    AC_SUBST(LIBCOAP_VERSION)
 
-# Define a base version string
-m4_define([base_version],
-          [m4_format([%u.%u.%u],
-                     libcoap_major_version,
-                     libcoap_minor_version,
-                     libcoap_micro_version)])
-LIBCOAP_PACKAGE_BASE=base_version
-AC_SUBST(LIBCOAP_PACKAGE_BASE)
+    # Define a base version string
+    m4_define([base_version],
+              [m4_format([%u.%u.%u],
+                         libcoap_major_version,
+                         libcoap_minor_version,
+                         libcoap_micro_version)])
+    LIBCOAP_PACKAGE_BASE=base_version
+    AC_SUBST(LIBCOAP_PACKAGE_BASE)
+else
+    # Doing a rc1 etc., so not a full release, use previous full version numbers
+    # Define a numeric version string
+    m4_define([version_number],
+              [m4_format([%u%03u%03u],
+                         libcoap_pre_major_version,
+                         libcoap_pre_minor_version,
+                         libcoap_pre_micro_version)])
+    LIBCOAP_VERSION=version_number
+    AC_SUBST(LIBCOAP_VERSION)
+
+    # Define a base version string
+    m4_define([base_version],
+              [m4_format([%u.%u.%u],
+                         libcoap_pre_major_version,
+                         libcoap_pre_minor_version,
+                         libcoap_pre_micro_version)])
+    LIBCOAP_PACKAGE_BASE=base_version
+    AC_SUBST(LIBCOAP_PACKAGE_BASE)
+fi
 
 # Adding some default warning options for code QS
 # see https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
