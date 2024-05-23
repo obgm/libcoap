@@ -211,7 +211,7 @@ int coap_delete_oscore_recipient_lkd(coap_context_t *context,
  * @param oscore_conf OSCORE configuration information. This structure is
  *                    freed off by this call.
  *
- * @return A new CoAP session or NULL if failed. Call coap_session_release()
+ * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
 coap_session_t *coap_new_client_session_oscore_lkd(coap_context_t *ctx,
@@ -238,7 +238,7 @@ coap_session_t *coap_new_client_session_oscore_lkd(coap_context_t *ctx,
  * @param oscore_conf OSCORE configuration information. This structure is
  *                    freed off by this call.
  *
- * @return A new CoAP session or NULL if failed. Call coap_session_release()
+ * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
 coap_session_t *coap_new_client_session_oscore_pki_lkd(coap_context_t *ctx,
@@ -266,7 +266,7 @@ coap_session_t *coap_new_client_session_oscore_pki_lkd(coap_context_t *ctx,
  * @param oscore_conf OSCORE configuration information. This structure is
  *                    freed off by this call.
  *
- * @return A new CoAP session or NULL if failed. Call coap_session_release()
+ * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
 coap_session_t *coap_new_client_session_oscore_psk_lkd(coap_context_t *ctx,

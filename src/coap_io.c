@@ -1350,7 +1350,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
             timeout = s_timeout;
         }
         /* Make sure the session object is not deleted in any callbacks */
-        coap_session_reference(s);
+        coap_session_reference_lkd(s);
         /* Check any DTLS timeouts and expire if appropriate */
         if (check_dtls_timeouts && s->state == COAP_SESSION_STATE_HANDSHAKE &&
             s->proto == COAP_PROTO_DTLS && s->tls) {
@@ -1403,7 +1403,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
         }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 release_1:
-        coap_session_release(s);
+        coap_session_release_lkd(s);
       }
     }
   }
@@ -1415,7 +1415,7 @@ release_1:
         ctx->ping_timeout > 0) {
       if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
         /* Time to send a ping */
-        if ((s->last_ping_mid = coap_session_send_ping(s)) == COAP_INVALID_MID)
+        if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID)
           /* Some issue - not safe to continue processing */
           continue;
         if (s->last_ping > 0 && s->last_pong < s->last_ping) {
@@ -1447,7 +1447,7 @@ release_1:
 #endif /* !COAP_DISABLE_TCP */
 
     /* Make sure the session object is not deleted in any callbacks */
-    coap_session_reference(s);
+    coap_session_reference_lkd(s);
     /* Check any DTLS timeouts and expire if appropriate */
     if (s->state == COAP_SESSION_STATE_HANDSHAKE &&
         s->proto == COAP_PROTO_DTLS && s->tls) {
@@ -1504,7 +1504,7 @@ release_1:
     }
 #endif /* ! COAP_EPOLL_SUPPORT && ! WITH_LWIP && ! RIOT_VERSION */
 release_2:
-    coap_session_release(s);
+    coap_session_release_lkd(s);
   }
 #endif /* COAP_CLIENT_SUPPORT */
 

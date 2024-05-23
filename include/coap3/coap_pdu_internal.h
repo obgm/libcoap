@@ -371,6 +371,27 @@ int coap_option_check_repeatable(coap_option_num_t number);
 coap_pdu_t *coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
                              coap_session_t *session);
 
+/**
+ * Duplicate an existing PDU. Specific options can be ignored and not copied
+ * across.  The PDU data payload is not copied across.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param old_pdu      The PDU to duplicate
+ * @param session      The session that will be using this PDU.
+ * @param token_length The length of the token to use in this duplicated PDU.
+ * @param token        The token to use in this duplicated PDU.
+ * @param drop_options A list of options not to copy into the duplicated PDU.
+ *                     If @c NULL, then all options are copied across.
+ *
+ * @return The duplicated PDU or @c NULL if failure.
+ */
+coap_pdu_t *coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
+                                   coap_session_t *session,
+                                   size_t token_length,
+                                   const uint8_t *token,
+                                   coap_opt_filter_t *drop_options);
+
 /** @} */
 
 #endif /* COAP_COAP_PDU_INTERNAL_H_ */

@@ -422,11 +422,11 @@ void coap_delete_pdu(coap_pdu_t *pdu);
  *
  * @return The duplicated PDU or @c NULL if failure.
  */
-coap_pdu_t *coap_pdu_duplicate(const coap_pdu_t *old_pdu,
-                               coap_session_t *session,
-                               size_t token_length,
-                               const uint8_t *token,
-                               coap_opt_filter_t *drop_options);
+COAP_API coap_pdu_t *coap_pdu_duplicate(const coap_pdu_t *old_pdu,
+                                        coap_session_t *session,
+                                        size_t token_length,
+                                        const uint8_t *token,
+                                        coap_opt_filter_t *drop_options);
 
 /**
  * Parses @p data into the CoAP PDU structure given in @p result.

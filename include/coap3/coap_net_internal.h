@@ -20,6 +20,7 @@
 
 #include "coap_internal.h"
 #include "coap_subscribe.h"
+#include "coap_threadsafe_internal.h"
 
 /**
  * @ingroup internal_api
@@ -501,6 +502,96 @@ int coap_handle_event_lkd(coap_context_t *context,
  */
 int coap_can_exit_lkd(coap_context_t *context);
 
+/**
+ * Function interface for joining a multicast group for listening for the
+ * currently defined endpoints that are UDP.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx       The current context.
+ * @param groupname The name of the group that is to be joined for listening.
+ * @param ifname    Network interface to join the group on, or NULL if first
+ *                  appropriate interface is to be chosen by the O/S.
+ *
+ * @return       0 on success, -1 on error
+ */
+int coap_join_mcast_group_intf_lkd(coap_context_t *ctx, const char *groupname,
+                                   const char *ifname);
+
+/**
+ * Registers the option type @p type with the given context object @p ctx.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param ctx  The context to use.
+ * @param type The option type to register.
+ */
+void coap_register_option_lkd(coap_context_t *ctx, uint16_t type);
+
+/**
+ * Set the context's default PKI information for a server.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context        The current coap_context_t object.
+ * @param setup_data     If NULL, PKI authentication will fail. Certificate
+ *                       information required.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_context_set_pki_lkd(coap_context_t *context,
+                             const coap_dtls_pki_t *setup_data);
+
+/**
+ * Set the context's default Root CA information for a client or server.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context        The current coap_context_t object.
+ * @param ca_file        If not NULL, is the full path name of a PEM encoded
+ *                       file containing all the Root CAs to be used.
+ * @param ca_dir         If not NULL, points to a directory containing PEM
+ *                       encoded files containing all the Root CAs to be used.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_context_set_pki_root_cas_lkd(coap_context_t *context,
+                                      const char *ca_file,
+                                      const char *ca_dir);
+
+/**
+ * Set the context's default PSK hint and/or key for a server.
+ *
+ * @deprecated Use coap_context_set_psk2() instead.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context The current coap_context_t object.
+ * @param hint    The default PSK server hint sent to a client. If NULL, PSK
+ *                authentication is disabled. Empty string is a valid hint.
+ * @param key     The default PSK key. If NULL, PSK authentication will fail.
+ * @param key_len The default PSK key's length. If @p 0, PSK authentication will
+ *                fail.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_context_set_psk_lkd(coap_context_t *context, const char *hint,
+                             const uint8_t *key, size_t key_len);
+
+/**
+ * Set the context's default PSK hint and/or key for a server.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context    The current coap_context_t object.
+ * @param setup_data If NULL, PSK authentication will fail. PSK
+ *                   information required.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_context_set_psk2_lkd(coap_context_t *context,
+                              coap_dtls_spsk_t *setup_data);
+
 /** @} */
 
 /**
@@ -685,6 +776,89 @@ int coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
                                  int nfds, fd_set *readfds, fd_set *writefds,
                                  fd_set *exceptfds);
 #endif /* ! RIOT_VERSION && ! WITH_CONTIKI */
+
+/**
+* Sends a CoAP message to given peer. The memory that is
+* allocated for the pdu will be released by coap_send_lkd().
+* The caller must not use or delete the pdu after calling coap_send_lkd().
+ *
+ * Note: This function must be called in the locked state.
+*
+* @param session         The CoAP session.
+* @param pdu             The CoAP PDU to send.
+*
+* @return                The message id of the sent message or @c
+*                        COAP_INVALID_MID on error.
+*/
+coap_mid_t coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu);
+
+/**
+ * Sends an error response with code @p code for request @p request to @p dst.
+ * @p opts will be passed to coap_new_error_response() to copy marked options
+ * from the request. This function returns the message id if the message was
+ * sent, or @c COAP_INVALID_MID otherwise.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session         The CoAP session.
+ * @param request         The original request to respond to.
+ * @param code            The response code.
+ * @param opts            A filter that specifies the options to copy from the
+ *                        @p request.
+ *
+ * @return                The message id if the message was sent, or @c
+ *                        COAP_INVALID_MID otherwise.
+ */
+coap_mid_t coap_send_error_lkd(coap_session_t *session,
+                               const coap_pdu_t *request,
+                               coap_pdu_code_t code,
+                               coap_opt_filter_t *opts);
+
+/**
+ * Helper function to create and send a message with @p type (usually ACK or
+ * RST). This function returns @c COAP_INVALID_MID when the message was not
+ * sent, a valid transaction id otherwise.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session         The CoAP session.
+ * @param request         The request that should be responded to.
+ * @param type            Which type to set.
+ * @return                message id on success or @c COAP_INVALID_MID
+ *                        otherwise.
+ */
+coap_mid_t coap_send_message_type_lkd(coap_session_t *session, const coap_pdu_t *request,
+                                      coap_pdu_type_t type);
+
+/**
+ * Sends an ACK message with code @c 0 for the specified @p request to @p dst.
+ * This function returns the corresponding message id if the message was
+ * sent or @c COAP_INVALID_MID on error.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session         The CoAP session.
+ * @param request         The request to be acknowledged.
+ *
+ * @return                The message id if ACK was sent or @c
+ *                        COAP_INVALID_MID on error.
+ */
+coap_mid_t coap_send_ack_lkd(coap_session_t *session, const coap_pdu_t *request);
+
+/**
+ * Sends an RST message with code @c 0 for the specified @p request to @p dst.
+ * This function returns the corresponding message id if the message was
+ * sent or @c COAP_INVALID_MID on error.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session         The CoAP session.
+ * @param request         The request to be reset.
+ *
+ * @return                The message id if RST was sent or @c
+ *                        COAP_INVALID_MID on error.
+ */
+coap_mid_t coap_send_rst_lkd(coap_session_t *session, const coap_pdu_t *request);
 
 /**@}*/
 

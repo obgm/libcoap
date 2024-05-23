@@ -209,7 +209,7 @@ coap_ws_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
   if (!session->ws) {
     session->ws = coap_malloc_type(COAP_STRING, sizeof(coap_ws_state_t));
     if (!session->ws) {
-      coap_session_disconnected(session, COAP_NACK_WS_LAYER_FAILED);
+      coap_session_disconnected_lkd(session, COAP_NACK_WS_LAYER_FAILED);
       return -1;
     }
     memset(session->ws, 0, sizeof(coap_ws_state_t));
@@ -579,7 +579,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
   if (!session->ws) {
     session->ws = coap_malloc_type(COAP_STRING, sizeof(coap_ws_state_t));
     if (!session->ws) {
-      coap_session_disconnected(session, COAP_NACK_WS_LAYER_FAILED);
+      coap_session_disconnected_lkd(session, COAP_NACK_WS_LAYER_FAILED);
       return -1;
     }
     memset(session->ws, 0, sizeof(coap_ws_state_t));
@@ -595,7 +595,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
         session->sock.lfunc[COAP_LAYER_WS].l_write(session, (uint8_t *)buf,
                                                    strlen(buf));
       }
-      coap_session_disconnected(session, COAP_NACK_WS_LAYER_FAILED);
+      coap_session_disconnected_lkd(session, COAP_NACK_WS_LAYER_FAILED);
       return -1;
     }
 
@@ -793,7 +793,7 @@ coap_ws_establish(coap_session_t *session) {
   if (!session->ws) {
     session->ws = coap_malloc_type(COAP_STRING, sizeof(coap_ws_state_t));
     if (!session->ws) {
-      coap_session_disconnected(session, COAP_NACK_WS_LAYER_FAILED);
+      coap_session_disconnected_lkd(session, COAP_NACK_WS_LAYER_FAILED);
       return;
     }
     memset(session->ws, 0, sizeof(coap_ws_state_t));
@@ -807,7 +807,7 @@ coap_ws_establish(coap_session_t *session) {
     session->ws->state = COAP_SESSION_TYPE_CLIENT;
     if (!session->ws_host) {
       coap_log_err("WS Host not defined\n");
-      coap_session_disconnected(session, COAP_NACK_WS_LAYER_FAILED);
+      coap_session_disconnected_lkd(session, COAP_NACK_WS_LAYER_FAILED);
       return;
     }
     coap_prng(session->ws->key, sizeof(session->ws->key));

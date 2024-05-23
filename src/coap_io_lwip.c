@@ -185,7 +185,7 @@ error:
    * https://rfc-editor.org/rfc/rfc7252#section-4.3 MAY send RST
    */
   if (session)
-    coap_send_rst(session, pdu);
+    coap_send_rst_lkd(session, pdu);
   coap_delete_pdu(pdu);
   return;
 }
@@ -280,7 +280,7 @@ error:
    * https://rfc-editor.org/rfc/rfc7252#section-4.3 MAY send RST
    */
   if (session && pdu)
-    coap_send_rst(session, pdu);
+    coap_send_rst_lkd(session, pdu);
   coap_delete_pdu(pdu);
   coap_free_packet(packet);
   coap_lock_unlock(ep->context);
@@ -450,10 +450,10 @@ do_tcp_err(void *arg, err_t err) {
   /*
    * as per tcp_err() documentation, the corresponding pcb is already freed
    * when this callback is called.  So, stop a double free when
-   * coap_session_disconnected() eventually coap_socket_close() is called.
+   * coap_session_disconnected_lkd() eventually coap_socket_close() is called.
    */
   session->sock.tcp_pcb = NULL;
-  coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+  coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
 }
 
 /** Callback from lwIP when a TCP packet is received.
@@ -474,7 +474,7 @@ coap_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     tcp_recv(sock->tcp_pcb, NULL);
     tcp_close(sock->tcp_pcb);
     sock->tcp_pcb = NULL;
-    coap_session_disconnected(session, COAP_NACK_NOT_DELIVERABLE);
+    coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
     return ERR_OK;
   } else if (err != ERR_OK) {
     /* cleanup, for unknown reason */

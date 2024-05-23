@@ -786,13 +786,13 @@ coap_dtls_send(coap_session_t *session,
     coap_log_warn("coap_dtls_send: cannot send PDU\n");
 
   if (coap_event_dtls >= 0) {
-    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
     if (coap_event_dtls != COAP_EVENT_DTLS_CLOSED)
       coap_handle_event_lkd(session->context, coap_event_dtls, session);
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
       coap_session_connected(session);
     else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
-      coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
+      coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
   }
 
   return res;
@@ -855,13 +855,13 @@ coap_dtls_receive(coap_session_t *session,
   }
 
   if (coap_event_dtls >= 0) {
-    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected() */
+    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
     if (coap_event_dtls != COAP_EVENT_DTLS_CLOSED)
       coap_handle_event_lkd(session->context, coap_event_dtls, session);
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
       coap_session_connected(session);
     else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR) {
-      coap_session_disconnected(session, COAP_NACK_TLS_FAILED);
+      coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
       err = -1;
     }
   }

@@ -271,6 +271,28 @@ void coap_session_send_csm(coap_session_t *session);
 void coap_session_connected(coap_session_t *session);
 
 /**
+ * Notify session that it has failed.  This cleans up any outstanding / queued
+ * transmissions, observations etc..
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ * @param reason The reason why the session was disconnected.
+ */
+void coap_session_disconnected_lkd(coap_session_t *session,
+                                   coap_nack_reason_t reason);
+
+/**
+ * Send a ping message for the session.
+ * @param session The CoAP session.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @return COAP_INVALID_MID if there is an error
+ */
+coap_mid_t coap_session_send_ping_lkd(coap_session_t *session);
+
+/**
  * Refresh the session's current Identity Hint (PSK).
  * Note: A copy of @p psk_hint is maintained in the session by libcoap.
  *
@@ -316,7 +338,7 @@ int coap_session_refresh_psk_identity(coap_session_t *session,
  * @param ep An endpoint where an incoming connection request is pending.
  * @param extra Available for use by any underlying network stack.
  *
- * @return A new CoAP session or NULL if failed. Call coap_session_release to
+ * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd to
  * add to unused queue.
  */
 coap_session_t *coap_new_server_session(coap_context_t *ctx,
@@ -333,6 +355,27 @@ coap_session_t *coap_new_server_session(coap_context_t *ctx,
  *
  */
 void coap_session_establish(coap_session_t *session);
+
+/**
+ * Increment reference counter on a session.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ * @return same as session
+ */
+coap_session_t *coap_session_reference_lkd(coap_session_t *session);
+
+/**
+ * Decrement reference counter on a session.
+ * Note that the session may be deleted as a result and should not be used
+ * after this call.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ */
+void coap_session_release_lkd(coap_session_t *session);
 
 /**
  * Send a pdu according to the session's protocol. This function returns
@@ -366,6 +409,8 @@ coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
 /**
  * Create a new endpoint for communicating with peers.
  *
+ * Note: This function must be called in the locked state.
+ *
  * @param context     The coap context that will own the new endpoint,
  * @param listen_addr Address the endpoint will listen for incoming requests
  *                    on or originate outgoing requests from. Use NULL to
@@ -378,6 +423,15 @@ coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
 coap_endpoint_t *coap_new_endpoint_lkd(coap_context_t *context, const coap_address_t *listen_addr,
                                        coap_proto_t proto);
 
+/**
+ * Release an endpoint and all the structures associated with it.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param endpoint The endpoint to release.
+ */
+void coap_free_endpoint_lkd(coap_endpoint_t *endpoint);
+
 #endif /* COAP_SERVER_SUPPORT */
 
 /**
@@ -387,6 +441,17 @@ coap_endpoint_t *coap_new_endpoint_lkd(coap_context_t *context, const coap_addre
  * @return maximum PDU size, not including header (but including token).
  */
 size_t coap_session_max_pdu_rcv_size(const coap_session_t *session);
+
+/**
+ * Get maximum acceptable PDU size
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ *
+ * @return maximum PDU size, not including header (but including token).
+ */
+size_t coap_session_max_pdu_size_lkd(const coap_session_t *session);
 
 /**
  * Creates a new client session to the designated server.
@@ -402,7 +467,7 @@ size_t coap_session_max_pdu_rcv_size(const coap_session_t *session);
  *               for the protocol will be used.
  * @param proto Protocol.
  *
- * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+ * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd to free.
  */
 coap_session_t *coap_new_client_session_lkd(
     coap_context_t *ctx,
@@ -426,7 +491,7 @@ coap_session_t *coap_new_client_session_lkd(
  * @param proto CoAP Protocol.
  * @param setup_data PKI parameters.
  *
- * @return A new CoAP session or NULL if failed. Call coap_session_release()
+ * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
 coap_session_t *coap_new_client_session_pki_lkd(coap_context_t *ctx,
@@ -455,7 +520,7 @@ coap_session_t *coap_new_client_session_pki_lkd(coap_context_t *ctx,
  * @param key PSK shared key
  * @param key_len PSK shared key length
  *
- * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
+ * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd to free.
  */
 coap_session_t *coap_new_client_session_psk_lkd(coap_context_t *ctx,
                                                 const coap_address_t *local_if,
@@ -481,7 +546,7 @@ coap_session_t *coap_new_client_session_psk_lkd(coap_context_t *ctx,
  * @param proto CoAP Protocol.
  * @param setup_data PSK parameters.
  *
- * @return A new CoAP session or NULL if failed. Call coap_session_release()
+ * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
 coap_session_t *coap_new_client_session_psk2_lkd(coap_context_t *ctx,

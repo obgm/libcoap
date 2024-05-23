@@ -149,7 +149,7 @@ void coap_register_pong_handler(coap_context_t *context,
  * @param ctx  The context to use.
  * @param type The option type to register.
  */
-void coap_register_option(coap_context_t *ctx, uint16_t type);
+COAP_API void coap_register_option(coap_context_t *ctx, uint16_t type);
 
 /**
  * Creates a new coap_context_t object that will hold the CoAP stack status.
@@ -170,8 +170,8 @@ coap_context_t *coap_new_context(const coap_address_t *listen_addr);
  *
  * @return @c 1 if successful, else @c 0.
  */
-int coap_context_set_psk(coap_context_t *context, const char *hint,
-                         const uint8_t *key, size_t key_len);
+COAP_API int coap_context_set_psk(coap_context_t *context, const char *hint,
+                                  const uint8_t *key, size_t key_len);
 
 /**
  * Set the context's default PSK hint and/or key for a server.
@@ -182,8 +182,8 @@ int coap_context_set_psk(coap_context_t *context, const char *hint,
  *
  * @return @c 1 if successful, else @c 0.
  */
-int coap_context_set_psk2(coap_context_t *context,
-                          coap_dtls_spsk_t *setup_data);
+COAP_API int coap_context_set_psk2(coap_context_t *context,
+                                   coap_dtls_spsk_t *setup_data);
 
 /**
  * Set the context's default PKI information for a server.
@@ -194,8 +194,8 @@ int coap_context_set_psk2(coap_context_t *context,
  *
  * @return @c 1 if successful, else @c 0.
  */
-int coap_context_set_pki(coap_context_t *context,
-                         const coap_dtls_pki_t *setup_data);
+COAP_API int coap_context_set_pki(coap_context_t *context,
+                                  const coap_dtls_pki_t *setup_data);
 
 /**
  * Set the context's default Root CA information for a client or server.
@@ -208,9 +208,9 @@ int coap_context_set_pki(coap_context_t *context,
  *
  * @return @c 1 if successful, else @c 0.
  */
-int coap_context_set_pki_root_cas(coap_context_t *context,
-                                  const char *ca_file,
-                                  const char *ca_dir);
+COAP_API int coap_context_set_pki_root_cas(coap_context_t *context,
+                                           const char *ca_file,
+                                           const char *ca_dir);
 
 /**
  * Set the context keepalive timer for sessions.
@@ -458,10 +458,10 @@ coap_pdu_t *coap_new_error_response(const coap_pdu_t *request,
  * @return                The message id if the message was sent, or @c
  *                        COAP_INVALID_MID otherwise.
  */
-coap_mid_t coap_send_error(coap_session_t *session,
-                           const coap_pdu_t *request,
-                           coap_pdu_code_t code,
-                           coap_opt_filter_t *opts);
+COAP_API coap_mid_t coap_send_error(coap_session_t *session,
+                                    const coap_pdu_t *request,
+                                    coap_pdu_code_t code,
+                                    coap_opt_filter_t *opts);
 
 /**
  * Helper function to create and send a message with @p type (usually ACK or
@@ -474,8 +474,8 @@ coap_mid_t coap_send_error(coap_session_t *session,
  * @return                message id on success or @c COAP_INVALID_MID
  *                        otherwise.
  */
-coap_mid_t coap_send_message_type(coap_session_t *session, const coap_pdu_t *request,
-                                  coap_pdu_type_t type);
+COAP_API coap_mid_t coap_send_message_type(coap_session_t *session, const coap_pdu_t *request,
+                                           coap_pdu_type_t type);
 
 /**
  * Sends an ACK message with code @c 0 for the specified @p request to @p dst.
@@ -488,7 +488,7 @@ coap_mid_t coap_send_message_type(coap_session_t *session, const coap_pdu_t *req
  * @return                The message id if ACK was sent or @c
  *                        COAP_INVALID_MID on error.
  */
-coap_mid_t coap_send_ack(coap_session_t *session, const coap_pdu_t *request);
+COAP_API coap_mid_t coap_send_ack(coap_session_t *session, const coap_pdu_t *request);
 
 /**
  * Sends an RST message with code @c 0 for the specified @p request to @p dst.
@@ -501,7 +501,7 @@ coap_mid_t coap_send_ack(coap_session_t *session, const coap_pdu_t *request);
  * @return                The message id if RST was sent or @c
  *                        COAP_INVALID_MID on error.
  */
-coap_mid_t coap_send_rst(coap_session_t *session, const coap_pdu_t *request);
+COAP_API coap_mid_t coap_send_rst(coap_session_t *session, const coap_pdu_t *request);
 
 /**
 * Sends a CoAP message to given peer. The memory that is
@@ -514,7 +514,7 @@ coap_mid_t coap_send_rst(coap_session_t *session, const coap_pdu_t *request);
 * @return                The message id of the sent message or @c
 *                        COAP_INVALID_MID on error.
 */
-coap_mid_t coap_send(coap_session_t *session, coap_pdu_t *pdu);
+COAP_API coap_mid_t coap_send(coap_session_t *session, coap_pdu_t *pdu);
 
 #define coap_send_large(session, pdu) coap_send(session, pdu)
 
@@ -560,8 +560,8 @@ void coap_ticks(coap_tick_t *);
  *
  * @return       0 on success, -1 on error
  */
-int coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupname,
-                               const char *ifname);
+COAP_API int coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupname,
+                                        const char *ifname);
 
 #define coap_join_mcast_group(ctx, groupname) \
   (coap_join_mcast_group_intf(ctx, groupname, NULL))

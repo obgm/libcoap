@@ -89,7 +89,7 @@ coap_new_client_session_oscore_lkd(coap_context_t *ctx,
     return NULL;
 
   if (coap_oscore_initiate(session, oscore_conf) == 0) {
-    coap_session_release(session);
+    coap_session_release_lkd(session);
     return NULL;
   }
   return session;
@@ -127,7 +127,7 @@ coap_new_client_session_oscore_psk_lkd(coap_context_t *ctx,
     return NULL;
 
   if (coap_oscore_initiate(session, oscore_conf) == 0) {
-    coap_session_release(session);
+    coap_session_release_lkd(session);
     return NULL;
   }
   return session;
@@ -165,7 +165,7 @@ coap_new_client_session_oscore_pki_lkd(coap_context_t *ctx,
     return NULL;
 
   if (coap_oscore_initiate(session, oscore_conf) == 0) {
-    coap_session_release(session);
+    coap_session_release_lkd(session);
     return NULL;
   }
   return session;
@@ -752,9 +752,9 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
       if (session->b_2_step != COAP_OSCORE_B_2_NONE && !session->done_b_1_2) {
         size_t size;
 
-        association->sent_pdu = coap_pdu_duplicate(pdu, session,
-                                                   pdu_token.length,
-                                                   pdu_token.s, NULL);
+        association->sent_pdu = coap_pdu_duplicate_lkd(pdu, session,
+                                                       pdu_token.length,
+                                                       pdu_token.s, NULL);
         if (association->sent_pdu == NULL)
           goto error;
         if (coap_get_data(pdu, &size, &data)) {
@@ -1494,7 +1494,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                              &pdu->actual_token);
     if (session->con_active)
       session->con_active--;
-    coap_send_ack(session, pdu);
+    coap_send_ack_lkd(session, pdu);
     if (sent_pdu) {
       coap_log_oscore("Appendix B.2 retransmit pdu\n");
       if (coap_retransmit_oscore_pdu(session, sent_pdu, NULL) ==
@@ -1644,7 +1644,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     if (session->con_active)
       session->con_active--;
     if (sent_pdu) {
-      coap_send_ack(session, pdu);
+      coap_send_ack_lkd(session, pdu);
       coap_log_debug("PDU requesting re-transmit\n");
       coap_show_pdu(COAP_LOG_DEBUG, decrypt_pdu);
       coap_log_oscore("RFC9175 retransmit pdu\n");
@@ -1659,7 +1659,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   return decrypt_pdu;
 
 error:
-  coap_send_ack(session, pdu);
+  coap_send_ack_lkd(session, pdu);
 error_no_ack:
   if (association && association->is_observe == 0)
     oscore_delete_association(session, association);

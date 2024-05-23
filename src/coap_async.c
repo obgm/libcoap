@@ -89,8 +89,8 @@ coap_register_async_lkd(coap_session_t *session,
   LL_PREPEND(session->context->async_state, s);
 
   /* Note that this generates a new MID */
-  s->pdu = coap_pdu_duplicate(request, session, request->actual_token.length,
-                              request->actual_token.s, NULL);
+  s->pdu = coap_pdu_duplicate_lkd(request, session, request->actual_token.length,
+                                  request->actual_token.s, NULL);
   if (s->pdu == NULL) {
     coap_free_async_lkd(session, s);
     coap_log_crit("coap_register_async: insufficient memory\n");
@@ -101,7 +101,7 @@ coap_register_async_lkd(coap_session_t *session,
     coap_add_data(s->pdu, len, data);
   }
 
-  s->session = coap_session_reference(session);
+  s->session = coap_session_reference_lkd(session);
 
   coap_async_set_delay_lkd(s, delay);
 
@@ -183,7 +183,7 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
   if (s) {
     LL_DELETE(context->async_state,s);
     if (s->session) {
-      coap_session_release(s->session);
+      coap_session_release_lkd(s->session);
     }
     if (s->pdu) {
       coap_delete_pdu(s->pdu);

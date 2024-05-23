@@ -45,13 +45,33 @@ coap_persist_track_funcs(coap_context_t *context,
   context->resource_deleted = resource_deleted;
 }
 
-coap_subscription_t *
+COAP_API coap_subscription_t *
 coap_persist_observe_add(coap_context_t *context,
                          coap_proto_t e_proto,
                          const coap_address_t *e_listen_addr,
                          const coap_addr_tuple_t *s_addr_info,
                          const coap_bin_const_t *raw_packet,
                          const coap_bin_const_t *oscore_info) {
+  coap_subscription_t *subs;
+
+  coap_lock_lock(context, return NULL);
+  subs = coap_persist_observe_add_lkd(context,
+                                      e_proto,
+                                      e_listen_addr,
+                                      s_addr_info,
+                                      raw_packet,
+                                      oscore_info);
+  coap_lock_unlock(context);
+  return subs;
+}
+
+coap_subscription_t *
+coap_persist_observe_add_lkd(coap_context_t *context,
+                             coap_proto_t e_proto,
+                             const coap_address_t *e_listen_addr,
+                             const coap_addr_tuple_t *s_addr_info,
+                             const coap_bin_const_t *raw_packet,
+                             const coap_bin_const_t *oscore_info) {
   coap_session_t *session = NULL;
   const uint8_t *data;
   size_t data_len;
@@ -439,11 +459,11 @@ coap_op_observe_load_disk(coap_context_t *ctx) {
                               &s_addr_info, &raw_packet, &oscore_info))
       break;
     coap_log_debug("persist: New session/observe being created\n");
-    observe_key = coap_persist_observe_add(ctx, e_proto,
-                                           &e_listen_addr,
-                                           &s_addr_info,
-                                           raw_packet,
-                                           oscore_info);
+    observe_key = coap_persist_observe_add_lkd(ctx, e_proto,
+                                               &e_listen_addr,
+                                               &s_addr_info,
+                                               raw_packet,
+                                               oscore_info);
     if (observe_key) {
       if (!coap_op_observe_write(fp_new, observe_key, e_proto, e_listen_addr,
                                  s_addr_info, raw_packet, oscore_info))
@@ -1114,12 +1134,30 @@ fail:
   return 0;
 }
 
-int
+COAP_API int
 coap_persist_startup(coap_context_t *context,
                      const char *dyn_resource_save_file,
                      const char *observe_save_file,
                      const char *obs_cnt_save_file,
                      uint32_t save_freq) {
+  int ret;
+
+  coap_lock_lock(context, return 0);
+  ret = coap_persist_startup_lkd(context,
+                                 dyn_resource_save_file,
+                                 observe_save_file,
+                                 obs_cnt_save_file,
+                                 save_freq);
+  coap_lock_unlock(context);
+  return ret;
+}
+
+int
+coap_persist_startup_lkd(coap_context_t *context,
+                         const char *dyn_resource_save_file,
+                         const char *observe_save_file,
+                         const char *obs_cnt_save_file,
+                         uint32_t save_freq) {
   coap_lock_check_locked(context);
   if (dyn_resource_save_file) {
     context->dyn_resource_save_file =
@@ -1169,8 +1207,17 @@ coap_persist_cleanup(coap_context_t *context) {
                            NULL, 0, NULL);
 }
 
-void
+COAP_API void
 coap_persist_stop(coap_context_t *context) {
+  if (!context)
+    return;
+  coap_lock_lock(context, return);
+  coap_persist_stop_lkd(context);
+  coap_lock_unlock(context);
+}
+
+void
+coap_persist_stop_lkd(coap_context_t *context) {
   if (context == NULL)
     return;
   coap_lock_check_locked(context);
@@ -1178,7 +1225,7 @@ coap_persist_stop(coap_context_t *context) {
   coap_persist_cleanup(context);
 }
 #else /* ! COAP_WITH_OBSERVE_PERSIST */
-int
+COAP_API int
 coap_persist_startup(coap_context_t *context,
                      const char *dyn_resource_save_file,
                      const char *observe_save_file,
@@ -1192,7 +1239,7 @@ coap_persist_startup(coap_context_t *context,
   return 0;
 }
 
-void
+COAP_API void
 coap_persist_stop(coap_context_t *context) {
   context->observe_no_clear = 1;
   /* Close down any tracking */

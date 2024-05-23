@@ -12,17 +12,6 @@
 
 #include "coap_config.h"
 
-#if COAP_THREAD_SAFE
-/*
- * Unfortunately, this needs to be set so that locking mapping of coap_
- * functions does not take place in this file.  coap.h includes coap_mem.h which
- * includes lwip headers (lwippools.h) which includes coap_internal.h which
- * includes coap_threadsafe_internal.h which does the mapping unless
- * COAP_THREAD_IGNORE_LOCKED_MAPPING is set.
- */
-#define COAP_THREAD_IGNORE_LOCKED_MAPPING
-#endif
-
 #include <coap3/coap.h>
 #include "server-coap.h"
 
