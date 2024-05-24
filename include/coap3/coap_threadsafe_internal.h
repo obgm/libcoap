@@ -47,7 +47,8 @@
  *
  * Note:
  * libcoap may call a handler, which may in turn call into libcoap, which may
- * then call a handler.  context will remain locked thoughout this process.
+ * then call a handler.  context will remain locked thoughout this process
+ * by the same thread.
  *
  * Alternatively, coap_lock_callback_release() (or
  * coap_lock_callback_ret_release()), is used where the context is unlocked
@@ -62,8 +63,8 @@
  * must be preceded by unlock context, and then context re-locked after
  * return;
  *
- * To check for recursive deadlocks, COAP_THREAD_RECURSIVE_CHECK needs to be
- * defined.
+ * To check for recursive deadlock coding errors, COAP_THREAD_RECURSIVE_CHECK
+ * needs to be defined.
  *
  * If thread safe is not enabled, then locking of the context does not take
  * place.
@@ -89,51 +90,162 @@ typedef struct coap_lock_t {
   unsigned int lock_count;
 } coap_lock_t;
 
+/**
+ * Unlock the (context) lock.
+ * If this is a nested lock (Public API - libcoap - app call-back - Public API),
+ * then the lock remains locked, but lock->in_callback is decremented.
+ *
+ * @param lock The lock to unlock.
+ * @param file The file from which coap_lock_unlock_func() is getting called.
+ * @param line The line no from which coap_lock_unlock_func() is getting called.
+ */
 void coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line);
-int coap_lock_lock_func(coap_lock_t *lock, const char *file, int line);
 
-#define coap_lock_lock(s,failed) do { \
-    assert(s); \
-    if (!coap_lock_lock_func(&(s)->lock, __FILE__, __LINE__)) { \
+/**
+ * Lock the (context) lock.
+ * If this is a nested lock (Public API - libcoap - app call-back - Public API),
+ * then increment the lock->in_callback.
+ * If lock->being_freed is set and @p force is not set, then lock ends up unlocked.
+ *
+ * @param lock The lock to unlock.
+ * @param force If set, then lock even if lock->being_freed is set.
+ * @param file The file from which coap_lock_unlock_func() is getting called.
+ * @param line The line no from which coap_lock_unlock_func() is getting called.
+ *
+ * @return @c 0 if lock->being_freed is set (and @p force is not set), else @c 1.
+ */
+int coap_lock_lock_func(coap_lock_t *lock, int force, const char *file, int line);
+
+/**
+ * Invoked when
+ *   Not locked at all
+ *   Not locked, context being freed
+ *   Locked, app call-back, call from app call-back
+ *   Locked, app call-back, call from app call-back, app call-back, call from app call-back
+ * Result
+ *   context locked
+ *   context not locked if context being freed and @p failed is executed. @p failed must
+ *   be code that skips doing the lock protected code.
+ *
+ * @param c Context to lock.
+ * @param failed Code to execute on lock failure
+ *
+ */
+#define coap_lock_lock(c,failed) do { \
+    assert(c); \
+    if (!coap_lock_lock_func(&(c)->lock, 0, __FILE__, __LINE__)) { \
       failed; \
     } \
   } while (0)
 
-#define coap_lock_unlock(s) do { \
-    assert(s); \
-    coap_lock_unlock_func(&(s)->lock, __FILE__, __LINE__); \
+/**
+ * Unlocked when
+ *   Same thread locked context
+ *   Not when called from app call-back
+ *
+ * @param c Context to unlock.
+ */
+#define coap_lock_unlock(c) do { \
+    assert(c); \
+    coap_lock_unlock_func(&(c)->lock, __FILE__, __LINE__); \
   } while (0)
 
-#define coap_lock_callback(s,func) do { \
-    coap_lock_check_locked(s); \
-    (s)->lock.in_callback++; \
-    (s)->lock.callback_file = __FILE__; \
-    (s)->lock.callback_line = __LINE__; \
+/**
+ * Called when
+ *   Locked
+ *   Unlocked by thread free'ing off context (need to lock over app call-back)
+ *
+ * @param c Context to lock if not locked
+ * @param func app call-back function to invoke
+ *
+ */
+#define coap_lock_callback(c,func) do { \
+    int being_freed = (c)->lock.being_freed && coap_thread_pid == (c)->lock.freeing_pid; \
+    if (being_freed) { \
+      coap_lock_lock_func(&(c)->lock, 1, __FILE__, __LINE__); \
+    } else { \
+      coap_lock_check_locked(c); \
+    } \
+    (c)->lock.in_callback++; \
+    (c)->lock.callback_file = __FILE__; \
+    (c)->lock.callback_line = __LINE__; \
     func; \
-    (s)->lock.in_callback--; \
+    (c)->lock.in_callback--; \
+    if (being_freed) { \
+      coap_lock_unlock_func(&(c)->lock, __FILE__, __LINE__); \
+    } \
   } while (0)
 
-#define coap_lock_callback_ret(r,s,func) do { \
-    coap_lock_check_locked(s); \
-    (s)->lock.in_callback++; \
-    (s)->lock.callback_file = __FILE__; \
-    (s)->lock.callback_line = __LINE__; \
-    r = func; \
-    (s)->lock.in_callback--; \
+/**
+ * Called when
+ *   Locked
+ *   Unlocked by thread free'ing off context (need to lock over app call-back)
+ *
+ * @param r Return value from @func.
+ * @param c Context to lock.
+ * @param func app call-back function to invoke
+ *
+ */
+#define coap_lock_callback_ret(r,c,func) do { \
+    int being_freed = (c)->lock.being_freed && coap_thread_pid == (c)->lock.freeing_pid; \
+    if (being_freed) { \
+      coap_lock_lock_func(&(c)->lock, 1, __FILE__, __LINE__); \
+    } else { \
+      coap_lock_check_locked(c); \
+    } \
+    (c)->lock.in_callback++; \
+    (c)->lock.callback_file = __FILE__; \
+    (c)->lock.callback_line = __LINE__; \
+    (r) = func; \
+    (c)->lock.in_callback--; \
+    if (being_freed) { \
+      coap_lock_unlock_func(&(c)->lock, __FILE__, __LINE__); \
+    } \
   } while (0)
 
-#define coap_lock_callback_release(s,func,fail) do { \
-    coap_lock_check_locked(s); \
-    coap_lock_unlock(s); \
-    func; \
-    coap_lock_lock(s,fail); \
+/**
+ * Called when
+ *   Locked (need to unlock over app call-back)
+ *   Unlocked by thread free'ing off context
+ *
+ * @param c Context to unlock.
+ * @param func app call-back function to invoke
+ * @param failed Code to execute on lock failure
+ *
+ */
+#define coap_lock_callback_release(c,func,failed) do { \
+    int being_freed = (c)->lock.being_freed && coap_thread_pid == (c)->lock.freeing_pid; \
+    if (!being_freed) { \
+      coap_lock_check_locked(c); \
+      coap_lock_unlock(c); \
+      func; \
+      coap_lock_lock(c,failed); \
+    } else { \
+      func; \
+    } \
   } while (0)
 
-#define coap_lock_callback_ret_release(r,s,func,fail) do { \
-    coap_lock_check_locked(s); \
-    coap_lock_unlock(s); \
-    r = func; \
-    coap_lock_lock(s,fail); \
+/**
+ * Called when
+ *   Locked (need to unlock over app call-back)
+ *   Unlocked by thread free'ing off context
+ *
+ * @param r Return value from @func.
+ * @param c Context to unlock.
+ * @param func app call-back function to invoke
+ * @param failed Code to execute on lock failure
+ *
+ */
+#define coap_lock_callback_ret_release(r,c,func,failed) do { \
+    int being_freed = (c)->lock.being_freed && coap_thread_pid == (c)->lock.freeing_pid; \
+    if (!being_freed) { \
+      coap_lock_check_locked(c); \
+      coap_lock_unlock(c); \
+      (r) = func; \
+      coap_lock_lock(c,failed); \
+    } else { \
+      (r) = func; \
+    } \
   } while (0)
 
 # else /* ! COAP_THREAD_RECURSIVE_CHECK */
@@ -150,76 +262,184 @@ typedef struct coap_lock_t {
   volatile uint32_t lock_count;
 } coap_lock_t;
 
+/**
+ * Unlock the (context) lock.
+ * If this is a nested lock (Public API - libcoap - app call-back - Public API),
+ * then the lock remains locked, but lock->in_callback is decremented.
+ *
+ * @param lock The lock to unlock.
+ */
 void coap_lock_unlock_func(coap_lock_t *lock);
-int coap_lock_lock_func(coap_lock_t *lock);
 
-#define coap_lock_lock(s,failed) do { \
-    assert(s); \
-    if (!coap_lock_lock_func(&(s)->lock)) { \
+/**
+ * Lock the (context) lock.
+ * If this is a nested lock (Public API - libcoap - app call-back - Public API),
+ * then increment the lock->in_callback.
+ * If lock->being_freed is set and @p force is not set, then lock ends up unlocked.
+ *
+ * @param lock The lock to unlock.
+ * @param force If set, then lock even if lock->being_freed is set.
+ *
+ * @return @c 0 if lock->being_freed is set (and @p force is not set), else @c 1.
+ */
+int coap_lock_lock_func(coap_lock_t *lock, int force);
+
+/**
+ * Invoked when
+ *   Not locked at all
+ *   Not locked, context being freed
+ *   Locked, app call-back, call from app call-back
+ *   Locked, app call-back, call from app call-back, app call-back, call from app call-back
+ * Result
+ *   context locked
+ *   context not locked if context being freed and @p failed is executed. @p failed must
+ *   be code that skips doing the lock protected code.
+ *
+ * @param c Context to lock.
+ * @param failed Code to execute on lock failure
+ *
+ */
+#define coap_lock_lock(c,failed) do { \
+    assert(c); \
+    if (!coap_lock_lock_func(&(c)->lock, 0)) { \
       failed; \
     } \
   } while (0)
 
-#define coap_lock_unlock(s) do { \
-    assert(s); \
-    coap_lock_unlock_func(&(s)->lock); \
+/**
+ * Unlocked when
+ *   Same thread locked context
+ *   Not when called from app call-back
+ *
+ * @param c Context to unlock.
+ */
+#define coap_lock_unlock(c) do { \
+    assert(c); \
+    coap_lock_unlock_func(&(c)->lock); \
   } while (0)
 
-#define coap_lock_callback(s,func) do { \
-    coap_lock_check_locked(s); \
-    (s)->lock.in_callback++; \
+/**
+ * Called when
+ *   Locked
+ *   Unlocked by thread free'ing off context (need to lock over app call-back)
+ *
+ * @param c Context to lock.
+ * @param func app call-back function to invoke
+ *
+ */
+#define coap_lock_callback(c,func) do { \
+    int being_freed = (c)->lock.being_freed && coap_thread_pid == (c)->lock.freeing_pid; \
+    if (being_freed) { \
+      coap_lock_lock_func(&(c)->lock, 1); \
+    } else { \
+      coap_lock_check_locked(c); \
+    } \
+    (c)->lock.in_callback++; \
     func; \
-    (s)->lock.in_callback--; \
+    (c)->lock.in_callback--; \
+    if (being_freed) { \
+      coap_lock_unlock_func(&(c)->lock); \
+    } \
   } while (0)
 
-#define coap_lock_callback_ret(r,s,func) do { \
-    coap_lock_check_locked(s); \
-    (s)->lock.in_callback++; \
-    r = func; \
-    (s)->lock.in_callback--; \
+/**
+ * Called when
+ *   Locked
+ *   Unlocked by thread free'ing off context (need to lock over app call-back)
+ *
+ * @param r Return value from @func.
+ * @param c Context to lock.
+ * @param func app call-back function to invoke
+ *
+ */
+#define coap_lock_callback_ret(r,c,func) do { \
+    int being_freed = (c)->lock.being_freed && coap_thread_pid == (c)->lock.freeing_pid; \
+    if (being_freed) { \
+      coap_lock_lock_func(&(c)->lock, 1); \
+    } else { \
+      coap_lock_check_locked(c); \
+    } \
+    (c)->lock.in_callback++; \
+    (c)->lock.in_callback++; \
+    (r) = func; \
+    (c)->lock.in_callback--; \
+    if (being_freed) { \
+      coap_lock_unlock_func(&(c)->lock); \
+    } \
   } while (0)
 
-#define coap_lock_callback_release(s,func,fail) do { \
-    coap_lock_check_locked(s); \
-    coap_lock_unlock(s); \
-    func; \
-    coap_lock_lock(s,fail); \
+/**
+ * Called when
+ *   Locked (need to unlock over app call-back)
+ *   Unlocked by thread free'ing off context
+ *
+ * @param c Context to unlock.
+ * @param func app call-back function to invoke
+ * @param failed Code to execute on lock failure
+ *
+ */
+#define coap_lock_callback_release(c,func,failed) do { \
+    int being_freed = (c)->lock.being_freed && coap_thread_pid == (c)->lock.freeing_pid; \
+    if (!being_freed) { \
+      coap_lock_check_locked(c); \
+      coap_lock_unlock(c); \
+      func; \
+      coap_lock_lock(c,failed); \
+    } else { \
+      func; \
+    } \
   } while (0)
 
-#define coap_lock_callback_ret_release(r,s,func,fail) do { \
-    coap_lock_check_locked(s); \
-    coap_lock_unlock(s); \
-    r = func; \
-    coap_lock_lock(s,fail); \
+/**
+ * Called when
+ *   Locked (need to unlock over app call-back)
+ *   Unlocked by thread free'ing off context
+ *
+ * @param r Return value from @func.
+ * @param c Context to unlock.
+ * @param func app call-back function to invoke
+ * @param failed Code to execute on lock failure
+ *
+ */
+#define coap_lock_callback_ret_release(r,c,func,failed) do { \
+    int being_freed = (c)->lock.being_freed && coap_thread_pid == (c)->lock.freeing_pid; \
+    if (!being_freed) { \
+      coap_lock_check_locked(c); \
+      coap_lock_unlock(c); \
+      (r) = func; \
+      coap_lock_lock(c,failed); \
+    } else { \
+      (r) = func; \
+    } \
   } while (0)
 
 # endif /* ! COAP_THREAD_RECURSIVE_CHECK */
 
-#define coap_lock_init(s) do { \
-    assert(s); \
-    memset(&((s)->lock), 0, sizeof((s)->lock)); \
-    coap_mutex_init(&(s)->lock.mutex); \
+#define coap_lock_init(c) do { \
+    assert(c); \
+    memset(&((c)->lock), 0, sizeof((c)->lock)); \
+    coap_mutex_init(&(c)->lock.mutex); \
   } while (0)
 
-#define coap_lock_being_freed(s,failed) do { \
-    coap_lock_lock(s,failed); \
-    (s)->lock.being_freed = 1; \
-    (s)->lock.freeing_pid = coap_thread_pid; \
-    coap_lock_unlock(s); \
+#define coap_lock_being_freed(c,failed) do { \
+    coap_lock_lock(c,failed); \
+    (c)->lock.being_freed = 1; \
+    (c)->lock.freeing_pid = coap_thread_pid; \
+    coap_lock_unlock(c); \
   } while (0)
 
-#define coap_lock_check_locked(s) do { \
-    assert((s) && \
-           coap_thread_pid == ((s)->lock.being_freed ? (s)->lock.freeing_pid : \
-                               (s)->lock.pid)); \
+#define coap_lock_check_locked(c) do { \
+    assert((c) && \
+           coap_thread_pid == ((c)->lock.being_freed ? (c)->lock.freeing_pid : \
+                               (c)->lock.pid)); \
   } while (0)
 
-#define coap_lock_invert(s,func,f) do { \
-    coap_lock_check_locked(s); \
-    if (!(s)->lock.being_freed) { \
-      coap_lock_unlock(s); \
+#define coap_lock_invert(c,func,f) do { \
+    coap_lock_check_locked(c); \
+    if (!(c)->lock.being_freed) { \
+      coap_lock_unlock(c); \
       func; \
-      coap_lock_lock(s,f); \
+      coap_lock_lock(c,f); \
     } else { \
       func; \
     } \
@@ -232,16 +452,16 @@ int coap_lock_lock_func(coap_lock_t *lock);
  */
 typedef coap_mutex_t coap_lock_t;
 
-#define coap_lock_lock(s,failed)
-#define coap_lock_unlock(s)
-#define coap_lock_init(s)
-#define coap_lock_being_freed(s,failed)
-#define coap_lock_check_locked(s) {}
-#define coap_lock_callback(s,func) func
-#define coap_lock_callback_ret(r,s,func) ret = func
-#define coap_lock_callback_release(s,func,fail) func
-#define coap_lock_callback_ret_release(r,s,func,fail) ret = func
-#define coap_lock_invert(s,func,f) func
+#define coap_lock_lock(c,failed)
+#define coap_lock_unlock(c)
+#define coap_lock_init(c)
+#define coap_lock_being_freed(c,failed)
+#define coap_lock_check_locked(c) {}
+#define coap_lock_callback(c,func) func
+#define coap_lock_callback_ret(r,c,func) (r) = func
+#define coap_lock_callback_release(c,func,failed) func
+#define coap_lock_callback_ret_release(r,c,func,failed) (r) = func
+#define coap_lock_invert(c,func,f) func
 
 #endif /* ! COAP_THREAD_SAFE */
 

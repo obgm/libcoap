@@ -71,7 +71,10 @@ functions.
 
 So, _failed_statement_ is the C code to execute if the
 locking fails for any reason. This should only happen when an another
-thread has called *coap_free_context*(3).
+thread has called *coap_free_context*(3). This code should prevent
+execution of the following code that would have been under the lock protection
+and certainly not cause the corresponding *coap_lock_unlock*() function to be
+called.
 
 Likewise, _callback_function_ is the callback handler function with all of
 its parameters.
@@ -97,11 +100,11 @@ be carefully analyzed as to any potential issues being created by the
 app call-back if it calls any Public API, updating any data that is relied on
 after lock takes place.
 
-coap_lock_callback() (or coap_lock_callback_ret()) wrapper leaves the _context_
+*coap_lock_callback*() (or *coap_lock_callback_ret*()) wrapper leaves the _context_
 locked when calling app call-back, but allows the app call-back to call a
 Public API when in the locked state.
 
-coap_lock_callback_release() (or coap_lock_callback_ret_release()) unlocks
+*coap_lock_callback_release*() (or *coap_lock_callback_ret_release*()) unlocks
 _context_ when calling app call-back. The allows the app call-back to go off
 and do other slow/blocking activity.  Any calls to a Public API then locks up
 _context_ before preceding.
