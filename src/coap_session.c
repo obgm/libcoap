@@ -1997,34 +1997,36 @@ coap_free_endpoint_lkd(coap_endpoint_t *ep) {
   if (ep) {
     coap_session_t *session, *rtmp;
 
-    if (ep->context)
+    if (ep->context) {
+      /* If fully allocated and inserted */
       coap_lock_check_locked(ep->context);
-    SESSIONS_ITER_SAFE(ep->sessions, session, rtmp) {
-      assert(session->ref == 0);
-      if (session->ref == 0) {
-        coap_handle_event_lkd(ep->context, COAP_EVENT_SERVER_SESSION_DEL, session);
-        coap_session_free(session);
+      SESSIONS_ITER_SAFE(ep->sessions, session, rtmp) {
+        assert(session->ref == 0);
+        if (session->ref == 0) {
+          coap_handle_event_lkd(ep->context, COAP_EVENT_SERVER_SESSION_DEL, session);
+          coap_session_free(session);
+        }
       }
-    }
-    if (coap_netif_available_ep(ep)) {
-      /*
-       * ep->sock.endpoint is set in coap_new_endpoint().
-       * ep->sock.session is never set.
-       *
-       * session->sock.session is set for both clients and servers (when a
-       * new session is accepted), but does not affect the endpoint.
-       *
-       * So, it is safe to call coap_netif_close_ep() after all the sessions
-       * have been freed above as we are only working with the endpoint sock.
-       */
+      if (coap_netif_available_ep(ep)) {
+        /*
+         * ep->sock.endpoint is set in coap_new_endpoint().
+         * ep->sock.session is never set.
+         *
+         * session->sock.session is set for both clients and servers (when a
+         * new session is accepted), but does not affect the endpoint.
+         *
+         * So, it is safe to call coap_netif_close_ep() after all the sessions
+         * have been freed above as we are only working with the endpoint sock.
+         */
 #ifdef COAP_EPOLL_SUPPORT
-      assert(ep->sock.session == NULL);
+        assert(ep->sock.session == NULL);
 #endif /* COAP_EPOLL_SUPPORT */
-      coap_netif_close_ep(ep);
-    }
+        coap_netif_close_ep(ep);
+      }
 
-    if (ep->context && ep->context->endpoint) {
-      LL_DELETE(ep->context->endpoint, ep);
+      if (ep->context->endpoint) {
+        LL_DELETE(ep->context->endpoint, ep);
+      }
     }
     coap_mfree_endpoint(ep);
   }

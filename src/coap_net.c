@@ -3422,7 +3422,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_lock_callback_release(context,
                              h(resource, session, pdu, query, response),
                              /* context is being freed off */
-                             return);
+                             goto finish);
 
   /* Check validity of response code */
   if (!coap_check_code_class(session, response)) {
@@ -3569,9 +3569,9 @@ drop_it_no_debug:
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
-#if COAP_Q_BLOCK_SUPPORT
+#if COAP_Q_BLOCK_SUPPORT || COAP_THREADSAFE
 finish:
-#endif /* COAP_Q_BLOCK_SUPPORT */
+#endif /* COAP_Q_BLOCK_SUPPORT || COAP_THREAD_SAFE */
   coap_delete_string(uri_path);
   return;
 
