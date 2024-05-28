@@ -3569,7 +3569,7 @@ drop_it_no_debug:
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
-#if COAP_Q_BLOCK_SUPPORT || COAP_THREADSAFE
+#if COAP_Q_BLOCK_SUPPORT || COAP_THREAD_SAFE
 finish:
 #endif /* COAP_Q_BLOCK_SUPPORT || COAP_THREAD_SAFE */
   coap_delete_string(uri_path);
