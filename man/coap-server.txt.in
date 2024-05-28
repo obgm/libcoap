@@ -138,7 +138,8 @@ OPTIONS - General
    then this server is considered to be the final endpoint. If
    scheme://address[:port] is not defined before the leading , (comma) of the
    first name, then the ongoing connection will be a direct connection.
-   Scheme is one of coap, coaps, coap+tcp and coaps+tcp.
+   Scheme is one of coap, coaps, coap+tcp, coaps+tcp, coap+ws, and coaps+ws.
+   http and https not currently supported.
 
 *-T* max_token_size::
    Set the maximum token length (8-65804).
@@ -292,6 +293,21 @@ coap-server -A 2001:db8:81a8:0:6ef0:dead:feed:beef -g FF02::FD
 ----
 Set listening address to '2001:db8:81a8:0:6ef0:dead:feed:beef' and join the
 All CoAP Nodes multicast group 'FF02::FD'.
+
+* Example
+----
+coap-server -P, -A ::1
+----
+Let the server listen on localhost (port '5683') for UDP/TCP, as well as
+accept any CoAP proxy requests and directly respond to them.
+
+* Example
+----
+coap-server -P coap://upstream-proxy, -A ::1
+----
+Let the server listen on localhost (port '5683') for UDP/TCP, and then
+open an upstream coap session to 'upstream-proxy' for proxying onwards
+the CoAP client's request.
 
 FILES
 ------

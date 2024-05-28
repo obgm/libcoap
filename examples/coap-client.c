@@ -567,7 +567,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tScheme, address and optional port to define how to\n"
           "\t       \t\tconnect to a CoAP proxy (automatically adds Proxy-Uri\n"
           "\t       \t\toption to request) to forward the request to.\n"
-          "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
+          "\t       \t\tScheme is one of coap, coaps, coap+tcp, coaps+tcp,\n"
+          "\t       \t\tcoap+ws, and coaps+ws\n"
           "\t-T token\tDefine the initial starting token (up to 24 characters)\n"
           "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
           "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
@@ -641,6 +642,7 @@ usage(const char *program, const char *version) {
           "\tcoap-client -m get coaps://%%2Funix%%2Fdomain%%2Fpath%%2Fdtls/.well-known/core\n"
           "\tcoap-client -m get coaps+tcp://%%2Funix%%2Fdomain%%2Fpath%%2Ftls/.well-known/core\n"
           "\tcoap-client -m get -T cafe coap://[::1]/time\n"
+          "\tcoap-client -m get -T cafe -P coap://upstream-proxy coap://[::1]/time\n"
           "\techo -n 1000 | coap-client -m put -T cafe coap://[::1]/time -f -\n"
          );
 }

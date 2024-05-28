@@ -179,7 +179,7 @@ OPTIONS - General
 *-P* scheme://addr[:port]::
    Scheme, address and optional port to define how to connect to a CoAP proxy
    (automatically adds Proxy-Uri option to request) to forward the request to.
-   Scheme is one of coap, coaps, coap+tcp and coaps+tcp.
+   Scheme is one of coap, coaps, coap+tcp, coaps+tcp, coap+ws, and coaps+ws.
 
 *-T* token::
    Define the initial starting 'token' for the request (up to 24 characters).
@@ -278,6 +278,13 @@ coap-client -m get coap://[::1]/
 ----
 Query the resource '/' on localhost using the 'GET' method to get back the
 summary information.
+
+* Example
+----
+coap-client -m get -P coap://upstream-proxy coap://[::1]/
+----
+Query the resource '/' on 'upstream-proxy' using the 'GET' method to get back
+the summary information.
 
 * Example
 ----
