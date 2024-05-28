@@ -16,8 +16,11 @@
 #include "coap3/coap_resource.h"
 #include "coap3/coap_subscribe.h"
 #ifdef COAP_WITH_LIBTINYDTLS
+
 #ifndef LWIP_TINYDTLS_LOCAL_FIX
 #define LWIP_TINYDTLS_LOCAL_FIX
+
+#if defined(WITH_LWIP_NO_SOCKET)
 #include <lwip/ip_addr.h>
 /* Local copies of struct to simplify #include nightmare */
 typedef struct {
@@ -26,6 +29,11 @@ typedef struct {
   ip_addr_t addr;         /**< session IP address */
   int ifindex;            /**< network interface index */
 } l_session_t;
+#else /* ! WITH_LWIP_NO_SOCKET */
+typedef struct {
+  char dummy[36];
+} l_session_t;
+#endif /* ! WITH_LWIP_NO_SOCKET */
 
 typedef struct l_coap_tiny_context_t {
   struct dtls_context_t *dtls_context;

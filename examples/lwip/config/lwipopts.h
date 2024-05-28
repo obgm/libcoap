@@ -10,7 +10,7 @@
  * of use.
  */
 
-#define NO_SYS                     1
+#define NO_SYS                     0
 #define LWIP_SOCKET                (NO_SYS==0)
 #define LWIP_NETCONN               (NO_SYS==0)
 #define LWIP_NETIF_API             (NO_SYS==0)
@@ -40,6 +40,7 @@
 #else
 #define COAP_THREAD_SAFE 1
 #define COAP_THREAD_RECURSIVE_CHECK 0
+#define LWIP_TCPIP_CORE_LOCKING 1
 #endif
 
 #define MEMP_NUM_SYS_TIMEOUT    10

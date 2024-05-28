@@ -220,8 +220,28 @@ coap_dtls_get_log_level(void) {
 static void
 get_session_addr(const session_t *s, coap_address_t *a) {
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
+#if LWIP_SOCKET
+  memset(&a->addr, 0, sizeof(a->addr));
+  switch (s->addr.sa.sa_family) {
+#if LWIP_IPV4
+  case AF_INET:
+    memcpy(&a->addr, &s->addr.sin.sin_addr, sizeof(s->addr.sin.sin_addr));
+    a->port = s->addr.sin.sin_port;
+    break;
+#endif /* LWIP_IPV4 */
+#if LWIP_IPV6
+  case AF_INET6:
+    memcpy(&a->addr, &s->addr.sin6.sin6_addr, sizeof(s->addr.sin6.sin6_addr));
+    a->port = s->addr.sin6.sin6_port;
+    break;
+#endif /* LWIP_IPV6 */
+  default:
+    break;
+  }
+#else /* ! LWIP_SOCKET */
   a->addr = s->addr;
   a->port = s->port;
+#endif /* ! LWIP_SOCKET */
 #elif defined(WITH_RIOT_SOCK)
   if (s->addr.family == AF_INET6) {
     a->riot.family = s->addr.family;
@@ -254,9 +274,26 @@ get_session_addr(const session_t *s, coap_address_t *a) {
 static void
 put_session_addr(const coap_address_t *a, session_t *s) {
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
+#if LWIP_SOCKET
+#if LWIP_IPV6 && LWIP_IPV4
+  if (a->addr.type == IPADDR_TYPE_V6) {
+    s->addr.sa.sa_family = AF_INET6;
+    s->size = (socklen_t)sizeof(s->addr.sin6);
+    memcpy(&s->addr.sin6.sin6_addr, &a->addr, sizeof(s->addr.sin6.sin6_addr));
+    s->addr.sin6.sin6_port = a->port;
+  } else if (a->addr.type == IPADDR_TYPE_V4) {
+    s->addr.sa.sa_family = AF_INET;
+    s->size = (socklen_t)sizeof(s->addr.sin);
+    memcpy(&s->addr.sin.sin_addr, &a->addr, sizeof(s->addr.sin.sin_addr));
+    s->addr.sin.sin_port = a->port;
+  }
+#else /* ! LWIP_IPV6 || ! LWIP_IPV4 */
+#endif /* ! LWIP_IPV6 || ! LWIP_IPV4 */
+#else /* ! LWIP_SOCKET */
   s->size = (unsigned char)sizeof(s->addr);
   s->addr = a->addr;
   s->port = a->port;
+#endif /* ! LWIP_SOCKET */
 #elif defined(WITH_RIOT_SOCK)
   if (a->riot.family == AF_INET6) {
     s->size = sizeof(s->addr.ipv6);

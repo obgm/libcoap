@@ -170,7 +170,12 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
   LWIP_ASSERT("Failed to initialize context", main_coap_context != NULL);
 
   coap_context_set_block_mode(main_coap_context, COAP_BLOCK_USE_LIBCOAP);
+#if NO_SYS
   coap_lwip_set_input_wait_handler(main_coap_context, input_wait, input_arg);
+#else /* ! NO_SYS */
+  (void)input_wait;
+  (void)input_arg;
+#endif /* ! NO_SYS */
 
   if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS ||
       proto == COAP_PROTO_WSS) {
@@ -238,6 +243,8 @@ client_coap_finished(void) {
 
 int
 client_coap_poll(void) {
+#if NO_SYS
   coap_io_process(main_coap_context, 1000);
+#endif /* NO_SYS */
   return quit;
 }
