@@ -674,6 +674,14 @@ get_uri_proxy_scheme_info(const coap_pdu_t *request,
              strncasecmp(opt_val, "coap", 4) == 0) {
     uri->scheme = COAP_URI_SCHEME_COAP;
     uri->port = COAP_DEFAULT_PORT;
+  } else if (opt_len == 7 &&
+             strncasecmp(opt_val, "coap+ws", 7) == 0) {
+    uri->scheme = COAP_URI_SCHEME_COAP_WS;
+    uri->port = 80;
+  } else if (opt_len == 8 &&
+             strncasecmp(opt_val, "coaps+ws", 8) == 0) {
+    uri->scheme = COAP_URI_SCHEME_COAPS_WS;
+    uri->port = 443;
   } else {
     coap_log_warn("Unsupported Proxy Scheme '%*.*s'\n",
                   opt_len, opt_len, opt_val);
@@ -1123,6 +1131,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
       case COAP_OPTION_PROXY_SCHEME:
       case COAP_OPTION_URI_PATH:
       case COAP_OPTION_URI_PORT:
+      case COAP_OPTION_URI_HOST:
       case COAP_OPTION_URI_QUERY:
         if (proxy_scheme_option) {
           /* Need to add back in */
@@ -2210,7 +2219,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tfinal endpoint. If scheme://address[:port] is not\n"
           "\t       \t\tdefined before the leading , (comma) of the first name,\n"
           "\t       \t\tthen the ongoing connection will be a direct connection.\n"
-          "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
+          "\t       \t\tScheme is one of coap, coaps, coap+tcp, coaps+tcp,\n"
+          "\t       \t\tcoap+ws, and coaps+ws. http(s) is not currently supported\n"
           "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
           "\t-U type\t\tTreat address defined by -A as a Unix socket address.\n"
           "\t       \t\ttype is 'coap', 'coaps', 'coap+tcp' or 'coaps+tcp'\n"
