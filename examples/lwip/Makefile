@@ -125,10 +125,10 @@ CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ \
 
 LWIP_SRC = def.c init.c tapif.c etharp.c netif.c timeouts.c stats.c udp.c \
 	   tcp.c pbuf.c ip4_addr.c ip4.c inet_chksum.c tcp_in.c tcp_out.c \
-	   icmp.c raw.c ip4_frag.c sys_arch.c ethernet.c ip.c mem.c memp.c
+	   icmp.c raw.c ip4_frag.c sys_arch.c ethernet.c ip.c mem.c memp.c tcpip.c
 vpath %.c lwip/src/core/ lwip-contrib/ports/unix/proj/minimal/ \
 	  lwip/src/netif/ lwip/src/core/ipv4/ lwip-contrib/ports/unix/port/ \
-	  lwip-contrib/ports/unix/port/netif/
+	  lwip-contrib/ports/unix/port/netif/ lwip/src/api/
 # CFLAGS += -DLWIP_UNIX_LINUX
 
 # if ipv6 is used

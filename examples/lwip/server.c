@@ -63,7 +63,9 @@ handle_sigint(int signum) {
  */
 static int
 wait_for_input(void *arg, uint32_t milli_secs) {
+#if NO_SYS
   struct netif *netif = (struct netif *)arg;
+#endif /* NO_SYS */
   int ret;
 
   (void)milli_secs;
@@ -72,9 +74,14 @@ wait_for_input(void *arg, uint32_t milli_secs) {
    * Has internal timeout of 1000 msec (sometimes less) based on
    * sys_timeouts_sleeptime().
    */
+#if NO_SYS
   ret = tapif_select(netif);
 
   sys_check_timeouts();
+#else /* ! NO_SYS */
+  (void)arg;
+  ret = 0;
+#endif /* ! NO_SYS */
   return ret;
 }
 
@@ -95,7 +102,13 @@ main(int argc, char **argv) {
   IP4_ADDR(&netmask, 255,255,255,0);
 #endif /* LWIP_IPV4 */
 
+#if NO_SYS
   lwip_init();
+#else /* ! NO_SYS */
+#include <lwip/tcpip.h>
+  (void)lock_tcpip_core;
+  tcpip_init(NULL, NULL);
+#endif /* ! NO_SYS */
 
   printf("TCP/IP initialized.\n");
 
