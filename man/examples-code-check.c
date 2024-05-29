@@ -125,6 +125,7 @@ const char *number_list[] = {
   "coap_pdu_type_t ",
   "coap_mid_t ",
   "coap_pdu_code_t ",
+  "coap_print_status_t ",
   "coap_proto_t ",
   "coap_session_state_t ",
   "coap_session_type_t ",

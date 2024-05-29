@@ -59,6 +59,8 @@ struct coap_context_t {
   coap_resource_release_userdata_handler_t release_userdata;
   /**< function to  release user_data
        when resource is deleted */
+  coap_print_wellknown_t print_wellknown_userdata; /**< custom response for
+                                                        well-known/core resource */
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_ASYNC_SUPPORT

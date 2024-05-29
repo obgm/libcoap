@@ -2718,12 +2718,28 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
  * .well-known/core.
  */
 COAP_STATIC_INLINE ssize_t
-get_wkc_len(coap_context_t *context, const coap_string_t *query_filter) {
+get_wkc_len(coap_context_t *context,
+            coap_session_t *session,
+            const coap_pdu_t *request,
+            const coap_string_t *query_filter) {
   unsigned char buf[1];
   size_t len = 0;
+  int result = 0;
 
-  if (coap_print_wellknown(context, buf, &len, UINT_MAX, query_filter) &
-      COAP_PRINT_STATUS_ERROR) {
+  if (context->print_wellknown_userdata) {
+    result = context->print_wellknown_userdata(context,
+                                               session,
+                                               request,
+                                               buf,
+                                               &len,
+                                               UINT_MAX,
+                                               query_filter);
+  } else {
+    coap_lock_lock(session->context, return COAP_PRINT_STATUS_ERROR);
+    result = coap_print_wellknown_lkd(context, buf, &len, UINT_MAX, query_filter);
+    coap_lock_unlock(session->context);
+  }
+  if (result & COAP_PRINT_STATUS_ERROR) {
     coap_log_warn("cannot determine length of /.well-known/core\n");
     return -1L;
   }
@@ -2738,6 +2754,9 @@ free_wellknown_response(coap_session_t *session COAP_UNUSED, void *app_ptr) {
   coap_delete_string(app_ptr);
 }
 
+/*
+ * Caution - this handler is being treated as if in app space.
+ */
 static void
 hnd_get_wellknown(coap_resource_t *resource,
                   coap_session_t *session,
@@ -2747,7 +2766,7 @@ hnd_get_wellknown(coap_resource_t *resource,
   size_t len = 0;
   coap_string_t *data_string = NULL;
   int result = 0;
-  ssize_t wkc_len = get_wkc_len(session->context, query);
+  ssize_t wkc_len = get_wkc_len(session->context, session, request, query);
 
   if (wkc_len) {
     if (wkc_len < 0)
@@ -2757,8 +2776,19 @@ hnd_get_wellknown(coap_resource_t *resource,
       goto error;
 
     len = wkc_len;
-    result = coap_print_wellknown(session->context, data_string->s, &len, 0,
-                                  query);
+    if (session->context->print_wellknown_userdata) {
+      result = session->context->print_wellknown_userdata(session->context,
+                                                          session,
+                                                          request,
+                                                          data_string->s,
+                                                          &len,
+                                                          0,
+                                                          query);
+    } else {
+      coap_lock_lock(session->context, goto error);
+      result = coap_print_wellknown_lkd(session->context, data_string->s, &len, 0, query);
+      coap_lock_unlock(session->context);
+    }
     if ((result & COAP_PRINT_STATUS_ERROR) != 0) {
       coap_log_debug("coap_print_wellknown failed\n");
       goto error;
@@ -4699,6 +4729,12 @@ finish:
 void
 coap_mcast_per_resource(coap_context_t *context) {
   context->mcast_per_resource = 1;
+}
+
+void
+coap_register_print_wellknown_callback(coap_context_t *context,
+                                       coap_print_wellknown_t hnd) {
+  context->print_wellknown_userdata = hnd;
 }
 
 #endif /* ! COAP_SERVER_SUPPORT */

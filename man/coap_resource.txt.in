@@ -23,7 +23,8 @@ coap_resource_set_userdata,
 coap_resource_get_userdata,
 coap_resource_release_userdata_handler,
 coap_resource_get_uri_path,
-coap_get_resource_from_uri_path
+coap_get_resource_from_uri_path,
+coap_print_wellknown
 - Work with CoAP resources
 
 SYNOPSIS
@@ -65,6 +66,10 @@ coap_resource_release_userdata_handler_t _callback_);*
 
 *coap_resource_t *coap_get_resource_from_uri_path(coap_context_t *_context_,
 coap_str_const_t *_uri_path_);*
+
+*coap_print_status_t coap_print_wellknown(coap_context_t *context,
+unsigned char *buf, size_t *buflen, size_t offset,
+const coap_string_t *query_filter);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -292,6 +297,12 @@ the _resource_ definion.
 The *coap_get_resource_from_uri_path*() function is used to return the resource
 identified by the unique string _uri_path_ associated with _context_.
 
+*Function: coap_print_wellknown()*
+
+The *coap_print_wellknown*() function prints the names of all known resources
+of the given _context_ into _buf_ which has a maximum size of _buflen_. The
+first _offset_ bytes are skipped from the output to handle block transfers.
+The _query_filter_ is usually defined by the CoAP Uri-Query options as a query.
 
 RETURN VALUES
 -------------
@@ -311,6 +322,10 @@ there was a failure.
 
 *coap_get_resource_from_uri_path*() returns the resource or NULL
 if not found.
+
+*coap_print_wellknown*() returns COAP_PRINT_STATUS_ERROR on error. Otherwise,
+the lower 28 bits are set to the number of bytes that have actually been
+written. COAP_PRINT_STATUS_TRUNC is set when the output has been truncated.
 
 EXAMPLES
 --------
