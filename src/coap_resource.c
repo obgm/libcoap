@@ -102,12 +102,13 @@ match(const coap_str_const_t *text, const coap_str_const_t *pattern,
 }
 
 /**
- * Prints the names of all known resources to @p buf. This function
+ * Prints the names of all known resources for @p context to @p buf. This function
  * sets @p buflen to the number of bytes actually written and returns
  * @c 1 on succes. On error, the value in @p buflen is undefined and
  * the return value will be @c 0.
  *
  * @param context The context with the resource map.
+ * @param session The CoAP session.
  * @param buf     The buffer to write the result.
  * @param buflen  Must be initialized to the maximum length of @p buf and will be
  *                set to the length of the well-known response on return.
@@ -122,16 +123,21 @@ match(const coap_str_const_t *text, const coap_str_const_t *pattern,
  *         @p buf. COAP_PRINT_STATUS_TRUNC is set when the output has been
  *         truncated.
  */
-#if defined(__GNUC__) && defined(WITHOUT_QUERY_FILTER)
 coap_print_status_t
-coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
-                     size_t offset,
-                     const coap_string_t *query_filter COAP_UNUSED) {
-#else /* not a GCC */
+coap_print_wellknown(coap_context_t *context, unsigned char *buf,
+                     size_t *buflen, size_t offset,
+                     const coap_string_t *query_filter) {
+  coap_print_status_t result;
+  coap_lock_lock(context, return COAP_PRINT_STATUS_ERROR);
+  result = coap_print_wellknown_lkd(context, buf, buflen, offset, query_filter);
+  coap_lock_unlock(context);
+  return result;
+}
+
 coap_print_status_t
-coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen,
-                     size_t offset, const coap_string_t *query_filter) {
-#endif /* GCC */
+coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
+                         size_t *buflen, size_t offset,
+                         const coap_string_t *query_filter) {
   coap_print_status_t output_length = 0;
   unsigned char *p = buf;
   const uint8_t *bufend = buf + *buflen;
@@ -139,7 +145,9 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf, size_t *buflen
   coap_print_status_t result;
   const size_t old_offset = offset;
   int subsequent_resource = 0;
-#ifndef WITHOUT_QUERY_FILTER
+#ifdef WITHOUT_QUERY_FILTER
+  (void)query_filter;
+#else
   coap_str_const_t resource_param = { 0, NULL }, query_pattern = { 0, NULL };
   int flags = 0; /* MATCH_SUBSTRING, MATCH_PREFIX, MATCH_URI */
 #define MATCH_URI       0x01

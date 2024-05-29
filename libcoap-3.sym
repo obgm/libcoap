@@ -188,6 +188,7 @@ coap_persist_track_funcs
 coap_print_addr
 coap_print_ip_addr
 coap_print_link
+coap_print_wellknown
 coap_prng
 coap_prng_init
 coap_q_block_is_supported
@@ -199,6 +200,7 @@ coap_register_nack_handler
 coap_register_option
 coap_register_ping_handler
 coap_register_pong_handler
+coap_register_print_wellknown_callback
 coap_register_request_handler
 coap_register_response_handler
 coap_resize_binary
