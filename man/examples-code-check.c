@@ -236,6 +236,7 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
   int is_number_func = 0;
   int is_inline_func = 0;
   int is_struct_func = 0;
+  int is_ptr = 0;
   const char *func_start = NULL;
   int is_struct = 0;
   unsigned int i;
@@ -243,6 +244,7 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
   if (strncmp(buffer, "*void ", sizeof("*void ")-1) == 0) {
     if (strncmp(buffer, "*void *", sizeof("*void *")-1) == 0) {
       func_start = &buffer[sizeof("*void *")-1];
+      is_ptr = 1;
     } else {
       is_void_func = 1;
       func_start = &buffer[sizeof("*void ")-1];
@@ -254,6 +256,7 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
                 strlen(number_list[i])) == 0) {
       if (buffer[1 + strlen(number_list[i])] == '*') {
         func_start = &buffer[2 + strlen(number_list[i])];
+        is_ptr = 1;
       } else {
         is_number_func = 1;
         func_start = &buffer[1 + strlen(number_list[i])];
@@ -267,6 +270,7 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
                 strlen(pointer_list[i])) == 0) {
       if (buffer[1 + strlen(pointer_list[i])] == '*') {
         func_start = &buffer[2 + strlen(pointer_list[i])];
+        is_ptr = 1;
       } else {
         is_struct_func = i + 1;
         func_start = &buffer[1 + strlen(pointer_list[i])];
@@ -330,6 +334,19 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
   len = strlen(outbuf);
   if (len > 3 && ((outbuf[len-3] == ';' && outbuf[len-2] == '*') ||
                   (outbuf[len-3] == '*' && outbuf[len-2] == ';'))) {
+    if (!is_inline_func && !is_void_func && !is_number_func && !is_struct_func && !is_struct &&
+        !is_ptr) {
+      char *lcp = strchr(buffer, ' ');
+
+      if (lcp)
+        *lcp = '\000';
+      fprintf(stderr,
+              "man/examples-code-check.c: Function return type '%s' undefined in ptr_list[] or number_list[]\n",
+              &buffer[1]);
+      if (lcp)
+        *lcp = ' ';
+      exit_code = 1;
+    }
     if (is_inline_func) {
       strcpy(&outbuf[len-3], ";\n");
     }
