@@ -155,13 +155,22 @@ to the request handler.
 *COAP_RESOURCE_FLAGS_OSCORE_ONLY*::
 Define this resource as an OSCORE enabled access only.
 
+*COAP_RESOURCE_HANDLE_WELLKNOWN_CORE*::
+Define this when invoking *coap_resource_unknown_init2*() if .well-known/core
+is to be passed to the unknown URI handler rather than processed locally.
+Used for easily passing on a request as a reverse-proxy request.
+
 *NOTE:* The following flags are only tested against if
 *coap_mcast_per_resource*() has been called.  If *coap_mcast_per_resource*()
 has not been called, then all resources have multicast support, libcoap adds
 in random delays to the responses, and 4.xx / 5.xx responses are dropped.
 
 *NOTE:* The pseudo resource for ".well-known/core" always has multicast
-support enabled and is not configurable.
+support enabled and is not configurable. It is possible for a server to
+create a resource for ".well-known/core" that can then control the
+multicast support and the provided GET request handler can call
+*coap_print_wellknown*() to produce the same information as the pseudo
+resource.
 
 [horizontal]
 *COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT*::
@@ -173,7 +182,7 @@ sending the response back to the client.  It is then the responsibility of
 the app to delay the responses for multicast requests. See
 "https://rfc-editor.org/rfc/rfc7252#section-8.2[RFC7252 8.2. Request/Response
 Layer]".
- However, the pseudo resource for ".well-known/core" always has multicast
+However, the pseudo resource for ".well-known/core" always has multicast
 support enabled.
 
 *COAP_RESOURCE_FLAGS_LIB_ENA_MCAST_SUPPRESS_2_05*::
@@ -302,6 +311,9 @@ identified by the unique string _uri_path_ associated with _context_.
 The *coap_print_wellknown*() function prints the names of all known resources
 of the given _context_ into _buf_ which has a maximum size of _buflen_. The
 first _offset_ bytes are skipped from the output to handle block transfers.
+Setting _offset_ to 0 means the entire (matching) information is output.
+Setting _offset_ to UINT_MAX skips, but calculates the size of, the (matching)
+output.
 The _query_filter_ is usually defined by the CoAP Uri-Query options as a query.
 
 RETURN VALUES

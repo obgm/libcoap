@@ -37,7 +37,6 @@
 #include "coap_pdu.h"
 #include "coap_session.h"
 #include "coap_debug.h"
-#include "coap_resource.h"
 
 /**
  * @ingroup application_api
@@ -607,28 +606,6 @@ void coap_context_set_app_data(coap_context_t *context, void *data);
  * @return Pointer to the stored data or @c NULL.
  */
 void *coap_context_get_app_data(const coap_context_t *context);
-
-/**
- * Definition of get .well-known/core string callback function
- */
-typedef coap_print_status_t (*coap_print_wellknown_t)(coap_context_t *context,
-                                                      coap_session_t *session,
-                                                      const coap_pdu_t *request,
-                                                      unsigned char *buf,
-                                                      size_t *buflen,
-                                                      size_t offset,
-                                                      const coap_string_t *query_filter);
-
-/**
- * Defines the callback that is called when the .well-known/core resource is requested.
- *
- * @param context  The context to associate the print_wellknown callback with
- * @param callback The callback to invoke when the .well-known/core resource is requested
- *                 or NULL to unregister a previously registered callback.
- *
- */
-void coap_register_print_wellknown_callback(coap_context_t *context,
-                                            coap_print_wellknown_t callback);
 
 /**@}*/
 

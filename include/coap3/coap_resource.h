@@ -151,6 +151,13 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
 #define COAP_RESOURCE_FLAGS_OSCORE_ONLY 0x400
 
 /**
+ * Define this when invoking *coap_resource_unknown_init2*() if .well-known/core
+ * is to be passed to the unknown URI handler rather than processed locally.
+ * Used for easily passing on a request as a reverse-proxy request.
+ */
+#define COAP_RESOURCE_HANDLE_WELLKNOWN_CORE 0x800
+
+/**
  * Creates a new resource object and initializes the link field to the string
  * @p uri_path. This function returns the new coap_resource_t object.
  *
@@ -497,8 +504,9 @@ coap_print_status_t coap_print_link(const coap_resource_t *resource,
 /**
  * Prints the names of all known resources for @p context to @p buf. This function
  * sets @p buflen to the number of bytes actually written and returns
- * @c 1 on success. On error, the value in @p buflen is undefined and
- * the return value will be @c 0.
+ * @c COAP_PRINT_STATUS_ERROR on error. On error, the value in @p buflen is undefined.
+ * Otherwise, the lower 28 bits are set to the number of bytes that have actually
+ * been written. COAP_PRINT_STATUS_TRUNC is set when the output has been truncated.
  *
  * @param context The context with the resource map.
  * @param buf     The buffer to write the result.
