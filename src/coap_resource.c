@@ -101,29 +101,7 @@ match(const coap_str_const_t *text, const coap_str_const_t *pattern,
          memcmp(text->s, pattern->s, pattern->length) == 0;
 }
 
-/**
- * Prints the names of all known resources for @p context to @p buf. This function
- * sets @p buflen to the number of bytes actually written and returns
- * @c 1 on succes. On error, the value in @p buflen is undefined and
- * the return value will be @c 0.
- *
- * @param context The context with the resource map.
- * @param session The CoAP session.
- * @param buf     The buffer to write the result.
- * @param buflen  Must be initialized to the maximum length of @p buf and will be
- *                set to the length of the well-known response on return.
- * @param offset  The offset in bytes where the output shall start and is
- *                shifted accordingly with the characters that have been
- *                processed. This parameter is used to support the block
- *                option.
- * @param query_filter A filter query according to <a href="http://tools.ietf.org/html/draft-ietf-core-link-format-11#section-4.1">Link Format</a>
- *
- * @return COAP_PRINT_STATUS_ERROR on error. Otherwise, the lower 28 bits are
- *         set to the number of bytes that have actually been written to
- *         @p buf. COAP_PRINT_STATUS_TRUNC is set when the output has been
- *         truncated.
- */
-coap_print_status_t
+COAP_API coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf,
                      size_t *buflen, size_t offset,
                      const coap_string_t *query_filter) {
@@ -133,6 +111,11 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf,
   coap_lock_unlock(context);
   return result;
 }
+
+static coap_str_const_t coap_default_uri_wellknown = {
+  sizeof(COAP_DEFAULT_URI_WELLKNOWN)-1,
+  (const uint8_t *)COAP_DEFAULT_URI_WELLKNOWN
+};
 
 coap_print_status_t
 coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
@@ -161,6 +144,7 @@ coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
   };
 #endif /* WITHOUT_QUERY_FILTER */
 
+  coap_lock_check_locked(context);
 #ifndef WITHOUT_QUERY_FILTER
   /* split query filter, if any */
   if (query_filter) {
@@ -207,6 +191,10 @@ coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
 
   RESOURCES_ITER(context->resources, r) {
 
+    if (coap_string_equal(r->uri_path, &coap_default_uri_wellknown)) {
+      /* server app has defined a resource for .well-known/core - ignore */
+      continue;
+    }
 #ifndef WITHOUT_QUERY_FILTER
     if (resource_param.length) { /* there is a query filter */
 
@@ -314,7 +302,7 @@ coap_resource_unknown_init2(coap_method_handler_t put_handler, int flags) {
     r->is_unknown = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_unknown_resource_uri, sizeof(coap_unknown_resource_uri)-1);
-    r->flags = flags & COAP_RESOURCE_FLAGS_MCAST_LIST;
+    r->flags = flags & ~COAP_RESOURCE_FLAGS_RELEASE_URI;
     coap_register_handler(r, COAP_REQUEST_PUT, put_handler);
   } else {
     coap_log_debug("coap_resource_unknown_init: no memory left\n");
@@ -372,7 +360,7 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
         r->proxy_name_count = i;
       }
     }
-    r->flags = flags & COAP_RESOURCE_FLAGS_MCAST_LIST;
+    r->flags = flags & ~COAP_RESOURCE_FLAGS_RELEASE_URI;
   } else {
     coap_log_debug("coap_resource_proxy_uri_init2: no memory left\n");
   }

@@ -16,8 +16,7 @@ coap_register_response_handler,
 coap_register_nack_handler,
 coap_register_ping_handler,
 coap_register_pong_handler,
-coap_register_event_handler,
-coap_register_print_wellknown_callback
+coap_register_event_handler
 - Work with CoAP handlers
 
 SYNOPSIS
@@ -41,9 +40,6 @@ coap_pong_handler_t _handler_)*;
 
 *void coap_register_event_handler(coap_context_t *_context_,
 coap_event_handler_t _handler_)*;
-
-*void coap_register_print_wellknown_callback(coap_context_t *context,
-coap_print_wellknown_t callback);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -390,39 +386,6 @@ typedef enum {
   /** Triggered when no response to a keep alive (ping) packet */
   COAP_EVENT_KEEPALIVE_FAILURE = 0x8001,
 } coap_event_t;
-----
-
-*Function: coap_register_print_wellknown_callback()*
-
-The *coap_register_print_wellknown_callback*() function registers a
-callback function that is called instead of the default *coap_print_wellknown*()
-function when the implicit .well-known/core resource is requested.
-
-The callback function prototype is defined as:
-[source, c]
-----
-/**
- * @param context The context with the resource map.
- * @param session The CoAP session.
- * @param buf The buffer to write the result.
- * @param buflen Must be initialized to the maximum length of buf and will be
- *			 	 set to the length of the well-known response on return.
- * @param offset The offset in bytes where the output shall start and is shifted
- * 				 accordingly with the characters that have been processed. This
- * 				 parameter is used to support the block option.
- * @param query_filter A filter query according to <a href="http://tools.ietf.org/html/draft-ietf-core-link-format-11#section-4.1">Link Format</a>
- *
- * @return COAP_PRINT_STATUS_ERROR on error. Otherwise, the lower 28 bits are
- *         set to the number of bytes that have actually been written to
- *         @p buf. COAP_PRINT_STATUS_TRUNC is set when the output has been
- *         truncated.
- */
-typedef coap_print_status_t (*coap_print_wellknown_t)(coap_context_t *context,
-                                                      coap_session_t *session,
-                                                      unsigned char *buf,
-                                                      size_t *buflen,
-                                                      size_t offset,
-                                                      const coap_string_t *query_filter);
 ----
 
 EXAMPLES

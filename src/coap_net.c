@@ -2713,40 +2713,6 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
 }
 
 #if COAP_SERVER_SUPPORT
-/**
- * Quick hack to determine the size of the resource description for
- * .well-known/core.
- */
-COAP_STATIC_INLINE ssize_t
-get_wkc_len(coap_context_t *context,
-            coap_session_t *session,
-            const coap_pdu_t *request,
-            const coap_string_t *query_filter) {
-  unsigned char buf[1];
-  size_t len = 0;
-  int result = 0;
-
-  if (context->print_wellknown_userdata) {
-    result = context->print_wellknown_userdata(context,
-                                               session,
-                                               request,
-                                               buf,
-                                               &len,
-                                               UINT_MAX,
-                                               query_filter);
-  } else {
-    coap_lock_lock(session->context, return COAP_PRINT_STATUS_ERROR);
-    result = coap_print_wellknown_lkd(context, buf, &len, UINT_MAX, query_filter);
-    coap_lock_unlock(session->context);
-  }
-  if (result & COAP_PRINT_STATUS_ERROR) {
-    coap_log_warn("cannot determine length of /.well-known/core\n");
-    return -1L;
-  }
-
-  return len;
-}
-
 #define SZX_TO_BYTES(SZX) ((size_t)(1 << ((SZX) + 4)))
 
 static void
@@ -2755,40 +2721,38 @@ free_wellknown_response(coap_session_t *session COAP_UNUSED, void *app_ptr) {
 }
 
 /*
- * Caution - this handler is being treated as if in app space.
+ * Caution: As this handler is in libcoap space, it is called with
+ * context locked.
  */
 static void
-hnd_get_wellknown(coap_resource_t *resource,
-                  coap_session_t *session,
-                  const coap_pdu_t *request,
-                  const coap_string_t *query,
-                  coap_pdu_t *response) {
+hnd_get_wellknown_lkd(coap_resource_t *resource,
+                      coap_session_t *session,
+                      const coap_pdu_t *request,
+                      const coap_string_t *query,
+                      coap_pdu_t *response) {
   size_t len = 0;
   coap_string_t *data_string = NULL;
-  int result = 0;
-  ssize_t wkc_len = get_wkc_len(session->context, session, request, query);
+  coap_print_status_t result = 0;
+  size_t wkc_len = 0;
+  uint8_t buf[4];
 
-  if (wkc_len) {
-    if (wkc_len < 0)
-      goto error;
+  /*
+   * Quick hack to determine the size of the resource descriptions for
+   * .well-known/core.
+   */
+  result = coap_print_wellknown_lkd(session->context, buf, &wkc_len, UINT_MAX, query);
+  if (result & COAP_PRINT_STATUS_ERROR) {
+    coap_log_warn("cannot determine length of /.well-known/core\n");
+    goto error;
+  }
+
+  if (wkc_len > 0) {
     data_string = coap_new_string(wkc_len);
     if (!data_string)
       goto error;
 
     len = wkc_len;
-    if (session->context->print_wellknown_userdata) {
-      result = session->context->print_wellknown_userdata(session->context,
-                                                          session,
-                                                          request,
-                                                          data_string->s,
-                                                          &len,
-                                                          0,
-                                                          query);
-    } else {
-      coap_lock_lock(session->context, goto error);
-      result = coap_print_wellknown_lkd(session->context, data_string->s, &len, 0, query);
-      coap_lock_unlock(session->context);
-    }
+    result = coap_print_wellknown_lkd(session->context, data_string->s, &len, 0, query);
     if ((result & COAP_PRINT_STATUS_ERROR) != 0) {
       coap_log_debug("coap_print_wellknown failed\n");
       goto error;
@@ -2797,8 +2761,6 @@ hnd_get_wellknown(coap_resource_t *resource,
     data_string->length = len;
 
     if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
-      uint8_t buf[4];
-
       if (!coap_insert_option(response, COAP_OPTION_CONTENT_FORMAT,
                               coap_encode_var_safe(buf, sizeof(buf),
                                                    COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf)) {
@@ -2825,6 +2787,12 @@ hnd_get_wellknown(coap_resource_t *resource,
                                                  free_wellknown_response,
                                                  data_string)) {
       goto error_released;
+    }
+  } else {
+    if (!coap_insert_option(response, COAP_OPTION_CONTENT_FORMAT,
+                            coap_encode_var_safe(buf, sizeof(buf),
+                                                 COAP_MEDIATYPE_APPLICATION_LINK_FORMAT), buf)) {
+      goto error;
     }
   }
   response->code = COAP_RESPONSE_CODE(205);
@@ -3215,20 +3183,31 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
      * if configured, for the unknown handler.
      *
      * if a PROXY URI/Scheme request and proxy URI handler defined, call the
-     *  proxy URI handler
+     *  proxy URI handler.
      *
-     * else if well-known URI generate a default response
+     * else if unknown URI handler defined and COAP_RESOURCE_HANDLE_WELLKNOWN_CORE
+     *  set, call the unknown URI handler with any unknown URI (including
+     *  .well-known/core) if the appropriate method is defined.
+     *
+     * else if well-known URI generate a default response.
      *
      * else if unknown URI handler defined, call the unknown
      *  URI handler (to allow for potential generation of resource
      *  [RFC7272 5.8.3]) if the appropriate method is defined.
      *
-     * else if DELETE return 2.02 (RFC7252: 5.8.4.  DELETE)
+     * else if DELETE return 2.02 (RFC7252: 5.8.4.  DELETE).
      *
-     * else return 4.04 */
+     * else return 4.04.
+     */
 
     if (is_proxy_uri || is_proxy_scheme) {
       resource = context->proxy_uri_resource;
+    } else if (context->unknown_resource != NULL &&
+               context->unknown_resource->flags & COAP_RESOURCE_HANDLE_WELLKNOWN_CORE &&
+               ((size_t)pdu->code - 1 <
+                (sizeof(resource->handler) / sizeof(coap_method_handler_t))) &&
+               (context->unknown_resource->handler[pdu->code - 1])) {
+      resource = context->unknown_resource;
     } else if (coap_string_equal(uri_path, &coap_default_uri_wellknown)) {
       /* request for .well-known/core */
       resource = &resource_uri_wellknown;
@@ -3446,13 +3425,21 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   /*
    * Call the request handler with everything set up
    */
-  coap_log_debug("call custom handler for resource '%*.*s' (3)\n",
-                 (int)resource->uri_path->length, (int)resource->uri_path->length,
-                 resource->uri_path->s);
-  coap_lock_callback_release(context,
-                             h(resource, session, pdu, query, response),
-                             /* context is being freed off */
-                             goto finish);
+  if (resource == &resource_uri_wellknown) {
+    /* Leave context locked */
+    coap_log_debug("call handler for pseudo resource '%*.*s' (3)\n",
+                   (int)resource->uri_path->length, (int)resource->uri_path->length,
+                   resource->uri_path->s);
+    h(resource, session, pdu, query, response);
+  } else {
+    coap_log_debug("call custom handler for resource '%*.*s' (3)\n",
+                   (int)resource->uri_path->length, (int)resource->uri_path->length,
+                   resource->uri_path->s);
+    coap_lock_callback_release(context,
+                               h(resource, session, pdu, query, response),
+                               /* context is being freed off */
+                               goto finish);
+  }
 
   /* Check validity of response code */
   if (!coap_check_code_class(session, response)) {
@@ -4411,7 +4398,7 @@ coap_startup(void) {
                                          (const uint8_t *)".well-known/core"
                                        };
   memset(&resource_uri_wellknown, 0, sizeof(resource_uri_wellknown));
-  resource_uri_wellknown.handler[COAP_REQUEST_GET-1] = hnd_get_wellknown;
+  resource_uri_wellknown.handler[COAP_REQUEST_GET-1] = hnd_get_wellknown_lkd;
   resource_uri_wellknown.flags = COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT;
   resource_uri_wellknown.uri_path = &well_known;
 #endif /* COAP_SERVER_SUPPORT */
@@ -4729,12 +4716,6 @@ finish:
 void
 coap_mcast_per_resource(coap_context_t *context) {
   context->mcast_per_resource = 1;
-}
-
-void
-coap_register_print_wellknown_callback(coap_context_t *context,
-                                       coap_print_wellknown_t hnd) {
-  context->print_wellknown_userdata = hnd;
 }
 
 #endif /* ! COAP_SERVER_SUPPORT */

@@ -185,8 +185,11 @@ void coap_delete_attr(coap_attr_t *attr);
 /**
  * Prints the names of all known resources for @p context to @p buf. This function
  * sets @p buflen to the number of bytes actually written and returns
- * @c 1 on success. On error, the value in @p buflen is undefined and
- * the return value will be @c 0.
+ * @c COAP_PRINT_STATUS_ERROR on error. On error, the value in @p buflen is undefined.
+ * Otherwise, the lower 28 bits are set to the number of bytes that have actually
+ * been written. COAP_PRINT_STATUS_TRUNC is set when the output has been truncated.
+ *
+ * Note: This function must be called in the locked state.
  *
  * @param context The context with the resource map.
  * @param buf     The buffer to write the result.
