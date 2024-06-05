@@ -193,7 +193,7 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
   }
 }
 
-void
+COAP_API void
 coap_free_async(coap_session_t *session, coap_async_t *async) {
   coap_lock_lock(session->context, return);
   coap_free_async_lkd(session, async);

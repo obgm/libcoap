@@ -86,7 +86,7 @@ COAP_API void coap_async_trigger(coap_async_t *async);
  * @param session  The session to use.
  * @param async The object to delete.
  */
-void coap_free_async(coap_session_t *session, coap_async_t *async);
+COAP_API void coap_free_async(coap_session_t *session, coap_async_t *async);
 
 /**
  * Retrieves the object identified by @p token from the list of asynchronous

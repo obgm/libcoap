@@ -216,11 +216,13 @@ int coap_insert_node(coap_queue_t **queue, coap_queue_t *node);
 /**
  * Destroys specified @p node.
  *
+ * Note: Not a part of the Public API.
+ *
  * @param node Node entry to remove.
  *
  * @return @c 1 node deleted from queue, @c 0 failure.
  */
-int coap_delete_node(coap_queue_t *node);
+COAP_API int coap_delete_node(coap_queue_t *node);
 
 /**
  * Destroys specified @p node.
