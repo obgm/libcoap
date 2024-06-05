@@ -494,18 +494,8 @@ coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
         lg_crcv->observe_set = 0;
         if (pdu == NULL)
           return 0;
-#if COAP_Q_BLOCK_SUPPORT
-        if (pdu->code == COAP_REQUEST_CODE_FETCH && using_q_block1) {
-          /* Have to make sure all gets through in case of packet loss */
-          pdu->type = COAP_MESSAGE_CON;
-        } else {
-          /* Need to make sure that this is the correct requested type */
-          pdu->type = type;
-        }
-#else /* ! COAP_Q_BLOCK_SUPPORT */
         /* Need to make sure that this is the correct requested type */
         pdu->type = type;
-#endif /* ! COAP_Q_BLOCK_SUPPORT */
 
         coap_update_option(pdu, COAP_OPTION_OBSERVE,
                            coap_encode_var_safe(buf, sizeof(buf),
@@ -2080,13 +2070,19 @@ track_fetch_observe(coap_pdu_t *pdu, coap_lg_crcv_t *lg_crcv,
                                            coap_opt_length(opt));
     if (observe_action == COAP_OBSERVE_ESTABLISH) {
       /* Save the token in lg_crcv */
-      tmp = coap_realloc_type(COAP_STRING, lg_crcv->obs_token,
-                              (block_num + 1) * sizeof(lg_crcv->obs_token[0]));
-      if (tmp == NULL)
-        return NULL;
-      lg_crcv->obs_token = tmp;
-      if (block_num + 1 == lg_crcv->obs_token_cnt)
-        coap_delete_bin_const(lg_crcv->obs_token[block_num]);
+      if (lg_crcv->obs_token_cnt <= block_num) {
+        size_t i;
+
+        tmp = coap_realloc_type(COAP_STRING, lg_crcv->obs_token,
+                                (block_num + 1) * sizeof(lg_crcv->obs_token[0]));
+        if (tmp == NULL)
+          return NULL;
+        lg_crcv->obs_token = tmp;
+        for (i = lg_crcv->obs_token_cnt; i < block_num + 1; i++) {
+          lg_crcv->obs_token[i] = NULL;
+        }
+      }
+      coap_delete_bin_const(lg_crcv->obs_token[block_num]);
 
       lg_crcv->obs_token_cnt = block_num + 1;
       lg_crcv->obs_token[block_num] = coap_new_bin_const(token->s,
@@ -2096,9 +2092,7 @@ track_fetch_observe(coap_pdu_t *pdu, coap_lg_crcv_t *lg_crcv,
     } else if (observe_action == COAP_OBSERVE_CANCEL) {
       /* Use the token in lg_crcv */
       if (block_num < lg_crcv->obs_token_cnt) {
-        if (lg_crcv->obs_token[block_num]) {
-          return lg_crcv->obs_token[block_num];
-        }
+        return lg_crcv->obs_token[block_num];
       }
     }
   }
@@ -3457,6 +3451,36 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
         return 1;
       }
+    } else if (COAP_RESPONSE_CLASS(rcvd->code) == 2) {
+      /*
+       * Not a block response asking for the next block.
+       * Could be an Observe response overlapping with block FETCH doing
+       * Observe cancellation.
+       */
+      coap_opt_iterator_t opt_iter;
+      coap_opt_t *obs_opt;
+      int observe_action = -1;
+
+      if (p->pdu.code != COAP_REQUEST_CODE_FETCH) {
+        goto lg_xmit_finished;
+      }
+      obs_opt = coap_check_option(&p->pdu,
+                                  COAP_OPTION_OBSERVE,
+                                  &opt_iter);
+      if (obs_opt) {
+        observe_action = coap_decode_var_bytes(coap_opt_value(obs_opt),
+                                               coap_opt_length(obs_opt));
+      }
+      if (observe_action != COAP_OBSERVE_CANCEL) {
+        goto lg_xmit_finished;
+      }
+      obs_opt = coap_check_option(rcvd,
+                                  COAP_OPTION_OBSERVE,
+                                  &opt_iter);
+      if (obs_opt) {
+        return 0;
+      }
+      goto lg_xmit_finished;
     } else if (rcvd->code == COAP_RESPONSE_CODE(401)) {
       if (check_freshness(session, rcvd, sent, p, NULL))
         return 1;
