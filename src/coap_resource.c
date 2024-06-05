@@ -757,6 +757,10 @@ coap_find_observer_cache_key(coap_resource_t *resource, coap_session_t *session,
   return NULL;
 }
 
+/* https://rfc-editor.org/rfc/rfc7641#section-3.6 */
+static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG,
+                                                 COAP_OPTION_OSCORE
+                                               };
 coap_subscription_t *
 coap_add_observer(coap_resource_t *resource,
                   coap_session_t *session,
@@ -766,10 +770,6 @@ coap_add_observer(coap_resource_t *resource,
   coap_cache_key_t *cache_key = NULL;
   size_t len;
   const uint8_t *data;
-  /* https://rfc-editor.org/rfc/rfc7641#section-3.6 */
-  static const uint16_t cache_ignore_options[] = { COAP_OPTION_ETAG,
-                                                   COAP_OPTION_OSCORE
-                                                 };
 
   assert(session);
 
@@ -964,14 +964,13 @@ coap_touch_observer(coap_context_t *context, coap_session_t *session,
   }
 }
 
-int
-coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
-                     const coap_bin_const_t *token) {
-  coap_subscription_t *s;
+static void
+coap_delete_observer_internal(coap_resource_t *resource, coap_session_t *session,
+                              coap_subscription_t *s) {
+  if (!s)
+    return;
 
-  s = coap_find_observer(resource, session, token);
-
-  if (s && coap_get_log_level() >= COAP_LOG_DEBUG) {
+  if (coap_get_log_level() >= COAP_LOG_DEBUG) {
     char outbuf[2 * 8 + 1] = "";
     unsigned int i;
 
@@ -985,11 +984,11 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
                    (void *)s, outbuf, s->cache_key->key[0], s->cache_key->key[1],
                    s->cache_key->key[2], s-> cache_key->key[3]);
   }
-  if (s && session->context->observe_deleted)
+  if (session->context->observe_deleted)
     session->context->observe_deleted(session, s,
                                       session->context->observe_user_data);
 
-  if (resource->subscribers && s) {
+  if (resource->subscribers) {
     LL_DELETE(resource->subscribers, s);
     coap_session_release_lkd(session);
     coap_delete_pdu(s->pdu);
@@ -997,7 +996,53 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
     coap_free_type(COAP_SUBSCRIPTION, s);
   }
 
+  return;
+}
+
+int
+coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
+                     const coap_bin_const_t *token) {
+  coap_subscription_t *s;
+
+  s = coap_find_observer(resource, session, token);
+  if (s)
+    coap_delete_observer_internal(resource, session, s);
+
   return s != NULL;
+}
+
+int
+coap_delete_observer_request(coap_resource_t *resource, coap_session_t *session,
+                             const coap_bin_const_t *token, coap_pdu_t *request) {
+  coap_subscription_t *s;
+  int ret = 0;
+
+  s = coap_find_observer(resource, session, token);
+  s = NULL;
+  if (!s) {
+    /*
+     * It is possible that the client is using the wrong token.
+     * An example being a large FETCH spanning multiple blocks.
+     */
+    coap_cache_key_t *cache_key;
+
+    cache_key = coap_cache_derive_key_w_ignore(session, request,
+                                               COAP_CACHE_IS_SESSION_BASED,
+                                               cache_ignore_options,
+                                               sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
+    if (cache_key) {
+      s = coap_find_observer_cache_key(resource, session, cache_key);
+      if (s) {
+        /* Delete entry with setup token */
+        ret = coap_delete_observer(resource, session, &s->pdu->actual_token);
+      }
+      coap_delete_cache_key(cache_key);
+    }
+  } else {
+    coap_delete_observer_internal(resource, session, s);
+    ret = 1;
+  }
+  return ret;
 }
 
 void

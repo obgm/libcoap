@@ -105,7 +105,8 @@ coap_subscription_t *coap_add_observer(coap_resource_t *resource,
  * @param resource The observed resource.
  * @param session  The observer's session
  * @param token    The token that identifies this subscription or @c NULL for
- *                 any token.
+ *                 the first subscription.
+ *
  * @return         A valid subscription if exists or @c NULL otherwise.
  */
 coap_subscription_t *coap_find_observer(coap_resource_t *resource,
@@ -125,19 +126,39 @@ void coap_touch_observer(coap_context_t *context,
                          const coap_bin_const_t *token);
 
 /**
- * Removes any subscription for @p observer from @p resource and releases the
+ * Removes any subscription for @p session observer from @p resource and releases the
  * allocated storage. The result is @c 1 if an observation relationship with @p
- * observer and @p token existed, @c 0 otherwise.
+ * session observer and @p token existed, @c 0 otherwise.
  *
  * @param resource The observed resource.
  * @param session  The observer's session.
  * @param token    The token that identifies this subscription or @c NULL for
- *                 any token.
+ *                 the first subscription.
+ *
  * @return         @c 1 if the observer has been deleted, @c 0 otherwise.
  */
 int coap_delete_observer(coap_resource_t *resource,
                          coap_session_t *session,
                          const coap_bin_const_t *token);
+
+/**
+ * Removes any subscription for @p session observer from @p resource and releases the
+ * allocated storage. The result is @c 1 if an observation relationship with @p
+ * session observer and @p token existed, or cache-key derived from @p request matches,
+ * @c 0 otherwise.
+ *
+ * @param resource The observed resource.
+ * @param session  The observer's session.
+ * @param token    The token that identifies this subscription or @c NULL for
+ *                 the first subscription.
+ * @param request  The requesting PDU.
+ *
+ * @return         @c 1 if the observer has been deleted, @c 0 otherwise.
+ */
+int coap_delete_observer_request(coap_resource_t *resource,
+                                 coap_session_t *session,
+                                 const coap_bin_const_t *token,
+                                 coap_pdu_t *request);
 
 /**
  * Removes any subscription for @p session and releases the allocated storage.

@@ -1502,25 +1502,6 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
                          buf);
     }
   }
-  if (pdu->type == COAP_MESSAGE_NON && pdu->code == COAP_REQUEST_CODE_FETCH &&
-      coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter) &&
-      coap_check_option(pdu, COAP_OPTION_Q_BLOCK1, &opt_iter)) {
-    /* Issue with Fetch + Observe + Q-Block1 + NON if there are
-     * retransmits as potential for Token confusion */
-    pdu->type = COAP_MESSAGE_CON;
-    /* Need to update associated lg_xmit */
-    coap_lg_xmit_t *lg_xmit;
-
-    LL_FOREACH(session->lg_xmit, lg_xmit) {
-      if (lg_xmit->pdu.code == COAP_REQUEST_CODE_FETCH &&
-          lg_xmit->b.b1.app_token &&
-          coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
-        /* Update as this is a Request */
-        lg_xmit->pdu.type = COAP_MESSAGE_CON;
-        break;
-      }
-    }
-  }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
   /*
@@ -3390,7 +3371,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
                                  buf);
       }
     } else if (observe_action == COAP_OBSERVE_CANCEL) {
-      coap_delete_observer(resource, session, &pdu->actual_token);
+      coap_delete_observer_request(resource, session, &pdu->actual_token, pdu);
     } else {
       coap_log_info("observe: unexpected action %d\n", observe_action);
     }
