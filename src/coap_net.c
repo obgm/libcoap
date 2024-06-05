@@ -200,7 +200,7 @@ coap_insert_node(coap_queue_t **queue, coap_queue_t *node) {
   return 1;
 }
 
-int
+COAP_API int
 coap_delete_node(coap_queue_t *node) {
   int ret;
 #if COAP_THREAD_SAFE
@@ -4257,7 +4257,7 @@ coap_event_name(coap_event_t event) {
 }
 #endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
 
-int
+COAP_API int
 coap_handle_event(coap_context_t *context, coap_event_t event,
                   coap_session_t *session) {
   int ret;
@@ -4754,7 +4754,7 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops) {
 #endif /* COAP_CLIENT_SUPPORT */
 
 #else /* defined WITH_CONTIKI || defined WITH_LWIP */
-int
+COAP_API int
 coap_join_mcast_group_intf(coap_context_t *ctx COAP_UNUSED,
                            const char *group_name COAP_UNUSED,
                            const char *ifname COAP_UNUSED) {

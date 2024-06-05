@@ -54,11 +54,11 @@ int coap_oscore_is_supported(void);
  * @return A new CoAP session or NULL if failed. Call coap_session_release()
  *         to free.
  */
-coap_session_t *coap_new_client_session_oscore(coap_context_t *ctx,
-                                               const coap_address_t *local_if,
-                                               const coap_address_t *server,
-                                               coap_proto_t proto,
-                                               coap_oscore_conf_t *oscore_conf);
+COAP_API coap_session_t *coap_new_client_session_oscore(coap_context_t *ctx,
+                                                        const coap_address_t *local_if,
+                                                        const coap_address_t *server,
+                                                        coap_proto_t proto,
+                                                        coap_oscore_conf_t *oscore_conf);
 
 /**
  * Creates a new client session to the designated server with PSK credentials

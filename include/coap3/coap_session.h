@@ -253,12 +253,11 @@ COAP_API size_t coap_session_max_pdu_size(const coap_session_t *session);
  *
  * @return A new CoAP session or NULL if failed. Call coap_session_release to free.
  */
-COAP_API coap_session_t *coap_new_client_session(
-    coap_context_t *ctx,
-    const coap_address_t *local_if,
-    const coap_address_t *server,
-    coap_proto_t proto
-);
+COAP_API coap_session_t *coap_new_client_session(coap_context_t *ctx,
+                                                 const coap_address_t *local_if,
+                                                 const coap_address_t *server,
+                                                 coap_proto_t proto
+                                                );
 
 /**
  * Creates a new client session to the designated server with PSK credentials
@@ -303,12 +302,12 @@ COAP_API coap_session_t *coap_new_client_session_psk(coap_context_t *ctx,
  * @return A new CoAP session or NULL if failed. Call coap_session_release()
  *         to free.
  */
-coap_session_t *coap_new_client_session_psk2(coap_context_t *ctx,
-                                             const coap_address_t *local_if,
-                                             const coap_address_t *server,
-                                             coap_proto_t proto,
-                                             coap_dtls_cpsk_t *setup_data
-                                            );
+COAP_API coap_session_t *coap_new_client_session_psk2(coap_context_t *ctx,
+                                                      const coap_address_t *local_if,
+                                                      const coap_address_t *server,
+                                                      coap_proto_t proto,
+                                                      coap_dtls_cpsk_t *setup_data
+                                                     );
 
 /**
  * Get the server session's current Identity Hint (PSK).
