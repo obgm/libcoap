@@ -303,6 +303,7 @@ setup_client_session(const char *server_ud) {
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <stdio.h>
 #include <netinet/in.h>
 
 static int
@@ -329,8 +330,11 @@ verify_cn_callback(const char *cn,
   return 1;
 }
 
+static char client_sni[256];
+
 static coap_session_t *
-setup_client_session_pki(struct in_addr ip_address,
+setup_client_session_pki(const char *host,
+                         struct in_addr ip_address,
                          const char *public_cert_file,
                          const char *private_key_file,
                          const char *ca_file) {
@@ -355,6 +359,8 @@ setup_client_session_pki(struct in_addr ip_address,
 
   memset(&dtls_pki, 0, sizeof(dtls_pki));
 
+  snprintf(client_sni, sizeof(client_sni), "%s", host);
+
   /* See coap_encryption(3) */
   dtls_pki.version                 = COAP_DTLS_PKI_SETUP_VERSION;
   dtls_pki.verify_peer_cert        = 1;
@@ -374,7 +380,7 @@ setup_client_session_pki(struct in_addr ip_address,
   dtls_pki.validate_sni_call_back  = NULL;
   dtls_pki.sni_call_back_arg       = NULL;
   dtls_pki.additional_tls_setup_call_back = NULL;
-  dtls_pki.client_sni              = NULL;
+  dtls_pki.client_sni              = client_sni;
   dtls_pki.pki_key.key_type        = COAP_PKI_KEY_PEM;
   dtls_pki.pki_key.key.pem.ca_file = ca_file;
   dtls_pki.pki_key.key.pem.public_cert = public_cert_file;
@@ -421,7 +427,7 @@ static coap_dtls_cpsk_t dtls_psk;
 static char client_sni[256];
 
 static coap_session_t *
-setup_client_session_psk(const char *uri,
+setup_client_session_psk(const char *host,
                          struct in_addr ip_address,
                          const uint8_t *identity,
                          unsigned int identity_len,
@@ -450,10 +456,7 @@ setup_client_session_psk(const char *uri,
   dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
   dtls_psk.validate_ih_call_back = verify_ih_callback;
   dtls_psk.ih_call_back_arg = &dtls_psk.psk_info;
-  if (uri)
-    memcpy(client_sni, uri, min(strlen(uri), sizeof(client_sni)-1));
-  else
-    memcpy(client_sni, "localhost", 9);
+  snprintf(client_sni, sizeof(client_sni), "%s", host);
   dtls_psk.client_sni = client_sni;
   dtls_psk.psk_info.identity.s = identity;
   dtls_psk.psk_info.identity.length = identity_len;

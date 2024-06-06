@@ -939,13 +939,7 @@ get_ongoing_proxy_session(coap_session_t *session,
   case COAP_URI_SCHEME_COAPS:
   case COAP_URI_SCHEME_COAPS_TCP:
   case COAP_URI_SCHEME_COAPS_WS:
-    memset(client_sni, 0, sizeof(client_sni));
-    if ((server.length == 3 && memcmp(server.s, "::1", 3) != 0) ||
-        (server.length == 9 && memcmp(server.s, "127.0.0.1", 9) != 0))
-      memcpy(client_sni, server.s, min(server.length, sizeof(client_sni)-1));
-    else
-      memcpy(client_sni, "localhost", 9);
-
+    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)server.length, (int)server.length, server.s);
     if (!key_defined) {
       /* Use our defined PKI certs (or NULL)  */
       coap_dtls_pki_t *dtls_pki = setup_pki(context, COAP_DTLS_ROLE_CLIENT,

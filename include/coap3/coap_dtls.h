@@ -406,7 +406,8 @@ struct coap_dtls_pki_t {
 
   char *client_sni;    /**<  If not NULL, SNI to use in client TLS setup.
                              Owned by the client app and must remain valid
-                             during the call to coap_new_client_session_pki() */
+                             during the call to coap_new_client_session_pki().
+                             Note: Ignored if literal IPv4 or IPv6 address. */
 
   coap_dtls_key_t pki_key;  /**< PKI key definition */
 };
@@ -469,10 +470,11 @@ typedef struct coap_dtls_cpsk_t {
   void *ih_call_back_arg;  /**< Passed in to the Identity Hint callback
                                 function */
 
-  char *client_sni;    /**< If not NULL, SNI to use in client TLS setup.
-                            Owned by the client app and must remain valid
-                            during the call to coap_new_client_session_psk2()
-                            Note: Not supported by TinyDTLS. */
+  char *client_sni; /**< If not NULL, SNI to use in client TLS setup.
+                         Owned by the client app and must remain valid
+                         during the call to coap_new_client_session_psk2().
+                         Note: Ignored if literal IPv4 or IPv6 address.
+                         Note: Not supported by TinyDTLS. */
 
   coap_dtls_cpsk_info_t psk_info;  /**< Client PSK definition */
 } coap_dtls_cpsk_t;
