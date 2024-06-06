@@ -16,7 +16,7 @@
         * Support for defining binary PSK for coap-client and coap-server.
         * Added new define types for defining PKI parameters.
         * Support for user definable ENGINE for OpenSSL.
-        * Support for using noTLS and TindyDTLS with WebSockets.
+        * Support for using noTLS and TinyDTLS with WebSockets.
         * Additional scan-build and pre-commit checks in build tests.
         * Updated CI build tests to use latest action versions.
         * Fixes CVE-2023-35862.
