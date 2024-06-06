@@ -86,7 +86,7 @@
 
 #ifndef PACKAGE_STRING
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libcoap 4.3.5rc1"
+#define PACKAGE_STRING "libcoap 4.3.5rc2"
 #endif /* PACKAGE_STRING */
 
 #ifndef PACKAGE_TARNAME
@@ -101,7 +101,7 @@
 
 #ifndef PACKAGE_VERSION
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "4.3.5rc1"
+#define PACKAGE_VERSION "4.3.5rc2"
 #endif /* PACKAGE_VERSION */
 
 #ifndef assert
