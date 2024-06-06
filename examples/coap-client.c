@@ -512,7 +512,6 @@ usage(const char *program, const char *version) {
           "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
           "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]\n"
-          "\t\t[-S match_pki_sni_file]] URI\n"
           "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
           "General Options\n"
           "\t-a addr\t\tThe local interface address to use\n"
