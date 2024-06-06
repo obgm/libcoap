@@ -1381,7 +1381,6 @@ setup_pki(coap_context_t *ctx) {
     }
   }
 
-  memset(client_sni, 0, sizeof(client_sni));
   memset(&dtls_pki, 0, sizeof(dtls_pki));
   dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
   if (ca_file || root_ca_file) {
@@ -1408,12 +1407,13 @@ setup_pki(coap_context_t *ctx) {
   }
   dtls_pki.is_rpk_not_cert = is_rpk_not_cert;
   dtls_pki.validate_cn_call_back = verify_cn_callback;
-  if ((uri.host.length == 3 && memcmp(uri.host.s, "::1", 3) != 0) ||
-      (uri.host.length == 9 && memcmp(uri.host.s, "127.0.0.1", 9) != 0))
-    memcpy(client_sni, uri.host.s, min(uri.host.length, sizeof(client_sni)-1));
-  else
-    memcpy(client_sni, "localhost", 9);
-
+  if (proxy.host.length) {
+    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)proxy.host.length, (int)proxy.host.length,
+             proxy.host.s);
+  } else {
+    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)uri.host.length, (int)uri.host.length,
+             uri.host.s);
+  }
   dtls_pki.client_sni = client_sni;
   if (doing_tls_engine) {
     dtls_pki.pki_key.key_type = COAP_PKI_KEY_DEFINE;
@@ -1465,18 +1465,19 @@ setup_psk(const uint8_t *identity,
   static coap_dtls_cpsk_t dtls_psk;
   static char client_sni[256];
 
-  memset(client_sni, 0, sizeof(client_sni));
   memset(&dtls_psk, 0, sizeof(dtls_psk));
   dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
   if (valid_ihs.count) {
     dtls_psk.validate_ih_call_back = verify_ih_callback;
   }
   dtls_psk.ih_call_back_arg = &dtls_psk.psk_info;
-  if ((uri.host.length == 3 && memcmp(uri.host.s, "::1", 3) != 0) ||
-      (uri.host.length == 9 && memcmp(uri.host.s, "127.0.0.1", 9) != 0))
-    memcpy(client_sni, uri.host.s, min(uri.host.length, sizeof(client_sni)-1));
-  else
-    memcpy(client_sni, "localhost", 9);
+  if (proxy.host.length) {
+    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)proxy.host.length, (int)proxy.host.length,
+             proxy.host.s);
+  } else {
+    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)uri.host.length, (int)uri.host.length,
+             uri.host.s);
+  }
   dtls_psk.client_sni = client_sni;
   dtls_psk.psk_info.identity.s = identity;
   dtls_psk.psk_info.identity.length = identity_len;

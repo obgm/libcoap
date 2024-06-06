@@ -183,16 +183,9 @@ client_coap_init(int argc, char **argv)
         static coap_dtls_cpsk_t dtls_psk;
         static char client_sni[256];
 
-        memset(client_sni, 0, sizeof(client_sni));
         memset(&dtls_psk, 0, sizeof(dtls_psk));
         dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
-        if (uri.host.length) {
-            memcpy(client_sni, uri.host.s,
-                   MIN(uri.host.length, sizeof(client_sni) - 1));
-        }
-        else {
-            memcpy(client_sni, "localhost", 9);
-        }
+        snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)uri.host.length, (int)uri.host.length, uri.host.s);
         dtls_psk.client_sni = client_sni;
         dtls_psk.psk_info.identity.s = (const uint8_t *)COAP_USE_PSK_ID;
         dtls_psk.psk_info.identity.length = strlen(COAP_USE_PSK_ID);

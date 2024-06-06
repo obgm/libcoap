@@ -1426,6 +1426,121 @@ coap_new_client_session_psk_lkd(coap_context_t *ctx,
                                           proto, &setup_data);
 }
 
+/*
+ * Check the validity of the SNI to send to the server.
+ *
+ * https://datatracker.ietf.org/doc/html/rfc6066#section-3
+ *  Literal IPv4 and IPv6 addresses are not permitted in "HostName".
+ */
+static void
+coap_sanitize_client_sni(char **client_sni) {
+  char *cp;
+
+  if (*client_sni == NULL)
+    return;
+
+  cp = *client_sni;
+  switch (*cp) {
+  case '0':
+  case '1':
+  case '2':
+  case '3':
+  case '4':
+  case '5':
+  case '6':
+  case '7':
+  case '8':
+  case '9':
+  case 'a':
+  case 'b':
+  case 'c':
+  case 'd':
+  case 'e':
+  case 'f':
+  case 'A':
+  case 'B':
+  case 'C':
+  case 'D':
+  case 'E':
+  case 'F':
+  case ':':
+    break;
+  case '\000':
+    /* Empty entry invalid */
+    *client_sni = NULL;
+    return;
+  default:
+    /* Does not start with a hex digit or : - not literal IP. */
+    return;
+  }
+  /* Check for IPv4 */
+  while (*cp) {
+    switch (*cp) {
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    case '.':
+      break;
+    default:
+      /* Not of format nnn.nnn.nnn.nnn. Could be IPv6 */
+      goto check_ipv6;
+    }
+    cp++;
+  }
+  /* IPv4 address - not allowed. */
+  *client_sni = NULL;
+  return;
+
+check_ipv6:
+  /* Check for IPv6 */
+  cp = *client_sni;
+  while (*cp) {
+    switch (*cp) {
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    case 'a':
+    case 'b':
+    case 'c':
+    case 'd':
+    case 'e':
+    case 'f':
+    case 'A':
+    case 'B':
+    case 'C':
+    case 'D':
+    case 'E':
+    case 'F':
+    case ':':
+      break;
+    case '%':
+      /* Start of i/f specification,  Previous is IPv6 */
+      *client_sni = NULL;
+      return;
+    default:
+      /* Not of format xx:xx::xx. */
+      return;
+    }
+    cp++;
+  }
+  *client_sni = NULL;
+  return;
+}
+
 COAP_API coap_session_t *
 coap_new_client_session_psk2(coap_context_t *ctx,
                              const coap_address_t *local_if,
@@ -1451,7 +1566,7 @@ coap_new_client_session_psk2_lkd(coap_context_t *ctx,
   coap_lock_check_locked(ctx);
   session = coap_session_create_client(ctx, local_if, server, proto);
 
-  if (!session)
+  if (!session || !setup_data)
     return NULL;
 
   session->cpsk_setup_data = *setup_data;
@@ -1484,8 +1599,10 @@ coap_new_client_session_psk2_lkd(coap_context_t *ctx,
     return NULL;
   }
 
+  coap_sanitize_client_sni(&session->cpsk_setup_data.client_sni);
+
   if (coap_dtls_is_supported() || coap_tls_is_supported()) {
-    if (!coap_dtls_context_set_cpsk(ctx, setup_data)) {
+    if (!coap_dtls_context_set_cpsk(ctx, &session->cpsk_setup_data)) {
       coap_session_release_lkd(session);
       return NULL;
     }
@@ -1633,19 +1750,19 @@ coap_new_client_session_pki_lkd(coap_context_t *ctx,
                                 coap_proto_t proto,
                                 coap_dtls_pki_t *setup_data) {
   coap_session_t *session;
+  coap_dtls_pki_t l_setup_data;
+
+  if (!setup_data)
+    return NULL;
+  if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION) {
+    coap_log_err("coap_new_client_session_pki: Wrong version of setup_data\n");
+    return NULL;
+  }
 
   coap_lock_check_locked(ctx);
-  if (coap_dtls_is_supported() || coap_tls_is_supported()) {
-    if (!setup_data) {
-      return NULL;
-    } else {
-      if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION) {
-        coap_log_err("coap_new_client_session_pki: Wrong version of setup_data\n");
-        return NULL;
-      }
-    }
+  l_setup_data = *setup_data;
+  coap_sanitize_client_sni(&l_setup_data.client_sni);
 
-  }
   session = coap_session_create_client(ctx, local_if, server, proto);
 
   if (!session) {
@@ -1654,7 +1771,7 @@ coap_new_client_session_pki_lkd(coap_context_t *ctx,
 
   if (coap_dtls_is_supported() || coap_tls_is_supported()) {
     /* we know that setup_data is not NULL */
-    if (!coap_dtls_context_set_pki(ctx, setup_data, COAP_DTLS_ROLE_CLIENT)) {
+    if (!coap_dtls_context_set_pki(ctx, &l_setup_data, COAP_DTLS_ROLE_CLIENT)) {
       coap_session_release_lkd(session);
       return NULL;
     }
