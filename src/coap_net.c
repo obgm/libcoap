@@ -1241,6 +1241,34 @@ coap_check_code_class(coap_session_t *session, coap_pdu_t *pdu) {
   return 1;
 }
 
+#if COAP_CLIENT_SUPPORT
+/*
+ * If type is CON and protocol is not reliable, there is no need to set up
+ * lg_crcv if it can be built up based on sent PDU if there is a
+ * (Q-)Block2 in the response.  However, still need it for Observe, Oscore and
+ * (Q-)Block1.
+ */
+static int
+coap_check_send_need_lg_crcv(coap_session_t *session, coap_pdu_t *pdu) {
+  coap_opt_iterator_t opt_iter;
+
+  if (
+#if COAP_OSCORE_SUPPORT
+      session->oscore_encryption ||
+#endif /* COAP_OSCORE_SUPPORT */
+      ((pdu->type == COAP_MESSAGE_NON || COAP_PROTO_RELIABLE(session->proto)) &&
+       COAP_PDU_IS_REQUEST(pdu) && pdu->code != COAP_REQUEST_CODE_DELETE) ||
+      coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter) ||
+#if COAP_Q_BLOCK_SUPPORT
+      coap_check_option(pdu, COAP_OPTION_Q_BLOCK1, &opt_iter) ||
+#endif /* COAP_Q_BLOCK_SUPPORT */
+      coap_check_option(pdu, COAP_OPTION_BLOCK1, &opt_iter)) {
+    return 1;
+  }
+  return 0;
+}
+#endif /* COAP_CLIENT_SUPPORT */
+
 COAP_API coap_mid_t
 coap_send(coap_session_t *session, coap_pdu_t *pdu) {
   coap_mid_t mid;
@@ -1510,12 +1538,7 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
    * (Q-)Block2 in the response.  However, still need it for Observe, Oscore and
    * (Q-)Block1.
    */
-  if (observe_action != -1 || have_block1 ||
-#if COAP_OSCORE_SUPPORT
-      session->oscore_encryption ||
-#endif /* COAP_OSCORE_SUPPORT */
-      ((pdu->type == COAP_MESSAGE_NON || COAP_PROTO_RELIABLE(session->proto)) &&
-       COAP_PDU_IS_REQUEST(pdu) && pdu->code != COAP_REQUEST_CODE_DELETE)) {
+  if (coap_check_send_need_lg_crcv(session, pdu)) {
     coap_lg_xmit_t *lg_xmit = NULL;
 
     if (!session->lg_xmit && have_block1) {
@@ -3968,6 +3991,49 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         }
       }
 #endif /* COAP_Q_BLOCK_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+      /*
+       * In coap_send(), lg_crcv was not set up if type is CON and protocol is not
+       * reliable to save overhead as this can be set up on detection of a (Q)-Block2
+       * response if the response was piggy-backed. Here, a separate response
+       * detected and so the lg_crcv needs to be set up before the sent PDU
+       * information is lost.
+       *
+       * lg_crcv was not set up if not a CoAP request or if DELETE.
+       *
+       * lg_crcv was always set up in coap_send() if Observe, Oscore and (Q)-Block1
+       * options.
+       */
+      if (sent &&
+          !coap_check_send_need_lg_crcv(session, pdu)) {
+        /*
+         * lg_crcv was not set up in coap_send(). It coud have been set up
+         * the first separate response.
+         * See if there already is a lg_crcv set up.
+         */
+        coap_lg_crcv_t *lg_crcv;
+        uint64_t token_match =
+            STATE_TOKEN_BASE(coap_decode_var_bytes8(sent->pdu->actual_token.s,
+                                                    sent->pdu->actual_token.length));
+
+        LL_FOREACH(session->lg_crcv, lg_crcv) {
+          if (token_match == STATE_TOKEN_BASE(lg_crcv->state_token) ||
+              coap_binary_equal(&sent->pdu->actual_token, lg_crcv->app_token)) {
+            break;
+          }
+        }
+        if (!lg_crcv) {
+          /*
+           * Need to set up a lg_crcv as it was not set up in coap_send()
+           * to save time, but server has not sent back a piggy-back response.
+           */
+          lg_crcv = coap_block_new_lg_crcv(session, sent->pdu, NULL);
+          if (lg_crcv) {
+            LL_PREPEND(session->lg_crcv, lg_crcv);
+          }
+        }
+      }
+#endif /* COAP_CLIENT_SUPPORT */
       /* an empty ACK needs no further handling */
       goto cleanup;
     } else if (COAP_PDU_IS_REQUEST(pdu)) {

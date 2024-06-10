@@ -30,6 +30,10 @@
  * @{
  */
 
+#define STATE_TOKEN_BASE(t) ((t) & 0xffffffffffffULL)
+#define STATE_TOKEN_RETRY(t) ((uint64_t)(t) >> 48)
+#define STATE_TOKEN_FULL(t,r) (STATE_TOKEN_BASE(t) + ((uint64_t)(r) << 48))
+
 #if COAP_Q_BLOCK_SUPPORT
 #define COAP_BLOCK_SET_MASK (COAP_BLOCK_USE_LIBCOAP | \
                              COAP_BLOCK_SINGLE_BODY | \
