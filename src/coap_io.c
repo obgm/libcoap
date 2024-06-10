@@ -1377,6 +1377,12 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
 #endif /* COAP_SERVER_SUPPORT */
     }
   }
+#if COAP_PROXY_SUPPORT
+  if (coap_proxy_check_timeouts(ctx, now, &s_timeout)) {
+    if (timeout == 0 || s_timeout < timeout)
+      timeout = s_timeout;
+  }
+#endif /* COAP_PROXY_SUPPORT */
 #if COAP_SERVER_SUPPORT
   coap_endpoint_t *ep;
   coap_tick_t session_timeout;

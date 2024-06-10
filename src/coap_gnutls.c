@@ -2346,6 +2346,8 @@ coap_dtls_send(coap_session_t *c_session,
   assert(g_env != NULL);
 
   c_session->dtls_event = -1;
+  coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
+                 coap_session_str(c_session), (int)data_len);
   if (g_env->established) {
     ret = gnutls_record_send(g_env->g_session, data, data_len);
 
@@ -2390,14 +2392,6 @@ coap_dtls_send(coap_session_t *c_session,
     }
   }
 
-  if (ret > 0) {
-    if (ret == (ssize_t)data_len)
-      coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
-                     coap_session_str(c_session), ret);
-    else
-      coap_log_debug("*  %s: dtls:  sent %4d of %4zd bytes\n",
-                     coap_session_str(c_session), ret, data_len);
-  }
   return ret;
 }
 

@@ -292,7 +292,6 @@ coap_address_set_unix_domain(coap_address_t *addr,
 #endif /* ! COAP_AF_UNIX_SUPPORT */
 }
 
-#if !defined(WITH_CONTIKI)
 static void
 update_port(coap_address_t *addr, uint16_t port, uint16_t default_port,
             int update_port0) {
@@ -492,7 +491,7 @@ coap_resolve_address_info(const coap_str_const_t *address,
                           int ai_hints_flags,
                           int scheme_hint_bits,
                           coap_resolve_type_t type) {
-#if !defined(RIOT_VERSION)
+#if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
 
   struct addrinfo *res, *ainfo;
   struct addrinfo hints;
@@ -643,7 +642,9 @@ coap_resolve_address_info(const coap_str_const_t *address,
 
   freeaddrinfo(res);
   return info_list;
-#else /* RIOT_VERSION */
+
+#elif defined(RIOT_VERSION)
+
 #include "net/utils.h"
 #if COAP_IPV6_SUPPORT
   ipv6_addr_t addr_ipv6;
@@ -724,9 +725,72 @@ coap_resolve_address_info(const coap_str_const_t *address,
     }
   }
   return info_list;
-#endif /* RIOT_VERSION */
+
+#elif defined(WITH_CONTIKI)
+
+#include <os/net/ipv6/uiplib.h>
+  uip_ipaddr_t *addr_ip;
+  coap_addr_info_t *info = NULL;
+  coap_addr_info_t *info_prev = NULL;
+  coap_addr_info_t *info_list = NULL;
+  coap_uri_scheme_t scheme;
+  int parsed_ip = 0;
+  uip_ipaddr_t all_zeros = {
+    {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    }
+  };
+
+  (void)ai_hints_flags;
+
+  if (address == NULL || address->length == 0) {
+    addr_ip = &all_zeros;
+  } else {
+#if COAP_IPV6_SUPPORT
+    if (uiplib_ip6addrconv((const char *)address->s, (uip_ip6addr_t *)&addr_ip) > 0) {
+      parsed_ip = 1;
+    }
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_IPV4_SUPPORT
+    if (family == AF_UNSPEC &&
+        uiplib_ip4addrconv((const char *)address->s, (uip_ip4addr_t *)&addr_ip) > 0) {
+      parsed_ip = 1;
+    }
+#endif /* COAP_IPV4_SUPPORT */
+    if (!parsed_ip) {
+      coap_log_err("coap_resolve_address_info: Unable to parse '%s'\n", address->s);
+      return NULL;
+    }
+  }
+  for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
+    if (scheme_hint_bits & (1 << scheme)) {
+      info = get_coap_addr_info(scheme);
+      if (info == NULL) {
+        continue;
+      }
+
+      /* Need to return in same order as getaddrinfo() */
+      if (!info_prev) {
+        info_list = info;
+        info_prev = info;
+      } else {
+        info_prev->next = info;
+        info_prev = info;
+      }
+
+      memcpy(&info->addr.addr, &addr_ip, sizeof(info->addr.addr));
+
+      update_coap_addr_port(scheme, info, port, secure_port, ws_port,
+                            ws_secure_port, type);
+    }
+  }
+  return info_list;
+#else
+#bad OS type not supported
+  return NULL;
+#endif
 }
-#endif /* !WITH_CONTIKI */
 
 void
 coap_free_address_info(coap_addr_info_t *info) {

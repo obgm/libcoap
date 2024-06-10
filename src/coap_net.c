@@ -771,6 +771,9 @@ coap_free_context_lkd(coap_context_t *context) {
   coap_persist_cleanup(context);
 #endif /* COAP_WITH_OBSERVE_PERSIST */
 #endif /* COAP_SERVER_SUPPORT */
+#if COAP_PROXY_SUPPORT
+  coap_proxy_cleanup(context);
+#endif /* COAP_PROXY_SUPPORT */
 
   coap_free_type(COAP_CONTEXT, context);
   coap_dump_memory_type_counts(COAP_LOG_DEBUG);
@@ -4297,6 +4300,10 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
     int ret;
 
     coap_lock_callback_ret(ret, context, context->handle_event(session, event));
+#if COAP_PROXY_SUPPORT
+    if (event == COAP_EVENT_SERVER_SESSION_DEL)
+      coap_proxy_remove_association(session, 0);
+#endif /* COAP_PROXY_SUPPORT */
     return ret;
   }
   return 0;

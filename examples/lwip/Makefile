@@ -148,6 +148,7 @@ COAP_SRC = coap_address.c \
 	   coap_oscore.c \
 	   coap_pdu.c \
 	   coap_prng.c \
+	   coap_proxy.c \
 	   coap_resource.c \
 	   coap_session.c \
 	   coap_sha1.c \

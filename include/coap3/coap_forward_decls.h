@@ -89,6 +89,14 @@ typedef struct coap_oscore_conf_t coap_oscore_conf_t;
  */
 typedef struct coap_pdu_t coap_pdu_t;
 
+/* ************* coap_proxy_internal.h ***************** */
+
+/**
+ * Proxy information.
+ */
+typedef struct coap_proxy_list_t coap_proxy_list_t;
+
+
 /* ************* coap_resource_internal.h ***************** */
 
 /*

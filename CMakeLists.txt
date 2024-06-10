@@ -127,6 +127,10 @@ option(
   "compile with support for server mode code"
   ON)
 option(
+  ENABLE_PROXY_CODE
+  "compile with support for proxy code"
+  ON)
+option(
   ENABLE_OSCORE
   "compile with support for OSCORE"
   ON)
@@ -320,6 +324,13 @@ if(${ENABLE_SERVER_MODE})
   message(STATUS "compiling with server support")
 else()
   message(STATUS "compiling without server support")
+endif()
+
+if(${ENABLE_PROXY_CODE})
+  set(COAP_PROXY_SUPPORT "1")
+  message(STATUS "compiling with proxy support")
+else()
+  message(STATUS "compiling without proxy support")
 endif()
 
 if(${ENABLE_OSCORE})
@@ -741,6 +752,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_oscore.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_pdu.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_prng.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_proxy.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_resource.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_sha1.c
@@ -780,6 +792,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_option.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_pdu.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_prng.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_proxy.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_resource.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_session.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_str.h

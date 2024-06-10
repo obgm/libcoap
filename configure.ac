@@ -1181,6 +1181,22 @@ if test "x$enable_server_mode" != "xyes" -a "x$enable_client_mode" != "xyes" ; t
     AC_MSG_ERROR([==> One or both of '--enable-server-mode' and '--enable-client-mode' need to be set!])
 fi
 
+AC_ARG_ENABLE([proxy-code],
+        [AS_HELP_STRING([--enable-proxy-code],
+                        [Enable CoAP proxy supporting code [default=yes]])],
+        [enable_proxy_code="$enableval"],
+        [enable_proxy_code="yes"])
+
+if test "x$enable_proxy_code" = "xyes"; then
+    if test "x$enable_server_mode" != "xyes" -o "x$enable_client_mode" != "xyes" ; then
+        AC_MSG_WARN([==> Both of '--enable-server-mode' and '--enable-client-mode' need to be set for --enable-proxy-code!])
+        enable_proxy_code="no"
+    fi
+fi
+if test "x$enable_proxy_code" = "xyes"; then
+    AC_DEFINE(COAP_PROXY_SUPPORT, 1, [Define to 1 if libcoap supports proxy code.])
+fi
+
 AC_ARG_ENABLE([max-logging-level],
         [AS_HELP_STRING([--enable-max-logging-level],
                         [Only build logging code up to and including the specified logging level [default=8]])],
@@ -1337,6 +1353,7 @@ man/coap_oscore.txt
 man/coap_pdu_access.txt
 man/coap_pdu_setup.txt
 man/coap_persist.txt
+man/coap_proxy.txt
 man/coap_recovery.txt
 man/coap_resource.txt
 man/coap_session.txt
@@ -1382,6 +1399,11 @@ if test "x$enable_client_mode" = "xyes"; then
     AC_MSG_RESULT([      build with client support      : "yes"])
 else
     AC_MSG_RESULT([      build with client support      : "no"])
+fi
+if test "x$enable_client_mode" = "xyes"; then
+    AC_MSG_RESULT([      build with proxy support       : "yes"])
+else
+    AC_MSG_RESULT([      build with proxy support       : "no"])
 fi
 if test "x$build_ipv4" != "xno"; then
     AC_MSG_RESULT([      build with IPv4 support        : "yes"])

@@ -194,6 +194,10 @@ struct coap_context_t {
   uint8_t mcast_per_resource;      /**< Mcast controlled on a per resource
                                         basis */
 #endif /* COAP_SERVER_SUPPORT */
+#if COAP_PROXY_SUPPORT
+  coap_proxy_list_t *proxy_list;   /**< Set of active proxy sessions */
+  size_t proxy_list_count;         /**< Number of active proxy sessions */
+#endif /* COAP_PROXY_SUPPORT */
 #if COAP_CLIENT_SUPPORT
   uint8_t testing_cids;            /**< Change client's source port every testing_cids */
 #endif /* COAP_CLIENT_SUPPORT */

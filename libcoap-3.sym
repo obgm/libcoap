@@ -194,6 +194,9 @@ coap_print_link
 coap_print_wellknown
 coap_prng
 coap_prng_init
+coap_proxy_forward_request
+coap_proxy_forward_response
+coap_proxy_is_supported
 coap_q_block_is_supported
 coap_query_into_optlist
 coap_realloc_type
@@ -299,6 +302,7 @@ coap_tls_engine_remove
 coap_tls_is_supported
 coap_uri_into_options
 coap_uri_into_optlist
+coap_verify_proxy_scheme_supported
 coap_write_block_b_opt
 coap_write_block_opt
 coap_ws_is_supported

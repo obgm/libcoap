@@ -631,139 +631,10 @@ hnd_put_example_data(coap_resource_t *resource,
 static unsigned char *user = NULL;
 static ssize_t user_length = -1;
 
-static coap_uri_t proxy = { {0, NULL}, 0, {0, NULL}, {0, NULL}, 0 };
 static size_t proxy_host_name_count = 0;
 static const char **proxy_host_name_list = NULL;
-
-typedef struct proxy_list_t {
-  coap_session_t *ongoing;  /* Ongoing session */
-  coap_session_t *incoming; /* Incoming session */
-  coap_binary_t *token;     /* Incoming token */
-  coap_string_t *query;     /* Incoming query */
-  coap_pdu_code_t req_code; /* Incoming request code */
-  coap_pdu_type_t req_type; /* Incoming request type */
-} proxy_list_t;
-
-static proxy_list_t *proxy_list = NULL;
-static size_t proxy_list_count = 0;
-static coap_resource_t *proxy_resource = NULL;
-
-static int
-get_uri_proxy_scheme_info(const coap_pdu_t *request,
-                          coap_opt_t *opt,
-                          coap_uri_t *uri,
-                          coap_string_t **uri_path,
-                          coap_string_t **uri_query) {
-
-  const char *opt_val = (const char *)coap_opt_value(opt);
-  int opt_len = coap_opt_length(opt);
-  coap_opt_iterator_t opt_iter;
-
-  if (opt_len == 9 &&
-      strncasecmp(opt_val, "coaps+tcp", 9) == 0) {
-    uri->scheme = COAP_URI_SCHEME_COAPS_TCP;
-    uri->port = COAPS_DEFAULT_PORT;
-  } else if (opt_len == 8 &&
-             strncasecmp(opt_val, "coap+tcp", 8) == 0) {
-    uri->scheme = COAP_URI_SCHEME_COAP_TCP;
-    uri->port = COAP_DEFAULT_PORT;
-  } else if (opt_len == 5 &&
-             strncasecmp(opt_val, "coaps", 5) == 0) {
-    uri->scheme = COAP_URI_SCHEME_COAPS;
-    uri->port = COAPS_DEFAULT_PORT;
-  } else if (opt_len == 4 &&
-             strncasecmp(opt_val, "coap", 4) == 0) {
-    uri->scheme = COAP_URI_SCHEME_COAP;
-    uri->port = COAP_DEFAULT_PORT;
-  } else if (opt_len == 7 &&
-             strncasecmp(opt_val, "coap+ws", 7) == 0) {
-    uri->scheme = COAP_URI_SCHEME_COAP_WS;
-    uri->port = 80;
-  } else if (opt_len == 8 &&
-             strncasecmp(opt_val, "coaps+ws", 8) == 0) {
-    uri->scheme = COAP_URI_SCHEME_COAPS_WS;
-    uri->port = 443;
-  } else {
-    coap_log_warn("Unsupported Proxy Scheme '%*.*s'\n",
-                  opt_len, opt_len, opt_val);
-    return 0;
-  }
-
-  opt = coap_check_option(request, COAP_OPTION_URI_HOST, &opt_iter);
-  if (opt) {
-    uri->host.length = coap_opt_length(opt);
-    uri->host.s = coap_opt_value(opt);
-  } else {
-    coap_log_warn("Proxy Scheme requires Uri-Host\n");
-    return 0;
-  }
-  opt = coap_check_option(request, COAP_OPTION_URI_PORT, &opt_iter);
-  if (opt) {
-    uri->port =
-        coap_decode_var_bytes(coap_opt_value(opt),
-                              coap_opt_length(opt));
-  }
-  *uri_path = coap_get_uri_path(request);
-  if (*uri_path) {
-    uri->path.s = (*uri_path)->s;
-    uri->path.length = (*uri_path)->length;
-  }
-  *uri_query = coap_get_query(request);
-  if (*uri_query) {
-    uri->query.s = (*uri_query)->s;
-    uri->query.length = (*uri_query)->length;
-  }
-  return 1;
-}
-
-static int
-verify_proxy_scheme_supported(coap_uri_scheme_t scheme) {
-
-  /* Sanity check that the connection can be forwarded on */
-  switch (scheme) {
-  case COAP_URI_SCHEME_HTTP:
-  case COAP_URI_SCHEME_HTTPS:
-    coap_log_warn("Proxy URI http or https not supported\n");
-    return 0;
-  case COAP_URI_SCHEME_COAP:
-    break;
-  case COAP_URI_SCHEME_COAPS:
-    if (!coap_dtls_is_supported()) {
-      coap_log_warn("coaps URI scheme not supported for proxy\n");
-      return 0;
-    }
-    break;
-  case COAP_URI_SCHEME_COAP_TCP:
-    if (!coap_tcp_is_supported()) {
-      coap_log_warn("coap+tcp URI scheme not supported for proxy\n");
-      return 0;
-    }
-    break;
-  case COAP_URI_SCHEME_COAPS_TCP:
-    if (!coap_tls_is_supported()) {
-      coap_log_warn("coaps+tcp URI scheme not supported for proxy\n");
-      return 0;
-    }
-    break;
-  case COAP_URI_SCHEME_COAP_WS:
-    if (!coap_ws_is_supported()) {
-      coap_log_warn("coap+ws URI scheme not supported for proxy\n");
-      return 0;
-    }
-    break;
-  case COAP_URI_SCHEME_COAPS_WS:
-    if (!coap_wss_is_supported()) {
-      coap_log_warn("coaps+ws URI scheme not supported for proxy\n");
-      return 0;
-    }
-    break;
-  case COAP_URI_SCHEME_LAST:
-  default:
-    coap_log_warn("%d URI scheme not supported\n", scheme);
-    break;
-  }
-  return 1;
-}
+static coap_proxy_server_list_t forward_proxy = { NULL, 0, 0, COAP_PROXY_FORWARD, 0, 300};
+static coap_proxy_server_list_t reverse_proxy = { NULL, 0, 0, COAP_PROXY_REVERSE_STRIP, 0, 10};
 
 static coap_dtls_cpsk_t *
 setup_cpsk(char *client_sni) {
@@ -779,404 +650,36 @@ setup_cpsk(char *client_sni) {
   return &dtls_cpsk;
 }
 
-static proxy_list_t *
-get_proxy_session(coap_session_t *session, coap_pdu_t *response,
-                  const coap_bin_const_t *token, const coap_string_t *query,
-                  coap_pdu_code_t req_code, coap_pdu_type_t req_type) {
+static void
+hnd_forward_proxy_uri(coap_resource_t *resource,
+                      coap_session_t *session,
+                      const coap_pdu_t *request,
+                      const coap_string_t *query COAP_UNUSED,
+                      coap_pdu_t *response) {
 
-  size_t i;
-  proxy_list_t *new_proxy_list;
-
-  /* Locate existing forwarding relationship */
-  for (i = 0; i < proxy_list_count; i++) {
-    if (proxy_list[i].incoming == session) {
-      return &proxy_list[i];
-    }
+  if (!coap_proxy_forward_request(session, request, response, resource,
+                                  NULL, &forward_proxy)) {
+    coap_log_debug("hnd_forward_proxy_uri: Failed to forward PDU\n");
+    /* Non ACK response code set on error detection */
   }
 
-  /* Need to create a new forwarding mapping */
-  new_proxy_list = realloc(proxy_list, (i+1)*sizeof(proxy_list[0]));
-
-  if (new_proxy_list == NULL) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
-    return NULL;
-  }
-  proxy_list = new_proxy_list;
-  proxy_list[i].incoming = session;
-  if (token) {
-    proxy_list[i].token = coap_new_binary(token->length);
-    if (!proxy_list[i].token) {
-      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
-      return NULL;
-    }
-    memcpy(proxy_list[i].token->s, token->s, token->length);
-  } else
-    proxy_list[i].token = NULL;
-
-  if (query) {
-    proxy_list[i].query = coap_new_string(query->length);
-    if (!proxy_list[i].query) {
-      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
-      return NULL;
-    }
-    memcpy(proxy_list[i].query->s, query->s, query->length);
-  } else
-    proxy_list[i].query = NULL;
-
-  proxy_list[i].ongoing = NULL;
-  proxy_list[i].req_code = req_code;
-  proxy_list[i].req_type = req_type;
-  proxy_list_count++;
-  return &proxy_list[i];
+  /* Leave response code as is */
 }
 
 static void
-remove_proxy_association(coap_session_t *session, int send_failure) {
+hnd_reverse_proxy_uri(coap_resource_t *resource,
+                      coap_session_t *session,
+                      const coap_pdu_t *request,
+                      const coap_string_t *query COAP_UNUSED,
+                      coap_pdu_t *response) {
 
-  size_t i;
-
-  for (i = 0; i < proxy_list_count; i++) {
-    if (proxy_list[i].incoming == session) {
-      coap_session_release(proxy_list[i].ongoing);
-      break;
-    }
-    if (proxy_list[i].ongoing == session && send_failure) {
-      coap_pdu_t *response;
-
-      coap_session_release(proxy_list[i].ongoing);
-
-      /* Need to send back a gateway failure */
-      response = coap_pdu_init(proxy_list[i].req_type,
-                               COAP_RESPONSE_CODE_BAD_GATEWAY,
-                               coap_new_message_id(proxy_list[i].incoming),
-                               coap_session_max_pdu_size(proxy_list[i].incoming));
-      if (!response) {
-        coap_log_info("PDU creation issue\n");
-        return;
-      }
-
-      if (proxy_list[i].token &&
-          !coap_add_token(response, proxy_list[i].token->length,
-                          proxy_list[i].token->s)) {
-        coap_log_debug("Cannot add token to incoming proxy response PDU\n");
-      }
-
-      if (coap_send(proxy_list[i].incoming, response) ==
-          COAP_INVALID_MID) {
-        coap_log_info("Failed to send PDU with 5.02 gateway issue\n");
-      }
-      break;
-    }
-  }
-  if (i != proxy_list_count) {
-    coap_delete_binary(proxy_list[i].token);
-    coap_delete_string(proxy_list[i].query);
-    if (proxy_list_count-i > 1) {
-      memmove(&proxy_list[i],
-              &proxy_list[i+1],
-              (proxy_list_count-i-1) * sizeof(proxy_list[0]));
-    }
-    proxy_list_count--;
-  }
-}
-
-
-static coap_session_t *
-get_ongoing_proxy_session(coap_session_t *session,
-                          coap_pdu_t *response, const coap_bin_const_t *token,
-                          const coap_string_t *query, coap_pdu_code_t req_code,
-                          coap_pdu_type_t req_type, const coap_uri_t *uri) {
-
-  coap_address_t dst;
-  coap_uri_scheme_t scheme;
-  coap_proto_t proto;
-  static char client_sni[256];
-  coap_str_const_t server;
-  uint16_t port;
-  coap_addr_info_t *info_list = NULL;
-  proxy_list_t *new_proxy_list;
-  coap_context_t *context = coap_session_get_context(session);
-
-  new_proxy_list = get_proxy_session(session, response, token, query, req_code,
-                                     req_type);
-  if (!new_proxy_list)
-    return NULL;
-
-  if (new_proxy_list->ongoing)
-    return new_proxy_list->ongoing;
-
-  if (proxy.host.length) {
-    server = proxy.host;
-    port = proxy.port;
-    scheme = proxy.scheme;
-  } else {
-    server = uri->host;
-    port = uri->port;
-    scheme = uri->scheme;
+  if (!coap_proxy_forward_request(session, request, response, resource,
+                                  NULL, &reverse_proxy)) {
+    coap_log_debug("hnd_reverse_proxy_uri: Failed to forward PDU\n");
+    /* Non ACK response code set on error detection */
   }
 
-  /* resolve destination address where data should be sent */
-  info_list = coap_resolve_address_info(&server, port, port, port, port,
-                                        0,
-                                        1 << scheme,
-                                        COAP_RESOLVE_TYPE_REMOTE);
-
-  if (info_list == NULL) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_GATEWAY);
-    remove_proxy_association(session, 0);
-    return NULL;
-  }
-  proto = info_list->proto;
-  memcpy(&dst, &info_list->addr, sizeof(dst));
-  coap_free_address_info(info_list);
-
-  switch (scheme) {
-  case COAP_URI_SCHEME_COAP:
-  case COAP_URI_SCHEME_COAP_TCP:
-  case COAP_URI_SCHEME_COAP_WS:
-    new_proxy_list->ongoing =
-        coap_new_client_session(context, NULL, &dst, proto);
-    break;
-  case COAP_URI_SCHEME_COAPS:
-  case COAP_URI_SCHEME_COAPS_TCP:
-  case COAP_URI_SCHEME_COAPS_WS:
-    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)server.length, (int)server.length, server.s);
-    if (!key_defined) {
-      /* Use our defined PKI certs (or NULL)  */
-      coap_dtls_pki_t *dtls_pki = setup_pki(context, COAP_DTLS_ROLE_CLIENT,
-                                            client_sni);
-      new_proxy_list->ongoing =
-          coap_new_client_session_pki(context, NULL, &dst, proto, dtls_pki);
-    } else {
-      /* Use our defined PSK */
-      coap_dtls_cpsk_t *dtls_cpsk = setup_cpsk(client_sni);
-
-      new_proxy_list->ongoing =
-          coap_new_client_session_psk2(context, NULL, &dst, proto, dtls_cpsk);
-    }
-    break;
-  case COAP_URI_SCHEME_HTTP:
-  case COAP_URI_SCHEME_HTTPS:
-  case COAP_URI_SCHEME_LAST:
-  default:
-    assert(0);
-    break;
-  }
-  if (new_proxy_list->ongoing == NULL) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
-    remove_proxy_association(session, 0);
-    return NULL;
-  }
-  return new_proxy_list->ongoing;
-}
-
-static void
-release_proxy_body_data(coap_session_t *session COAP_UNUSED,
-                        void *app_ptr) {
-  coap_delete_binary(app_ptr);
-}
-
-static void
-hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
-              coap_session_t *session,
-              const coap_pdu_t *request,
-              const coap_string_t *query,
-              coap_pdu_t *response) {
-  coap_opt_iterator_t opt_iter;
-  coap_opt_t *opt;
-  coap_opt_t *proxy_uri;
-  int proxy_scheme_option = 0;
-  coap_uri_t uri;
-  coap_string_t *uri_path = NULL;
-  coap_string_t *uri_query = NULL;
-  coap_session_t *ongoing = NULL;
-  size_t size;
-  size_t offset;
-  size_t total;
-  coap_binary_t *body_data = NULL;
-  const uint8_t *data;
-  coap_pdu_t *pdu = NULL;
-  coap_optlist_t *optlist = NULL;
-  coap_opt_t *option;
-  coap_bin_const_t token = coap_pdu_get_token(request);
-
-  memset(&uri, 0, sizeof(uri));
-  /*
-   * See if Proxy-Scheme
-   */
-  opt = coap_check_option(request, COAP_OPTION_PROXY_SCHEME, &opt_iter);
-  if (opt) {
-    if (!get_uri_proxy_scheme_info(request, opt, &uri, &uri_path,
-                                   &uri_query)) {
-      coap_pdu_set_code(response,
-                        COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
-      goto cleanup;
-    }
-    proxy_scheme_option = 1;
-  }
-  /*
-   * See if Proxy-Uri
-   */
-  proxy_uri = coap_check_option(request, COAP_OPTION_PROXY_URI, &opt_iter);
-  if (proxy_uri) {
-    coap_log_info("Proxy URI '%.*s'\n",
-                  coap_opt_length(proxy_uri),
-                  (const char *)coap_opt_value(proxy_uri));
-    if (coap_split_proxy_uri(coap_opt_value(proxy_uri),
-                             coap_opt_length(proxy_uri),
-                             &uri) < 0) {
-      /* Need to return a 5.05 RFC7252 Section 5.7.2 */
-      coap_log_warn("Proxy URI not decodable\n");
-      coap_pdu_set_code(response,
-                        COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
-      goto cleanup;
-    }
-  }
-
-  if (!(proxy_scheme_option || proxy_uri)) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
-    goto cleanup;
-  }
-
-  if (uri.host.length == 0) {
-    /* Ongoing connection not well formed */
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
-    goto cleanup;
-  }
-
-  if (!verify_proxy_scheme_supported(uri.scheme)) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_PROXYING_NOT_SUPPORTED);
-    goto cleanup;
-  }
-
-  /* Handle the CoAP forwarding mapping */
-  if (uri.scheme == COAP_URI_SCHEME_COAP ||
-      uri.scheme == COAP_URI_SCHEME_COAPS ||
-      uri.scheme == COAP_URI_SCHEME_COAP_TCP ||
-      uri.scheme == COAP_URI_SCHEME_COAPS_TCP ||
-      uri.scheme == COAP_URI_SCHEME_COAP_WS ||
-      uri.scheme == COAP_URI_SCHEME_COAPS_WS) {
-    coap_pdu_code_t req_code = coap_pdu_get_code(request);
-    coap_pdu_type_t req_type = coap_pdu_get_type(request);
-
-    if (!get_proxy_session(session, response, &token, query, req_code, req_type))
-      goto cleanup;
-
-    if (coap_get_data_large(request, &size, &data, &offset, &total)) {
-      /* COAP_BLOCK_SINGLE_BODY is set, so single body should be given */
-      assert(size == total);
-      body_data = coap_new_binary(total);
-      if (!body_data) {
-        coap_log_debug("body build memory error\n");
-        goto cleanup;
-      }
-      memcpy(body_data->s, data, size);
-      data = body_data->s;
-    }
-
-    /* Send data on (opening session if appropriate) */
-
-    ongoing = get_ongoing_proxy_session(session, response, &token,
-                                        query, req_code, req_type, &uri);
-    if (!ongoing)
-      goto cleanup;
-    /*
-     * Build up the ongoing PDU that we are going to send
-     */
-    pdu = coap_pdu_init(req_type, req_code,
-                        coap_new_message_id(ongoing),
-                        coap_session_max_pdu_size(ongoing));
-    if (!pdu) {
-      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
-      goto cleanup;
-    }
-
-    if (!coap_add_token(pdu, token.length, token.s)) {
-      coap_log_debug("cannot add token to proxy request\n");
-      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
-      goto cleanup;
-    }
-
-    if (proxy.host.length == 0) {
-      /* Use  Uri-Path and Uri-Query - direct session */
-      proxy_uri = NULL;
-      proxy_scheme_option = 0;
-      const coap_address_t *dst = coap_session_get_addr_remote(ongoing);
-
-      if (!coap_uri_into_optlist(&uri, dst, &optlist, 1)) {
-        coap_log_err("Failed to create options for URI\n");
-        goto cleanup;
-      }
-    }
-
-    /* Copy the remaining options across */
-    coap_option_iterator_init(request, &opt_iter, COAP_OPT_ALL);
-    while ((option = coap_option_next(&opt_iter))) {
-      switch (opt_iter.number) {
-      case COAP_OPTION_PROXY_URI:
-        if (proxy_uri) {
-          /* Need to add back in */
-          goto add_in;
-        }
-        break;
-      case COAP_OPTION_PROXY_SCHEME:
-      case COAP_OPTION_URI_PATH:
-      case COAP_OPTION_URI_PORT:
-      case COAP_OPTION_URI_HOST:
-      case COAP_OPTION_URI_QUERY:
-        if (proxy_scheme_option) {
-          /* Need to add back in */
-          goto add_in;
-        }
-        break;
-      case COAP_OPTION_BLOCK1:
-      case COAP_OPTION_BLOCK2:
-      case COAP_OPTION_Q_BLOCK1:
-      case COAP_OPTION_Q_BLOCK2:
-        /* These are not passed on */
-        break;
-      default:
-add_in:
-        coap_insert_optlist(&optlist,
-                            coap_new_optlist(opt_iter.number,
-                                             coap_opt_length(option),
-                                             coap_opt_value(option)));
-        break;
-      }
-    }
-
-    /* Update pdu with options */
-    coap_add_optlist_pdu(pdu, &optlist);
-    coap_delete_optlist(optlist);
-
-    if (size) {
-      if (!coap_add_data_large_request(ongoing, pdu, size, data,
-                                       release_proxy_body_data, body_data)) {
-        coap_log_debug("cannot add data to proxy request\n");
-      } else {
-        body_data = NULL;
-      }
-    }
-
-    if (coap_get_log_level() < COAP_LOG_DEBUG)
-      coap_show_pdu(COAP_LOG_INFO, pdu);
-
-    coap_send(ongoing, pdu);
-    /*
-     * Do not update with response code (hence empty ACK) as will be sending
-     * separate response when response comes back from upstream server
-     */
-    pdu = NULL;
-    goto cleanup;
-  } else {
-    /* TODO http & https */
-    coap_log_err("Proxy-Uri scheme %d not currently supported\n", uri.scheme);
-  }
-cleanup:
-  coap_delete_string(uri_path);
-  coap_delete_string(uri_query);
-  coap_delete_binary(body_data);
-  coap_delete_pdu(pdu);
+  /* Leave response code as is */
 }
 
 #endif /* SERVER_CAN_PROXY */
@@ -1551,7 +1054,7 @@ hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
 
 #if SERVER_CAN_PROXY
 static int
-proxy_event_handler(coap_session_t *session,
+proxy_event_handler(coap_session_t *session COAP_UNUSED,
                     coap_event_t event) {
 
   switch (event) {
@@ -1566,9 +1069,6 @@ proxy_event_handler(coap_session_t *session,
   case COAP_EVENT_OSCORE_DECODE_ERROR:
   case COAP_EVENT_WS_PACKET_SIZE:
   case COAP_EVENT_WS_CLOSED:
-    /* Need to remove any proxy associations */
-    remove_proxy_association(session, 0);
-    break;
   case COAP_EVENT_DTLS_CONNECTED:
   case COAP_EVENT_DTLS_RENEGOTIATE:
   case COAP_EVENT_DTLS_ERROR:
@@ -1591,130 +1091,15 @@ proxy_event_handler(coap_session_t *session,
 }
 
 static coap_response_t
-proxy_response_handler(coap_session_t *session,
-                       const coap_pdu_t *sent COAP_UNUSED,
-                       const coap_pdu_t *received,
-                       const coap_mid_t id COAP_UNUSED) {
-
-  coap_pdu_t *pdu = NULL;
-  coap_session_t *incoming = NULL;
-  size_t i;
-  size_t size;
-  const uint8_t *data;
-  coap_optlist_t *optlist = NULL;
-  coap_opt_t *option;
-  coap_opt_iterator_t opt_iter;
-  size_t offset;
-  size_t total;
-  proxy_list_t *proxy_entry = NULL;
-  uint16_t media_type = COAP_MEDIATYPE_TEXT_PLAIN;
-  int maxage = -1;
-  uint64_t etag = 0;
-  coap_pdu_code_t rcv_code = coap_pdu_get_code(received);
-  coap_bin_const_t rcv_token = coap_pdu_get_token(received);
-  coap_binary_t *body_data = NULL;
-
-  for (i = 0; i < proxy_list_count; i++) {
-    if (proxy_list[i].ongoing == session) {
-      proxy_entry = &proxy_list[i];
-      incoming = proxy_entry->incoming;
-      break;
-    }
-  }
-  if (i == proxy_list_count) {
-    coap_log_debug("Unknown proxy ongoing session response received\n");
-    return COAP_RESPONSE_OK;
-  }
-
-  coap_log_debug("** process upstream incoming %d.%02d response:\n",
-                 COAP_RESPONSE_CLASS(rcv_code), rcv_code & 0x1F);
-  if (coap_get_log_level() < COAP_LOG_DEBUG)
-    coap_show_pdu(COAP_LOG_INFO, received);
-
-  if (coap_get_data_large(received, &size, &data, &offset, &total)) {
-    /* COAP_BLOCK_SINGLE_BODY is set, so single body should be given */
-    assert(size == total);
-    body_data = coap_new_binary(total);
-    if (!body_data) {
-      coap_log_debug("body build memory error\n");
-      return COAP_RESPONSE_OK;
-    }
-    memcpy(body_data->s, data, size);
-    data = body_data->s;
-  }
-
-  /*
-   * Build up the ongoing PDU that we are going to send to proxy originator
-   * as separate response
-   */
-  pdu = coap_pdu_init(proxy_entry->req_type, rcv_code,
-                      coap_new_message_id(incoming),
-                      coap_session_max_pdu_size(incoming));
-  if (!pdu) {
-    coap_log_debug("Failed to create ongoing proxy response PDU\n");
-    return COAP_RESPONSE_OK;
-  }
-
-  if (!coap_add_token(pdu, rcv_token.length, rcv_token.s)) {
-    coap_log_debug("cannot add token to ongoing proxy response PDU\n");
-  }
-
-  /*
-   * Copy the options across, skipping those needed for
-   * coap_add_data_response_large()
-   */
-  coap_option_iterator_init(received, &opt_iter, COAP_OPT_ALL);
-  while ((option = coap_option_next(&opt_iter))) {
-    switch (opt_iter.number) {
-    case COAP_OPTION_CONTENT_FORMAT:
-      media_type = coap_decode_var_bytes(coap_opt_value(option),
-                                         coap_opt_length(option));
-      break;
-    case COAP_OPTION_MAXAGE:
-      maxage = coap_decode_var_bytes(coap_opt_value(option),
-                                     coap_opt_length(option));
-      break;
-    case COAP_OPTION_ETAG:
-      etag = coap_decode_var_bytes8(coap_opt_value(option),
-                                    coap_opt_length(option));
-      break;
-    case COAP_OPTION_BLOCK2:
-    case COAP_OPTION_Q_BLOCK2:
-    case COAP_OPTION_SIZE2:
-      break;
-    default:
-      coap_insert_optlist(&optlist,
-                          coap_new_optlist(opt_iter.number,
-                                           coap_opt_length(option),
-                                           coap_opt_value(option)));
-      break;
-    }
-  }
-  coap_add_optlist_pdu(pdu, &optlist);
-  coap_delete_optlist(optlist);
-
-  if (size > 0) {
-    coap_pdu_t *dummy_pdu = coap_pdu_init(proxy_entry->req_type,
-                                          proxy_entry->req_code, 0,
-                                          coap_session_max_pdu_size(incoming));
-
-    coap_add_data_large_response(proxy_resource, incoming, dummy_pdu, pdu,
-                                 proxy_entry->query,
-                                 media_type, maxage, etag, size, data,
-                                 release_proxy_body_data,
-                                 body_data);
-    coap_delete_pdu(dummy_pdu);
-  }
-
-  if (coap_get_log_level() < COAP_LOG_DEBUG)
-    coap_show_pdu(COAP_LOG_INFO, pdu);
-
-  coap_send(incoming, pdu);
-  return COAP_RESPONSE_OK;
+reverse_response_handler(coap_session_t *session,
+                         const coap_pdu_t *sent COAP_UNUSED,
+                         const coap_pdu_t *received,
+                         const coap_mid_t id COAP_UNUSED) {
+  return coap_proxy_forward_response(session, received, NULL);
 }
 
 static void
-proxy_nack_handler(coap_session_t *session,
+proxy_nack_handler(coap_session_t *session COAP_UNUSED,
                    const coap_pdu_t *sent COAP_UNUSED,
                    const coap_nack_reason_t reason,
                    const coap_mid_t mid COAP_UNUSED) {
@@ -1727,9 +1112,6 @@ proxy_nack_handler(coap_session_t *session,
   case COAP_NACK_WS_FAILED:
   case COAP_NACK_TLS_LAYER_FAILED:
   case COAP_NACK_WS_LAYER_FAILED:
-    /* Need to remove any proxy associations */
-    remove_proxy_association(session, 1);
-    break;
   case COAP_NACK_ICMP_ISSUE:
   case COAP_NACK_BAD_RESPONSE:
   default:
@@ -1744,69 +1126,87 @@ static void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
-  r = coap_resource_init(NULL, COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT);
-  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_index);
-
-  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"General Info\""), 0);
-  coap_add_resource(ctx, r);
-
-  /* store clock base to use in /time */
-  my_clock_base = clock_offset;
-
-  r = coap_resource_init(coap_make_str_const("time"), resource_flags);
-  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_fetch_time);
-  coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get_fetch_time);
-  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_time);
-  coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
-  coap_resource_set_get_observable(r, 1);
-
-  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Internal Clock\""), 0);
-  coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"ticks\""), 0);
-  coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"clock\""), 0);
-
-  coap_add_resource(ctx, r);
-  time_resource = r;
-
-  if (support_dynamic > 0) {
-    /* Create a resource to handle PUTs to unknown URIs */
-    r = coap_resource_unknown_init2(hnd_put_post_unknown, 0);
-    /* Add in handling POST as well */
-    coap_register_handler(r, COAP_REQUEST_POST, hnd_put_post_unknown);
+#if SERVER_CAN_PROXY
+  if (reverse_proxy.entry_count) {
+    /* Create a reverse proxy resource to handle PUTs */
+    r = coap_resource_unknown_init2(hnd_reverse_proxy_uri,
+                                    COAP_RESOURCE_HANDLE_WELLKNOWN_CORE);
+    /* Add in handling other requests as well */
+    coap_register_handler(r, COAP_REQUEST_GET, hnd_reverse_proxy_uri);
+    coap_register_handler(r, COAP_REQUEST_POST, hnd_reverse_proxy_uri);
+    coap_register_handler(r, COAP_REQUEST_DELETE, hnd_reverse_proxy_uri);
+    coap_register_handler(r, COAP_REQUEST_FETCH, hnd_reverse_proxy_uri);
+    coap_register_handler(r, COAP_REQUEST_PATCH, hnd_reverse_proxy_uri);
+    coap_register_handler(r, COAP_REQUEST_IPATCH, hnd_reverse_proxy_uri);
     coap_add_resource(ctx, r);
-  }
-
-  if (coap_async_is_supported()) {
-    r = coap_resource_init(coap_make_str_const("async"),
-                           resource_flags |
-                           COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT |
-                           COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS);
-    coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_async);
+    coap_register_event_handler(ctx, proxy_event_handler);
+    coap_register_response_handler(ctx, reverse_response_handler);
+    coap_register_nack_handler(ctx, proxy_nack_handler);
+  } else {
+#endif /* SERVER_CAN_PROXY */
+    r = coap_resource_init(NULL, COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT);
+    coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+    coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"General Info\""), 0);
     coap_add_resource(ctx, r);
-  }
 
-  r = coap_resource_init(coap_make_str_const("example_data"), resource_flags);
-  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
-  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);
-  coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get_example_data);
-  coap_resource_set_get_observable(r, 1);
+    /* store clock base to use in /time */
+    my_clock_base = clock_offset;
 
-  coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Example Data\""), 0);
-  coap_add_resource(ctx, r);
+    r = coap_resource_init(coap_make_str_const("time"), resource_flags);
+    coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_fetch_time);
+    coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get_fetch_time);
+    coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_time);
+    coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
+    coap_resource_set_get_observable(r, 1);
+
+    coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+    coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Internal Clock\""), 0);
+    coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"ticks\""), 0);
+    coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"clock\""), 0);
+
+    coap_add_resource(ctx, r);
+    time_resource = r;
+
+    if (support_dynamic > 0) {
+      /* Create a resource to handle PUTs to unknown URIs */
+      r = coap_resource_unknown_init2(hnd_put_post_unknown, 0);
+      /* Add in handling POST as well */
+      coap_register_handler(r, COAP_REQUEST_POST, hnd_put_post_unknown);
+      coap_add_resource(ctx, r);
+    }
+
+    if (coap_async_is_supported()) {
+      r = coap_resource_init(coap_make_str_const("async"),
+                             resource_flags |
+                             COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT |
+                             COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS);
+      coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_async);
+
+      coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+      coap_add_resource(ctx, r);
+    }
+
+    r = coap_resource_init(coap_make_str_const("example_data"), resource_flags);
+    coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
+    coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);
+    coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get_example_data);
+    coap_resource_set_get_observable(r, 1);
+
+    coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
+    coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Example Data\""), 0);
+    coap_add_resource(ctx, r);
 
 #if SERVER_CAN_PROXY
+  }
   if (proxy_host_name_count) {
-    r = coap_resource_proxy_uri_init2(hnd_proxy_uri, proxy_host_name_count,
+    r = coap_resource_proxy_uri_init2(hnd_forward_proxy_uri, proxy_host_name_count,
                                       proxy_host_name_list, 0);
     coap_add_resource(ctx, r);
     coap_register_event_handler(ctx, proxy_event_handler);
-    coap_register_response_handler(ctx, proxy_response_handler);
+    coap_register_response_handler(ctx, reverse_response_handler);
     coap_register_nack_handler(ctx, proxy_nack_handler);
-    proxy_resource = r;
   }
 #endif /* SERVER_CAN_PROXY */
 }
@@ -2122,6 +1522,40 @@ fill_keystore(coap_context_t *ctx) {
   }
 }
 
+#if SERVER_CAN_PROXY
+static void
+proxy_dtls_setup(coap_context_t *ctx, coap_proxy_server_list_t *proxy_info) {
+  size_t i;
+  static char client_sni[256];
+
+  for (i = 0; i < proxy_info->entry_count; i++) {
+    coap_proxy_server_t *proxy_server = &proxy_info->entry[i];
+
+    if (proxy_info->type == COAP_PROXY_DIRECT || proxy_info->type == COAP_PROXY_DIRECT_STRIP) {
+      memset(client_sni, 0, sizeof(client_sni));
+    } else {
+      snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)proxy_server->uri.host.length,
+               (int)proxy_server->uri.host.length, proxy_server->uri.host.s);
+    }
+    if (!key_defined) {
+      /* Use our defined PKI certs (or NULL)  */
+      proxy_server->dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT,
+                                         client_sni);
+      proxy_server->dtls_cpsk = NULL;
+    } else {
+      /* Use our defined PSK */
+      proxy_server->dtls_cpsk = setup_cpsk(client_sni);
+      proxy_server->dtls_pki = NULL;
+    }
+    /*
+     * Set this to a client specific oscore_conf if needed.
+     * proxy_server->oscore_conf = oscore_conf;
+     */
+  }
+}
+#endif /* SERVER_CAN_PROXY */
+
+
 static void
 usage(const char *program, const char *version) {
   const char *p;
@@ -2140,9 +1574,9 @@ usage(const char *program, const char *version) {
           coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
-          "Usage: %s [-a priority] [-b max_block_size] [-d max] [-e] [-g group]\n"
-          "\t\t[-l loss] [-p port] [-q tls_engine_conf_file] [-r] [-v num]\n"
-          "\t\t[-w [port][,secure_port]]\n"
+          "Usage: %s [-a priority] [-b max_block_size] [-d max] [-e]\n"
+          "\t\t[-f scheme://address[:port] [-g group] -l loss] [-p port]\n"
+          "\t\t[-q tls_engine_conf_file] [-r] [-v num] [-w [port][,secure_port]]\n"
           "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
           "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
@@ -2160,6 +1594,13 @@ usage(const char *program, const char *version) {
           "\t       \t\tresources. If max is reached, a 4.06 code is returned\n"
           "\t       \t\tuntil one of the dynamic resources has been deleted\n"
           "\t-e     \t\tEcho back the data sent with a PUT\n"
+          "\t-f scheme://address[:port]\n"
+          "\t       \t\tAct as a reverse proxy where scheme, address, optional\n"
+          "\t       \t\tport define how to connect to the internal server.\n"
+          "\t       \t\tScheme is one of coap, coaps, coap+tcp, coaps+tcp,\n"
+          "\t       \t\tcoap+ws, and coaps+ws. http(s) is not currently supported.\n"
+          "\t       \t\tThis option can be repeated to provide multiple internal\n"
+          "\t       \t\tservers that are round-robin load balanced\n"
           "\t-g group\tJoin the given multicast group\n"
           "\t       \t\tNote: DTLS over multicast is not currently supported\n"
           "\t-l list\t\tFail to send some datagrams specified by a comma\n"
@@ -2214,7 +1655,9 @@ usage(const char *program, const char *version) {
           "\t       \t\tdefined before the leading , (comma) of the first name,\n"
           "\t       \t\tthen the ongoing connection will be a direct connection.\n"
           "\t       \t\tScheme is one of coap, coaps, coap+tcp, coaps+tcp,\n"
-          "\t       \t\tcoap+ws, and coaps+ws. http(s) is not currently supported\n"
+          "\t       \t\tcoap+ws, and coaps+ws. http(s) is not currently supported.\n"
+          "\t       \t\tThis option can be repeated to provide multiple upstream\n"
+          "\t       \t\tservers that are round-robin load balanced\n"
           "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
           "\t-U type\t\tTreat address defined by -A as a Unix socket address.\n"
           "\t       \t\ttype is 'coap', 'coaps', 'coap+tcp' or 'coaps+tcp'\n"
@@ -2376,6 +1819,8 @@ cmdline_proxy(char *arg) {
   char *host_start = strchr(arg, ',');
   char *next_name = host_start;
   size_t ofs;
+  coap_uri_t uri;
+  coap_proxy_server_t *new_entry;
 
   if (!host_start) {
     coap_log_warn("Zero or more proxy host names not defined\n");
@@ -2385,12 +1830,31 @@ cmdline_proxy(char *arg) {
 
   if (host_start != arg) {
     /* Next upstream proxy is defined */
-    if (coap_split_uri((unsigned char *)arg, strlen(arg), &proxy) < 0 ||
-        proxy.path.length != 0 || proxy.query.length != 0) {
-      coap_log_err("invalid CoAP Proxy definition\n");
+    if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0 ||
+        uri.path.length != 0 || uri.query.length != 0) {
+      coap_log_err("Invalid CoAP Proxy definition\n");
       return 0;
     }
+    if (!coap_verify_proxy_scheme_supported(uri.scheme)) {
+      coap_log_err("Unsupported CoAP Proxy protocol\n");
+      return 0;
+    }
+    forward_proxy.type = COAP_PROXY_FORWARD;
+  } else {
+    forward_proxy.type = COAP_PROXY_DIRECT_STRIP;
   }
+
+  new_entry = realloc(forward_proxy.entry,
+                      (forward_proxy.entry_count + 1)*sizeof(forward_proxy.entry[0]));
+  if (!new_entry) {
+    coap_log_err("CoAP Reverse-Proxy realloc() error\n");
+    return 0;
+  }
+  forward_proxy.entry = new_entry;
+  memset(&forward_proxy.entry[forward_proxy.entry_count], 0, sizeof(forward_proxy.entry[0]));
+  forward_proxy.entry[forward_proxy.entry_count].uri = uri;
+  forward_proxy.entry_count++;
+
   proxy_host_name_count = 0;
   while (next_name) {
     proxy_host_name_count++;
@@ -2405,6 +1869,35 @@ cmdline_proxy(char *arg) {
     if (next_name)
       *next_name = '\000';
   }
+  return 1;
+}
+
+static int
+cmdline_reverse_proxy(char *arg) {
+  /* upstream server is defined */
+  coap_uri_t uri;
+  coap_proxy_server_t *new_entry;
+
+  if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0 ||
+      uri.path.length != 0 || uri.query.length != 0) {
+    coap_log_err("Invalid CoAP Reverse-Proxy definition\n");
+    return 0;
+  }
+  if (!coap_verify_proxy_scheme_supported(uri.scheme)) {
+    coap_log_err("Unsupported CoAP Reverse-Proxy protocol\n");
+    return 0;
+  }
+
+  new_entry = realloc(reverse_proxy.entry,
+                      (reverse_proxy.entry_count + 1)*sizeof(reverse_proxy.entry[0]));
+  if (!new_entry) {
+    coap_log_err("CoAP Reverse-Proxy realloc() error\n");
+    return 0;
+  }
+  reverse_proxy.entry = new_entry;
+  memset(&reverse_proxy.entry[reverse_proxy.entry_count], 0, sizeof(reverse_proxy.entry[0]));
+  reverse_proxy.entry[reverse_proxy.entry_count].uri = uri;
+  reverse_proxy.entry_count++;
   return 1;
 }
 
@@ -2853,7 +2346,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:eg:h:i:j:k:l:mnp:q:rs:tu:v:w:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:2")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnp:q:rs:tu:v:w:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:2")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2887,6 +2380,19 @@ main(int argc, char **argv) {
       if (!doing_oscore) {
         goto failed;
       }
+      break;
+    case 'f':
+      if (!coap_proxy_is_supported()) {
+        fprintf(stderr, "Reverse Proxy support not available as libcoap proxy code not enabled\n");
+        goto failed;
+      }
+#if SERVER_CAN_PROXY
+      if (!cmdline_reverse_proxy(optarg)) {
+        fprintf(stderr, "Reverse Proxy error specifying upstream address\n");
+        goto failed;
+      }
+      block_mode |= COAP_BLOCK_SINGLE_BODY;
+#endif /* SERVER_CAN_PROXY */
       break;
     case 'g' :
       group = optarg;
@@ -2950,16 +2456,17 @@ main(int argc, char **argv) {
       port_str = optarg;
       break;
     case 'P':
+      if (!coap_proxy_is_supported()) {
+        fprintf(stderr, "Proxy support not available as libcoap proxy code not enabled\n");
+        goto failed;
+      }
 #if SERVER_CAN_PROXY
       if (!cmdline_proxy(optarg)) {
         fprintf(stderr, "error specifying proxy address or host names\n");
         goto failed;
       }
       block_mode |= COAP_BLOCK_SINGLE_BODY;
-#else /* ! SERVER_CAN_PROXY */
-      fprintf(stderr, "Proxy support not available as no Client mode code\n");
-      goto failed;
-#endif /* ! SERVER_CAN_PROXY */
+#endif /* SERVER_CAN_PROXY */
       break;
     case 'q':
       tls_engine_conf = optarg;
@@ -2990,12 +2497,13 @@ main(int argc, char **argv) {
       track_observes = 1;
       break;
     case 'u':
+      if (!coap_proxy_is_supported()) {
+        fprintf(stderr, "Proxy support not available as libcoap proxy code not enabled\n");
+        goto failed;
+      }
 #if SERVER_CAN_PROXY
       user_length = cmdline_read_user(optarg, &user, MAX_USER);
-#else /* ! SERVER_CAN_PROXY */
-      fprintf(stderr, "Proxy support not available as no Client mode code\n");
-      goto failed;
-#endif /* ! SERVER_CAN_PROXY */
+#endif /* SERVER_CAN_PROXY */
       break;
     case 'U':
       if (!cmdline_unix(optarg)) {
@@ -3073,6 +2581,14 @@ main(int argc, char **argv) {
     if (get_oscore_conf(ctx) == NULL)
       goto failed;
   }
+#if SERVER_CAN_PROXY
+  if (reverse_proxy.entry_count) {
+    proxy_dtls_setup(ctx, &reverse_proxy);
+  }
+  if (forward_proxy.entry_count) {
+    proxy_dtls_setup(ctx, &forward_proxy);
+  }
+#endif /* SERVER_CAN_PROXY */
   if (extended_token_size > COAP_TOKEN_DEFAULT_MAX)
     coap_context_set_max_token_size(ctx, extended_token_size);
 
@@ -3227,13 +2743,8 @@ finish:
   free(dynamic_entry);
   release_resource_data(NULL, example_data_value);
 #if SERVER_CAN_PROXY
-  for (i = 0; i < proxy_list_count; i++) {
-    coap_delete_binary(proxy_list[i].token);
-    coap_delete_string(proxy_list[i].query);
-  }
-  free(proxy_list);
-  proxy_list = NULL;
-  proxy_list_count = 0;
+  free(reverse_proxy.entry);
+  free(forward_proxy.entry);
 #if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning( disable : 4090 )
 #endif

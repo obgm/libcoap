@@ -26,6 +26,9 @@
 /* Define to 1 if the library has server support. */
 #cmakedefine COAP_SERVER_SUPPORT @COAP_SERVER_SUPPORT@
 
+/* Define to 1 if the library has proxy support. */
+#cmakedefine COAP_PROXY_SUPPORT @COAP_PROXY_SUPPORT@
+
 /* Define to 1 if the library is to have observe persistence. */
 #cmakedefine COAP_WITH_OBSERVE_PERSIST @COAP_WITH_OBSERVE_PERSIST@
 
