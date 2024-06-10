@@ -19,10 +19,6 @@
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-#define STATE_TOKEN_BASE(t) ((t) & 0xffffffffffffULL)
-#define STATE_TOKEN_RETRY(t) ((uint64_t)(t) >> 48)
-#define STATE_TOKEN_FULL(t,r) (STATE_TOKEN_BASE(t) + ((uint64_t)(r) << 48))
-
 #if COAP_Q_BLOCK_SUPPORT
 int
 coap_q_block_is_supported(void) {
@@ -3317,9 +3313,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
   LL_FOREACH_SAFE(session->lg_xmit, p, q) {
     if (!COAP_PDU_IS_REQUEST(&p->pdu) ||
         (token_match != STATE_TOKEN_BASE(p->b.b1.state_token) &&
-         token_match !=
-         STATE_TOKEN_BASE(coap_decode_var_bytes8(p->b.b1.app_token->s,
-                                                 p->b.b1.app_token->length)))) {
+         !coap_binary_equal(&rcvd->actual_token, p->b.b1.app_token))) {
       /* try out the next one */
       continue;
     }
@@ -3578,6 +3572,7 @@ lg_xmit_finished:
           STATE_TOKEN_BASE(lg_crcv->state_token)) {
         /* In case of observe */
         lg_crcv->state_token = p->b.b1.state_token;
+        lg_crcv->retry_counter = p->b.b1.count;
         break;
       }
     }
