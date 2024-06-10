@@ -249,7 +249,8 @@ transmitted. The callback function _release_func_ can be used to release
 storage that has been dynamically allocated to hold the transmit data. If not
 NULL, the callback function is called once the final block of _data_ has been
 transmitted. The user-defined parameter _app_ptr_ is the same value that was
-passed to *coap_add_data_large_request*().
+passed to *coap_add_data_large_request*(). Even if there is an error return,
+_release_func_ (if set) is always called.
 
 *NOTE:* This function must only be called once per _pdu_.
 
@@ -271,7 +272,8 @@ transmitted. The callback function _release_func_ can be used to release
 storage that has been dynamically allocated to hold the transmit data. If not
 NULL, the callback function is called once the final block of _data_ has been
 transmitted. The user-defined parameter _app_ptr_ is the same value that was
-passed to *coap_add_data_large_response*().
+passed to *coap_add_data_large_response*(). Even if there is an error return,
+_release_func_ (if set) is always called.
 
 It also adds in the appropriate CoAP options such as Block2, Size2 and ETag to
 handle block-wise transfer if the data does not fit in a single PDU.

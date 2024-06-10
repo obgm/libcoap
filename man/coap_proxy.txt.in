@@ -1,0 +1,102 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_proxy(3)
+=============
+:doctype: manpage
+:man source:   coap_proxy
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_proxy,
+coap_proxy_forward_request,
+coap_proxy_forward_response,
+coap_verify_proxy_scheme_supported
+- Work with CoAP proxies
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*int coap_proxy_forward_request(coap_session_t *_session_,
+const coap_pdu_t *_request_, coap_pdu_t *_response_,
+coap_resource_t *_resource_, coap_cache_key_t *_cache_key_,
+coap_proxy_server_list_t *_server_list_);*
+
+*coap_response_t coap_proxy_forward_response(coap_session_t *_session_,
+                            const coap_pdu_t *received_,
+                            coap_cache_key_t **_cache_key_);*
+
+*int coap_verify_proxy_scheme_supported(coap_uri_scheme_t _scheme_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*,
+*-lcoap-@LIBCOAP_API_VERSION@-wolfssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+
+To simplify some of the CoAP proxy requirements, some of the functionaliy
+is provided by libcoap.
+
+FUNCTIONS
+---------
+
+*Function: coap_proxy_forward_request()*
+
+The *coap_proxy_forward_request*() function is called from a request handler
+when the request needs to be forwarded to an upstream server with a possible
+change in protocol.
+
+*Function: coap_proxy_forward_response()*
+
+The *coap_proxy_forward_response*() function is used to cleanup / free any information set
+up by the *coap_startup*() function and should be the last *coap_**() function
+called. The only safe function that can be called after *coap_cleanup*() is
+*coap_startup*() to re-initialize the libcoap logic.
+
+*NOTE:* Calling *coap_cleanup*() in one thread while continuing to use other
+*coap_**() function calls in a different thread is not supported - even if they
+are using a different coap_context_t.
+
+*NOTE:* All other libcoap cleanups should called prior to *coap_cleanup*(), e.g.
+*coap_free_context*(3).
+
+*Function: coap_verify_proxy_scheme_supported()*
+
+The *coap_proxy_forward_request*() function is called from a request handler
+when the request needs to be forwarded to an upstream server with a possible
+change in protocol.
+
+RETURN VALUES
+-------------
+*coap_proxy_forward_request*() and *coap_verify_proxy_scheme_supported*()
+return 1 on success and 0 on failure.
+
+*coap_proxy_forward_response*() returns one of COAP_RESPONSE_OK or
+COAP_RESPONSE_FAIL.
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
+
+BUGS
+----
+Please raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues to report any bugs.
+
+Please raise a Pull Request at https://github.com/obgm/libcoap/pulls
+for any fixes.
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

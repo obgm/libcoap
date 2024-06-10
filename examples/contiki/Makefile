@@ -31,3 +31,9 @@ server:	$(CONTIKI)
 clean:
 	$(MAKE) -f Makefile.contiki CONTIKI=$(CONTIKI) TARGET=$(TARGET) clean
 	rm -rf build
+
+distclean:
+	$(MAKE) -f Makefile.contiki CONTIKI=$(CONTIKI) TARGET=$(TARGET) distclean
+
+viewconf:
+	$(MAKE) -f Makefile.contiki CONTIKI=$(CONTIKI) TARGET=$(TARGET) viewconf

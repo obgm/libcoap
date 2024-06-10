@@ -20,6 +20,7 @@ coap-server-notls
 SYNOPSIS
 --------
 *coap-server* [*-a* priority] [*-b* max_block_size] [*-d* max] [*-e*]
+              [*-f* scheme://addr[:port]
               [*-g* group] [*-l* loss] [*-p* port] [*-q* tls_engine_conf_file]
               [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]]
               [*-A* address] [*-E* oscore_conf_file[,seq_file]]
@@ -58,6 +59,14 @@ OPTIONS - General
 
 *-e* ::
    Echo back the data sent with a PUT.
+
+*-f* scheme://address[:port]::
+   Act as a reverse proxy where scheme, address, optional
+   port define how to connect to the internal server.
+   Scheme is one of coap, coaps, coap+tcp, coaps+tcp,
+   coap+ws, and coaps+ws. http(s) is not currently supported.
+   This option can be repeated to provide multiple internal
+   servers that are round-robin load balanced.
 
 *-g* group::
    Join specified multicast 'group' on start up.
@@ -140,6 +149,8 @@ OPTIONS - General
    first name, then the ongoing connection will be a direct connection.
    Scheme is one of coap, coaps, coap+tcp, coaps+tcp, coap+ws, and coaps+ws.
    http and https not currently supported.
+   This option can be repeated to provide multiple upstream
+   servers that are round-robin load balanced.
 
 *-T* max_token_size::
    Set the maximum token length (8-65804).

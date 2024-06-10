@@ -18,6 +18,7 @@
 #define COAP_MEM_H_
 
 #include "coap3/coap_oscore.h"
+#include "coap3/coap_proxy.h"
 #include <stdlib.h>
 
 #ifndef WITH_LWIP

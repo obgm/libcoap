@@ -58,6 +58,7 @@ extern "C" {
 #include "coap@LIBCOAP_API_VERSION@/coap_oscore.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_pdu.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_prng.h"
+#include "coap@LIBCOAP_API_VERSION@/coap_proxy.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_resource.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_str.h"
 #include "coap@LIBCOAP_API_VERSION@/coap_subscribe.h"

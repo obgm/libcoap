@@ -40,6 +40,7 @@ TXT3 = coap_address.txt \
 	coap_pdu_access.txt \
 	coap_pdu_setup.txt \
 	coap_persist.txt \
+	coap_proxy.txt \
 	coap_recovery.txt \
 	coap_resource.txt \
 	coap_session.txt \
