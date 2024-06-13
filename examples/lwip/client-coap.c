@@ -215,8 +215,8 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
                       coap_session_max_pdu_size(session));
   LWIP_ASSERT("Failed to create PDU", pdu != NULL);
 
-  len = coap_uri_into_options(&uri, &dst, &optlist, 1, buf, sizeof(buf));
-  LWIP_ASSERT("Failed to create options", len == 0);
+  res = coap_uri_into_optlist(&uri, &dst, &optlist, 1);
+  LWIP_ASSERT("Failed to create options", res == 1);
 
   /* Add option list (which will be sorted) to the PDU */
   if (optlist) {

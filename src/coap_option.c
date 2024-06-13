@@ -560,11 +560,11 @@ coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t **options) {
     LL_SORT((*options), order_opts);
 
     LL_FOREACH((*options), opt) {
-      coap_add_option_internal(pdu, opt->number, opt->length, opt->data);
+      if (!coap_add_option_internal(pdu, opt->number, opt->length, opt->data))
+        return 0;
     }
-    return 1;
   }
-  return 0;
+  return 1;
 }
 
 int

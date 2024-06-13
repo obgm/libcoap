@@ -59,18 +59,20 @@ typedef enum coap_uri_scheme_t {
 /**
  * Representation of parsed URI. Components may be filled from a string with
  * coap_split_uri() or coap_split_proxy_uri() and can be used as input for
- * option-creation functions. Alternatively, coap_uri_into_options() can
+ * option-creation functions. Alternatively, coap_uri_into_optlist() can
  * be used to convert coap_uri_t into CoAP options.
  */
 typedef struct {
   coap_str_const_t host;  /**< The host part of the URI */
   uint16_t port;          /**< The port in host byte order */
   coap_str_const_t path;  /**< The complete path if present or {0, NULL}.
-                               Needs to be split using coap_split_path()
-                               or coap_uri_into_options(). */
+                               Needs to be split into options using
+                               coap_path_into_optlist() or
+                               coap_uri_into_optlist(). */
   coap_str_const_t query; /**< The complete query if present or {0, NULL}.
-                               Needs to be split using coap_split_query()
-                               or coap_uri_into_options(). */
+                               Needs to be split into options using
+                               coap_query_into_options() or
+                               coap_uri_into_optlist(). */
   /** The parsed scheme specifier. */
   enum coap_uri_scheme_t scheme;
 } coap_uri_t;
@@ -167,20 +169,22 @@ int coap_split_proxy_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri);
 /**
  * Takes a coap_uri_t and then adds CoAP options into the @p optlist_chain.
  * If the port is not the default port and create_port_host_opt is not 0, then
- * the Port option is added to the @p optlist_chain.
+ * the Uri-Port option is added to the @p optlist_chain.
  * If the dst defines an address that does not match the host in uri->host and
- * is not 0, then the Host option is added to the @p optlist_chain.
- * Any path or query are broken down into the individual segment Path or Query
- * options and added to the @p optlist_chain.
+ * is not 0, then the Uri-Host option is added to the @p optlist_chain.
+ * Any path or query are broken down into the individual segment Uri-Path or
+ * Uri-Query options and added to the @p optlist_chain.
+ *
+ * Note: coap_uri_into_optlist(3) is an alternative function (but has a
+ * different return value).
  *
  * @param uri     The coap_uri_t object.
  * @param dst     The destination, or NULL if URI_HOST not to be added.
  * @param optlist_chain Where to store the chain of options.
- * @param buf     Scratch buffer area (needs to be bigger than
- *                uri->path.length and uri->query.length)
- * @param buflen  Size of scratch buffer.
  * @param create_port_host_opt @c 1 if port/host option to be added
  *                             (if non-default) else @c 0
+ * @param buf     Parameter ignored. Can be NULL.
+ * @param buflen  Parameter ignored.
  *
  * @return        @c 0 on success, or < 0 on error.
  *
@@ -191,42 +195,102 @@ int coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
                           uint8_t *buf, size_t buflen);
 
 /**
+ * Takes a coap_uri_t and then adds CoAP options into the @p optlist_chain.
+ * If the port is not the default port and create_port_host_opt is not 0, then
+ * the Uri-Port option is added to the @p optlist_chain.
+ * If the dst defines an address that does not match the host in uri->host and
+ * is not 0, then the Uri-Host option is added to the @p optlist_chain.
+ * Any path or query are broken down into the individual segment Uri-Path or
+ * Uri-Query options and added to the @p optlist_chain.
+ *
+ * @param uri     The coap_uri_t object.
+ * @param dst     The destination, or NULL if URI_HOST not to be added.
+ * @param optlist_chain Where to store the chain of options.
+ * @param create_port_host_opt @c 1 if port/host option to be added
+ *                             (if non-default) else @c 0.
+ *
+ * @return        @c 1 on success, @c 0 if error.
+ *
+ */
+int coap_uri_into_optlist(const coap_uri_t *uri, const coap_address_t *dst,
+                          coap_optlist_t **optlist_chain,
+                          int create_port_host_opt);
+
+/**
  * Splits the given URI path into segments. Each segment is preceded
  * by an option pseudo-header with delta-value 0 and the actual length
  * of the respective segment after percent-decoding.
  *
- * @param s      The path string to split.
- * @param length The actual length of @p s.
+ * @param path   The path string to split.
+ * @param length The actual length of @p path.
  * @param buf    Result buffer for parsed segments.
  * @param buflen Maximum length of @p buf. Will be set to the actual number
- *               of bytes written into buf on success.
+ *               of bytes written into buf on success. This needs to be
+ *               at least @p length, but 2 bytes should be added for each
+ *               segment to handle large segments.
  *
  * @return       The number of segments created or @c -1 on error.
  */
-int coap_split_path(const uint8_t *s,
+int coap_split_path(const uint8_t *path,
                     size_t length,
                     unsigned char *buf,
                     size_t *buflen);
 
 /**
+ * Splits the given URI path into '/' separate segments, and then adds
+ * the Uri-Path / Location-Path option for each segment to the @p optlist_chain.
+ *
+ * Note: any segments that are just '.' or '..' are stripped out.
+ *
+ * @param path   The path string to split.
+ * @param length The actual length of @p path.
+ * @param optnum The CoAP option (COAP_OPTION_URI_PATH or
+ *               COAP_OPTION_LOCATION_PATH)
+ * @param optlist_chain The chain of optlists to add to. optlist_chain
+ *                      parent is to be NULL or a previous set of optlists.
+ *
+ * @return       @c 1 on success else @c 0 if error.
+ */
+int coap_path_into_optlist(const uint8_t *path, size_t length,
+                           coap_option_num_t optnum,
+                           coap_optlist_t **optlist_chain);
+
+/**
  * Splits the given URI query into segments. Each segment is preceded
  * by an option pseudo-header with delta-value 0 and the actual length
- * of the respective query term.
+ * of the respective query segment.
  *
- * @param s      The query string to split.
- * @param length The actual length of @p s.
+ * @param query  The query string to split.
+ * @param length The actual length of @p query
  * @param buf    Result buffer for parsed segments.
  * @param buflen Maximum length of @p buf. Will be set to the actual number
- *               of bytes written into buf on success.
+ *               of bytes written into buf on success. This needs to be
+ *               at least @p length, but 2 bytes should be added for each
+ *               segment to handle large segments.
  *
  * @return       The number of segments created or @c -1 on error.
- *
- * @bug This function does not reserve additional space for delta > 12.
  */
-int coap_split_query(const uint8_t *s,
+int coap_split_query(const uint8_t *query,
                      size_t length,
                      unsigned char *buf,
                      size_t *buflen);
+
+/**
+ * Splits the given URI query into '&' separate segments, and then adds
+ * the Uri-Query / Location-Query option for each segment to the @p optlist_chain.
+ *
+ * @param query  The query string to split.
+ * @param length The actual length of @p query.
+ * @param optnum The CoAP option (COAP_OPTION_URI_QUERY or
+ *               COAP_OPTION_LOCATION_QUERY)
+ * @param optlist_chain The chain of optlists to add to. optlist_chain
+ *                      parent is to be NULL or a previous set of optlists.
+ *
+ * @return       @c 1 on success else @c 0 if error.
+ */
+int coap_query_into_optlist(const uint8_t *query, size_t length,
+                            coap_option_num_t optnum,
+                            coap_optlist_t **optlist_chain);
 
 /**
  * Extract query string from request PDU according to escape rules in 6.5.8.
@@ -242,7 +306,7 @@ coap_string_t *coap_get_query(const coap_pdu_t *request);
  * Extract uri_path string from request PDU
  * @param request Request PDU.
  * @return        Reconstructed and escaped uri path string part or @c NULL
- *                if no URI-Path was contained in @p request. The
+ *                if no Uri-Path was contained in @p request. The
  *                coap_string_t object returned by this function must be
  *                released with coap_delete_string.
  */

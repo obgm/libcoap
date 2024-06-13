@@ -172,6 +172,7 @@ global:
   coap_package_build;
   coap_package_name;
   coap_package_version;
+  coap_path_into_optlist;
   coap_pdu_duplicate;
   coap_pdu_get_code;
   coap_pdu_get_mid;
@@ -194,6 +195,7 @@ global:
   coap_prng;
   coap_prng_init;
   coap_q_block_is_supported;
+  coap_query_into_optlist;
   coap_realloc_type;
   coap_register_async;
   coap_register_event_handler;
@@ -296,6 +298,7 @@ global:
   coap_tls_engine_remove;
   coap_tls_is_supported;
   coap_uri_into_options;
+  coap_uri_into_optlist;
   coap_write_block_b_opt;
   coap_write_block_opt;
   coap_ws_is_supported;

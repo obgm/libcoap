@@ -170,10 +170,10 @@ hnd_post_test(coap_resource_t *resource COAP_UNUSED,
   const uint8_t *data;
 
 #define BUFSIZE 20
-  int res;
   unsigned char _buf[BUFSIZE];
   unsigned char *buf = _buf;
   size_t buflen = BUFSIZE;
+  coap_optlist_t *optlist_chain = NULL;
 
   coap_get_data(request, &len, &data);
 
@@ -208,18 +208,20 @@ hnd_post_test(coap_resource_t *resource COAP_UNUSED,
     coap_add_payload(r, test_payload);
 
     /* add Location-Path */
-    res = coap_split_path(uri->s, uri->length, buf, &buflen);
+    if (!coap_path_into_optlist(uri->s, uri->length, COAP_OPTION_LOCATION_PATH,
+                                &optlist_chain))
+      goto error;
+    if (!coap_add_optlist_pdu(response, &optlist_chain))
+      goto error;
 
-    while (res--) {
-      coap_add_option(response, COAP_OPTION_LOCATION_PATH,
-                      coap_opt_length(buf), coap_opt_value(buf));
-
-      buf += coap_opt_size(buf);
-    }
+    coap_delete_optlist(optlist_chain);
 
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
   }
+  return;
 
+error:
+  coap_delete_optlist(optlist_chain);
 }
 
 static void

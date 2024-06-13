@@ -342,7 +342,7 @@ function TD_COAP_CORE_11 {
 # Client sends a confirmable GET request to server's resource
 #
 # check: sent request contains Type=0(CON) and Code=1(GET), Option
-# type=URI-Path (one for each path segment)
+# type=Uri-Path (one for each path segment)
 #
 # check: Server sends response containing Code=69(2.05 content),
 # Payload=Content of the requested resource, Content type option
@@ -365,7 +365,7 @@ function TD_COAP_CORE_12 {
 # (e.g. ?first=1&second=2&third=3) to server's resource
 #
 # check: sent request contains Type=0(CON) and Code=1(GET), Option
-# type=URI-Query (More than one query parameter)
+# type=Uri-Query (More than one query parameter)
 #
 # check: Server sends response containing Type=0/2(Con/ACK),
 # Code=69(2.05 content), Payload=Content of the requested resource,
@@ -500,7 +500,7 @@ function TD_COAP_LINK_01 {
 # Client retrieves Server's list of resource of a specific Type 1
 #
 # check: client sends GET request for /.well-known/core resource
-# containing URI-Query indicating "rt=Type1"
+# containing Uri-Query indicating "rt=Type1"
 #
 # check: server sends response containing content-type option
 # indicating 40 (application/link-format), payload indicating only the

@@ -205,7 +205,7 @@ coap_rebuild_pdu_for_proxy(coap_pdu_t *pdu) {
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
   uint8_t option_value_buffer[15];
-  uint8_t *keep_proxy_uri = NULL;
+  coap_optlist_t *optlist_chain = NULL;
 
   if ((option =
            coap_check_option(pdu, COAP_OPTION_PROXY_URI, &opt_iter)) == NULL)
@@ -213,12 +213,8 @@ coap_rebuild_pdu_for_proxy(coap_pdu_t *pdu) {
 
   /* Need to break down into the component parts, but keep data safe */
   memset(&uri, 0, sizeof(uri));
-  keep_proxy_uri = coap_malloc_type(COAP_STRING, coap_opt_length(option));
-  if (keep_proxy_uri == NULL)
-    goto error;
-  memcpy(keep_proxy_uri, coap_opt_value(option), coap_opt_length(option));
 
-  if (coap_split_proxy_uri(keep_proxy_uri,
+  if (coap_split_proxy_uri(coap_opt_value(option),
                            coap_opt_length(option),
                            &uri) < 0 || uri.scheme >= COAP_URI_SCHEME_LAST) {
     coap_log_warn("Proxy URI '%.*s' not decodable\n",
@@ -243,59 +239,31 @@ coap_rebuild_pdu_for_proxy(coap_pdu_t *pdu) {
                           option_value_buffer))
     goto error;
   if (uri.path.length) {
-    uint8_t *buf;
-    uint8_t *kbuf;
-    size_t buflen = uri.path.length + 1;
-    int res;
-
-    kbuf = buf = coap_malloc_type(COAP_STRING, uri.path.length + 1);
-    if (buf) {
-      res = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
-      while (res--) {
-        if (!coap_insert_option(pdu,
-                                COAP_OPTION_URI_PATH,
-                                coap_opt_length(buf),
-                                coap_opt_value(buf))) {
-          coap_free_type(COAP_STRING, buf);
-          goto error;
-        }
-        buf += coap_opt_size(buf);
-      }
-    }
-    coap_free_type(COAP_STRING, kbuf);
+    /* Add in the Uri-Path options */
+    if (!coap_path_into_optlist(uri.path.s, uri.path.length, COAP_OPTION_URI_PATH,
+                                &optlist_chain))
+      goto error;
   }
   if (uri.query.length) {
-    uint8_t *buf;
-    size_t buflen = uri.query.length + 1;
-    int res;
-
-    buf = coap_malloc_type(COAP_STRING, uri.query.length + 1);
-    if (buf) {
-      res = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
-      while (res--) {
-        if (!coap_insert_option(pdu,
-                                COAP_OPTION_URI_QUERY,
-                                coap_opt_length(buf),
-                                coap_opt_value(buf))) {
-          coap_free_type(COAP_STRING, buf);
-          goto error;
-        }
-
-        buf += coap_opt_size(buf);
-      }
-      coap_free_type(COAP_STRING, buf);
-    }
+    /* Add in the Uri-Query options */
+    if (!coap_query_into_optlist(uri.query.s, uri.query.length, COAP_OPTION_URI_QUERY,
+                                 &optlist_chain))
+      goto error;
   }
+  if (!coap_add_optlist_pdu(pdu, &optlist_chain))
+    goto error;
+
   if (!coap_insert_option(pdu,
                           COAP_OPTION_PROXY_SCHEME,
                           strlen(coap_uri_scheme[uri.scheme].name),
                           (const uint8_t *)coap_uri_scheme[uri.scheme].name))
     goto error;
-  coap_free_type(COAP_STRING, keep_proxy_uri);
+
+  coap_delete_optlist(optlist_chain);
   return 1;
 
 error:
-  coap_free_type(COAP_STRING, keep_proxy_uri);
+  coap_delete_optlist(optlist_chain);
   return 0;
 }
 
