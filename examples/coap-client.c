@@ -1655,8 +1655,6 @@ main(int argc, char **argv) {
   uint8_t *data = NULL;
   size_t data_len = 0;
   coap_addr_info_t *info_list = NULL;
-#define BUFSIZE 100
-  static unsigned char buf[BUFSIZE];
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1930,10 +1928,9 @@ main(int argc, char **argv) {
   coap_session_init_token(session, the_token.length, the_token.s);
 
   /* Convert provided uri into CoAP options */
-  if (coap_uri_into_options(&uri, !uri_host_option && !proxy.host.length ?
-                            &dst : NULL,
-                            &optlist, create_uri_opts,
-                            buf, sizeof(buf)) < 0) {
+  if (!coap_uri_into_optlist(&uri, !uri_host_option && !proxy.host.length ?
+                             &dst : NULL,
+                             &optlist, create_uri_opts)) {
     coap_log_err("Failed to create options for URI\n");
     goto failed;
   }

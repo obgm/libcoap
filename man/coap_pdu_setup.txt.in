@@ -27,7 +27,9 @@ coap_add_option,
 coap_add_data,
 coap_add_data_blocked_response,
 coap_send,
+coap_path_into_optlist,
 coap_split_path,
+coap_query_into_optlist,
 coap_split_query,
 coap_pdu_set_mid,
 coap_pdu_set_code,
@@ -82,8 +84,14 @@ const uint8_t *_data_);*
 
 *coap_mid_t coap_send(coap_session_t *_session_, coap_pdu_t *_pdu_);*
 
+*int coap_path_into_optlist(const uint8_t *_path_, size_t _length_,
+coap_option_num_t _optnum_, coap_optlist_t **_optlist_chain_);*
+
 *int coap_split_path(const uint8_t *_path_, size_t _length_, uint8_t *_buffer_,
 size_t *_buflen_);*
+
+*int coap_query_into_optlist(const uint8_t *_path_, size_t _length_,
+coap_option_num_t _optnum_, coap_optlist_t **_optlist_chain_);*
 
 *int coap_split_query(const uint8_t *_query_, size_t _length_,
 uint8_t *_buffer_, size_t *_buflen_);*
@@ -411,25 +419,57 @@ The *coap_encode_var_safe8*() function encodes 8 byte _value_ into _buffer_
 which has a size of _size_ in bytes.  Normally, the _buffer_ size should be at
 least 8 bytes unless you definitely know less space is required.
 
+*Function: coap_path_into_optlist()*
+
+The *coap_path_into_optlist*() function splits up _path_ of length _length_
+into '/' separated segments and then appends the _optnum_ option for each
+segment to _optlist_chain_. _optlist_chain_ can contain previous optlist
+entries or the parent has to be initialized to NULL. Any segment that is
+just "." is not appended. Any segment that is just ".." causes the previous
+segment (if just added by *coap_path_into_optlist*()) to be removed from
+_optlist_chain_. Any %<hex><hex> definitions are replaced by the actual byte.
+_optnum_ should be one of COAP_OPTION_URI_PATH or COAP_OPTION_LOCATION_PATH.
+
 *Function: coap_split_path()*
 
-The *coap_split_path*() function splits up _path_ of length _length_ and
-places the result in _buffer_ which has a size of _buflen_ with the nul
-character separating each path component.  _buflen_ needs
-to be preset with the size of _buffer_ before the function call, and then
-_buflen_ is updated with the actual size of _buffer_ used. The return
-value indicates the number of components that individual COAP_OPTION_URI_PATH
-options need to be created for.
+The *coap_split_path*() function splits up _path_ of length _length_ into
+'/' separated segments and places the result in _buffer_ which has a size
+of _buflen_ with a dummy option separating each path segment.
+_buflen_ needs to be preset with the size of _buffer_ before the function call,
+and then _buflen_ is updated with the actual size of _buffer_ used.
+_buflen_ needs to be at least _length_ with an extra 2 bytes per segment to
+handle long segments.
+Any segment that is just "." is not appended. Any segment that is just ".."
+causes the previous segment (if any) to be removed from _buffer_.
+Any %<hex><hex> definitions are replaced by the actual byte.
+The return value indicates the number of components that individual
+COAP_OPTION_URI_PATH (or COAP_OPTION_LOCATION_PATH) options need to be
+created for.
+
+Note: For simplicity, use *coap_path_into_optlist*() instead.
+
+*Function: coap_query_into_optlist()*
+
+The *coap_query_into_optlist*() function splits up _query_ of length _length_
+into '&' separated segments and then appends the _optnum_ option for each
+segment to _optlist_chain_. _optlist_chain_ can contain previous optlist
+entries or the parent has to be initialized to NULL.  _optnum_ should be one of
+COAP_OPTION_URI_QUERY or COAP_OPTION_LOCATION_QUERY.
 
 *Function: coap_split_query()*
 
-The *coap_split_query*() function splits up _query_ of length _length_ and
-places the result in _buffer_ which has a size of _buflen_ with the nul
-character separating each path component.  _buflen_ needs
+The *coap_split_query*() function splits up _query_ of length _length_ into
+'&' separated segments and
+places the result in _buffer_ which has a size of _buflen_ with a dummy
+option separating each query segment.  _buflen_ needs
 to be preset with the size of _buffer_ before the function call, and then
-_buflen_ is updated with the actual size of _buffer_ used. The return
+_buflen_ is updated with the actual size of _buffer_ used. _buflen_ needs
+to be at least _length_ with an extra 2 bytes per segment to handle long
+segments. The return
 value indicates the number of components that individual COAP_OPTION_URI_QUERY
-options need to be created for.
+(or COAP_OPTION_LOCATION_QUERY) options need to be created for.
+
+Note: For simplicity, use *coap_query_into_optlist*() instead.
 
 PDU OPTIONS - LIBCOAP HANDLING
 ------------------------------
@@ -554,6 +594,9 @@ failure.
 *coap_send*() returns the CoAP message ID on success or
 COAP_INVALID_MID on failure.
 
+*coap_path_into_optlist*() and *coap_query_into_optlist*() return 1 on
+success or 0 on failure.
+
 *coap_split_path*() and *coap_split_query*() return the number
 of components found.
 
@@ -569,14 +612,12 @@ EXAMPLES
 
 static int
 build_send_pdu(coap_context_t *context, coap_session_t *session,
-               uint8_t msgtype, uint8_t request_code, const char *uri,
+               uint8_t msgtype, uint8_t request_code, const char *path,
                const char *query, unsigned char *data, size_t length,
                int observe) {
   coap_pdu_t *pdu;
-  uint8_t buf[1024];
+  uint8_t buf[8];
   size_t buflen;
-  uint8_t *sbuf = buf;
-  int res;
   coap_optlist_t *optlist_chain = NULL;
   /* Remove (void) definition if variable is used */
   (void)context;
@@ -597,32 +638,18 @@ build_send_pdu(coap_context_t *context, coap_session_t *session,
     goto error;
   }
 
-  if (uri) {
-    /* Add in the URI options */
-    buflen = sizeof(buf);
-    res = coap_split_path((const uint8_t *)uri, strlen(uri), sbuf, &buflen);
-    while (res--) {
-      if (!coap_insert_optlist(&optlist_chain,
-                               coap_new_optlist(COAP_OPTION_URI_PATH,
-                                                coap_opt_length(sbuf),
-                                                coap_opt_value(sbuf))))
-        goto error;
-      sbuf += coap_opt_size(sbuf);
-    }
+  if (path) {
+    /* Add in the Uri-Path options */
+    if (!coap_path_into_optlist((const uint8_t *)path, strlen(path),
+                                COAP_OPTION_URI_PATH, &optlist_chain))
+      goto error;
   }
 
   if (query) {
-    /* Add in the QUERY options */
-    buflen = sizeof(buf);
-    res = coap_split_query((const uint8_t *)query, strlen(query), sbuf, &buflen);
-    while (res--) {
-      if (!coap_insert_optlist(&optlist_chain,
-                               coap_new_optlist(COAP_OPTION_URI_QUERY,
-                                                coap_opt_length(sbuf),
-                                                coap_opt_value(sbuf))))
-        goto error;
-      sbuf += coap_opt_size(sbuf);
-    }
+    /* Add in the Uri-Query options */
+    if (!coap_query_into_optlist((const uint8_t *)query, strlen(query),
+                                 COAP_OPTION_URI_QUERY, &optlist_chain))
+      goto error;
   }
 
   if (request_code == COAP_REQUEST_GET && observe) {

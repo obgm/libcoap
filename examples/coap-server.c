@@ -997,8 +997,6 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
   coap_pdu_t *pdu;
   coap_optlist_t *optlist = NULL;
   coap_opt_t *option;
-#define BUFSIZE 100
-  unsigned char buf[BUFSIZE];
   coap_bin_const_t token = coap_pdu_get_token(request);
 
   memset(&uri, 0, sizeof(uri));
@@ -1105,8 +1103,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
       proxy_scheme_option = 0;
       const coap_address_t *dst = coap_session_get_addr_remote(ongoing);
 
-      if (coap_uri_into_options(&uri, dst, &optlist, 1,
-                                buf, sizeof(buf)) < 0) {
+      if (!coap_uri_into_optlist(&uri, dst, &optlist, 1)) {
         coap_log_err("Failed to create options for URI\n");
         goto cleanup;
       }

@@ -145,6 +145,8 @@ t_parse_uri7(void) {
   coap_uri_t uri;
   unsigned char buf[40];
   size_t buflen = sizeof(buf);
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
 
   /* The list of path segments to check against. Each segment is
      preceded by a dummy option indicating that holds the (dummy)
@@ -174,6 +176,18 @@ t_parse_uri7(void) {
     CU_ASSERT(result == 4);
     CU_ASSERT(buflen == sizeof(checkbuf));
     CU_ASSERT_NSTRING_EQUAL(buf, checkbuf, buflen);
+
+    result = coap_path_into_optlist(uri.path.s, uri.path.length, 0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 128);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->used_size == sizeof(checkbuf));
+    CU_ASSERT_NSTRING_EQUAL(pdu->token, checkbuf, pdu->used_size);
+    coap_delete_pdu(pdu);
   } else {
     CU_FAIL("uri parser error");
   }
@@ -244,6 +258,8 @@ t_parse_uri11(void) {
   coap_uri_t uri;
   unsigned char buf[40];
   size_t buflen = sizeof(buf);
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
 
   /* The list of path segments to check against. Each segment is
      preceded by a dummy option indicating that holds the (dummy)
@@ -273,6 +289,18 @@ t_parse_uri11(void) {
     CU_ASSERT(result == 1);
     CU_ASSERT(buflen == sizeof(checkbuf));
     CU_ASSERT_NSTRING_EQUAL(buf, checkbuf, buflen);
+
+    result = coap_path_into_optlist(uri.path.s, uri.path.length, 0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 128);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->used_size == sizeof(checkbuf));
+    CU_ASSERT_NSTRING_EQUAL(pdu->token, checkbuf, pdu->used_size);
+    coap_delete_pdu(pdu);
   } else {
     CU_FAIL("uri parser error");
   }
@@ -285,6 +313,8 @@ t_parse_uri12(void) {
   coap_uri_t uri;
   unsigned char buf[40];
   size_t buflen = sizeof(buf);
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
 
   /* The list of path segments to check against. Each segment is
      preceded by a dummy option indicating that holds the (dummy)
@@ -311,12 +341,36 @@ t_parse_uri12(void) {
     CU_ASSERT(buflen == sizeof(uricheckbuf));
     CU_ASSERT_NSTRING_EQUAL(buf, uricheckbuf, buflen);
 
+    result = coap_path_into_optlist(uri.path.s, uri.path.length, 0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 128);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->used_size == sizeof(uricheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(pdu->token, uricheckbuf, pdu->used_size);
+    coap_delete_pdu(pdu);
+
     /* check query segments */
     buflen = sizeof(buf);
     result = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
     CU_ASSERT(result == 2);
     CU_ASSERT(buflen == sizeof(querycheckbuf));
     CU_ASSERT_NSTRING_EQUAL(buf, querycheckbuf, buflen);
+    optlist_chain = NULL;
+    result = coap_query_into_optlist(uri.query.s, uri.query.length, 0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 128);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->used_size == sizeof(querycheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(pdu->token, querycheckbuf, pdu->used_size);
+    coap_delete_pdu(pdu);
   } else {
     CU_FAIL("uri parser error");
   }
@@ -357,6 +411,8 @@ t_parse_uri14(void) {
   char teststr[] =
       "longerthan13lessthan270=0123456789012345678901234567890123456789";
   int result;
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
 
   /* buf is large enough to hold sizeof(teststr) - 1 bytes content and
    * 2 bytes for the option header. */
@@ -370,6 +426,19 @@ t_parse_uri14(void) {
     CU_ASSERT(buf[1] == strlen(teststr) - 13);
 
     CU_ASSERT_NSTRING_EQUAL(buf+2, teststr, strlen(teststr));
+
+    result = coap_query_into_optlist((unsigned char *)teststr,
+                                     strlen(teststr), 0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 128);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->token[0] == 0x0d);
+    CU_ASSERT(pdu->token[1] == strlen(teststr) - 13);
+    coap_delete_pdu(pdu);
   } else {
     CU_FAIL("uri parser error");
   }
@@ -416,6 +485,8 @@ t_parse_uri17(void) {
       "01234567890123456789012345678901234567890123456789"
       "01234567890123456789012345678901234567890123456789";
   int result;
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
 
   /* buf is large enough to hold sizeof(teststr) - 1 bytes content and
    * 3 bytes for the option header. */
@@ -430,6 +501,19 @@ t_parse_uri17(void) {
     CU_ASSERT(buf[2] == ((strlen(teststr) - 269) & 0xff));
 
     CU_ASSERT_NSTRING_EQUAL(buf+3, teststr, strlen(teststr));
+    result = coap_query_into_optlist((unsigned char *)teststr, strlen(teststr),
+                                     0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 300);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->token[0] == 0x0e);
+    CU_ASSERT(pdu->token[1] == (((strlen(teststr) - 269) >> 8) & 0xff));
+    CU_ASSERT(pdu->token[2] == ((strlen(teststr) - 269) & 0xff));
+    coap_delete_pdu(pdu);
   } else {
     CU_FAIL("uri parser error");
   }
@@ -569,17 +653,397 @@ t_parse_uri23(void) {
  */
 static void
 t_parse_uri24(void) {
-  /* coap://\206cap:// */
+  /* coap://\206coap:// */
   uint8_t teststr[] = { 0x63, 0x6f, 0x61, 0x70, 0x3a, 0x2f, 0x2f, 0x86, 0x63, 0x6f, 0x61, 0x70, 0x3a, 0x2f, 0x2f };
   int result;
   unsigned char buf[40];
   size_t buflen = sizeof(buf);
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
 
   result = coap_split_path(teststr, sizeof(teststr), buf, &buflen);
   CU_ASSERT(result == 5);
   CU_ASSERT(buflen == 16);
+
+  result = coap_path_into_optlist(teststr, sizeof(teststr), 0, &optlist_chain);
+  CU_ASSERT(result == 1);
+  pdu = coap_pdu_init(0, 0, 0, 128);
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  result = coap_add_optlist_pdu(pdu, &optlist_chain);
+  CU_ASSERT(result == 1);
+  coap_delete_optlist(optlist_chain);
+  CU_ASSERT(pdu->used_size == 16);
+  coap_delete_pdu(pdu);
 }
 
+static void
+t_parse_uri25(void) {
+  char teststr[] = "coap://198.51.100.1:61616//%2E//%2E%2E/./../a?%2e%2F&?%26";
+  int result;
+  coap_uri_t uri;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
+
+  /* The list of path segments to check against. Each segment is
+     preceded by a dummy option indicating that holds the (dummy)
+     delta value 0 and the actual segment length. */
+  const uint8_t uricheckbuf[] = { 0x01, 0x61 };
+  const uint8_t querycheckbuf[] = { 0x02, 0x2e, 0x2f, 0x02, 0x3f, 0x26 };
+
+  result = coap_split_uri((unsigned char *)teststr, strlen(teststr), &uri);
+  if (result == 0) {
+    CU_ASSERT(uri.host.length == 12);
+    CU_ASSERT_NSTRING_EQUAL(uri.host.s, "198.51.100.1", 12);
+
+    CU_ASSERT(uri.port == 61616);
+
+    CU_ASSERT(uri.path.length == 19);
+    CU_ASSERT_NSTRING_EQUAL(uri.path.s, "/%2E//%2E%2E/./../a", 19);
+
+    CU_ASSERT(uri.query.length == 11);
+    CU_ASSERT_NSTRING_EQUAL(uri.query.s, "%2e%2F&?%26", 11);
+
+    /* check path segments */
+    result = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
+    CU_ASSERT(result == 1);
+    CU_ASSERT(buflen == sizeof(uricheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(buf, uricheckbuf, buflen);
+
+    result = coap_path_into_optlist(uri.path.s, uri.path.length, 0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 128);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->used_size == sizeof(uricheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(pdu->token, uricheckbuf, pdu->used_size);
+    coap_delete_pdu(pdu);
+
+    /* check query segments */
+    buflen = sizeof(buf);
+    result = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
+    CU_ASSERT(result == 2);
+    CU_ASSERT(buflen == sizeof(querycheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(buf, querycheckbuf, buflen);
+    optlist_chain = NULL;
+
+    result = coap_query_into_optlist(uri.query.s, uri.query.length, 0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 128);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->used_size == sizeof(querycheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(pdu->token, querycheckbuf, pdu->used_size);
+    coap_delete_pdu(pdu);
+  } else {
+    CU_FAIL("uri parser error");
+  }
+}
+
+static void
+t_parse_uri26(void) {
+  char teststr[] = "coap://198.51.100.1:61616//a/?a=b";
+  int result;
+  coap_uri_t uri;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
+
+  /* The list of path segments to check against. Each segment is
+     preceded by a dummy option indicating that holds the (dummy)
+     delta value 0 and the actual segment length. */
+  const uint8_t uricheckbuf[] = { 0x00, 0x01, 0x61, 0x00 };
+  const uint8_t querycheckbuf[] = { 0x03, 0x61, 0x3d, 0x62 };
+
+  result = coap_split_uri((unsigned char *)teststr, strlen(teststr), &uri);
+  if (result == 0) {
+    CU_ASSERT(uri.host.length == 12);
+    CU_ASSERT_NSTRING_EQUAL(uri.host.s, "198.51.100.1", 12);
+
+    CU_ASSERT(uri.port == 61616);
+
+    CU_ASSERT(uri.path.length == 3);
+    CU_ASSERT_NSTRING_EQUAL(uri.path.s, "/a/", 3);
+
+    CU_ASSERT(uri.query.length == 3);
+    CU_ASSERT_NSTRING_EQUAL(uri.query.s, "a=b", 3);
+
+    /* check path segments */
+    result = coap_split_path(uri.path.s, uri.path.length, buf, &buflen);
+    CU_ASSERT(result == 3);
+    CU_ASSERT(buflen == sizeof(uricheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(buf, uricheckbuf, buflen);
+
+    result = coap_path_into_optlist(uri.path.s, uri.path.length, 0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 128);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->used_size == sizeof(uricheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(pdu->token, uricheckbuf, pdu->used_size);
+    coap_delete_pdu(pdu);
+
+    /* check query segments */
+    buflen = sizeof(buf);
+    result = coap_split_query(uri.query.s, uri.query.length, buf, &buflen);
+    CU_ASSERT(result == 1);
+    CU_ASSERT(buflen == sizeof(querycheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(buf, querycheckbuf, buflen);
+    optlist_chain = NULL;
+
+    result = coap_query_into_optlist(uri.query.s, uri.query.length, 0, &optlist_chain);
+    CU_ASSERT(result == 1);
+    pdu = coap_pdu_init(0, 0, 0, 128);
+    CU_ASSERT(pdu != NULL);
+    assert(pdu != NULL);
+    result = coap_add_optlist_pdu(pdu, &optlist_chain);
+    CU_ASSERT(result == 1);
+    coap_delete_optlist(optlist_chain);
+    CU_ASSERT(pdu->used_size == sizeof(querycheckbuf));
+    CU_ASSERT_NSTRING_EQUAL(pdu->token, querycheckbuf, pdu->used_size);
+    coap_delete_pdu(pdu);
+  } else {
+    CU_FAIL("uri parser error");
+  }
+}
+
+static void
+t_parse_uri27(void) {
+  char testpath[] = "../a";
+  int result;
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+
+  const uint8_t pathcheckbuf_1[] = { 0x01, 0x61 };
+  const uint8_t pathcheckbuf_2[] = { 0x34, 0x68, 0x6f, 0x73, 0x74, 0x81, 0x61 };
+
+  result = coap_split_path((uint8_t *)testpath, strlen(testpath), buf, &buflen);
+  CU_ASSERT(result == 1);
+  CU_ASSERT(buflen == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(buf, pathcheckbuf_1, buflen);
+
+  result = coap_path_into_optlist((uint8_t *)testpath, strlen(testpath),
+                                  0, &optlist_chain);
+  CU_ASSERT(result == 1);
+  pdu = coap_pdu_init(0, 0, 0, 128);
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  result = coap_add_optlist_pdu(pdu, &optlist_chain);
+  CU_ASSERT(result == 1);
+  coap_delete_optlist(optlist_chain);
+  CU_ASSERT(pdu->used_size == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(pdu->token, pathcheckbuf_1, pdu->used_size);
+  coap_delete_pdu(pdu);
+
+  optlist_chain = NULL;
+  /* Add in a Uri-Host: option to check .. backup */
+  coap_insert_optlist(&optlist_chain,
+                      coap_new_optlist(COAP_OPTION_URI_HOST,
+                                       4,
+                                       (const uint8_t *)"host"));
+  result = coap_path_into_optlist((uint8_t *)testpath, strlen(testpath),
+                                  COAP_OPTION_URI_PATH, &optlist_chain);
+  CU_ASSERT(result == 1);
+  pdu = coap_pdu_init(0, 0, 0, 128);
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  result = coap_add_optlist_pdu(pdu, &optlist_chain);
+  CU_ASSERT(result == 1);
+  coap_delete_optlist(optlist_chain);
+  CU_ASSERT(pdu->used_size == sizeof(pathcheckbuf_2));
+  CU_ASSERT_NSTRING_EQUAL(pdu->token, pathcheckbuf_2, pdu->used_size);
+  coap_delete_pdu(pdu);
+}
+
+static void
+t_parse_uri28(void) {
+  char testpath[] = "a/";
+  int result;
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+
+  const uint8_t pathcheckbuf_1[] = { 0x01, 0x61, 0x00 };
+
+  result = coap_split_path((uint8_t *)testpath, strlen(testpath), buf, &buflen);
+  CU_ASSERT(result == 2);
+  CU_ASSERT(buflen == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(buf, pathcheckbuf_1, buflen);
+
+  result = coap_path_into_optlist((uint8_t *)testpath, strlen(testpath),
+                                  0, &optlist_chain);
+  CU_ASSERT(result == 1);
+  pdu = coap_pdu_init(0, 0, 0, 128);
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  result = coap_add_optlist_pdu(pdu, &optlist_chain);
+  CU_ASSERT(result == 1);
+  coap_delete_optlist(optlist_chain);
+  CU_ASSERT(pdu->used_size == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(pdu->token, pathcheckbuf_1, pdu->used_size);
+  coap_delete_pdu(pdu);
+}
+
+static void
+t_parse_uri29(void) {
+  char testpath[] = "a/.";
+  int result;
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+
+  const uint8_t pathcheckbuf_1[] = { 0x01, 0x61 };
+
+  result = coap_split_path((uint8_t *)testpath, strlen(testpath), buf, &buflen);
+  CU_ASSERT(result == 1);
+  CU_ASSERT(buflen == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(buf, pathcheckbuf_1, buflen);
+
+  result = coap_path_into_optlist((uint8_t *)testpath, strlen(testpath),
+                                  0, &optlist_chain);
+  CU_ASSERT(result == 1);
+  pdu = coap_pdu_init(0, 0, 0, 128);
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  result = coap_add_optlist_pdu(pdu, &optlist_chain);
+  CU_ASSERT(result == 1);
+  coap_delete_optlist(optlist_chain);
+  CU_ASSERT(pdu->used_size == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(pdu->token, pathcheckbuf_1, pdu->used_size);
+  coap_delete_pdu(pdu);
+}
+
+static void
+t_parse_uri30(void) {
+  char testpath[] = "a/..";
+  int result;
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+
+  result = coap_split_path((uint8_t *)testpath, strlen(testpath), buf, &buflen);
+  CU_ASSERT(result == 0);
+  CU_ASSERT(buflen == 0);
+
+  result = coap_path_into_optlist((uint8_t *)testpath, strlen(testpath),
+                                  0, &optlist_chain);
+  CU_ASSERT(result == 1);
+  pdu = coap_pdu_init(0, 0, 0, 128);
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  result = coap_add_optlist_pdu(pdu, &optlist_chain);
+  CU_ASSERT(result == 1);
+  coap_delete_optlist(optlist_chain);
+  CU_ASSERT(pdu->used_size == 0);
+  coap_delete_pdu(pdu);
+}
+
+static void
+t_parse_uri31(void) {
+  char testpath[] = "a/../";
+  int result;
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+
+  const uint8_t pathcheckbuf_1[] = { 0x00 };
+
+  result = coap_split_path((uint8_t *)testpath, strlen(testpath), buf, &buflen);
+  CU_ASSERT(result == 1);
+  CU_ASSERT(buflen == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(buf, pathcheckbuf_1, buflen);
+
+  result = coap_path_into_optlist((uint8_t *)testpath, strlen(testpath),
+                                  0, &optlist_chain);
+  CU_ASSERT(result == 1);
+  pdu = coap_pdu_init(0, 0, 0, 128);
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  result = coap_add_optlist_pdu(pdu, &optlist_chain);
+  CU_ASSERT(result == 1);
+  coap_delete_optlist(optlist_chain);
+  CU_ASSERT(pdu->used_size == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(pdu->token, pathcheckbuf_1, pdu->used_size);
+  coap_delete_pdu(pdu);
+}
+
+static void
+t_parse_uri32(void) {
+  char testpath[] = "a/.b";
+  int result;
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+
+  const uint8_t pathcheckbuf_1[] = { 0x01, 0x61, 0x2, 0x2e, 0x62 };
+
+  result = coap_split_path((uint8_t *)testpath, strlen(testpath), buf, &buflen);
+  CU_ASSERT(result == 2);
+  CU_ASSERT(buflen == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(buf, pathcheckbuf_1, buflen);
+
+  result = coap_path_into_optlist((uint8_t *)testpath, strlen(testpath),
+                                  0, &optlist_chain);
+  CU_ASSERT(result == 1);
+  pdu = coap_pdu_init(0, 0, 0, 128);
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  result = coap_add_optlist_pdu(pdu, &optlist_chain);
+  CU_ASSERT(result == 1);
+  coap_delete_optlist(optlist_chain);
+  CU_ASSERT(pdu->used_size == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(pdu->token, pathcheckbuf_1, pdu->used_size);
+  coap_delete_pdu(pdu);
+}
+
+static void
+t_parse_uri33(void) {
+  char testpath[] = "a/..b";
+  int result;
+  coap_optlist_t *optlist_chain = NULL;
+  coap_pdu_t *pdu = NULL;
+  unsigned char buf[40];
+  size_t buflen = sizeof(buf);
+
+  const uint8_t pathcheckbuf_1[] = { 0x01, 0x61, 0x3, 0x2e, 0x2e, 0x62 };
+
+  result = coap_split_path((uint8_t *)testpath, strlen(testpath), buf, &buflen);
+  CU_ASSERT(result == 2);
+  CU_ASSERT(buflen == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(buf, pathcheckbuf_1, buflen);
+
+  result = coap_path_into_optlist((uint8_t *)testpath, strlen(testpath),
+                                  0, &optlist_chain);
+  CU_ASSERT(result == 1);
+  pdu = coap_pdu_init(0, 0, 0, 128);
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  result = coap_add_optlist_pdu(pdu, &optlist_chain);
+  CU_ASSERT(result == 1);
+  coap_delete_optlist(optlist_chain);
+  CU_ASSERT(pdu->used_size == sizeof(pathcheckbuf_1));
+  CU_ASSERT_NSTRING_EQUAL(pdu->token, pathcheckbuf_1, pdu->used_size);
+  coap_delete_pdu(pdu);
+}
 
 CU_pSuite
 t_init_uri_tests(void) {
@@ -623,6 +1087,15 @@ t_init_uri_tests(void) {
   URI_TEST(suite, t_parse_uri22);
   URI_TEST(suite, t_parse_uri23);
   URI_TEST(suite, t_parse_uri24);
+  URI_TEST(suite, t_parse_uri25);
+  URI_TEST(suite, t_parse_uri26);
+  URI_TEST(suite, t_parse_uri27);
+  URI_TEST(suite, t_parse_uri28);
+  URI_TEST(suite, t_parse_uri29);
+  URI_TEST(suite, t_parse_uri30);
+  URI_TEST(suite, t_parse_uri31);
+  URI_TEST(suite, t_parse_uri32);
+  URI_TEST(suite, t_parse_uri33);
 
   return suite;
 }

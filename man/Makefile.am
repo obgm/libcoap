@@ -172,7 +172,9 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_setup.3" > coap_add_data.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_add_data_blocked_response.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_send.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_path_into_optlist.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_path.3
+	@echo ".so man3/coap_pdu_setup.3" > coap_query_into_optlist.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_mid.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_code.3

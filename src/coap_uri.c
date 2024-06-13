@@ -277,14 +277,27 @@ coap_split_proxy_uri(const uint8_t *str_var, size_t len, coap_uri_t *uri) {
   return coap_split_uri_sub(str_var, len, uri, COAP_URI_CHECK_PROXY);
 }
 
+static void
+coap_replace_upper_lower(coap_optlist_t *optlist) {
+  size_t i;
+
+  for (i = 0; i < optlist->length; i++) {
+    if (optlist->data[i] >= 'A' && optlist->data[i] <= 'Z') {
+      optlist->data[i] += 'a' - 'A';
+    }
+  }
+}
+
 int
 coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
                       coap_optlist_t **optlist_chain, int create_port_host_opt,
-                      uint8_t *_buf, size_t _buflen) {
-  int res;
-  unsigned char *buf = _buf;
-  size_t buflen = _buflen;
+                      uint8_t *_buf COAP_UNUSED, size_t buflen COAP_UNUSED) {
+  return !coap_uri_into_optlist(uri, dst, optlist_chain, create_port_host_opt) ? -1 : 0;
+}
 
+int
+coap_uri_into_optlist(const coap_uri_t *uri, const coap_address_t *dst,
+                      coap_optlist_t **optlist_chain, int create_port_host_opt) {
   if (create_port_host_opt && !coap_host_is_unix_domain(&uri->host)) {
     int add_option = 0;
 
@@ -294,8 +307,9 @@ coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
 #else /* WITH_LWIP || WITH_CONTIKI */
       char addr[40];
 #endif /* WITH_LWIP || WITH_CONTIKI */
+      coap_optlist_t *optlist;
 
-      /* Add in UriHost if not match (need to strip off &iface) */
+      /* Add in Uri-Host if not match (need to strip off %iface) */
       size_t uri_host_len = uri->host.length;
       const uint8_t *cp = uri->host.s;
 
@@ -312,10 +326,15 @@ coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
           (strlen(addr) != uri_host_len ||
            memcmp(addr, uri->host.s, uri_host_len) != 0)) {
         /* add Uri-Host */
-        coap_insert_optlist(optlist_chain,
-                            coap_new_optlist(COAP_OPTION_URI_HOST,
-                                             uri->host.length,
-                                             uri->host.s));
+        optlist = coap_new_optlist(COAP_OPTION_URI_HOST, uri->host.length,
+                                   uri->host.s);
+        if (!coap_host_is_unix_domain(&uri->host)) {
+          coap_replace_percents(optlist);
+          coap_replace_upper_lower(optlist);
+        }
+        if (!coap_insert_optlist(optlist_chain, optlist)) {
+          return 0;
+        }
       }
     }
     /* Add in UriPort if not default */
@@ -336,52 +355,29 @@ coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
         add_option = 1;
       break;
     }
-    if (add_option)
+    if (add_option) {
+      u_char tbuf[4];
+
       coap_insert_optlist(optlist_chain,
                           coap_new_optlist(COAP_OPTION_URI_PORT,
-                                           coap_encode_var_safe(buf, 4,
+                                           coap_encode_var_safe(tbuf, 4,
                                                                 (uri->port & 0xffff)),
-                                           buf));
+                                           tbuf));
+    }
   }
 
   if (uri->path.length) {
-    if (uri->path.length > buflen)
-      coap_log_warn("URI path will be truncated (max buffer %zu)\n",
-                    buflen);
-    res = coap_split_path(uri->path.s, uri->path.length, buf, &buflen);
-    if (res < 0)
-      return -1;
-
-    while (res--) {
-      coap_insert_optlist(optlist_chain,
-                          coap_new_optlist(COAP_OPTION_URI_PATH,
-                                           coap_opt_length(buf),
-                                           coap_opt_value(buf)));
-
-      buf += coap_opt_size(buf);
-    }
+    if (!coap_path_into_optlist(uri->path.s, uri->path.length, COAP_OPTION_URI_PATH,
+                                optlist_chain))
+      return 0;
   }
 
   if (uri->query.length) {
-    buflen = _buflen;
-    buf = _buf;
-    if (uri->query.length > buflen)
-      coap_log_warn("URI query will be truncated (max buffer %zu)\n",
-                    buflen);
-    res = coap_split_query(uri->query.s, uri->query.length, buf, &buflen);
-    if (res < 0)
-      return -1;
-
-    while (res--) {
-      coap_insert_optlist(optlist_chain,
-                          coap_new_optlist(COAP_OPTION_URI_QUERY,
-                                           coap_opt_length(buf),
-                                           coap_opt_value(buf)));
-
-      buf += coap_opt_size(buf);
-    }
+    if (!coap_query_into_optlist(uri->query.s, uri->query.length, COAP_OPTION_URI_QUERY,
+                                 optlist_chain))
+      return 0;
   }
-  return 0;
+  return 1;
 }
 
 int
@@ -532,35 +528,110 @@ typedef void (*segment_handler_t)(const uint8_t *, size_t, void *);
 
 /**
  * Checks if path segment @p s consists of one or two dots.
+ *
+ * returns 1 if . , 2 if .. else 0.
  */
-COAP_STATIC_INLINE int
+static int
 dots(const uint8_t *s, size_t len) {
-  return len && *s == '.' && (len == 1 || (len == 2 && *(s+1) == '.'));
+  uint8_t p;
+
+  if (!len)
+    return 0;
+
+  p = *s;
+
+  /* Check 'first' char */
+  if (p == '%' && len >=3) {
+    if (s[1] == '2' && (s[2] == 'E' || s[2] == 'e')) {
+      s += 2;
+      len -= 2;
+    }
+    p = '.';
+  }
+  if (p != '.')
+    return 0;
+  if (len == 1)
+    return 1;
+
+  /* Check 'second' char, first is '.' */
+  s++;
+  len--;
+  assert(len);
+  p = *s;
+  if (p == '%' && len >=3) {
+    if (s[1] == '2' && (s[2] == 'E' || s[2] == 'e')) {
+      len -= 2;
+    }
+    p = '.';
+  }
+  if (p != '.')
+    return 0;
+  if (len == 1)
+    return 2;
+
+  return 0;
+}
+
+struct cnt_str {
+  coap_string_t base_buf;
+  coap_string_t buf;
+  int n;
+};
+
+static void
+backup_segment(void *data) {
+  struct cnt_str *state = (struct cnt_str *)data;
+  int i;
+  uint8_t *buf;
+
+  if (state->n == 0)
+    return;
+
+  state->n--;
+  buf = state->base_buf.s;
+  for (i = 0; i < state->n; i++) {
+    buf += coap_opt_size(buf);
+  }
+  state->buf.s = buf;
+  state->buf.length = state->base_buf.length - (buf - state->base_buf.s);
 }
 
 /**
  * Splits the given string into segments. You should call one of the
- * macros coap_split_path() or coap_split_query() instead.
+ * functions coap_split_path() or coap_split_query() instead.
  *
- * @param s      The URI string to be tokenized.
- * @param length The length of @p s.
+ * @param path   The URI path string to be tokenized.
+ * @param len    The length of @p path.
  * @param h      A handler that is called with every token.
  * @param data   Opaque data that is passed to @p h when called.
  *
  * @return The number of characters that have been parsed from @p s.
  */
 static size_t
-coap_split_path_impl(const uint8_t *s, size_t length,
+coap_split_path_impl(const uint8_t *path, size_t len,
                      segment_handler_t h, void *data) {
-
   const uint8_t *p, *q;
+  size_t length = len;
+  int num_dots;
 
-  p = q = s;
+  p = q = path;
   while (length > 0 && !strnchr((const uint8_t *)"?#", 2, *q)) {
-    if (*q == '/') {                /* start new segment */
-
-      if (!dots(p, q - p)) {
+    if (*q == '/') {
+      /* start new segment */
+      num_dots = dots(p, q - p);
+      switch (num_dots) {
+      case 1:
+        /* drop segment */
+        break;
+      case 2:
+        /* backup segment */
+        backup_segment(data);
+        break;
+      case 0:
+      default:
+        /* add segment */
         h(p, q - p, data);
+        break;
       }
 
       p = q + 1;
@@ -571,17 +642,24 @@ coap_split_path_impl(const uint8_t *s, size_t length,
   }
 
   /* write last segment */
-  if (!dots(p, q - p)) {
+  num_dots = dots(p, q - p);
+  switch (num_dots) {
+  case 1:
+    /* drop segment */
+    break;
+  case 2:
+    /* backup segment */
+    backup_segment(data);
+    break;
+  case 0:
+  default:
+    /* add segment */
     h(p, q - p, data);
+    break;
   }
 
-  return q - s;
+  return q - path;
 }
-
-struct cnt_str {
-  coap_string_t buf;
-  int n;
-};
 
 static void
 write_option(const uint8_t *s, size_t len, void *data) {
@@ -601,7 +679,7 @@ write_option(const uint8_t *s, size_t len, void *data) {
 int
 coap_split_path(const uint8_t *s, size_t length,
                 unsigned char *buf, size_t *buflen) {
-  struct cnt_str tmp = { { *buflen, buf }, 0 };
+  struct cnt_str tmp = { { *buflen, buf }, { *buflen, buf }, 0 };
 
   coap_split_path_impl(s, length, write_option, &tmp);
 
@@ -610,10 +688,116 @@ coap_split_path(const uint8_t *s, size_t length,
   return tmp.n;
 }
 
+void
+coap_replace_percents(coap_optlist_t *optlist) {
+  size_t i;
+  size_t o = 0;
+
+  for (i = 0; i < optlist->length; i++) {
+    if (optlist->data[i] == '%' && optlist->length - i >= 3) {
+      optlist->data[o] = (hexchar_to_dec(optlist->data[i+1]) << 4) +
+                         hexchar_to_dec(optlist->data[i+2]);
+      i+= 2;
+    } else if (o != i) {
+      optlist->data[o] = optlist->data[i];
+    }
+    o++;
+  }
+  optlist->length = o;
+}
+
+static void
+backup_optlist(coap_optlist_t **optlist_begin) {
+  coap_optlist_t *last = NULL;
+  coap_optlist_t *cur = *optlist_begin;
+
+  if (!cur)
+    return;
+
+  while (cur) {
+    if (!cur->next)
+      break;
+    last = cur;
+    cur = cur->next;
+  }
+  coap_delete_optlist(cur);
+  if (last) {
+    last->next = NULL;
+  } else {
+    *optlist_begin = NULL;
+  }
+}
+
+int
+coap_path_into_optlist(const uint8_t *s, size_t length, coap_option_num_t optnum,
+                       coap_optlist_t **optlist_chain) {
+  const uint8_t *p = s;
+  coap_optlist_t *optlist;
+  int num_dots;
+  coap_optlist_t **optlist_start;
+
+  if (*optlist_chain) {
+    /* Something previously in optlist_chain. Need to make that the start */
+    optlist_start = &((*optlist_chain)->next);
+  } else {
+    optlist_start = optlist_chain;
+  }
+
+  while (length > 0 && !strnchr((const uint8_t *)"?#", 2, *s)) {
+    if (*s == '/') {                /* start of new path element */
+      /* start new segment */
+      num_dots = dots(p, s - p);
+      switch (num_dots) {
+      case 1:
+        /* drop segment */
+        break;
+      case 2:
+        /* backup segment */
+        backup_optlist(optlist_start);
+        break;
+      case 0:
+      default:
+        /* add segment */
+        optlist = coap_new_optlist(optnum, s - p, p);
+        coap_replace_percents(optlist);
+        if (!coap_insert_optlist(optlist_chain, optlist)) {
+          return 0;
+        }
+        break;
+      }
+      p = s + 1;
+    }
+    s++;
+    length--;
+
+  }
+  /* add last path element */
+  num_dots = dots(p, s - p);
+  switch (num_dots) {
+  case 1:
+    /* drop segment */
+    break;
+  case 2:
+    /* backup segment */
+    backup_optlist(optlist_start);
+    break;
+  case 0:
+  default:
+    /* add segment */
+    optlist = coap_new_optlist(optnum, s - p, p);
+    coap_replace_percents(optlist);
+    if (!coap_insert_optlist(optlist_chain, optlist)) {
+      return 0;
+    }
+    break;
+  }
+  return 1;
+}
+
 int
 coap_split_query(const uint8_t *s, size_t length,
                  unsigned char *buf, size_t *buflen) {
-  struct cnt_str tmp = { { *buflen, buf }, 0 };
+  struct cnt_str tmp = { { *buflen, buf }, { *buflen, buf }, 0 };
   const uint8_t *p;
 
   p = s;
@@ -632,6 +816,34 @@ coap_split_query(const uint8_t *s, size_t length,
 
   *buflen = *buflen - tmp.buf.length;
   return tmp.n;
+}
+
+int
+coap_query_into_optlist(const uint8_t *s, size_t length, coap_option_num_t optnum,
+                        coap_optlist_t **optlist_chain) {
+  const uint8_t *p = s;
+  coap_optlist_t *optlist;
+
+  while (length > 0 && *s != '#') {
+    if (*s == '&') {                /* start of new query element */
+      /* add previous query element */
+      optlist = coap_new_optlist(optnum, s - p, p);
+      coap_replace_percents(optlist);
+      if (!coap_insert_optlist(optlist_chain, optlist)) {
+        return 0;
+      }
+      p = s + 1;
+    }
+    s++;
+    length--;
+  }
+  /* add last query element */
+  optlist = coap_new_optlist(optnum, s - p, p);
+  coap_replace_percents(optlist);
+  if (!coap_insert_optlist(optlist_chain, optlist)) {
+    return 0;
+  }
+  return 1;
 }
 
 #define URI_DATA(uriobj) ((unsigned char *)(uriobj) + sizeof(coap_uri_t))

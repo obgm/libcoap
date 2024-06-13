@@ -35,6 +35,14 @@ typedef struct {
 
 extern coap_uri_info_t coap_uri_scheme[COAP_URI_SCHEME_LAST];
 
+/**
+ * replace any % hex definitions with the actual character.
+ *
+ * @param optlist The optlist entry to modify if % hex definitions.
+ *
+ */
+void coap_replace_percents(coap_optlist_t *optlist);
+
 /** @} */
 
 #endif /* COAP_URI_INTERNAL_H_ */

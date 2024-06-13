@@ -16,6 +16,7 @@ coap_split_proxy_uri,
 coap_new_uri,
 coap_clone_uri,
 coap_delete_uri,
+coap_uri_into_optlist,
 coap_uri_into_options
 - Work with CoAP URIs
 
@@ -34,6 +35,10 @@ coap_uri_t *_uri_);*
 *coap_uri_t *coap_clone_uri(const coap_uri_t *_uri_);*
 
 *void coap_delete_uri(coap_uri_t *_uri_);*
+
+*int coap_uri_into_optlist(const coap_uri_t *_uri_,
+const coap_address_t *_dst_, coap_optlist_t **_optlist_chain_,
+int _create_port_host_opt_);*
 
 *int coap_uri_into_options(const coap_uri_t *_uri_,
 const coap_address_t *_dst_, coap_optlist_t **_optlist_chain_,
@@ -72,11 +77,11 @@ typedef struct {
   coap_str_const_t host;  /* The host part of the URI */
   uint16_t port;          /* The port in host byte order */
   coap_str_const_t path;  /* The complete path if present or {0, NULL}.
-                             Needs to be split using coap_split_path()
-                             or coap_uri_into_options(). */
+                             Needs to be split using coap_path_into_optlist(3)
+                             or coap_uri_into_optlist(). */
   coap_str_const_t query; /* The complete query if present or {0, NULL}.
-                             Needs to be split using coap_split_query()
-                             or coap_uri_into_options(). */
+                             Needs to be split using coap_query_into_optlist(3)
+                             or coap_uri_into_optlist(). */
   enum coap_uri_scheme_t scheme; /* The parsed scheme specifier. */
 } coap_uri_t;
 ----
@@ -115,9 +120,9 @@ The returned coap_uri_t structure needs to be freed off using
 The *coap_delete_uri*() function frees off a previously created _uri_
 coap_uri_t structure.
 
-*Function: coap_uri_into_options()*
+*Function: coap_uri_into_optlist()*
 
-The *coap_uri_into_options*() function takes the _uri_ structure and then takes
+The *coap_uri_into_optlist*() function takes the _uri_ structure and then takes
 CoAP options derived from this information and adds them to _optlist_chain_.
 The initial _optlist_chain_ entry should be set to NULL before
 this function is called (unless *coap_insert_optlist*(3) has been previously
@@ -128,25 +133,29 @@ option is added in if the _uri_ host definition is not an exact match with the
 ascii readable version of _dst.
 
 If the port is not the default port and _create_port_host_opt_ is not 0, then
-the Port option is added to _optlist_chain_.
+the Uri-Port option is added to _optlist_chain_.
 
-If there is a path, then this is broken down into individual Path options for
-each segment which are then added to _optlist_chain_.
+If there is a path, then this is broken down into individual Uri-Path options
+for each segment which are then added to _optlist_chain_.
 
-Likewise, if
-there is a query, individual Query options for each segment are then added to
-_optlist_chain_.
-
-_buf_ provides a scratch buffer to use, of size _buflen_ bytes.  _buf_ needs
-to be as big as the path or query lengths.
+Likewise, if there is a query, individual Uri-Query options for each segment are
+then added to _optlist_chain_.
 
 *NOTE:* It is the responsibility of the application to free off the entries
 added to _optlist_chain_ using *coap_delete_optlist*(3).
+
+*Function: coap_uri_into_options()*
+
+The *coap_uri_into_options*() function has the same functionality as
+*coap_uri_into_optlist*() except that _buf_ and _buflen_ are ignored, but the
+return values are different.
 
 RETURN VALUES
 -------------
 *coap_split_uri*(), *coap_split_proxy_uri*(), and
 *coap_uri_into_options*() return 0 on success, else < 0 on failure.
+
+*coap_uri_into_optlist*() returns 1 on success, 0 on failure.
 
 *coap_new_uri*() and *coap_clone_uri*() return a newly allocated coap_uri_t
 structure or NULL on failure.
@@ -171,8 +180,6 @@ parse_and_send_uri(coap_session_t *session, const char *do_uri) {
   const coap_address_t *dst = coap_session_get_addr_remote(session);
   int res;
   coap_mid_t mid;
-#define BUFSIZE 100
-  unsigned char buf[BUFSIZE];
 
   /* Parse the URI */
   res = coap_split_uri((const uint8_t *)do_uri, strlen(do_uri), &uri);
@@ -222,8 +229,7 @@ parse_and_send_uri(coap_session_t *session, const char *do_uri) {
     return 0;
 
   /* Create all the necessary options from the URI */
-  res = coap_uri_into_options(&uri, dst, &optlist, 1, buf, sizeof(buf));
-  if (res != 0)
+  if (!coap_uri_into_optlist(&uri, dst, &optlist, 1))
     return 0;
 
   /* Add option list (which will get sorted) to the PDU */
