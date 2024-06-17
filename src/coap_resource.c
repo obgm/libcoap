@@ -1018,7 +1018,6 @@ coap_delete_observer_request(coap_resource_t *resource, coap_session_t *session,
   int ret = 0;
 
   s = coap_find_observer(resource, session, token);
-  s = NULL;
   if (!s) {
     /*
      * It is possible that the client is using the wrong token.
