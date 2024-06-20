@@ -33,8 +33,8 @@ coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line) {
 
 int
 coap_lock_lock_func(coap_lock_t *lock, int force, const char *file, int line) {
-  if (!force && lock->being_freed) {
-    /* context is going away */
+  if ((!force && lock->being_freed) || !coap_started) {
+    /* context is going away or libcoap not initialized with coap_startup() */
     return 0;
   }
   if (coap_mutex_trylock(&lock->mutex)) {
@@ -88,8 +88,8 @@ coap_lock_unlock_func(coap_lock_t *lock) {
 
 int
 coap_lock_lock_func(coap_lock_t *lock, int force) {
-  if (!force && lock->being_freed) {
-    /* context is going away */
+  if ((!force && lock->being_freed) || !coap_started) {
+    /* context is going away or libcoap not initialized with coap_startup() */
     return 0;
   }
   /*
