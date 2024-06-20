@@ -239,9 +239,16 @@ coap_dgram_write(void *ctx, const unsigned char *send_buffer,
     result = (int)c_session->sock.lfunc[COAP_LAYER_TLS].l_write(c_session,
                                                                 send_buffer, send_buffer_length);
     if (result != (ssize_t)send_buffer_length) {
+      int keep_errno = errno;
+
       coap_log_warn("coap_netif_dgrm_write failed (%zd != %zu)\n",
                     result, send_buffer_length);
-      result = 0;
+      errno = keep_errno;
+      if (result < 0) {
+        return -1;
+      } else {
+        result = 0;
+      }
     } else if (m_env) {
       coap_tick_t now;
       coap_ticks(&now);
