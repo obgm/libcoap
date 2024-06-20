@@ -4453,6 +4453,9 @@ coap_startup(void) {
 
 void
 coap_cleanup(void) {
+  if (!coap_started)
+    return;
+  coap_started = 0;
 #if defined(HAVE_WINSOCK2_H)
   WSACleanup();
 #elif defined(WITH_CONTIKI)
@@ -4469,7 +4472,6 @@ coap_cleanup(void) {
   coap_mutex_destroy(&m_persist_add);
 #endif /* COAP_CONSTRAINED_STACK */
   coap_debug_reset();
-  coap_started = 0;
 }
 
 void

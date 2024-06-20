@@ -55,8 +55,12 @@ until *coap_cleanup*() is called.
 
 The *coap_cleanup*() function is used to cleanup / free any information set
 up by the *coap_startup*() function and should be the last *coap_**() function
-called. It is possible to call *coap_startup*() after *coap_cleanup*() to
-re-initialize the libcoap logic.
+called. The only safe function that can be called after *coap_cleanup*() is
+*coap_startup*() to re-initialize the libcoap logic.
+
+*NOTE:* Calling *coap_cleanup*() in one thread while continuing to use other
+*coap_**() function calls in a different thread is not supported - even if they
+are using a different coap_context_t.
 
 *NOTE:* All other libcoap cleanups should called prior to *coap_cleanup*(), e.g.
 *coap_free_context*(3).
