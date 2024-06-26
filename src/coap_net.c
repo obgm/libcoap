@@ -4005,9 +4005,10 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
        * options.
        */
       if (sent &&
-          !coap_check_send_need_lg_crcv(session, pdu)) {
+          !coap_check_send_need_lg_crcv(session, pdu) &&
+          COAP_PDU_IS_REQUEST(sent->pdu)) {
         /*
-         * lg_crcv was not set up in coap_send(). It coud have been set up
+         * lg_crcv was not set up in coap_send(). It could have been set up
          * the first separate response.
          * See if there already is a lg_crcv set up.
          */
