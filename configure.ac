@@ -497,19 +497,78 @@ if test "x$build_dtls" = "xyes"; then
                   [have_wolfssl="yes"],
                   [have_wolfssl="no"])
 
-    # Mbed TLS [does not have mbedtls.pc pkg-config file]
-    AC_CHECK_LIB(mbedtls, mbedtls_version_get_string,
-                 [have_mbedtls="yes"; MbedTLS_CFLAGS="" ; MbedTLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"],
-                 [have_mbedtls="no"], -lmbedx509 -lmbedcrypto)
+    # Mbed TLS
+    if test "x${MbedTLS_CFLAGS+set}" = "xset"; then
+        mbedtls_cflags_overridden="yes"
+    else
+        mbedtls_cflags_overridden="no"
+    fi
+
+    if test "x${MbedTLS_LIBS+set}" = "xset"; then
+        mbedtls_libs_overridden="yes"
+    else
+        mbedtls_libs_overridden="no"
+    fi
+
+    # If MbedTLS_CFLAGS and MbedTLS_LIBS are overridden, pkg-config will always assume the library was found, even
+    # though MbedTLS doesn't necessarily have a pkg-config file. Therefore, we might as well use the "old" way to
+    # determine whether we can link MbedTLS (and which version we have).
+    if test "x$mbedtls_libs_overridden" = "xyes" -a "x$mbedtls_cflags_overridden" = "xyes"; then
+      have_mbedtls="no"
+      mbedtls_has_pkgconfig="no"
+    else
+      # Attempt to find MbedTLS using pkg-config.
+
+      # When statically linking against libcoap, all transitive dependencies need to be specified as linker flags
+      # as well. Use PKG_CHECK_MODULES_STATIC for that.
+      if test "x$enable_static" = "xyes"; then
+        PKG_CHECK_MODULES_STATIC([MbedTLS],
+                                 [mbedtls],
+                                 [have_mbedtls="yes"; mbedtls_has_pkgconfig="yes"],
+                                 [have_mbedtls="no"; mbedtls_has_pkgconfig="no"])
+      else
+        PKG_CHECK_MODULES([MbedTLS],
+                          [mbedtls],
+                          [have_mbedtls="yes"; mbedtls_has_pkgconfig="yes"],
+                          [have_mbedtls="no"; mbedtls_has_pkgconfig="no"])
+      fi
+    fi
+
+    if test "x$have_mbedtls" = "xno"; then
+      # Attempt to find mbedtls without pkg-config.
+
+      # default linker flags (default CFLAGS are empty, so they don't need to be set).
+      if test "x$mbedtls_libs_overridden" == "xno"; then
+        MbedTLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"
+      fi
+
+      # check whether we can find MbedTLS
+      local_MbedTLS_save_CFLAGS=$CFLAGS
+      CFLAGS="$MbedTLS_CFLAGS $CFLAGS"
+      local_MbedTLS_save_LIBS=$LIBS
+      LIBS="$MbedTLS_LIBS $LIBS"
+      AC_CHECK_LIB(mbedtls, mbedtls_version_get_string,
+                   [have_mbedtls="yes"],
+                   [have_mbedtls="no"])
+      LIBS=$local_MbedTLS_save_LIBS
+      CFLAGS=$local_MbedTLS_save_CFLAGS
+    fi
+
+    # here, we know whether we can find MbedTLS, but need to determine the version.
     if test "x$have_mbedtls" = "xyes"; then
-        if test "x$cross_compiling" = "xyes" ; then
+        if test "x$mbedtls_has_pkgconfig" = "xyes"; then
+          # If pkg-config found mbedtls, use it to determine the version.
+          mbedtls_version=`$PKG_CONFIG --modversion mbedtls`;
+        elif test "x$cross_compiling" = "xyes" ; then
             # Have no option but to do this
             mbedtls_version=$mbedtls_version_required
         else
-            # Get actual library version
-            AC_LANG_PUSH(C)
+            # Get actual library version by compiling a test program.
+            local_MbedTLS_save_CFLAGS=$CFLAGS
+            CFLAGS="$MbedTLS_CFLAGS $CFLAGS"
             local_MbedTLS_save_LIBS=$LIBS
             LIBS="$MbedTLS_LIBS $LIBS"
+            AC_LANG_PUSH(C)
             AC_LINK_IFELSE([dnl
                 AC_LANG_SOURCE(
                     [[#include <stdio.h>
@@ -523,8 +582,9 @@ if test "x$build_dtls" = "xyes"; then
                [mbedtls_version=$(./conftest$EXEEXT)],
                [AC_MSG_WARN(Failed to determine Mbed TLS version)
                 have_mbedtls=no])
-            LIBS=$local_MbedTLS_save_LIBS
             AC_LANG_POP(C)
+            LIBS=$local_MbedTLS_save_LIBS
+            CFLAGS=$local_MbedTLS_save_CFLAGS
         fi
     fi
 
@@ -609,7 +669,6 @@ if test "x$build_dtls" = "xyes"; then
         fi
         AC_MSG_NOTICE([The use of Mbed TLS was explicitly requested with configure option '--with-mbedtls'!])
 
-        # check for valid Mbed TLS version (mbedtls.pc does not exist - hmm)
         # mbedtls_version determined previously
         AX_CHECK_MBEDTLS_VERSION
         have_gnutls="no" # don't confuse AC_MSG_RESULT at the end of the script
@@ -1343,14 +1402,14 @@ fi
 if test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support             : "yes"])
     AC_MSG_RESULT([          -->  GnuTLS around         : "yes" (found GnuTLS $gnutls_version)])
-    AC_MSG_RESULT([               GNUTLS_CFLAGS         : "$GnuTLS_CFLAGS"])
-    AC_MSG_RESULT([               GNUTLS_LIBS           : "$GnuTLS_LIBS"])
+    AC_MSG_RESULT([               GnuTLS_CFLAGS         : "$GnuTLS_CFLAGS"])
+    AC_MSG_RESULT([               GnuTLS_LIBS           : "$GnuTLS_LIBS"])
 fi
 if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support             : "yes"])
     AC_MSG_RESULT([         -->  OpenSSL around         : "yes" (found OpenSSL $openssl_version)])
-    AC_MSG_RESULT([              OPENSSL_CFLAGS         : "$OpenSSL_CFLAGS"])
-    AC_MSG_RESULT([              OPENSSL_LIBS           : "$OpenSSL_LIBS"])
+    AC_MSG_RESULT([              OpenSSL_CFLAGS         : "$OpenSSL_CFLAGS"])
+    AC_MSG_RESULT([              OpenSSL_LIBS           : "$OpenSSL_LIBS"])
 fi
 if test "x$with_wolfssl" = "xyes" -o "x$with_wolfssl_auto" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support             : "yes"])
@@ -1360,9 +1419,13 @@ if test "x$with_wolfssl" = "xyes" -o "x$with_wolfssl_auto" = "xyes"; then
 fi
 if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support             : "yes"])
-    AC_MSG_RESULT([         -->  Mbed TLS around        : "yes" (found Mbed TLS $mbedtls_version)])
-    AC_MSG_RESULT([              MBEDTLS_CFLAGS         : "$MbedTLS_CFLAGS"])
-    AC_MSG_RESULT([              MBEDTLS_LIBS           : "$MbedTLS_LIBS"])
+    if test "x$mbedtls_has_pkgconfig" = "xyes"; then
+      AC_MSG_RESULT([         -->  Mbed TLS around        : "yes" (found Mbed TLS $mbedtls_version using pkg-config)])
+    else
+      AC_MSG_RESULT([         -->  Mbed TLS around        : "yes" (found Mbed TLS $mbedtls_version without pkg-config)])
+    fi
+    AC_MSG_RESULT([              MbedTLS_CFLAGS         : "$MbedTLS_CFLAGS"])
+    AC_MSG_RESULT([              MbedTLS_LIBS           : "$MbedTLS_LIBS"])
 fi
 if test "x$with_tinydtls" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support             : "yes"])
