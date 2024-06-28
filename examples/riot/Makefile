@@ -24,7 +24,19 @@ pkg:
 		git pull --unshallow > /dev/null 2>&1 ; \
 		if [ ! -z "$${RIOT_HASH}" ] ; then \
 			(cd pkg_libcoap/patches ; git format-patch -n $${RIOT_HASH}) ; \
-		fi \
+		fi ; \
+		COMMIT_FILE=pkg_libcoap/patches/9999-Not-Yet-Commited.patch ; \
+		WC=`git diff HEAD -p --stat | wc -l` ; \
+		if [ "$${WC}" != 0 ] ; then \
+		        echo "From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001" > $${COMMIT_FILE}} ; \
+		        echo "From: Internal <test@test.com>" >> $${COMMIT_FILE}} ; \
+		        echo "Date: `date`" >> $${COMMIT_FILE}} ; \
+		        echo "Subject: [PATCH 1/1] RIOT: To commit" >> $${COMMIT_FILE}} ; \
+		        echo "" >> $${COMMIT_FILE}} ; \
+		        echo "---" >> $${COMMIT_FILE}} ; \
+		        git diff HEAD -p --stat >> $${COMMIT_FILE}} ; \
+		        echo "9999-Not-Yet-Commited.patch" ; \
+		fi ; \
 	fi
 	rm -rf RIOT/pkg/libcoap && mkdir RIOT/pkg/libcoap
 	cd pkg_libcoap && cp -r * ../RIOT/pkg/libcoap
