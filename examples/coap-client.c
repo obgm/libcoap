@@ -511,7 +511,7 @@ usage(const char *program, const char *version) {
           "\t\t[-T token] [-U]  [-V num] [-X size]\n"
           "\t\t[[-h match_hint_file] [-k key] [-u user]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
-          "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]\n"
+          "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]] URI\n"
           "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
           "General Options\n"
           "\t-a addr\t\tThe local interface address to use\n"
@@ -1928,7 +1928,7 @@ main(int argc, char **argv) {
   coap_session_init_token(session, the_token.length, the_token.s);
 
   /* Convert provided uri into CoAP options */
-  if (!coap_uri_into_optlist(&uri, !uri_host_option && !proxy.host.length ?
+  if (!coap_uri_into_optlist(proxy.host.length ? &proxy : &uri, !uri_host_option ?
                              &dst : NULL,
                              &optlist, create_uri_opts)) {
     coap_log_err("Failed to create options for URI\n");
