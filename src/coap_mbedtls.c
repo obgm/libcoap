@@ -2800,7 +2800,7 @@ error:
 }
 #endif /* COAP_WS_SUPPORT */
 
-#if COAP_OSCORE_SUPPORT
+#if COAP_OSCORE_SUPPORT && !defined(WITH_CONTIKI)
 int
 coap_oscore_is_supported(void) {
   return 1;
@@ -3128,7 +3128,7 @@ error:
   return ret;
 }
 
-#endif /* COAP_OSCORE_SUPPORT */
+#endif /* COAP_OSCORE_SUPPORT && !WITH_CONTIKI */
 
 #else /* !COAP_WITH_LIBMBEDTLS */
 
