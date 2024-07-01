@@ -1075,6 +1075,8 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
   coap_tick_t now;
   coap_session_t *obs_session;
 
+  coap_lock_check_locked(context);
+
   if (r->observable && (r->dirty || r->partiallydirty)) {
     r->partiallydirty = 0;
 

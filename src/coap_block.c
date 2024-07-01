@@ -3675,6 +3675,7 @@ coap_handle_response_get_block(coap_context_t *context,
       STATE_TOKEN_BASE(coap_decode_var_bytes8(rcvd->actual_token.s,
                                               rcvd->actual_token.length));
 
+  coap_lock_check_locked(context);
   memset(&block, 0, sizeof(block));
 #if COAP_Q_BLOCK_SUPPORT
   memset(&qblock, 0, sizeof(qblock));

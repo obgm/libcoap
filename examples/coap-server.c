@@ -994,7 +994,7 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
   size_t total;
   coap_binary_t *body_data = NULL;
   const uint8_t *data;
-  coap_pdu_t *pdu;
+  coap_pdu_t *pdu = NULL;
   coap_optlist_t *optlist = NULL;
   coap_opt_t *option;
   coap_bin_const_t token = coap_pdu_get_token(request);
@@ -1093,7 +1093,6 @@ hnd_proxy_uri(coap_resource_t *resource COAP_UNUSED,
     if (!coap_add_token(pdu, token.length, token.s)) {
       coap_log_debug("cannot add token to proxy request\n");
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
-      coap_delete_pdu(pdu);
       goto cleanup;
     }
 
@@ -1166,6 +1165,7 @@ add_in:
      * Do not update with response code (hence empty ACK) as will be sending
      * separate response when response comes back from upstream server
      */
+    pdu = NULL;
     goto cleanup;
   } else {
     /* TODO http & https */
@@ -1175,6 +1175,7 @@ cleanup:
   coap_delete_string(uri_path);
   coap_delete_string(uri_query);
   coap_delete_binary(body_data);
+  coap_delete_pdu(pdu);
 }
 
 #endif /* SERVER_CAN_PROXY */

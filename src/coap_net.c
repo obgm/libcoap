@@ -585,7 +585,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   memset(c, 0, sizeof(coap_context_t));
 
   coap_lock_init(c);
-  coap_lock_lock(c, return NULL);
+  coap_lock_lock(c, coap_free_type(COAP_CONTEXT, c); return NULL);
 #ifdef COAP_EPOLL_SUPPORT
   c->epfd = epoll_create1(0);
   if (c->epfd == -1) {
