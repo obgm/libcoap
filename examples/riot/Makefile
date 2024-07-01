@@ -28,13 +28,13 @@ pkg:
 		COMMIT_FILE=pkg_libcoap/patches/9999-Not-Yet-Commited.patch ; \
 		WC=`git diff HEAD -p --stat | wc -l` ; \
 		if [ "$${WC}" != 0 ] ; then \
-		        echo "From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001" > $${COMMIT_FILE}} ; \
-		        echo "From: Internal <test@test.com>" >> $${COMMIT_FILE}} ; \
-		        echo "Date: `date`" >> $${COMMIT_FILE}} ; \
-		        echo "Subject: [PATCH 1/1] RIOT: To commit" >> $${COMMIT_FILE}} ; \
-		        echo "" >> $${COMMIT_FILE}} ; \
-		        echo "---" >> $${COMMIT_FILE}} ; \
-		        git diff HEAD -p --stat >> $${COMMIT_FILE}} ; \
+		        echo "From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001" > $${COMMIT_FILE} ; \
+		        echo "From: Internal <test@test.com>" >> $${COMMIT_FILE} ; \
+		        echo "Date: `date`" >> $${COMMIT_FILE} ; \
+		        echo "Subject: [PATCH 1/1] RIOT: To commit" >> $${COMMIT_FILE} ; \
+		        echo "" >> $${COMMIT_FILE} ; \
+		        echo "---" >> $${COMMIT_FILE} ; \
+		        git diff HEAD -p --stat >> $${COMMIT_FILE} ; \
 		        echo "9999-Not-Yet-Commited.patch" ; \
 		fi ; \
 	fi
