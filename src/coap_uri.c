@@ -356,7 +356,7 @@ coap_uri_into_optlist(const coap_uri_t *uri, const coap_address_t *dst,
       break;
     }
     if (add_option) {
-      u_char tbuf[4];
+      uint8_t tbuf[4];
 
       coap_insert_optlist(optlist_chain,
                           coap_new_optlist(COAP_OPTION_URI_PORT,
