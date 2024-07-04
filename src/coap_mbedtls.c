@@ -425,12 +425,19 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
                       "Self-signed",
                       cn ? cn : "?", depth);
       }
+    } else if (self_signed) {
+      if (!setup_data->verify_peer_cert) {
+        *flags &= ~MBEDTLS_X509_BADCERT_NOT_TRUSTED;
+        coap_log_info("   %s: %s: overridden: '%s' depth %d\n",
+                      coap_session_str(c_session),
+                      "Self-signed", cn ? cn : "?", depth);
+      }
     } else {
       if (!setup_data->verify_peer_cert) {
         *flags &= ~MBEDTLS_X509_BADCERT_NOT_TRUSTED;
         coap_log_info("   %s: %s: overridden: '%s' depth %d\n",
                       coap_session_str(c_session),
-                      "The certificate's CA does not match", cn ? cn : "?", depth);
+                      "The certificate's CA is not trusted", cn ? cn : "?", depth);
       }
     }
   }
@@ -727,7 +734,11 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
   /*
    * Configure the CA
    */
-  if (setup_data->check_common_ca && key.key.define.ca.u_byte &&
+  if (
+#if MBEDTLS_VERSION_NUMBER < 0x03060000
+      setup_data->check_common_ca &&
+#endif /* MBEDTLS_VERSION_NUMBER < 0x03060000 */
+      key.key.define.ca.u_byte &&
       key.key.define.ca.u_byte[0]) {
     switch (key.key.define.ca_def) {
     case COAP_PKI_KEY_DEF_DER: /* define ca */
@@ -1139,6 +1150,12 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
           /* Minimum of TLS1.2 required - skip */
         }
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
+#if MBEDTLS_VERSION_NUMBER >= 0x03060000
+        else if (cur->min_tls_version >= MBEDTLS_SSL_VERSION_TLS1_3) {
+          psk_count++;
+          pki_count++;
+        }
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03060000 */
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
         else if (coap_ssl_ciphersuite_uses_psk(cur)) {
           psk_count++;
@@ -1182,6 +1199,14 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
           /* Minimum of TLS1.2 required - skip */
         }
 #endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
+#if MBEDTLS_VERSION_NUMBER >= 0x03060000
+        else if (cur->min_tls_version >= MBEDTLS_SSL_VERSION_TLS1_3) {
+          *psk_list = *list;
+          psk_list++;
+          *pki_list = *list;
+          pki_list++;
+        }
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03060000 */
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
         else if (coap_ssl_ciphersuite_uses_psk(cur)) {
           *psk_list = *list;
@@ -2525,6 +2550,9 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
         m_env->sent_alert = 1;
         c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
         break;
+#if MBEDTLS_VERSION_NUMBER >= 0x03060000
+      case MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET:
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03060000 */
       case MBEDTLS_ERR_SSL_WANT_READ:
         errno = EAGAIN;
         ret = 0;
