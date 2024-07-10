@@ -474,13 +474,17 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
     *flags &= ~MBEDTLS_X509_BADCERT_CN_MISMATCH;
   }
   if (setup_data->validate_cn_call_back) {
-    if (!setup_data->validate_cn_call_back(cn,
-                                           crt->raw.p,
-                                           crt->raw.len,
-                                           c_session,
-                                           depth,
-                                           *flags == 0,
-                                           setup_data->cn_call_back_arg)) {
+    int ret;
+
+    coap_lock_callback_ret(ret, c_session->context,
+                           setup_data->validate_cn_call_back(cn,
+                                                             crt->raw.p,
+                                                             crt->raw.len,
+                                                             c_session,
+                                                             depth,
+                                                             *flags == 0,
+                                                             setup_data->cn_call_back_arg));
+    if (!ret) {
       *flags |= MBEDTLS_X509_BADCERT_CN_MISMATCH;
     }
   }
@@ -897,9 +901,9 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
     coap_dtls_key_t *new_entry;
     pki_sni_entry *pki_sni_entry_list;
 
-    new_entry =
-        m_context->setup_data.validate_sni_call_back(name,
-                                                     m_context->setup_data.sni_call_back_arg);
+    coap_lock_callback_ret(new_entry, c_session->context,
+                           m_context->setup_data.validate_sni_call_back(name,
+                               m_context->setup_data.sni_call_back_arg));
     if (!new_entry) {
       mbedtls_free(name);
       return -1;
@@ -975,10 +979,10 @@ psk_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
     const coap_dtls_spsk_info_t *new_entry;
     psk_sni_entry *psk_sni_entry_list;
 
-    new_entry =
-        c_session->context->spsk_setup_data.validate_sni_call_back(name,
-            c_session,
-            c_session->context->spsk_setup_data.sni_call_back_arg);
+    coap_lock_callback_ret(new_entry, c_session->context,
+                           c_session->context->spsk_setup_data.validate_sni_call_back(name,
+                               c_session,
+                               c_session->context->spsk_setup_data.sni_call_back_arg));
     if (!new_entry) {
       mbedtls_free(name);
       return -1;

@@ -471,8 +471,9 @@ coap_free_resource(coap_resource_t *resource) {
     resource->context->resource_deleted(resource->context, resource->uri_path,
                                         resource->context->observe_user_data);
 
-  if (resource->context->release_userdata && resource->user_data)
-    resource->context->release_userdata(resource->user_data);
+  if (resource->context->release_userdata && resource->user_data) {
+    coap_lock_callback(resource->context, resource->context->release_userdata(resource->user_data));
+  }
 
   /* delete registered attributes */
   LL_FOREACH_SAFE(resource->link_attr, attr, tmp) coap_delete_attr(attr);

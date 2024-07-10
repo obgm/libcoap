@@ -292,7 +292,7 @@ coap_delete_cache_entry(coap_context_t *ctx, coap_cache_entry_t *cache_entry) {
   }
   coap_delete_cache_key(cache_entry->cache_key);
   if (cache_entry->callback && cache_entry->app_data) {
-    cache_entry->callback(cache_entry->app_data);
+    coap_lock_callback(ctx, cache_entry->callback(cache_entry->app_data));
   }
   coap_free_type(COAP_CACHE_ENTRY, cache_entry);
 }

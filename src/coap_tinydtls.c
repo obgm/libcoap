@@ -459,10 +459,10 @@ get_psk_info(struct dtls_context_t *dtls_context,
 
       lhint.length = id_len;
       lhint.s = id;
-      cpsk_info =
-          setup_cdata->validate_ih_call_back(&lhint,
-                                             coap_session,
-                                             setup_cdata->ih_call_back_arg);
+      coap_lock_callback_ret(cpsk_info, coap_session->context,
+                             setup_cdata->validate_ih_call_back(&lhint,
+                                                                coap_session,
+                                                                setup_cdata->ih_call_back_arg));
       if (cpsk_info) {
         psk_identity = &cpsk_info->identity;
         coap_session_refresh_psk_identity(coap_session, &cpsk_info->identity);
@@ -619,6 +619,8 @@ verify_ecdsa_key(struct dtls_context_t *dtls_context COAP_UNUSED,
                  size_t key_size) {
   coap_tiny_context_t *t_context =
       (coap_tiny_context_t *)dtls_get_app_data(dtls_context);
+  int ret;
+
   if (t_context && t_context->setup_data.validate_cn_call_back) {
     /* Need to build asn.1 certificate - code taken from tinydtls */
     uint8 *p;
@@ -647,8 +649,10 @@ verify_ecdsa_key(struct dtls_context_t *dtls_context COAP_UNUSED,
                                          &remote_addr, dtls_session->ifindex);
     if (!c_session)
       return -3;
-    if (!t_context->setup_data.validate_cn_call_back(COAP_DTLS_RPK_CERT_CN,
-                                                     buf, p-buf, c_session, 0, 1, t_context->setup_data.cn_call_back_arg)) {
+    coap_lock_callback_ret(ret, t_context->coap_context,
+                           t_context->setup_data.validate_cn_call_back(COAP_DTLS_RPK_CERT_CN,
+                               buf, p-buf, c_session, 0, 1, t_context->setup_data.cn_call_back_arg));
+    if (!ret) {
       return -1;
     }
   }
