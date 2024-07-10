@@ -667,8 +667,9 @@ coap_add_data_large_internal(coap_session_t *session,
   assert(pdu);
   if (pdu->data) {
     coap_log_warn("coap_add_data_large: PDU already contains data\n");
-    if (release_func)
-      release_func(session, app_ptr);
+    if (release_func) {
+      coap_lock_callback(session->context, release_func(session, app_ptr));
+    }
     return 0;
   }
 
@@ -865,8 +866,9 @@ coap_add_data_large_internal(coap_session_t *session,
       if (!coap_add_data(pdu, rem, &data[block.num * chunk]))
         goto fail;
     }
-    if (release_func)
-      release_func(session, app_ptr);
+    if (release_func) {
+      coap_lock_callback(session->context, release_func(session, app_ptr));
+    }
   } else if ((have_block_defined && length > chunk) || (ssize_t)length > avail) {
     /* Only add in lg_xmit if more than one block needs to be handled */
     size_t rem;
@@ -1065,8 +1067,9 @@ add_data:
     if (!coap_add_data(pdu, length, data))
       goto fail;
 
-    if (release_func)
-      release_func(session, app_ptr);
+    if (release_func) {
+      coap_lock_callback(session->context, release_func(session, app_ptr));
+    }
   }
   return 1;
 
@@ -1074,7 +1077,7 @@ fail:
   if (lg_xmit) {
     coap_block_delete_lg_xmit(session, lg_xmit);
   } else if (release_func) {
-    release_func(session, app_ptr);
+    coap_lock_callback(session->context, release_func(session, app_ptr));
   }
   return 0;
 }
@@ -1109,8 +1112,9 @@ coap_add_data_large_request_lkd(coap_session_t *session,
    * E.g. Reliable and CSM not in yet for checking block support
    */
   if (coap_client_delay_first(session) == 0) {
-    if (release_func)
-      release_func(session, app_ptr);
+    if (release_func) {
+      coap_lock_callback(session->context, release_func(session, app_ptr));
+    }
     return 0;
   }
   return coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0,
@@ -1249,8 +1253,9 @@ coap_add_data_large_response_lkd(coap_resource_t *resource,
   return 1;
 
 error:
-  if (release_func)
-    release_func(session, app_ptr);
+  if (release_func) {
+    coap_lock_callback(session->context, release_func(session, app_ptr));
+  }
 error_released:
 #if COAP_ERROR_PHRASE_LENGTH > 0
   coap_add_data(response,
@@ -2334,7 +2339,7 @@ coap_block_delete_lg_xmit(coap_session_t *session,
     return;
 
   if (lg_xmit->release_func) {
-    lg_xmit->release_func(session, lg_xmit->app_ptr);
+    coap_lock_callback(session->context, lg_xmit->release_func(session, lg_xmit->app_ptr));
   }
   if (lg_xmit->pdu.token) {
     coap_free_type(COAP_PDU_BUF, lg_xmit->pdu.token - lg_xmit->pdu.max_hdr_size);

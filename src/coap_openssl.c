@@ -762,10 +762,10 @@ coap_dtls_psk_client_callback(SSL *ssl,
 
     lhint.s = temp.s;
     lhint.length = temp.length;
-    cpsk_info =
-        setup_data->validate_ih_call_back(&lhint,
-                                          c_session,
-                                          setup_data->ih_call_back_arg);
+    coap_lock_callback_ret(cpsk_info, c_session->context,
+                           setup_data->validate_ih_call_back(&lhint,
+                                                             c_session,
+                                                             setup_data->ih_call_back_arg));
 
     if (cpsk_info == NULL)
       return 0;
@@ -2410,12 +2410,15 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
     int length = i2d_X509(x509, NULL);
     uint8_t *base_buf;
     uint8_t *base_buf2 = base_buf = OPENSSL_malloc(length);
+    int ret;
 
     /* base_buf2 gets moved to the end */
     i2d_X509(x509, &base_buf2);
-    if (!setup_data->validate_cn_call_back(cn, base_buf, length, session,
-                                           depth, preverify_ok,
-                                           setup_data->cn_call_back_arg)) {
+    coap_lock_callback_ret(ret, session->context,
+                           setup_data->validate_cn_call_back(cn, base_buf, length, session,
+                                                             depth, preverify_ok,
+                                                             setup_data->cn_call_back_arg));
+    if (!ret) {
       if (depth == 0) {
         X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
       } else {
@@ -2564,8 +2567,11 @@ tls_server_name_call_back(SSL *ssl,
     if (i == context->sni_count) {
       SSL_CTX *ctx;
       coap_dtls_pki_t sni_setup_data;
-      coap_dtls_key_t *new_entry = setup_data->validate_sni_call_back(sni,
-                                   setup_data->sni_call_back_arg);
+      coap_dtls_key_t *new_entry;
+
+      coap_lock_callback_ret(new_entry, session->context,
+                             setup_data->validate_sni_call_back(sni,
+                                                                setup_data->sni_call_back_arg));
       if (!new_entry) {
         return SSL_TLSEXT_ERR_ALERT_FATAL;
       }
@@ -2661,10 +2667,12 @@ psk_tls_server_name_call_back(SSL *ssl,
     }
     if (i == o_context->psk_sni_count) {
       SSL_CTX *ctx;
-      const coap_dtls_spsk_info_t *new_entry =
-          setup_data->validate_sni_call_back(sni,
-                                             c_session,
-                                             setup_data->sni_call_back_arg);
+      const coap_dtls_spsk_info_t *new_entry;
+
+      coap_lock_callback_ret(new_entry, c_session->context,
+                             setup_data->validate_sni_call_back(sni,
+                                                                c_session,
+                                                                setup_data->sni_call_back_arg));
       if (!new_entry) {
         return SSL_TLSEXT_ERR_ALERT_FATAL;
       }
@@ -2880,8 +2888,11 @@ is_x509:
       /*
        * New SNI request
        */
-      coap_dtls_key_t *new_entry = setup_data->validate_sni_call_back(sni,
-                                   setup_data->sni_call_back_arg);
+      coap_dtls_key_t *new_entry;
+
+      coap_lock_callback_ret(new_entry, session->context,
+                             setup_data->validate_sni_call_back(sni,
+                                                                setup_data->sni_call_back_arg));
       if (!new_entry) {
         *al = SSL_AD_UNRECOGNIZED_NAME;
         return SSL_CLIENT_HELLO_ERROR;
@@ -3005,10 +3016,13 @@ psk_tls_client_hello_call_back(SSL *ssl,
        * New SNI request
        */
       psk_sni_entry *tmp_entry;
-      const coap_dtls_spsk_info_t *new_entry = setup_data->validate_sni_call_back(
-                                                   sni,
-                                                   c_session,
-                                                   setup_data->sni_call_back_arg);
+      const coap_dtls_spsk_info_t *new_entry;
+
+      coap_lock_callback_ret(new_entry, c_session->context,
+                             setup_data->validate_sni_call_back(
+                                 sni,
+                                 c_session,
+                                 setup_data->sni_call_back_arg));
       if (!new_entry) {
         *al = SSL_AD_UNRECOGNIZED_NAME;
         return SSL_CLIENT_HELLO_ERROR;
@@ -3019,7 +3033,8 @@ psk_tls_client_hello_call_back(SSL *ssl,
                           (o_context->psk_sni_count+1)*sizeof(sni_entry));
       if (tmp_entry) {
         o_context->psk_sni_entry_list = tmp_entry;
-        o_context->psk_sni_entry_list[o_context->psk_sni_count].sni =
+        o_context->psk_sni_entry_list[o_context->psk_sni_count]
+        .sni =
             OPENSSL_strdup(sni);
         if (o_context->psk_sni_entry_list[o_context->psk_sni_count].sni) {
           o_context->psk_sni_entry_list[o_context->psk_sni_count].psk_info =
