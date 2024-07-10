@@ -255,7 +255,7 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
 #endif /* COAP_IPV6_SUPPORT */
 #if COAP_AF_UNIX_SUPPORT
   case AF_UNIX:
-    snprintf((char *)buf, len, "'%s'", addr->addr.cun.sun_path);
+    snprintf((char *)buf, len, "%s", addr->addr.cun.sun_path);
     break;
 #endif /* COAP_AF_UNIX_SUPPORT */
   default:
@@ -431,7 +431,7 @@ coap_print_ip_addr(const coap_address_t *addr, char *buf, size_t len) {
 #endif /* COAP_IPV6_SUPPORT */
 #if COAP_AF_UNIX_SUPPORT
   case AF_UNIX:
-    snprintf(buf, len, "'%s'", addr->addr.cun.sun_path);
+    snprintf(buf, len, "%s", addr->addr.cun.sun_path);
     return buf;
 #endif /* COAP_AF_UNIX_SUPPORT */
   default:
