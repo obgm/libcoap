@@ -363,6 +363,7 @@ coap_session_release(coap_session_t *session) {
   if (session) {
 #if COAP_THREAD_SAFE
     coap_context_t *context = session->context;
+    (void)context;
 #endif /* COAP_THREAD_SAFE */
 
     coap_lock_lock(context, return);
