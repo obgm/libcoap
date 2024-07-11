@@ -86,6 +86,16 @@ coap_mfree_endpoint(coap_endpoint_t *ep) {
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+#if defined(__MINGW32__)
+#if(_WIN32_WINNT >= 0x0600)
+#define CMSG_FIRSTHDR WSA_CMSG_FIRSTHDR
+#define CMSG_NXTHDR WSA_CMSG_NXTHDR
+#define CMSG_LEN WSA_CMSG_LEN
+#define CMSG_SPACE WSA_CMSG_SPACE
+#define cmsghdr _WSACMSGHDR
+#endif /* (_WIN32_WINNT>=0x0600) */
+#endif /* defined(__MINGW32__) */
+
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP) && !defined(RIOT_VERSION)
 
 #if COAP_SERVER_SUPPORT
@@ -734,7 +744,9 @@ struct in_pktinfo {
 
 #if defined(_WIN32)
 #include <mswsock.h>
-#if !defined(__MINGW32__)
+#if defined(__MINGW32__)
+static __thread LPFN_WSARECVMSG lpWSARecvMsg = NULL;
+#else /* ! __MINGW32__ */
 static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #endif /* ! __MINGW32__ */
 /* Map struct WSABUF fields to their posix counterpart */
@@ -783,7 +795,7 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
     bytes_written = send(sock->fd, data, datalen, 0);
 #endif
   } else {
-#if defined(_WIN32) && !defined(__MINGW32__)
+#if defined(_WIN32)
     DWORD dwNumberOfBytesSent = 0;
     int r;
 #endif /* _WIN32 && !__MINGW32__ */
@@ -920,7 +932,7 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
     }
 #endif /* HAVE_STRUCT_CMSGHDR */
 
-#if defined(_WIN32) && !defined(__MINGW32__)
+#if defined(_WIN32)
     r = WSASendMsg(sock->fd, &mhdr, 0 /*dwFlags*/, &dwNumberOfBytesSent, NULL /*lpOverlapped*/,
                    NULL /*lpCompletionRoutine*/);
     if (r == 0)
@@ -1005,7 +1017,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
       packet->length = (size_t)len;
     }
   } else {
-#if defined(_WIN32) && !defined(__MINGW32__)
+#if defined(_WIN32)
     DWORD dwNumberOfBytesRecvd = 0;
     int r;
 #endif /* _WIN32 && !__MINGW32__ */
@@ -1016,7 +1028,11 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
     struct msghdr mhdr;
     struct iovec iov[1];
 
+#if defined(__MINGW32__)
+    iov[0].iov_base = (char *) packet->payload;
+#else
     iov[0].iov_base = packet->payload;
+#endif /* defined(__MINGW32__) */
     iov[0].iov_len = (iov_len_t)COAP_RXBUFFER_SIZE;
 
     memset(&mhdr, 0, sizeof(struct msghdr));
