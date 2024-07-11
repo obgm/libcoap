@@ -4448,6 +4448,9 @@ coap_startup(void) {
 #endif /* WITH_CONTIKI */
   coap_memory_init();
   coap_dtls_startup();
+#ifdef WITH_LWIP
+  coap_io_lwip_init();
+#endif /* WITH_LWIP */
 #if COAP_SERVER_SUPPORT
   static coap_str_const_t well_known = { sizeof(".well-known/core")-1,
                                          (const uint8_t *)".well-known/core"
@@ -4469,6 +4472,9 @@ coap_cleanup(void) {
 #elif defined(WITH_CONTIKI)
   coap_stop_io_process();
 #endif
+#ifdef WITH_LWIP
+  coap_io_lwip_cleanup();
+#endif /* WITH_LWIP */
   coap_dtls_shutdown();
 
 #if COAP_CONSTRAINED_STACK

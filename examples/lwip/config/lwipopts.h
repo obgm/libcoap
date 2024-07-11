@@ -10,6 +10,13 @@
  * of use.
  */
 
+/*
+ * NO_SYS = 0
+ *  Use lwIP OS-awareness (multi threaded, semaphores, mutexes and mboxes).
+ *
+ * NO_SYS = 1
+ *  Use lwIP without OS-awareness (no thread, semaphores, mutexes or mboxes).
+ */
 #define NO_SYS                     0
 #define LWIP_SOCKET                (NO_SYS==0)
 #define LWIP_NETCONN               (NO_SYS==0)
