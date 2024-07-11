@@ -195,12 +195,6 @@ struct coap_context_t {
                                         basis */
 #endif /* COAP_SERVER_SUPPORT */
   uint32_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
-#if COAP_THREAD_SAFE
-  /**
-   * Context lock for multi-thread support
-   */
-  coap_lock_t lock;
-#endif /* COAP_THREAD_SAFE */
 };
 
 /**

@@ -205,6 +205,7 @@ coap_delete_node(coap_queue_t *node) {
   int ret;
 #if COAP_THREAD_SAFE
   coap_context_t *context;
+  (void)context;
 #endif /* COAP_THREAD_SAFE */
 
   if (!node)
@@ -584,7 +585,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   }
   memset(c, 0, sizeof(coap_context_t));
 
-  coap_lock_init(c);
+  coap_lock_init();
   coap_lock_lock(c, coap_free_type(COAP_CONTEXT, c); return NULL);
 #ifdef COAP_EPOLL_SUPPORT
   c->epfd = epoll_create1(0);
@@ -676,9 +677,8 @@ coap_free_context(coap_context_t *context) {
    * Note there is an immediate unlock to release any other 'context' waiters
    * So that their coap_lock_lock() will fail as 'context' is realy no more.
    */
-  coap_lock_being_freed(context, return);
+  coap_lock_lock(context, return);
   coap_free_context_lkd(context);
-  /* No need to unlock as context is no longer there */
 }
 
 void
@@ -4404,6 +4404,12 @@ coap_mutex_t m_read_session;
 coap_mutex_t m_read_endpoint;
 coap_mutex_t m_persist_add;
 #endif /* COAP_CONSTRAINED_STACK */
+#if COAP_THREAD_SAFE
+/*
+ * Global lock for multi-thread support
+ */
+coap_lock_t global_lock;
+#endif /* COAP_THREAD_SAFE */
 
 void
 coap_startup(void) {
@@ -4424,6 +4430,10 @@ coap_startup(void) {
   coap_mutex_init(&m_read_endpoint);
   coap_mutex_init(&m_persist_add);
 #endif /* COAP_CONSTRAINED_STACK */
+
+#if COAP_THREAD_SAFE
+  coap_lock_init();
+#endif /* COAP_THREAD_SAFE */
 
 #if defined(HAVE_WINSOCK2_H)
   WORD wVersionRequested = MAKEWORD(2, 2);
