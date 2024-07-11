@@ -300,7 +300,7 @@ check_function_exists(random HAVE_RANDOM)
 check_function_exists(if_nametoindex HAVE_IF_NAMETOINDEX)
 
 # check for symbols
-if(WIN32 AND NOT MINGW)
+if(WIN32)
   set(HAVE_STRUCT_CMSGHDR 1)
   message(STATUS "setting HAVE_STRUCT_CMSGHDR")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL QNX)
