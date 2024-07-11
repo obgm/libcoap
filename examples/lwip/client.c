@@ -53,9 +53,7 @@ static void
 handle_sigint(int signum) {
   (void)signum;
 
-  client_coap_finished();
-  printf("Client Application finished.\n");
-  exit(0);
+  quit = 1;
 }
 
 /*

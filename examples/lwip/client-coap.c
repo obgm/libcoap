@@ -239,8 +239,6 @@ client_coap_finished(void) {
 
 int
 client_coap_poll(void) {
-#if NO_SYS
   coap_io_process(main_coap_context, 1000);
-#endif /* NO_SYS */
   return quit;
 }

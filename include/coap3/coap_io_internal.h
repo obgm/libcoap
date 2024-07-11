@@ -218,6 +218,8 @@ void coap_packet_get_memmapped(coap_packet_t *packet,
 
 #ifdef WITH_LWIP
 void coap_io_process_timeout(void *arg);
+void coap_io_lwip_init(void);
+void coap_io_lwip_cleanup(void);
 #endif
 
 struct coap_packet_t {

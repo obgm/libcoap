@@ -51,9 +51,31 @@ coap_lwip_set_input_wait_handler(coap_context_t *context,
   context->input_arg = input_arg;
 }
 
+#if NO_SYS == 0
+sys_sem_t coap_io_timeout_sem;
+#endif /* NO_SYS == 0 */
+
+void
+coap_io_lwip_init(void) {
+#if NO_SYS == 0
+  if (sys_sem_new(&coap_io_timeout_sem, 0) != ERR_OK)
+    coap_log_warn("coap_io_lwip_init: Failed to set up semaphore\n");
+#endif /* NO_SYS == 0 */
+}
+
+void
+coap_io_lwip_cleanup(void) {
+#if NO_SYS == 0
+  sys_sem_free(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
+}
+
 void
 coap_io_process_timeout(void *arg) {
   (void)arg;
+#if NO_SYS == 0
+  sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
 }
 
 int
@@ -102,7 +124,15 @@ coap_io_process_lkd(coap_context_t *context, uint32_t timeout_ms) {
   UNLOCK_TCPIP_CORE();
 
   if (context->input_wait) {
-    context->input_wait(context->input_arg, timeout);
+    coap_lock_callback_release(context,
+                               context->input_wait(context->input_arg, timeout),
+                               return 0);
+#if NO_SYS == 0
+  } else {
+    coap_lock_callback_release(context,
+                               sys_arch_sem_wait(&coap_io_timeout_sem, timeout),
+                               return 0);
+#endif /* NO_SYS == 0 */
   }
 
   coap_lock_invert(context,
@@ -176,6 +206,9 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     coap_dispatch(session->context, session, pdu);
     coap_lock_unlock(session->context);
   }
+#if NO_SYS == 0
+  sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
   coap_delete_pdu(pdu);
   return;
 
@@ -269,6 +302,9 @@ coap_udp_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   coap_delete_pdu(pdu);
   coap_free_packet(packet);
   coap_lock_unlock(ep->context);
+#if NO_SYS == 0
+  sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
   return;
 
 error_free_pbuf:
@@ -342,8 +378,16 @@ coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
     UNLOCK_TCPIP_CORE();
 
     pbuf_free(pbuf);
-    if (err < 0)
+    if (err < 0) {
+      if (err == ERR_RTE) {
+        coap_log_warn("** %s: udp_send: Packet not routable\n",
+                      coap_session_str(session));
+      } else {
+        coap_log_warn("** %s: udp_send: error %d\n",
+                      coap_session_str(session), err);
+      }
       return -1;
+    }
   }
   return data_len;
 }
@@ -745,7 +789,6 @@ coap_socket_close(coap_socket_t *sock) {
     }
     tcp_close(sock->tcp_pcb);
     UNLOCK_TCPIP_CORE();
-    tcp_close(sock->tcp_pcb);
     sock->tcp_pcb = NULL;
   }
 #endif /* !COAP_DISABLE_TCP */
