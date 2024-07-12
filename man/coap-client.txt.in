@@ -22,7 +22,7 @@ SYNOPSIS
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-q* tls_engine_conf_file]
               [*-r*] [*-s duration*]
-              [*-t* type] [*-v* num] [*-w*] [*-A* type] [*-B* seconds]
+              [*-t* type] [*-v* num] [*-w*] [*-x*] [*-A* type] [*-B* seconds]
               [*-E* oscore_conf_file[,seq_file]] [*-G* count] [*-H* hoplimit]
               [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-T* token] [*-U*] [*-V* num]
@@ -129,6 +129,9 @@ OPTIONS - General
 
 *-w*::
    Append a newline to received data.
+
+*-x*::
+  Disable output of PDU data when displaying PDUs.
 
 *-A* type::
    Accepted media type. 'type' must be either a numeric value reflecting a

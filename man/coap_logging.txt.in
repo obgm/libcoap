@@ -32,6 +32,7 @@ coap_package_name,
 coap_package_version,
 coap_package_build,
 coap_set_show_pdu_output,
+coap_enable_pdu_data_output,
 coap_show_pdu,
 coap_endpoint_str,
 coap_session_str,
@@ -84,6 +85,8 @@ SYNOPSIS
 *const char *coap_package_build(void);*
 
 *void coap_set_show_pdu_output(int _use_fprintf_);*
+
+*void coap_enable_pdu_data_output(int _enable_data_);*
 
 *void coap_show_pdu(coap_log_t _level_, const coap_pdu_t *_pdu_);*
 
@@ -277,6 +280,13 @@ The *coap_set_show_pdu_output*() function defines whether the output from
 *coap_show_pdu*() is to be either sent to stdout/stderr, or output using
 *coap_log*().  _use_fprintf_ is set to 1 for stdout/stderr (the default), and
 _use_fprintf_ is set to 0 for *coap_log*().
+
+*Function: coap_enable_pdu_data_output()*
+
+The *coap_enable_pdu_data_output*() function defines whether the output from
+*coap_show_pdu*() is to include data detail or not.  _enable_data_ is set to
+1 for data to be output (the default) or set to 0 if the data detail is
+suppressed.
 
 *Function: coap_show_pdu()*
 

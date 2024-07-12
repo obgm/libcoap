@@ -30,9 +30,11 @@
  * @{
  */
 
-#define STATE_TOKEN_BASE(t) ((t) & 0xffffffffffffULL)
-#define STATE_TOKEN_RETRY(t) ((uint64_t)(t) >> 48)
-#define STATE_TOKEN_FULL(t,r) (STATE_TOKEN_BASE(t) + ((uint64_t)(r) << 48))
+/* Use the top 20 bits of a 64 bit token for tracking current block in large transfer */
+#define STATE_MAX_BLK_CNT_BITS 20
+#define STATE_TOKEN_BASE(t) ((t) & (0xffffffffffffffffULL >> STATE_MAX_BLK_CNT_BITS))
+#define STATE_TOKEN_RETRY(t) ((uint64_t)(t) >> (64 - STATE_MAX_BLK_CNT_BITS))
+#define STATE_TOKEN_FULL(t,r) (STATE_TOKEN_BASE(t) + ((uint64_t)(r) << (64 - STATE_MAX_BLK_CNT_BITS)))
 
 #if COAP_Q_BLOCK_SUPPORT
 #define COAP_BLOCK_SET_MASK (COAP_BLOCK_USE_LIBCOAP | \

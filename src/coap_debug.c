@@ -66,6 +66,7 @@ static coap_log_t maxlog = COAP_LOG_WARN;  /* default maximum CoAP log level */
 #endif /* RIOT_VERSION */
 
 static int use_fprintf_for_show_pdu = 1; /* non zero to output with fprintf */
+static int enable_data_for_show_pdu = 1; /* By default show PDU data for coap_show_pdu() */
 
 const char *
 coap_package_name(void) {
@@ -89,6 +90,11 @@ coap_package_build(void) {
 void
 coap_set_show_pdu_output(int use_fprintf) {
   use_fprintf_for_show_pdu = use_fprintf;
+}
+
+void
+coap_enable_pdu_data_output(int enable_data) {
+  enable_data_for_show_pdu = enable_data;
 }
 
 coap_log_t
@@ -1041,6 +1047,16 @@ no_more:
   snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " ]");
 
   if (coap_get_data(pdu, &data_len, &data)) {
+    if (!enable_data_for_show_pdu) {
+      /* Only output data if wanted */
+      outbuflen = strlen(outbuf);
+      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
+      outbuflen = strlen(outbuf);
+      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
+               "data length %zu (data suppressed)\n", data_len);
+      COAP_DO_SHOW_OUTPUT_LINE;
+      return;
+    }
 
     outbuflen = strlen(outbuf);
     snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");

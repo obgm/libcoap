@@ -4099,6 +4099,7 @@ give_to_app:
           if (!coap_binary_equal(&rcvd->actual_token, lg_crcv->app_token)) {
             /* need to put back original token into rcvd */
             coap_update_token(rcvd, lg_crcv->app_token->length, lg_crcv->app_token->s);
+            coap_remove_option(rcvd, COAP_OPTION_BLOCK1);
             coap_log_debug("PDU presented to app.\n");
             coap_show_pdu(COAP_LOG_DEBUG, rcvd);
           }
