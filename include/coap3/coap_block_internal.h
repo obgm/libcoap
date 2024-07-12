@@ -154,6 +154,7 @@ struct coap_lg_xmit_t {
     coap_l_block1_t b1;
     coap_l_block2_t b2;
   } b;
+  coap_lg_crcv_t *lg_crcv; /**< The lg_crcv associated with this blocked xmit */
   coap_pdu_t pdu;        /**< skeletal PDU */
   coap_tick_t last_payload; /**< Last time MAX_PAYLOAD was sent or 0 */
   coap_tick_t last_sent; /**< Last time any data sent */
