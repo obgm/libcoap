@@ -22,7 +22,7 @@ SYNOPSIS
 *coap-server* [*-a* priority] [*-b* max_block_size] [*-d* max] [*-e*]
               [*-f* scheme://addr[:port]
               [*-g* group] [*-l* loss] [*-p* port] [*-q* tls_engine_conf_file]
-              [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]]
+              [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]] [*-x*]
               [*-A* address] [*-E* oscore_conf_file[,seq_file]]
               [*-G* group_if] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port],[name1[,name2..]]]
@@ -108,6 +108,9 @@ OPTIONS - General
 *-w* [port][,secure_port]::
    Enable WebSockets support support on port (WS) and/or secure_port (WSS),
    comma separated.
+
+*-x*::
+  Disable output of PDU data when displaying PDUs.
 
 *-A* address::
    The local address of the interface which the server has to listen on.

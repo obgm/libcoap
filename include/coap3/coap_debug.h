@@ -314,9 +314,20 @@ void coap_print_contiki_prefix(coap_log_t level);
 void coap_set_show_pdu_output(int use_fprintf);
 
 /**
+ * Defines whether the data is to be output or not for the
+ * coap_show_pdu() function.
+ *
+ * @param enable_data @p 1 if the data is to be output (the default)
+ *                    @p 0 if the data detail is not to be output.
+ */
+void coap_enable_pdu_data_output(int enable_data);
+
+/**
  * Display the contents of the specified @p pdu.
  * Note: The output method of coap_show_pdu() is dependent on the setting of
  * coap_set_show_pdu_output().
+ * Note: Data may, or may not be output depending on the setting of
+ * coap_enable_pdu_data_output().
  *
  * @param level The required minimum logging level.
  * @param pdu The PDU to decode.

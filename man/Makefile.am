@@ -152,6 +152,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_logging.3" > coap_package_version.3
 	@echo ".so man3/coap_logging.3" > coap_package_build.3
 	@echo ".so man3/coap_logging.3" > coap_set_show_pdu_output.3
+	@echo ".so man3/coap_logging.3" > coap_enable_pdu_data_output.3
 	@echo ".so man3/coap_logging.3" > coap_show_pdu.3
 	@echo ".so man3/coap_logging.3" > coap_endpoint_str.3
 	@echo ".so man3/coap_logging.3" > coap_session_str.3

@@ -90,6 +90,7 @@ coap_dtls_psk_is_supported
 coap_dtls_rpk_is_supported
 coap_dtls_set_log_level
 coap_dump_memory_type_counts
+coap_enable_pdu_data_output
 coap_encode_var_safe
 coap_encode_var_safe8
 coap_endpoint_set_default_mtu

@@ -507,7 +507,7 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "\n"
           "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
           "\t\t[-m method] [-o file] [-p port] [-q tls_engine_conf_file] [-r]\n"
-          "\t\t[-s duration] [-t type] [-v num] [-w] [-A type] [-B seconds]\n"
+          "\t\t[-s duration] [-t type] [-v num] [-w] [-x] [-A type] [-B seconds]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
           "\t\t[-T token] [-U]  [-V num] [-X size]\n"
@@ -543,6 +543,7 @@ usage(const char *program, const char *version) {
           "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
           "\t       \t\tCoAP logging\n"
           "\t-w     \t\tAppend a newline to received data\n"
+          "\t-x     \t\tDisable output of PDU data when displaying PDUs\n"
           "\t-A type\t\tAccepted media type\n"
           "\t-B seconds\tBreak operation after waiting given seconds\n"
           "\t       \t\t(default is %d)\n"
@@ -1678,7 +1679,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:2")) != -1) {
+                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:A:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:2")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1737,6 +1738,9 @@ main(int argc, char **argv) {
       break;
     case 'w':
       add_nl = 1;
+      break;
+    case 'x':
+      coap_enable_pdu_data_output(0);
       break;
     case 'N':
       msgtype = COAP_MESSAGE_NON;

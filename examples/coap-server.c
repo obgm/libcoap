@@ -1562,7 +1562,7 @@ usage(const char *program, const char *version) {
           "Usage: %s [-a priority] [-b max_block_size] [-d max] [-e]\n"
           "\t\t[-f scheme://address[:port] [-g group] -l loss] [-p port]\n"
           "\t\t[-q tls_engine_conf_file] [-r] [-v num] [-w [port][,secure_port]]\n"
-          "\t\t[-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
+          "\t\t[-x] [-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
           "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
@@ -1612,6 +1612,7 @@ usage(const char *program, const char *version) {
           "\t-w [port][,secure_port]\n"
           "\t       \t\tEnable WebSockets support on port (WS) and/or secure_port\n"
           "\t       \t\t(WSS), comma separated\n"
+          "\t-x     \t\tDisable output of PDU data when displaying PDUs\n"
           "\t-A address\tInterface address to bind to\n"
           "\t-E oscore_conf_file[,seq_file]\n"
           "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
@@ -2509,6 +2510,9 @@ main(int argc, char **argv) {
         exit(1);
       }
       enable_ws = 1;
+      break;
+    case 'x':
+      coap_enable_pdu_data_output(0);
       break;
     case 'X':
       csm_max_message_size = strtol(optarg, NULL, 10);
