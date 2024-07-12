@@ -15,8 +15,7 @@ LIBCOAP_API_VERSION = $(shell if [ -f $(libcoap_dir)/configure.ac ];  then \
 
 coap_include_dir = $(libcoap_dir)/include/coap$(LIBCOAP_API_VERSION)
 
-WITH_LWIP_BRANCH=STABLE-2_1_3_RELEASE
-WITH_LWIP_CONTRIB_BRANCH=STABLE-2_1_0_RELEASE
+WITH_LWIP_BRANCH=STABLE-2_2_0_RELEASE
 # Update to latest TinyDTLS submodule as defined for libcoap
 WITH_TINYDTLS_BRANCH=4a6a78236043da7f8af9ad7be8488aeed6884eda
 
@@ -29,7 +28,6 @@ LDLIBS := $(shell if [ -f $(libcoap_dir)/config.log ] ; then \
 # some of the built objects.
 #
 all: lwip \
-     lwip-contrib \
      check-version \
      check-tinydtls \
      $(coap_include_dir)/coap.h \
@@ -47,11 +45,6 @@ lwip:
 	(cd lwip ; git checkout $(WITH_LWIP_BRANCH))
 	$(MAKE)
 
-lwip-contrib:
-	git clone --depth 1 https://git.savannah.nongnu.org/git/lwip/lwip-contrib.git -b $(WITH_LWIP_CONTRIB_BRANCH)
-	(cd lwip-contrib ; git checkout $(WITH_LWIP_CONTRIB_BRANCH))
-	$(MAKE)
-
 check-version:
 	@(if [ -d lwip ] ; then \
 		cd lwip ; \
@@ -61,18 +54,6 @@ check-version:
 				echo "Updating lwip to ${WITH_LWIP_BRANCH}" ; \
 				cd .. ; \
 				rm -rf lwip ; \
-				${MAKE}; \
-			fi ; \
-		fi ; \
-	fi)
-	@(if [ -d lwip-contrib ] ; then \
-		cd lwip-contrib ; \
-		TAG=`git describe --tags`; \
-		if [ "$$TAG" != ${WITH_LWIP_CONTRIB_BRANCH} ] ; then \
-			if [ "$$TAG" != "tags/${WITH_LWIP_CONTRIB_BRANCH}" ] ; then \
-				echo "Updating lwip-contib to ${WITH_LWIP_CONTRIB_BRANCH}" ; \
-				cd .. ; \
-				rm -rf lwip-contrib ; \
 				${MAKE}; \
 			fi ; \
 		fi ; \
@@ -114,21 +95,21 @@ check-tinydtls:
 		${MAKE} ; \
 	fi)
 
-# lwip and coap opts (include early to shadow the lwip-contrib/ports/unix/proj/minimal/ file and any ../../config.h)
+# lwip and coap opts (include early to shadow the lwip/contrib/ports/unix/proj/minimal/ file and any ../../config.h)
 CFLAGS += -DWITH_LWIP -iquote./config $(EXTRA_CFLAGS)
 
 # lwip library
 
 CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ \
-	  -Ilwip-contrib/ports/unix/port/include/ \
-	  -Ilwip-contrib/ports/unix/proj/minimal/
+	  -Ilwip/contrib/ports/unix/port/include/ \
+	  -Ilwip/contrib/ports/unix/proj/minimal/
 
 LWIP_SRC = def.c init.c tapif.c etharp.c netif.c timeouts.c stats.c udp.c \
 	   tcp.c pbuf.c ip4_addr.c ip4.c inet_chksum.c tcp_in.c tcp_out.c \
 	   icmp.c raw.c ip4_frag.c sys_arch.c ethernet.c ip.c mem.c memp.c tcpip.c
-vpath %.c lwip/src/core/ lwip-contrib/ports/unix/proj/minimal/ \
-	  lwip/src/netif/ lwip/src/core/ipv4/ lwip-contrib/ports/unix/port/ \
-	  lwip-contrib/ports/unix/port/netif/ lwip/src/api/
+vpath %.c lwip/src/core/ lwip/contrib/ports/unix/proj/minimal/ \
+	  lwip/src/netif/ lwip/src/core/ipv4/ lwip/contrib/ports/unix/port/ \
+	  lwip/contrib/ports/unix/port/netif/ lwip/src/api/
 # CFLAGS += -DLWIP_UNIX_LINUX
 
 # if ipv6 is used

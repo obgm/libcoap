@@ -26,10 +26,6 @@
 /* Set to 1 if TCP support is required */
 #define LWIP_TCP                        0
 
-#ifndef LWIP_RAND
-#define LWIP_RAND() ((u32_t)rand())
-#endif
-
 #ifndef netif_get_index
 #define netif_get_index(netif)      ((u8_t)((netif)->num + 1))
 #endif
