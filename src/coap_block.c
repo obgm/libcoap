@@ -2285,6 +2285,9 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu,
     coap_remove_option(&lg_crcv->pdu, COAP_OPTION_BLOCK1);
   }
 
+  if (lg_xmit)
+    lg_xmit->lg_crcv = lg_crcv;
+
   return lg_crcv;
 }
 
@@ -2292,12 +2295,20 @@ void
 coap_block_delete_lg_crcv(coap_session_t *session,
                           coap_lg_crcv_t *lg_crcv) {
   size_t i;
+  coap_lg_xmit_t *lg_xmit;
 
 #if (COAP_MAX_LOGGING_LEVEL < _COAP_LOG_DEBUG)
   (void)session;
 #endif
   if (lg_crcv == NULL)
     return;
+
+  LL_FOREACH(session->lg_xmit, lg_xmit) {
+    if (lg_xmit->lg_crcv == lg_crcv) {
+      lg_xmit->lg_crcv = NULL;
+      break;
+    }
+  }
 
   if (lg_crcv->pdu.token)
     coap_free_type(COAP_PDU_BUF, lg_crcv->pdu.token - lg_crcv->pdu.max_hdr_size);
@@ -3326,6 +3337,10 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
     size_t chunk = (size_t)1 << (lg_xmit->blk_size + 4);
     coap_block_b_t block;
 
+    lg_crcv = lg_xmit->lg_crcv;
+    if (lg_crcv)
+      coap_ticks(&lg_crcv->last_used);
+
     if (COAP_RESPONSE_CLASS(rcvd->code) == 2 &&
         coap_get_block_b(session, rcvd, lg_xmit->option, &block)) {
 
@@ -3391,7 +3406,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
 
         if (lg_xmit->pdu.code == COAP_REQUEST_CODE_FETCH) {
           /* Need to handle Observe for large FETCH */
-          LL_FOREACH(session->lg_crcv, lg_crcv) {
+          if (lg_crcv) {
             if (coap_binary_equal(lg_xmit->b.b1.app_token, lg_crcv->app_token)) {
               coap_bin_const_t *new_token;
               coap_bin_const_t ctoken = { len, buf };
@@ -3404,7 +3419,6 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                 len = new_token->length;
                 memcpy(buf, new_token->s, len);
               }
-              break;
             }
           }
         }
@@ -3571,15 +3585,12 @@ fail_body:
   /* There has been an internal error of some sort */
   rcvd->code = COAP_RESPONSE_CODE(500);
 lg_xmit_finished:
-  if (session->lg_crcv) {
-    LL_FOREACH(session->lg_crcv, lg_crcv) {
-      if (STATE_TOKEN_BASE(lg_xmit->b.b1.state_token) ==
-          STATE_TOKEN_BASE(lg_crcv->state_token)) {
-        /* In case of observe */
-        lg_crcv->state_token = lg_xmit->b.b1.state_token;
-        lg_crcv->retry_counter = lg_xmit->b.b1.count;
-        break;
-      }
+  if (lg_crcv) {
+    if (STATE_TOKEN_BASE(lg_xmit->b.b1.state_token) ==
+        STATE_TOKEN_BASE(lg_crcv->state_token)) {
+      /* In case of observe */
+      lg_crcv->state_token = lg_xmit->b.b1.state_token;
+      lg_crcv->retry_counter = lg_xmit->b.b1.count;
     }
   }
   if (!lg_crcv) {
