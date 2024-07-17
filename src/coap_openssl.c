@@ -289,7 +289,6 @@ coap_dtls_shutdown(void) {
   }
   ERR_free_strings();
   coap_dtls_set_log_level(COAP_LOG_EMERG);
-  OPENSSL_cleanup();
 }
 
 void *
