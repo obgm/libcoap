@@ -673,12 +673,9 @@ COAP_API void
 coap_free_context(coap_context_t *context) {
   if (!context)
     return;
-  /*
-   * Note there is an immediate unlock to release any other 'context' waiters
-   * So that their coap_lock_lock() will fail as 'context' is realy no more.
-   */
   coap_lock_lock(context, return);
   coap_free_context_lkd(context);
+  coap_lock_unlock(context);
 }
 
 void
