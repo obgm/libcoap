@@ -303,7 +303,6 @@ coap_get_session_client_psk_key(const coap_session_t *session) {
   /* Not defined in coap_new_client_session_psk2() */
   return NULL;
 }
-#endif /* COAP_CLIENT_SUPPORT */
 
 const coap_bin_const_t *
 coap_get_session_client_psk_identity(const coap_session_t *session) {
@@ -317,6 +316,7 @@ coap_get_session_client_psk_identity(const coap_session_t *session) {
   /* Not defined in coap_new_client_session_psk2() */
   return NULL;
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
 const coap_bin_const_t *
