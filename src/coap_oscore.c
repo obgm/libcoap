@@ -46,7 +46,7 @@ coap_oscore_initiate(coap_session_t *session, coap_oscore_conf_t *oscore_conf) {
       if (id_context == NULL)
         return 0;
       coap_delete_bin_const(oscore_conf->id_context);
-      coap_prng(id_context->s, id_context->length);
+      coap_prng_lkd(id_context->s, id_context->length);
       oscore_conf->id_context = (coap_bin_const_t *)id_context;
       session->b_2_step = COAP_OSCORE_B_2_STEP_1;
       coap_log_oscore("Appendix B.2 client step 1 (Generated ID1)\n");
@@ -1399,7 +1399,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       goto error;
     }
 
-    coap_prng(&session->oscore_r2, sizeof(session->oscore_r2));
+    coap_prng_lkd(&session->oscore_r2, sizeof(session->oscore_r2));
     memcpy(kc->s, &session->oscore_r2, sizeof(session->oscore_r2));
     memcpy(&kc->s[sizeof(session->oscore_r2)],
            cose->kid_context.s,
@@ -1453,7 +1453,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       goto error;
     }
     memcpy(kc->s, cose->kid_context.s, cose->kid_context.length);
-    coap_prng(&kc->s[cose->kid_context.length], 8);
+    coap_prng_lkd(&kc->s[cose->kid_context.length], 8);
 
     oscore_update_ctx(osc_ctx, (coap_bin_const_t *)kc);
 
@@ -1501,7 +1501,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
           session->b_2_step = COAP_OSCORE_B_2_NONE;
           coap_log_oscore("Appendix B.2 server finished\n");
         }
-        coap_prng(rcp_ctx->echo_value, sizeof(rcp_ctx->echo_value));
+        coap_prng_lkd(rcp_ctx->echo_value, sizeof(rcp_ctx->echo_value));
         coap_log_oscore("Appendix B.1.2 server plain response\n");
         build_and_send_error_pdu(session,
                                  pdu,

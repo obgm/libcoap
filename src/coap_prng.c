@@ -55,6 +55,48 @@ coap_prng_impl(unsigned char *buf, size_t len) {
 
 #endif /* _WIN32 */
 
+COAP_API void
+coap_prng_init(unsigned int seed) {
+  coap_lock_lock(NULL, return);
+  coap_prng_init_lkd(seed);
+  coap_lock_unlock(NULL);
+}
+
+COAP_API int
+coap_prng(void *buf, size_t len) {
+  int ret;
+
+  coap_lock_lock(NULL, return 0);
+  ret = coap_prng_lkd(buf, len);
+  coap_lock_unlock(NULL);
+  return ret;
+}
+
+#if defined(WITH_LWIP) && defined(LWIP_RAND)
+
+void
+coap_prng_init_lkd(unsigned int seed) {
+  (void)seed;
+}
+
+int
+coap_prng_lkd(void *bufp, size_t len) {
+  unsigned char *buf = (unsigned char *)bufp;
+  u32_t v = LWIP_RAND();
+
+  while (len > sizeof(v)) {
+    memcpy(buf, &v, sizeof(v));
+    len -= sizeof(v);
+    buf += sizeof(v);
+    v = LWIP_RAND();
+  }
+
+  memcpy(buf, &v, len);
+  return 1;
+}
+
+#else
+
 /*
  * This, or any user provided alternative, function is expected to
  * return 0 on failure and 1 on success.
@@ -115,17 +157,13 @@ coap_prng_default(void *buf, size_t len) {
 
 static coap_rand_func_t rand_func = coap_prng_default;
 
-#if defined(WITH_LWIP) && defined(LWIP_RAND)
-
-#else
-
 void
 coap_set_prng(coap_rand_func_t rng) {
   rand_func = rng;
 }
 
 void
-coap_prng_init(unsigned int seed) {
+coap_prng_init_lkd(unsigned int seed) {
 #ifdef HAVE_GETRANDOM
   /* No seed to seed the random source if getrandom() is used */
   (void)seed;
@@ -137,7 +175,7 @@ coap_prng_init(unsigned int seed) {
 }
 
 int
-coap_prng(void *buf, size_t len) {
+coap_prng_lkd(void *buf, size_t len) {
   if (!rand_func) {
     return 0;
   }

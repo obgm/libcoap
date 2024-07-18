@@ -890,7 +890,7 @@ setup_dtls_context(coap_wolfssl_context_t *w_context) {
     if (!wolfSSL_RAND_bytes(cookie_secret, (int)sizeof(cookie_secret))) {
       coap_dtls_log(COAP_LOG_WARN,
                     "Insufficient entropy for random cookie generation");
-      coap_prng(cookie_secret, sizeof(cookie_secret));
+      coap_prng_lkd(cookie_secret, sizeof(cookie_secret));
     }
     w_context->dtls.cookie_hmac = wolfSSL_HMAC_CTX_new();
     if (!wolfSSL_HMAC_Init_ex(w_context->dtls.cookie_hmac, cookie_secret, (int)sizeof(cookie_secret),

@@ -1818,7 +1818,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
 
   node->id = pdu->mid;
   node->pdu = pdu;
-  coap_prng(&r, sizeof(r));
+  coap_prng_lkd(&r, sizeof(r));
   /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
   node->timeout = coap_calc_timeout(session, r);
   return coap_wait_ack(session->context, session, node);
@@ -1846,7 +1846,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
         context->ping_timeout * COAP_TICKS_PER_SECOND < next_delay) {
       uint8_t byte;
 
-      coap_prng(&byte, sizeof(byte));
+      coap_prng_lkd(&byte, sizeof(byte));
       /* Don't exceed the ping timeout value */
       next_delay = context->ping_timeout * COAP_TICKS_PER_SECOND - 255 + byte;
     }
@@ -3548,7 +3548,7 @@ skip_handler:
       node->id = response->mid;
       node->pdu = response;
       node->is_mcast = 1;
-      coap_prng(&r, sizeof(r));
+      coap_prng_lkd(&r, sizeof(r));
       delay = (COAP_DEFAULT_LEISURE_TICKS(session) * r) / 256;
       coap_log_debug("   %s: mid=0x%04x: mcast response delayed for %u.%03u secs\n",
                      coap_session_str(session),
@@ -4441,7 +4441,7 @@ coap_startup(void) {
 #ifndef WITH_CONTIKI
   us = coap_ticks_to_rt_us(now);
   /* Be accurate to the nearest (approx) us */
-  coap_prng_init((unsigned int)us);
+  coap_prng_init_lkd((unsigned int)us);
 #else /* WITH_CONTIKI */
   coap_start_io_process();
 #endif /* WITH_CONTIKI */

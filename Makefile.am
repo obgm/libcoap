@@ -112,6 +112,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_netif_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_oscore_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_pdu_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_prng_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_resource_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_sha1_internal.h \

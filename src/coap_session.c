@@ -88,7 +88,7 @@ coap_get_non_timeout_random(coap_session_t *session) {
   coap_fixed_point_t res;
   uint8_t ran;
 
-  coap_prng(&ran, sizeof(ran));
+  coap_prng_lkd(&ran, sizeof(ran));
   res = coap_sub_fixed_uint(COAP_ACK_RANDOM_FACTOR(session), 1);
   res = coap_multi_fixed_uint(res, ran);
   res = coap_div_fixed_uint(res, 0xff);
@@ -478,8 +478,8 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
   /* Randomly initialize */
   /* TCP/TLS have no notion of mid */
   if (COAP_PROTO_NOT_RELIABLE(session->proto))
-    coap_prng((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
-  coap_prng((unsigned char *)&session->tx_rtag, sizeof(session->tx_rtag));
+    coap_prng_lkd((unsigned char *)&session->tx_mid, sizeof(session->tx_mid));
+  coap_prng_lkd((unsigned char *)&session->tx_rtag, sizeof(session->tx_rtag));
 
   return session;
 }
@@ -719,7 +719,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     node->pdu = pdu;
     if (pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       uint8_t r;
-      coap_prng(&r, sizeof(r));
+      coap_prng_lkd(&r, sizeof(r));
       /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
       node->timeout = coap_calc_timeout(session, r);
     }

@@ -304,7 +304,6 @@ int coap_lock_lock_func(void);
  *
  */
 #define coap_lock_lock(c,failed) do { \
-    assert(c); \
     if (!coap_lock_lock_func()) { \
       failed; \
     } \

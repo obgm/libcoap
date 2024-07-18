@@ -1100,7 +1100,7 @@ coap_dtls_new_context(coap_context_t *coap_context) {
     if (!RAND_bytes(cookie_secret, (int)sizeof(cookie_secret))) {
       coap_dtls_log(COAP_LOG_WARN,
                     "Insufficient entropy for random cookie generation");
-      coap_prng(cookie_secret, sizeof(cookie_secret));
+      coap_prng_lkd(cookie_secret, sizeof(cookie_secret));
     }
     context->dtls.cookie_hmac = HMAC_CTX_new();
     if (!HMAC_Init_ex(context->dtls.cookie_hmac, cookie_secret, (int)sizeof(cookie_secret),
