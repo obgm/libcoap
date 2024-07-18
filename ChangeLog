@@ -5,8 +5,10 @@
         * Support for wolfSSL TLS library.
         * Support for DTLS1.3 (using wolfSSL).
         * Support for Mbed TLS 3.6.0.
+        * Support for EC-JPAKE (Mbed TLS)
         * TinyDTLS version update.
         * Support for RIOT using SOCK i/f.
+        * Support for LwIP 2.2.0.
         * Support for LwIP using NO_SYS set to 0.
         * Support for (Posix based) Zephyr.
         * Support for QNX builds.
@@ -14,9 +16,13 @@
         * Updated Contiki-NG support.
         * Support for multi-thread safe libcoap usage.
         * Support for defining binary PSK for coap-client and coap-server.
+        * Support for Connection-ID (CID) (Mbed TLS, wolfSSL and TinyDTLS).
         * Added new define types for defining PKI parameters.
         * Support for user definable ENGINE for OpenSSL.
         * Support for using noTLS and TinyDTLS with WebSockets.
+        * Support for providing list of compilation #defines.
+        * Support for proxy code running within lbcoap.
+        * Cleaned up support for building .h files.
         * Additional scan-build and pre-commit checks in build tests.
         * Updated CI build tests to use latest action versions.
         * Fixes CVE-2023-35862.

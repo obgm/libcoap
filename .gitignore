@@ -107,6 +107,9 @@ tests/test_common.h
 # the cmake/ folder
 cmake/libcoap
 
+# the scripts/ folder
+scripts/fix_version.sh
+
 # ctags - Sublime plugin
 tags
 .tags*
