@@ -1386,7 +1386,7 @@ coap_debug_send_packet(void) {
   }
   if (packet_loss_level > 0) {
     uint16_t r = 0;
-    coap_prng((uint8_t *)&r, 2);
+    coap_prng_lkd((uint8_t *)&r, 2);
     if (r < packet_loss_level) {
       coap_log_debug("Packet %u dropped\n", send_packet_count);
       return 0;

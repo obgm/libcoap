@@ -175,7 +175,7 @@ typedef enum coap_enc_method_t {
  */
 static int
 coap_rng(void *ctx COAP_UNUSED, unsigned char *buf, size_t len) {
-  return coap_prng(buf, len) ? 0 : MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED;
+  return coap_prng_lkd(buf, len) ? 0 : MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED;
 }
 #endif /* MBEDTLS_2_X_COMPAT */
 
@@ -1757,7 +1757,7 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
        * to use RFC9146 extension ID of 54, rather than the draft version -05
        * value of 254.
        */
-      coap_prng(cid, sizeof(cid));
+      coap_prng_lkd(cid, sizeof(cid));
       mbedtls_ssl_set_cid(&m_env->ssl, MBEDTLS_SSL_CID_ENABLED, cid,
                           sizeof(cid));
     }

@@ -1,7 +1,7 @@
 /*
- * coap_prng.h -- Pseudo Random Numbers
+ * coap_prng_internal.h -- Pseudo Random Numbers
  *
- * Copyright (C) 2010-2024 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2024 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -10,34 +10,19 @@
  */
 
 /**
- * @file coap_prng.h
- * @brief Pseudo Random Numbers
+ * @file coap_prng_internal.h
+ * @brief Internal Pseudo Random Numbers
  */
 
-#ifndef COAP_PRNG_H_
-#define COAP_PRNG_H_
+#ifndef COAP_PRNG_INTERNAL_H_
+#define COAP_PRNG_INTERNAL_H_
 
 /**
- * @ingroup application_api
- * @defgroup coap_prng Pseudo Random Numbers
- * API for generating pseudo random numbers
+ * @ingroup internal_api
+ * @defgroup coap_prng_internal Pseudo Random Numbers
+ * Internal API for generating pseudo random numbers
  * @{
  */
-
-/**
- * Data type for random number generator function. The function must
- * fill @p len bytes of random data into the buffer starting at @p
- * out.  On success, the function should return 1, zero otherwise.
- */
-typedef int (*coap_rand_func_t)(void *out, size_t len);
-
-/**
- * Replaces the current random number generation function with the
- * default function @p rng.
- *
- * @param rng  The random number generation function to use.
- */
-void coap_set_prng(coap_rand_func_t rng);
 
 /**
  * Seeds the default random number generation function with the given
@@ -46,7 +31,7 @@ void coap_set_prng(coap_rand_func_t rng);
  *
  * @param seed  The seed for the pseudo random number generator.
  */
-COAP_API void coap_prng_init(unsigned int seed);
+void coap_prng_init_lkd(unsigned int seed);
 
 /**
  * Fills @p buf with @p len random bytes using the default pseudo
@@ -59,7 +44,7 @@ COAP_API void coap_prng_init(unsigned int seed);
  *
  * @return 1 on success, 0 otherwise.
  */
-COAP_API int coap_prng(void *buf, size_t len);
+int coap_prng_lkd(void *buf, size_t len);
 
 /** @} */
 

@@ -246,7 +246,7 @@ coap_ws_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
     /* Need to set the Mask bit, and set the masking key */
     ws_header[1] |= WS_B1_MASK_BIT;
     /* TODO Masking Key and mask provided data */
-    coap_prng(&ws_header[hdr_len], 4);
+    coap_prng_lkd(&ws_header[hdr_len], 4);
     memcpy(session->ws->mask_key, &ws_header[hdr_len], 4);
     hdr_len += 4;
   }
@@ -810,7 +810,7 @@ coap_ws_establish(coap_session_t *session) {
       coap_session_disconnected_lkd(session, COAP_NACK_WS_LAYER_FAILED);
       return;
     }
-    coap_prng(session->ws->key, sizeof(session->ws->key));
+    coap_prng_lkd(session->ws->key, sizeof(session->ws->key));
     coap_ws_log_key(session);
     if (!coap_base64_encode_buffer(session->ws->key, sizeof(session->ws->key),
                                    base64, sizeof(base64)))
@@ -866,7 +866,7 @@ coap_ws_close(coap_session_t *session) {
       if (session->ws->state == COAP_SESSION_TYPE_CLIENT) {
         /* Need to set the Mask bit, and set the masking key */
         ws_header[1] |= WS_B1_MASK_BIT;
-        coap_prng(&ws_header[hdr_len], 4);
+        coap_prng_lkd(&ws_header[hdr_len], 4);
         memcpy(session->ws->mask_key, &ws_header[hdr_len], 4);
         hdr_len += 4;
       }
