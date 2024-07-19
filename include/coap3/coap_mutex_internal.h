@@ -150,15 +150,4 @@ typedef int coap_mutex_t;
 
 #endif /* !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
 
-#if COAP_CONSTRAINED_STACK
-
-extern coap_mutex_t m_show_pdu;
-extern coap_mutex_t m_log_impl;
-extern coap_mutex_t m_dtls_recv;
-extern coap_mutex_t m_read_session;
-extern coap_mutex_t m_read_endpoint;
-extern coap_mutex_t m_persist_add;
-
-#endif /* COAP_CONSTRAINED_STACK */
-
 #endif /* COAP_MUTEX_INTERNAL_H_ */

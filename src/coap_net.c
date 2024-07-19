@@ -2002,7 +2002,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
 void
 coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
 #if COAP_CONSTRAINED_STACK
-  /* payload and packet protected by mutex m_read_session */
+  /* payload and packet can be protected by global_lock if needed */
   static unsigned char payload[COAP_RXBUFFER_SIZE];
   static coap_packet_t s_packet;
 #else /* ! COAP_CONSTRAINED_STACK */
@@ -2010,10 +2010,6 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
   coap_packet_t s_packet;
 #endif /* ! COAP_CONSTRAINED_STACK */
   coap_packet_t *packet = &s_packet;
-
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_lock(&m_read_session);
-#endif /* COAP_CONSTRAINED_STACK */
 
   assert(session->sock.flags & (COAP_SOCKET_CONNECTED | COAP_SOCKET_MULTICAST));
 
@@ -2052,9 +2048,6 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       /* Need max space incase PDU is updated with updated token etc. */
       pdu = coap_pdu_init(0, 0, 0, coap_session_max_pdu_rcv_size(session));
       if (!pdu) {
-#if COAP_CONSTRAINED_STACK
-        coap_mutex_unlock(&m_read_session);
-#endif /* COAP_CONSTRAINED_STACK */
         return;
       }
 
@@ -2062,15 +2055,9 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
         coap_handle_event_lkd(session->context, COAP_EVENT_BAD_PACKET, session);
         coap_log_warn("discard malformed PDU\n");
         coap_delete_pdu(pdu);
-#if COAP_CONSTRAINED_STACK
-        coap_mutex_unlock(&m_read_session);
-#endif /* COAP_CONSTRAINED_STACK */
         return;
       }
 
-#if COAP_CONSTRAINED_STACK
-      coap_mutex_unlock(&m_read_session);
-#endif /* COAP_CONSTRAINED_STACK */
       coap_dispatch(ctx, session, pdu);
       coap_delete_pdu(pdu);
       return;
@@ -2102,13 +2089,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
           if (n == len) {
             if (coap_pdu_parse_header(session->partial_pdu, session->proto)
                 && coap_pdu_parse_opt(session->partial_pdu)) {
-#if COAP_CONSTRAINED_STACK
-              coap_mutex_unlock(&m_read_session);
-#endif /* COAP_CONSTRAINED_STACK */
               coap_dispatch(ctx, session, session->partial_pdu);
-#if COAP_CONSTRAINED_STACK
-              coap_mutex_lock(&m_read_session);
-#endif /* COAP_CONSTRAINED_STACK */
             }
             coap_delete_pdu(session->partial_pdu);
             session->partial_pdu = NULL;
@@ -2154,13 +2135,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
             session->partial_read = hdr_size + tok_ext_bytes;
             if (size == 0) {
               if (coap_pdu_parse_header(session->partial_pdu, session->proto)) {
-#if COAP_CONSTRAINED_STACK
-                coap_mutex_unlock(&m_read_session);
-#endif /* COAP_CONSTRAINED_STACK */
                 coap_dispatch(ctx, session, session->partial_pdu);
-#if COAP_CONSTRAINED_STACK
-                coap_mutex_lock(&m_read_session);
-#endif /* COAP_CONSTRAINED_STACK */
               }
               coap_delete_pdu(session->partial_pdu);
               session->partial_pdu = NULL;
@@ -2185,9 +2160,6 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
 #endif /* !COAP_DISABLE_TCP */
   }
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_unlock(&m_read_session);
-#endif /* COAP_CONSTRAINED_STACK */
 }
 
 #if COAP_SERVER_SUPPORT
@@ -2196,7 +2168,7 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
   ssize_t bytes_read = -1;
   int result = -1;                /* the value to be returned */
 #if COAP_CONSTRAINED_STACK
-  /* payload and e_packet protected by mutex m_read_endpoint */
+  /* payload and e_packet can be protected by global_lock if needed */
   static unsigned char payload[COAP_RXBUFFER_SIZE];
   static coap_packet_t e_packet;
 #else /* ! COAP_CONSTRAINED_STACK */
@@ -2207,10 +2179,6 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
 
   assert(COAP_PROTO_NOT_RELIABLE(endpoint->proto));
   assert(endpoint->sock.flags & COAP_SOCKET_BOUND);
-
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_lock(&m_read_endpoint);
-#endif /* COAP_CONSTRAINED_STACK */
 
   /* Need to do this as there may be holes in addr_info */
   memset(&packet->addr_info, 0, sizeof(packet->addr_info));
@@ -2234,9 +2202,6 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
         coap_session_new_dtls_session(session, now);
     }
   }
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_unlock(&m_read_endpoint);
-#endif /* COAP_CONSTRAINED_STACK */
   return result;
 }
 
@@ -4392,14 +4357,6 @@ coap_check_async(coap_context_t *context, coap_tick_t now) {
 
 int coap_started = 0;
 
-#if COAP_CONSTRAINED_STACK
-coap_mutex_t m_show_pdu;
-coap_mutex_t m_log_impl;
-coap_mutex_t m_dtls_recv;
-coap_mutex_t m_read_session;
-coap_mutex_t m_read_endpoint;
-coap_mutex_t m_persist_add;
-#endif /* COAP_CONSTRAINED_STACK */
 #if COAP_THREAD_SAFE
 /*
  * Global lock for multi-thread support
@@ -4417,15 +4374,6 @@ coap_startup(void) {
   if (coap_started)
     return;
   coap_started = 1;
-
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_init(&m_show_pdu);
-  coap_mutex_init(&m_log_impl);
-  coap_mutex_init(&m_dtls_recv);
-  coap_mutex_init(&m_read_session);
-  coap_mutex_init(&m_read_endpoint);
-  coap_mutex_init(&m_persist_add);
-#endif /* COAP_CONSTRAINED_STACK */
 
 #if COAP_THREAD_SAFE
   coap_lock_init();
@@ -4476,14 +4424,6 @@ coap_cleanup(void) {
 #endif /* WITH_LWIP */
   coap_dtls_shutdown();
 
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_destroy(&m_show_pdu);
-  coap_mutex_destroy(&m_log_impl);
-  coap_mutex_destroy(&m_dtls_recv);
-  coap_mutex_destroy(&m_read_session);
-  coap_mutex_destroy(&m_read_endpoint);
-  coap_mutex_destroy(&m_persist_add);
-#endif /* COAP_CONSTRAINED_STACK */
   coap_debug_reset();
 }
 
