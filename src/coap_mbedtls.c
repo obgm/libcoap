@@ -2299,15 +2299,11 @@ coap_dtls_receive(coap_session_t *c_session,
 
   if (m_env->established) {
 #if COAP_CONSTRAINED_STACK
-    /* pdu protected by mutex m_dtls_recv */
+    /* pdu can be protected by global_lock if needed */
     static uint8_t pdu[COAP_RXBUFFER_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
     uint8_t pdu[COAP_RXBUFFER_SIZE];
 #endif /* ! COAP_CONSTRAINED_STACK */
-
-#if COAP_CONSTRAINED_STACK
-    coap_mutex_lock(&m_dtls_recv);
-#endif /* COAP_CONSTRAINED_STACK */
 
     if (c_session->state == COAP_SESSION_STATE_HANDSHAKE) {
       coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
@@ -2318,9 +2314,6 @@ coap_dtls_receive(coap_session_t *c_session,
     ret = mbedtls_ssl_read(&m_env->ssl, pdu, sizeof(pdu));
     if (ret > 0) {
       ret = coap_handle_dgram(c_session->context, c_session, pdu, (size_t)ret);
-#if COAP_CONSTRAINED_STACK
-      coap_mutex_unlock(&m_dtls_recv);
-#endif /* COAP_CONSTRAINED_STACK */
       goto finish;
     }
     switch (ret) {
@@ -2337,9 +2330,6 @@ coap_dtls_receive(coap_session_t *c_session,
                     -ret, get_error_string(ret), data_len);
       break;
     }
-#if COAP_CONSTRAINED_STACK
-    coap_mutex_unlock(&m_dtls_recv);
-#endif /* COAP_CONSTRAINED_STACK */
     ret = -1;
   } else {
     ret = do_mbedtls_handshake(c_session, m_env);

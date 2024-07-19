@@ -778,7 +778,7 @@ void
 coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 #if COAP_CONSTRAINED_STACK
   /* Proxy-Uri: can be 1034 bytes long */
-  /* buf and outbuf protected by mutex m_show_pdu */
+  /* buf and outbuf can be protected by global_lock if needed */
   static unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1035)];
   static char outbuf[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
@@ -802,10 +802,6 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   /* Save time if not needed */
   if (level > coap_get_log_level())
     return;
-
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_lock(&m_show_pdu);
-#endif /* COAP_CONSTRAINED_STACK */
 
   if (!pdu->session || COAP_PROTO_NOT_RELIABLE(pdu->session->proto)) {
     snprintf(outbuf, sizeof(outbuf), "v:%d t:%s c:%s i:%04x {",
@@ -1118,10 +1114,6 @@ no_more:
     outbuflen--;
   snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
   COAP_DO_SHOW_OUTPUT_LINE;
-
-#if COAP_CONSTRAINED_STACK
-  coap_mutex_unlock(&m_show_pdu);
-#endif /* COAP_CONSTRAINED_STACK */
 }
 
 void
@@ -1273,17 +1265,13 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
 
   if (log_handler) {
 #if COAP_CONSTRAINED_STACK
-    /* message protected by mutex m_log_impl */
+    /* message can be protected by global_lock if needed */
     static char message[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
     char message[COAP_DEBUG_BUF_SIZE];
 #endif /* ! COAP_CONSTRAINED_STACK */
     va_list ap;
     va_start(ap, format);
-
-#if COAP_CONSTRAINED_STACK
-    coap_mutex_lock(&m_log_impl);
-#endif /* COAP_CONSTRAINED_STACK */
 
 #ifdef RIOT_VERSION
     flash_vsnprintf(message, sizeof(message), format, ap);
@@ -1292,9 +1280,6 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
 #endif /* !RIOT_VERSION */
     va_end(ap);
     log_handler(level, message);
-#if COAP_CONSTRAINED_STACK
-    coap_mutex_unlock(&m_log_impl);
-#endif /* COAP_CONSTRAINED_STACK */
   } else {
     char timebuf[32];
     coap_tick_t now;
