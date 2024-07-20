@@ -460,6 +460,16 @@ coap_context_set_keepalive(coap_context_t *context, unsigned int seconds) {
 }
 
 void
+coap_context_set_cid_tuple_change(coap_context_t *context, uint8_t every) {
+#if COAP_CLIENT_SUPPORT
+  context->testing_cids = every;
+#else /* ! COAP_CLIENT_SUPPORT */
+  (void)context;
+  (void)every;
+#endif /* ! COAP_CLIENT_SUPPORT */
+}
+
+void
 coap_context_set_max_token_size(coap_context_t *context,
                                 size_t max_token_size) {
   assert(max_token_size >= COAP_TOKEN_DEFAULT_MAX &&

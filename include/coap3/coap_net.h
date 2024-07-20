@@ -231,6 +231,14 @@ COAP_API int coap_context_set_pki_root_cas(coap_context_t *context,
 void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds);
 
 /**
+ * Set the Connection ID client tuple frequency change for testing CIDs.
+ *
+ * @param context        The coap_context_t object.
+ * @param every          Change the client's source port @p every packets sent.
+ */
+void coap_context_set_cid_tuple_change(coap_context_t *context, uint8_t every);
+
+/**
  * Set the maximum token size (RFC8974).
  *
  * @param context        The coap_context_t object.

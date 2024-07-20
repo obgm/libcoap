@@ -1453,6 +1453,9 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
   coap_log_warn("TinyDTLS not compiled with ECC support\n");
   return 0;
 #endif /* ! DTLS_ECC */
+  if (setup_data->use_cid) {
+    coap_log_warn("TinyDTLS has no Connection-ID support\n");
+  }
 }
 
 int
@@ -1472,6 +1475,9 @@ coap_dtls_context_set_cpsk(coap_context_t *coap_context COAP_UNUSED,
   if (!setup_data)
     return 0;
 
+  if (setup_data->use_cid) {
+    coap_log_warn("TinyDTLS has no Connection-ID support\n");
+  }
 #ifdef DTLS_PSK
   if (setup_data->ec_jpake) {
     coap_log_warn("TinyDTLS has no EC-JPAKE support\n");

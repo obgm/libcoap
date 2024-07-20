@@ -334,6 +334,9 @@ coap_dtls_context_set_pki(coap_context_t *c_context,
   coap_dtls_map_key_type_to_define(&g_context->setup_data, &key);
   g_context->setup_data.pki_key = key;
   g_context->psk_pki_enabled |= IS_PKI;
+  if (setup_data->use_cid) {
+    coap_log_warn("GnuTLS has no Connection-ID support\n");
+  }
   return 1;
 }
 
@@ -419,6 +422,9 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
 
   if (setup_data->ec_jpake) {
     coap_log_warn("GnuTLS has no EC-JPAKE support\n");
+  }
+  if (setup_data->use_cid) {
+    coap_log_warn("GnuTLS has no Connection-ID support\n");
   }
   g_context->psk_pki_enabled |= IS_PSK;
   return 1;

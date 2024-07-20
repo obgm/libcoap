@@ -143,8 +143,11 @@ typedef struct coap_dtls_cpsk_t {
   uint8_t ec_jpake;        /* Set to 1 if DC-JPAKE is to be used.
                               Currently Mbed TLS only */
 
+  uint8_t use_cid;         /* Set to 1 if DTLS Connection ID is to be used.
+                              Currently Mbed TLS only */
+
   /* Options to enable different TLS functionality in libcoap */
-  uint8_t reserved[6];             /* Reserved - must be set to 0 for
+  uint8_t reserved[5];             /* Reserved - must be set to 0 for
                                       future compatibility */
 
   /** Identity Hint check callback function.
@@ -182,10 +185,15 @@ definition.
 *version* is set to COAP_DTLS_CPSK_SETUP_VERSION.  This will then allow
 support for different versions of the coap_dtls_cpsk_t structure in the future.
 
-*SECTION: PSK Server: coap_dtls_spsk_t: ec_jpake*
+*SECTION: PSK Client: coap_dtls_cpsk_t: ec_jpake*
 
 *ec_jpake* Set to 1 if EC-JPAKE negotiation is to be used. Currently only
 supported by suitably compiled Mbed TLS library.
+
+*SECTION: PSK Client: coap_dtls_cpsk_t: use_cid*
+
+*use_cid* Set to 1 if the DTLS Client is to try to used Connection-ID.
+Server is alwys enabled if support available.
 
 *SECTION: PSK Client: coap_dtls_cpsk_t: Reserved*
 
@@ -468,7 +476,10 @@ typedef struct coap_dtls_pki_t {
   uint8_t is_rpk_not_cert;          /* 1 is RPK instead of Public Certificate.
                                      *   If set, PKI key format type cannot be
                                      *   COAP_PKI_KEY_PEM */
-  uint8_t reserved[3];              /* Reserved - must be set to 0 for
+  uint8_t use_cid;                  /* 1 if DTLS Connection ID is to be
+                                     *   used (Client only, server always enabled)
+                                     *   if supported */
+  uint8_t reserved[2];              /* Reserved - must be set to 0 for
                                        future compatibility */
 
   /** CN check callback function
@@ -575,6 +586,9 @@ check_common_ca, allow_self_signed, allow_expired_certs,
 cert_chain_validation, cert_chain_verify_depth, check_cert_revocation,
 allow_no_crl, allow_expired_crl, allow_bad_md_hash and
 allow_short_rsa_length settings are all ignored.
+
+*use_cid* Set to 1 if the DTLS Client is to try to used Connection-ID.
+Server is alwys enabled if support available.
 
 *SECTION: PKI/RPK: coap_dtls_pki_t: Reserved*
 

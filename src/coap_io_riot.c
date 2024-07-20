@@ -106,7 +106,7 @@ coap_io_process_lkd(coap_context_t *ctx, uint32_t timeout_ms) {
  */
 ssize_t
 coap_socket_send(coap_socket_t *sock,
-                 const coap_session_t *session,
+                 coap_session_t *session,
                  const uint8_t *data,
                  size_t datalen) {
   ssize_t bytes_written = 0;

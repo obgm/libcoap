@@ -76,6 +76,7 @@ static coap_uri_t proxy = { {0, NULL}, 0, {0, NULL}, {0, NULL}, 0 };
 static int proxy_scheme_option = 0;
 static int uri_host_option = 0;
 static unsigned int ping_seconds = 0;
+static int setup_cid = 0;
 
 #define REPEAT_DELAY_MS 1000
 static size_t repeat_count = 1;
@@ -510,7 +511,8 @@ usage(const char *program, const char *version) {
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
           "\t\t[-T token] [-U]  [-V num] [-X size]\n"
-          "\t\t[[-h match_hint_file] [-k key] [-u user] [-2]]\n"
+          "\t\t[[-d count]]\n"
+          "\t\t[[h match_hint_file] [-k key] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
           "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]] URI\n"
           "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
@@ -576,6 +578,13 @@ usage(const char *program, const char *version) {
           "\t-X size\t\tMaximum message size to use for TCP based connections\n"
           "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
           ,program, wait_seconds);
+  fprintf(stderr,
+          "DTLS Options (if supported by underlying (D)TLS library)\n"
+          "\t-d count\n"
+          "\t       \t\tFor DTLS, enable use of Connection-ID. If count\n"
+          "\t       \t\tis not 0, then the client will changes its source port\n"
+          "\t       \t\tevery count packets to test CID\n"
+         );
   fprintf(stderr,
           "PSK Options (if supported by underlying (D)TLS library)\n"
           "\t-h match_hint_file\n"
@@ -1408,6 +1417,7 @@ setup_pki(coap_context_t *ctx) {
     dtls_pki.verify_peer_cert        = verify_peer_cert;
   }
   dtls_pki.is_rpk_not_cert = is_rpk_not_cert;
+  dtls_pki.use_cid = setup_cid;
   dtls_pki.validate_cn_call_back = verify_cn_callback;
   if (proxy.host.length) {
     snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)proxy.host.length, (int)proxy.host.length,
@@ -1470,6 +1480,7 @@ setup_psk(const uint8_t *identity,
   memset(&dtls_psk, 0, sizeof(dtls_psk));
   dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
   dtls_psk.ec_jpake = ec_jpake;
+  dtls_psk.use_cid = setup_cid;
   if (valid_ihs.count) {
     dtls_psk.validate_ih_call_back = verify_ih_callback;
   }
@@ -1658,6 +1669,7 @@ main(int argc, char **argv) {
   uint8_t *data = NULL;
   size_t data_len = 0;
   coap_addr_info_t *info_list = NULL;
+  uint8_t cid_every = 0;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1666,7 +1678,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:2")) != -1) {
+                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:2")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1687,6 +1699,10 @@ main(int argc, char **argv) {
       break;
     case 'R':
       root_ca_file = optarg;
+      break;
+    case 'd':
+      cid_every = atoi(optarg);
+      setup_cid = 1;
       break;
     case 'e':
       if (!cmdline_input(optarg, &payload))
@@ -1908,6 +1924,8 @@ main(int argc, char **argv) {
   coap_register_nack_handler(ctx, nack_handler);
   if (the_token.length > COAP_TOKEN_DEFAULT_MAX)
     coap_context_set_max_token_size(ctx, the_token.length);
+  if (cid_every)
+    coap_context_set_cid_tuple_change(ctx, cid_every);
 
   session = get_session(ctx,
                         node_str[0] ? node_str : NULL,

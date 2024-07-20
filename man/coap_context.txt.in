@@ -23,7 +23,8 @@ coap_context_set_csm_timeout_ms,
 coap_context_get_csm_timeout_ms,
 coap_context_set_max_token_size,
 coap_context_set_app_data,
-coap_context_get_app_data
+coap_context_get_app_data,
+coap_context_set_cid_tuple_change
 - Work with CoAP contexts
 
 SYNOPSIS
@@ -63,6 +64,8 @@ size_t _max_token_size_);*
 *void coap_context_set_app_data(coap_context_t *_context_, void *_app_data_);*
 
 *void *coap_context_get_app_data(const coap_context_t *_context_);*
+
+*void coap_context_set_cid_tuple_change(coap_context_t *_context_context, uint8_t _every_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -182,6 +185,12 @@ pointer for the _context_ which can then be retrieved at a later date.
 
 The *coap_context_get_app_data*() function is used to retrieve the app_data
 pointer previously defined by *coap_context_set_app_data*().
+
+*Function: coap_context_set_cid_tuple_change()*
+
+The *coap_context_set_cid_tuple_change*() function is used to define to a client
+to force the client's port to change _every_ packets sent, providing the ability
+to test a CID (RFC9146) enabled server.
 
 RETURN VALUES
 -------------

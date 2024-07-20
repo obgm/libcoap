@@ -372,9 +372,12 @@ struct coap_dtls_pki_t {
   uint8_t is_rpk_not_cert;        /**< 1 is RPK instead of Public Certificate.
                                    *     If set, PKI key format type cannot be
                                    *     COAP_PKI_KEY_PEM */
-  uint8_t reserved[3];             /**< Reserved - must be set to 0 for
+  uint8_t use_cid;                 /**< 1 if DTLS Connection ID is to be
+                                    *     used (Client only, server always enabled)
+                                    *     if supported */
+  uint8_t reserved[2];             /**< Reserved - must be set to 0 for
                                         future compatibility */
-  /* Size of 3 chosen to align to next
+  /* Size of 2 chosen to align to next
    * parameter, so if newly defined option
    * it can use one of the reserved slots so
    * no need to change
@@ -453,9 +456,10 @@ typedef struct coap_dtls_cpsk_t {
   /* Options to enable different TLS functionality in libcoap */
   uint8_t ec_jpake;        /**< Set to 1 if EC-JPAKE is to be used.
                                 Currently Mbed TLS only */
-  uint8_t reserved[6];     /**< Reserved - must be set to 0 for
+  uint8_t use_cid;         /**< Set to 1 if DTLS Connection ID is to be used */
+  uint8_t reserved[5];     /**< Reserved - must be set to 0 for
                                 future compatibility */
-  /* Size of 6 chosen to align to next
+  /* Size of 5 chosen to align to next
    * parameter, so if newly defined option
    * it can use one of the reserverd slot so
    * no need to change

@@ -1747,19 +1747,40 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
     mbedtls_ssl_set_bio(&m_env->ssl, c_session, coap_dgram_write,
                         coap_dgram_read, NULL);
 #ifdef MBEDTLS_SSL_DTLS_CONNECTION_ID
-    if (role != COAP_DTLS_ROLE_CLIENT &&
-        COAP_PROTO_NOT_RELIABLE(c_session->proto)) {
-      u_char cid[COAP_DTLS_CID_LENGTH];
-      /*
-       * Enable server DTLS CID support.
-       *
-       * Note: Set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT to 0 (the default)
-       * to use RFC9146 extension ID of 54, rather than the draft version -05
-       * value of 254.
-       */
-      coap_prng_lkd(cid, sizeof(cid));
-      mbedtls_ssl_set_cid(&m_env->ssl, MBEDTLS_SSL_CID_ENABLED, cid,
-                          sizeof(cid));
+    if (COAP_PROTO_NOT_RELIABLE(c_session->proto)) {
+      if (role == COAP_DTLS_ROLE_CLIENT) {
+#if COAP_CLIENT_SUPPORT
+        coap_mbedtls_context_t *m_context =
+            (coap_mbedtls_context_t *)c_session->context->dtls_context;
+
+        if ((m_context->psk_pki_enabled & IS_PSK && c_session->cpsk_setup_data.use_cid) ||
+            m_context->setup_data.use_cid) {
+          /*
+           * Enable passive DTLS CID support.
+           *
+           * Note: Set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT to 0 (the default)
+           * to use RFC9146 extension ID of 54, rather than the draft version -05
+           * value of 254.
+           */
+          mbedtls_ssl_set_cid(&m_env->ssl, MBEDTLS_SSL_CID_ENABLED, NULL, 0);
+        }
+#endif /* COAP_CLIENT_SUPPORT */
+      } else {
+#if COAP_SERVER_SUPPORT
+        u_char cid[COAP_DTLS_CID_LENGTH];
+        /*
+         * Enable server DTLS CID support.
+         *
+         * Note: Set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT to 0 (the default)
+         * to use RFC9146 extension ID of 54, rather than the draft version -05
+         * value of 254.
+         */
+        coap_prng_lkd(cid, sizeof(cid));
+        mbedtls_ssl_set_cid(&m_env->ssl, MBEDTLS_SSL_CID_ENABLED, cid,
+                            sizeof(cid));
+        c_session->client_cid = coap_new_bin_const(cid, sizeof(cid));
+#endif /* COAP_SERVER_SUPPORT */
+      }
     }
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
   }
@@ -1940,6 +1961,11 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
     coap_log_warn("Mbed TLS not compiled for EC-JPAKE support\n");
 #endif /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
   }
+  if (setup_data->use_cid) {
+#ifndef MBEDTLS_SSL_DTLS_CONNECTION_ID
+    coap_log_warn("Mbed TLS not compiled for Connection-ID support\n");
+#endif /* ! MBEDTLS_SSL_DTLS_CONNECTION_ID */
+  }
   m_context->psk_pki_enabled |= IS_PSK;
   return 1;
 #endif /* MBEDTLS_SSL_CLI_C */
@@ -1969,6 +1995,11 @@ coap_dtls_context_set_pki(coap_context_t *c_context,
     m_context->setup_data.allow_short_rsa_length = 1;
   }
   m_context->psk_pki_enabled |= IS_PKI;
+  if (setup_data->use_cid) {
+#ifndef MBEDTLS_SSL_DTLS_CONNECTION_ID
+    coap_log_warn("Mbed TLS not compiled for Connection-ID support\n");
+#endif /* ! MBEDTLS_SSL_DTLS_CONNECTION_ID */
+  }
   return 1;
 }
 
@@ -2065,18 +2096,7 @@ coap_dtls_new_client_session(coap_session_t *c_session) {
 
   if (m_env) {
     coap_tick_t now;
-#ifdef MBEDTLS_SSL_DTLS_CONNECTION_ID
-    if (COAP_PROTO_NOT_RELIABLE(c_session->proto)) {
-      /*
-       * Enable passive DTLS CID support.
-       *
-       * Note: Set MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT to 0 (the default)
-       * to use RFC9146 extension ID of 54, rather than the draft version -05
-       * value of 254.
-       */
-      mbedtls_ssl_set_cid(&m_env->ssl, MBEDTLS_SSL_CID_ENABLED, NULL, 0);
-    }
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
     coap_ticks(&now);
     m_env->last_timeout = now;
     ret = do_mbedtls_handshake(c_session, m_env);
@@ -2151,6 +2171,8 @@ coap_dtls_send(coap_session_t *c_session,
     return -1;
   }
   c_session->dtls_event = -1;
+  coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
+                 coap_session_str(c_session), (int)data_len);
   if (m_env->established) {
     ret = mbedtls_ssl_write(&m_env->ssl, (const unsigned char *) data, data_len);
     if (ret <= 0) {
@@ -2192,14 +2214,6 @@ coap_dtls_send(coap_session_t *c_session,
       coap_session_disconnected_lkd(c_session, COAP_NACK_TLS_FAILED);
       ret = -1;
     }
-  }
-  if (ret > 0) {
-    if (ret == (ssize_t)data_len)
-      coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
-                     coap_session_str(c_session), ret);
-    else
-      coap_log_debug("*  %s: dtls:  sent %4d of %4zd bytes\n",
-                     coap_session_str(c_session), ret, data_len);
   }
   return ret;
 }

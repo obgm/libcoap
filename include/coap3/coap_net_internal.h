@@ -194,6 +194,9 @@ struct coap_context_t {
   uint8_t mcast_per_resource;      /**< Mcast controlled on a per resource
                                         basis */
 #endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+  uint8_t testing_cids;            /**< Change client's source port every testing_cids */
+#endif /* COAP_CLIENT_SUPPORT */
   uint32_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
 };
 

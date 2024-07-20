@@ -40,7 +40,7 @@
 
 /* For RFC9146 Connection ID support */
 #ifndef COAP_DTLS_CID_LENGTH
-#define COAP_DTLS_CID_LENGTH 6
+#define COAP_DTLS_CID_LENGTH 8
 #endif
 
 typedef enum {

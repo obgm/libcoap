@@ -215,6 +215,9 @@ struct coap_session_t {
                                        been processed */
   coap_response_t last_con_handler_res; /**< The result of calling the response handler
                                        of the last CON */
+#if COAP_SERVER_SUPPORT
+  coap_bin_const_t *client_cid;     /**< Contains client CID or NULL */
+#endif /* COAP_SERVER_SUPPORT */
 };
 
 #if COAP_SERVER_SUPPORT
