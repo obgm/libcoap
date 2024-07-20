@@ -1260,6 +1260,9 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
   if (setup_data->ec_jpake) {
     coap_log_warn("OpenSSL has no EC-JPAKE support\n");
   }
+  if (setup_data->use_cid) {
+    coap_log_warn("OpenSSL has no Connection-ID support\n");
+  }
   o_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
@@ -3195,6 +3198,9 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
     SSL_set_mtu(context->dtls.ssl, COAP_DEFAULT_MTU);
   }
   context->psk_pki_enabled |= IS_PKI;
+  if (setup_data->use_cid) {
+    coap_log_warn("OpenSSL has no Connection-ID support\n");
+  }
   return 1;
 }
 

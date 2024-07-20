@@ -357,7 +357,7 @@ coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
  *         -1 Error error in errno).
  */
 ssize_t
-coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
+coap_socket_send(coap_socket_t *sock, coap_session_t *session,
                  const uint8_t *data, size_t data_len) {
   struct pbuf *pbuf;
   int err;

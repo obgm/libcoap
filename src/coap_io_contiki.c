@@ -180,7 +180,7 @@ coap_socket_close(coap_socket_t *sock) {
  *         -1 Error error in errno).
  */
 ssize_t
-coap_socket_send(coap_socket_t *sock, const coap_session_t *session, const uint8_t *data,
+coap_socket_send(coap_socket_t *sock, coap_session_t *session, const uint8_t *data,
                  size_t datalen) {
   ssize_t bytes_written = 0;
 

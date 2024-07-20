@@ -27,6 +27,7 @@ SYNOPSIS
               [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-T* token] [*-U*] [*-V* num]
               [*-X* size]
+              [*-d* value]
               [[*-h* match_hint_file] [*-k* key] [*-u* user] [*-2*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
@@ -194,6 +195,15 @@ OPTIONS - General
 *-X* size::
    Maximum message size to use for TCP based connections (default is 8388864).
    Maximum value of 2^32 -1.
+
+OPTIONS - DTLS
+--------------
+(If supported by underlying (D)TLS library)
+
+*-d* count::
+   For DTLS, enable use of Connection-ID (RFC9176). If the count is not 0,
+   then the client will changes its source port every count packets to test
+   CID.
 
 OPTIONS - PSK
 -------------

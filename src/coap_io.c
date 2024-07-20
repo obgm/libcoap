@@ -776,15 +776,57 @@ static __declspec(thread) LPFN_WSARECVMSG lpWSARecvMsg = NULL;
 #endif
 
 #if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if COAP_CLIENT_SUPPORT
+static uint32_t cid_track_counter;
+
+static void
+coap_test_cid_tuple_change(coap_session_t *session) {
+  if (session->type == COAP_SESSION_TYPE_CLIENT &&
+      session->state == COAP_SESSION_STATE_ESTABLISHED &&
+      COAP_PROTO_NOT_RELIABLE(session->proto) && session->context->testing_cids) {
+    if ((++cid_track_counter) % session->context->testing_cids == 0) {
+      coap_address_t local_if = session->addr_info.local;
+      uint16_t port = coap_address_get_port(&local_if);
+
+      port++;
+      coap_address_set_port(&local_if, port);
+
+      coap_socket_close(&session->sock);
+      session->sock.session = session;
+      if (!coap_socket_connect_udp(&session->sock, &local_if, &session->addr_info.remote,
+                                   port,
+                                   &session->addr_info.local,
+                                   &session->addr_info.remote)) {
+        coap_log_err("Tuple change for CID failed\n");
+        return;
+#ifdef COAP_EPOLL_SUPPORT
+      } else {
+        coap_epoll_ctl_add(&session->sock,
+                           EPOLLIN |
+                           ((session->sock.flags & COAP_SOCKET_WANT_CONNECT) ?
+                            EPOLLOUT : 0),
+                           __func__);
+#endif /* COAP_EPOLL_SUPPORT */
+      }
+      session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_WANT_READ | COAP_SOCKET_BOUND;
+    }
+  }
+}
+#endif /* COAP_CLIENT_SUPPORT */
+
 /*
  * dgram
  * return +ve Number of bytes written.
  *         -1 Error error in errno).
  */
 ssize_t
-coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
+coap_socket_send(coap_socket_t *sock, coap_session_t *session,
                  const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
+
+#if COAP_CLIENT_SUPPORT
+  coap_test_cid_tuple_change(session);
+#endif /* COAP_CLIENT_SUPPORT */
 
   if (!coap_debug_send_packet()) {
     bytes_written = (ssize_t)datalen;

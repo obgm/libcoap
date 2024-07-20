@@ -187,7 +187,7 @@ ssize_t coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
  * @return              The number of bytes written on success, or a value
  *                      less than zero on error.
  */
-ssize_t coap_socket_send(coap_socket_t *sock, const coap_session_t *session,
+ssize_t coap_socket_send(coap_socket_t *sock, coap_session_t *session,
                          const uint8_t *data, size_t datalen);
 
 /**

@@ -1066,6 +1066,9 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
   if (setup_data->ec_jpake) {
     coap_log_warn("wolfSSL has no EC-JPAKE support\n");
   }
+  if (setup_data->use_cid) {
+    coap_log_warn("wolfSSL has no Connection-ID support\n");
+  }
   w_context->psk_pki_enabled |= IS_PSK;
   return 1;
 }
@@ -1764,6 +1767,9 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
 #endif /* ! COAP_SERVER_SUPPORT */
 
   w_context->psk_pki_enabled |= IS_PKI;
+  if (setup_data->use_cid) {
+    coap_log_warn("wolfSSL has no Connection-ID support\n");
+  }
   return 1;
 }
 
