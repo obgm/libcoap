@@ -205,7 +205,6 @@ coap_delete_node(coap_queue_t *node) {
   int ret;
 #if COAP_THREAD_SAFE
   coap_context_t *context;
-  (void)context;
 #endif /* COAP_THREAD_SAFE */
 
   if (!node)
@@ -216,6 +215,7 @@ coap_delete_node(coap_queue_t *node) {
 #if COAP_THREAD_SAFE
   /* Keep copy as node will be going away */
   context = node->session->context;
+  (void)context;
 #endif /* COAP_THREAD_SAFE */
   coap_lock_lock(context, return 0);
   ret = coap_delete_node_lkd(node);
