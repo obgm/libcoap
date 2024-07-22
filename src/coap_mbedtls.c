@@ -1467,6 +1467,31 @@ do_mbedtls_handshake(coap_session_t *c_session,
     coap_log_debug("*  %s: Mbed TLS established\n",
                    coap_session_str(c_session));
     ret = 1;
+#ifdef MBEDTLS_SSL_DTLS_CONNECTION_ID
+#if COAP_CLIENT_SUPPORT
+    if (c_session->type == COAP_SESSION_TYPE_CLIENT &&
+        c_session->proto == COAP_PROTO_DTLS) {
+      coap_mbedtls_context_t *m_context;
+
+      m_context = (coap_mbedtls_context_t *)c_session->context->dtls_context;
+      if ((m_context->psk_pki_enabled & IS_PSK && c_session->cpsk_setup_data.use_cid) ||
+          m_context->setup_data.use_cid) {
+        unsigned char peer_cid[MBEDTLS_SSL_CID_OUT_LEN_MAX];
+        int enabled;
+        size_t peer_cid_len;
+
+        /* See whether CID was negotiated */
+        if (mbedtls_ssl_get_peer_cid(&m_env->ssl, &enabled, peer_cid, &peer_cid_len) == 0 &&
+            enabled == MBEDTLS_SSL_CID_ENABLED) {
+          c_session->negotiated_cid = 1;
+        } else {
+          coap_log_info("** %s: CID was not negotiated\n", coap_session_str(c_session));
+          c_session->negotiated_cid = 0;
+        }
+      }
+    }
+#endif /* COAP_CLIENT_SUPPORT */
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
     break;
   case MBEDTLS_ERR_SSL_WANT_READ:
   case MBEDTLS_ERR_SSL_WANT_WRITE:
@@ -1885,6 +1910,33 @@ int
 coap_dtls_rpk_is_supported(void) {
   return 0;
 }
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_cid_is_supported(void) {
+#ifdef MBEDTLS_SSL_DTLS_CONNECTION_ID
+  return 1;
+#else /* ! MBEDTLS_SSL_DTLS_CONNECTION_ID */
+  return 0;
+#endif /* ! MBEDTLS_SSL_DTLS_CONNECTION_ID */
+}
+
+#if COAP_CLIENT_SUPPORT
+int
+coap_dtls_set_cid_tuple_change(coap_context_t *c_context, uint8_t every) {
+#ifdef MBEDTLS_SSL_DTLS_CONNECTION_ID
+  c_context->testing_cids = every;
+  return 1;
+#else /* ! MBEDTLS_SSL_DTLS_CONNECTION_ID */
+  (void)c_context;
+  (void)every;
+  return 0;
+#endif /* ! MBEDTLS_SSL_DTLS_CONNECTION_ID */
+}
+#endif /* COAP_CLIENT_SUPPORT */
 
 void *
 coap_dtls_new_context(coap_context_t *c_context) {

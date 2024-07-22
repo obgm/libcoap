@@ -1924,8 +1924,12 @@ main(int argc, char **argv) {
   coap_register_nack_handler(ctx, nack_handler);
   if (the_token.length > COAP_TOKEN_DEFAULT_MAX)
     coap_context_set_max_token_size(ctx, the_token.length);
-  if (cid_every)
-    coap_context_set_cid_tuple_change(ctx, cid_every);
+  if (cid_every) {
+    if (!coap_context_set_cid_tuple_change(ctx, cid_every)) {
+      coap_log_warn("coap_context_set_cid_tuple_change: "
+                    "Unable to set CID tuple change\n");
+    }
+  }
 
   session = get_session(ctx,
                         node_str[0] ? node_str : NULL,

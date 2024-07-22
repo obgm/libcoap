@@ -47,6 +47,9 @@ typedef struct coap_tiny_context_t {
   coap_binary_t *priv_key;
   coap_binary_t *pub_key;
 #endif /* DTLS_ECC */
+#if (DTLS_MAX_CID_LENGTH > 0)
+  uint8_t use_cid;
+#endif /* DTLS_MAX_CID_LENGTH > 0 */
 } coap_tiny_context_t;
 
 #if ! defined(DTLS_PSK) && ! defined(DTLS_ECC)
@@ -104,6 +107,37 @@ coap_dtls_rpk_is_supported(void) {
   return 0;
 #endif /* ! DTLS_ECC */
 }
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_cid_is_supported(void) {
+#if (DTLS_MAX_CID_LENGTH > 0)
+  return 1;
+#else /* ! DTLS_MAX_CID_LENGTH > 0 */
+  return 0;
+#endif /* ! DTLS_MAX_CID_LENGTH > 0 */
+}
+
+#if COAP_CLIENT_SUPPORT
+/*
+ * TinyDTLS only supports client CID if compiled appropriately, and
+ * has CID support (i.e DTLS_MAX_CID_LENGTH is defined and used).
+ */
+int
+coap_dtls_set_cid_tuple_change(coap_context_t *c_context, uint8_t every) {
+#if (DTLS_MAX_CID_LENGTH > 0)
+  c_context->testing_cids = every;
+  return 1;
+#else /* ! DTLS_MAX_CID_LENGTH > 0 */
+  (void)c_context;
+  (void)every;
+  return 0;
+#endif /* ! DTLS_MAX_CID_LENGTH > 0 */
+}
+#endif /* COAP_CLIENT_SUPPORT */
 
 static coap_log_t
 dtls_map_logging(log_t d_level) {
@@ -580,6 +614,20 @@ error:
 }
 #endif /* DTLS_PSK */
 
+static void
+dtls_update_user_parameters(struct dtls_context_t *ctx,
+                            session_t *session, dtls_user_parameters_t *user_parameters) {
+  (void) ctx;
+  (void) session;
+#if (DTLS_MAX_CID_LENGTH > 0)
+  coap_tiny_context_t *t_context =
+      (coap_tiny_context_t *)dtls_get_app_data(ctx);
+  user_parameters->support_cid = t_context ? t_context->use_cid : 0;
+#else /* ! DTLS_MAX_CID_LENGTH > 0 */
+  (void)user_parameters;
+#endif /* ! DTLS_MAX_CID_LENGTH > 0 */
+}
+
 #ifdef DTLS_ECC
 static int
 get_ecdsa_key(struct dtls_context_t *dtls_context,
@@ -658,9 +706,11 @@ verify_ecdsa_key(struct dtls_context_t *dtls_context COAP_UNUSED,
   }
   return 0;
 }
+
 static dtls_handler_t ec_cb = {
   .write = dtls_send_to_peer,
   .read = dtls_application_data,
+  .get_user_parameters = dtls_update_user_parameters,
   .event = dtls_event,
 #ifdef DTLS_PSK
   .get_psk_info = NULL,
@@ -673,6 +723,7 @@ static dtls_handler_t ec_cb = {
 static dtls_handler_t psk_cb = {
   .write = dtls_send_to_peer,
   .read = dtls_application_data,
+  .get_user_parameters = dtls_update_user_parameters,
   .event = dtls_event,
 #ifdef DTLS_PSK
   .get_psk_info = get_psk_info,
@@ -830,10 +881,24 @@ coap_dtls_send(coap_session_t *session,
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
     if (coap_event_dtls != COAP_EVENT_DTLS_CLOSED)
       coap_handle_event_lkd(session->context, coap_event_dtls, session);
-    if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
+    if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED) {
+#if (DTLS_MAX_CID_LENGTH > 0)
+      if (session->type == COAP_SESSION_TYPE_CLIENT) {
+        dtls_peer_t *peer = dtls_get_peer(dtls_context, (session_t *)session->tls);
+        dtls_security_parameters_t *security = dtls_security_params(peer);
+
+        if (security->write_cid_length > 0) {
+          session->negotiated_cid = 1;
+        } else {
+          coap_log_info("** %s: CID was not negotiated\n", coap_session_str(session));
+          session->negotiated_cid = 0;
+        }
+      }
+#endif /* DTLS_MAX_CID_LENGTH > 0 */
       coap_session_connected(session);
-    else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR)
+    } else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR) {
       coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
+    }
   }
 
   return res;
@@ -899,9 +964,21 @@ coap_dtls_receive(coap_session_t *session,
     /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
     if (coap_event_dtls != COAP_EVENT_DTLS_CLOSED)
       coap_handle_event_lkd(session->context, coap_event_dtls, session);
-    if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED)
+    if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED) {
       coap_session_connected(session);
-    else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR) {
+#if (DTLS_MAX_CID_LENGTH > 0)
+      if (session->type == COAP_SESSION_TYPE_CLIENT) {
+        dtls_peer_t *peer = dtls_get_peer(dtls_context, (session_t *)session->tls);
+        dtls_security_parameters_t *security = dtls_security_params(peer);
+
+        if (security->write_cid_length > 0) {
+          session->negotiated_cid = 1;
+        } else {
+          session->negotiated_cid = 0;
+        }
+      }
+#endif /* DTLS_MAX_CID_LENGTH > 0 */
+    } else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR) {
       coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
       err = -1;
     }
@@ -1445,6 +1522,14 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
     }
   }
 
+  if (setup_data->use_cid) {
+#if (DTLS_MAX_CID_LENGTH == 0)
+    coap_log_warn("TinyDTLS has no Connection-ID support\n");
+#endif /* DTLS_MAX_CID_LENGTH == 0 */
+  }
+#if (DTLS_MAX_CID_LENGTH > 0)
+  t_context->use_cid = setup_data->use_cid;
+#endif /* DTLS_MAX_CID_LENGTH > 0 */
   return 1;
 #else /* ! DTLS_ECC */
   (void)ctx;
@@ -1453,9 +1538,6 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
   coap_log_warn("TinyDTLS not compiled with ECC support\n");
   return 0;
 #endif /* ! DTLS_ECC */
-  if (setup_data->use_cid) {
-    coap_log_warn("TinyDTLS has no Connection-ID support\n");
-  }
 }
 
 int
@@ -1469,15 +1551,25 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *ctx COAP_UNUSED,
 
 #if COAP_CLIENT_SUPPORT
 int
-coap_dtls_context_set_cpsk(coap_context_t *coap_context COAP_UNUSED,
-                           coap_dtls_cpsk_t *setup_data
-                          ) {
+coap_dtls_context_set_cpsk(coap_context_t *coap_context,
+                           coap_dtls_cpsk_t *setup_data) {
+  coap_tiny_context_t *t_context;
+
   if (!setup_data)
     return 0;
 
+  t_context = (coap_tiny_context_t *)coap_context->dtls_context;
+  if (!t_context)
+    return 0;
+
   if (setup_data->use_cid) {
+#if (DTLS_MAX_CID_LENGTH == 0)
     coap_log_warn("TinyDTLS has no Connection-ID support\n");
+#endif /* DTLS_MAX_CID_LENGTH == 0 */
   }
+#if (DTLS_MAX_CID_LENGTH > 0)
+  t_context->use_cid = setup_data->use_cid;
+#endif /* DTLS_MAX_CID_LENGTH > 0 */
 #ifdef DTLS_PSK
   if (setup_data->ec_jpake) {
     coap_log_warn("TinyDTLS has no EC-JPAKE support\n");

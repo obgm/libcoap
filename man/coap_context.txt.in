@@ -65,7 +65,7 @@ size_t _max_token_size_);*
 
 *void *coap_context_get_app_data(const coap_context_t *_context_);*
 
-*void coap_context_set_cid_tuple_change(coap_context_t *_context_context, uint8_t _every_);*
+*int coap_context_set_cid_tuple_change(coap_context_t *_context_context, uint8_t _every_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -190,7 +190,8 @@ pointer previously defined by *coap_context_set_app_data*().
 
 The *coap_context_set_cid_tuple_change*() function is used to define to a client
 to force the client's port to change _every_ packets sent, providing the ability
-to test a CID (RFC9146) enabled server.
+to test a CID (RFC9146) enabled server. Only supported by DTLS libraries that
+support CID.
 
 RETURN VALUES
 -------------
@@ -210,6 +211,8 @@ out an idle server session.
 (TCP) CSM negotiation response from the peer.
 
 *coap_context_get_app_data*() returns a previously defined pointer.
+
+*coap_context_set_cid_tuple_change*() returns 1 on success, else 0;
 
 SEE ALSO
 --------

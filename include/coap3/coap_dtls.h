@@ -29,6 +29,8 @@
  * @{
  */
 
+int coap_dtls_cid_is_supported(void);
+
 typedef struct coap_dtls_pki_t coap_dtls_pki_t;
 
 #ifndef COAP_DTLS_HINT_LENGTH

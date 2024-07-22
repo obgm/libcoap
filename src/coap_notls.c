@@ -78,6 +78,24 @@ coap_dtls_rpk_is_supported(void) {
   return 0;
 }
 
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_cid_is_supported(void) {
+  return 0;
+}
+
+#if COAP_CLIENT_SUPPORT
+int
+coap_dtls_set_cid_tuple_change(coap_context_t *c_context, uint8_t every) {
+  (void)c_context;
+  (void)every;
+  return 0;
+}
+#endif /* COAP_CLIENT_SUPPORT */
+
 coap_tls_version_t *
 coap_get_tls_library_version(void) {
   static coap_tls_version_t version;

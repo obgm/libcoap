@@ -203,6 +203,10 @@ struct coap_session_t {
 #endif /* COAP_OSCORE_SUPPORT */
   volatile uint8_t max_token_checked; /**< Check for max token size
                                            coap_ext_token_check_t */
+#if COAP_CLIENT_SUPPORT
+  uint8_t negotiated_cid;         /**< Set for a client if CID negotiated */
+#endif /* COAP_CLIENT_SUPPORT */
+  uint8_t is_dtls13;              /**< Set if session is DTLS1.3 */
   coap_mid_t remote_test_mid;     /**< mid used for checking remote
                                        support */
   uint32_t max_token_size;        /**< Largest token size supported RFC8974 */

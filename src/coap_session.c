@@ -1148,6 +1148,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
 #define DTLS_HT_CLIENT_HELLO  1  /* Client Hello handshake type */
 #define DTLS_CT_CID          25  /* Content Type Connection ID */
 #define OFF_CID              11  /* offset of CID in dtls_record_handshake_t */
+#define OFF_CID_DTLS13        1  /* offset of CID in DTLS1.3 Unified Header */
 
     const uint8_t *payload = (const uint8_t *)packet->payload;
     size_t length = packet->length;
@@ -1157,18 +1158,24 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
                      OFF_HANDSHAKE_TYPE + 1);
       return NULL;
     }
-    if (payload[OFF_CONTENT_TYPE] == DTLS_CT_CID) {
+    if ((payload[OFF_CONTENT_TYPE] & 0x30) == 0x30 ||
+        payload[OFF_CONTENT_TYPE] == DTLS_CT_CID) {
       /* Client may have changed its IP address */
       int changed = 0;
 
       SESSIONS_ITER(endpoint->sessions, session, rtmp) {
         if (session->client_cid) {
-          if (memcmp(session->client_cid->s, &payload[OFF_CID],
-                     session->client_cid->length) == 0) {
+          if ((session->is_dtls13 && (payload[OFF_CONTENT_TYPE] & 0x30) == 0x30 &&
+               memcmp(session->client_cid->s, &payload[OFF_CID_DTLS13],
+                      session->client_cid->length) == 0) ||
+              (!session->is_dtls13 && payload[OFF_CONTENT_TYPE] == DTLS_CT_CID &&
+               memcmp(session->client_cid->s, &payload[OFF_CID],
+                      session->client_cid->length) == 0)) {
             /* Updating IP address */
             coap_log_info("***%s: CID: Old Client Session\n", coap_session_str(session));
             SESSIONS_DELETE(endpoint->sessions, session);
             session->addr_info = packet->addr_info;
+            memcpy(&session->addr_hash, &addr_hash, sizeof(session->addr_hash));
             SESSIONS_ADD(endpoint->sessions, session);
             coap_log_info("***%s: CID: New Client Session\n", coap_session_str(session));
             return session;
@@ -1184,7 +1191,8 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
       /* only log if not a late alert */
       if (payload[OFF_CONTENT_TYPE] != DTLS_CT_ALERT)
         coap_log_debug("coap_dtls_hello: ContentType %d Handshake %d dropped\n",
-                       payload[OFF_CONTENT_TYPE], payload[OFF_HANDSHAKE_TYPE]);
+                       payload[OFF_CONTENT_TYPE],
+                       payload[OFF_HANDSHAKE_TYPE]);
       return NULL;
     }
   }
