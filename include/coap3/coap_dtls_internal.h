@@ -481,6 +481,17 @@ int coap_dtls_define_issue(coap_define_issue_key_t type,
                            coap_dtls_key_t *key,
                            const coap_dtls_role_t role,
                            int ret);
+
+/**
+ * Set the Connection ID client tuple frequency change for testing CIDs.
+ *
+ * @param context        The coap_context_t object.
+ * @param every          Change the client's source port @p every packets sent.
+ *
+ * @return @c 1 if frequency change set (CID supported), else @c 0.
+ */
+int coap_dtls_set_cid_tuple_change(coap_context_t *context, uint8_t every);
+
 /** @} */
 
 #endif /* COAP_DTLS_INTERNAL_H */

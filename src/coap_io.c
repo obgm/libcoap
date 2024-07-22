@@ -782,8 +782,9 @@ static uint32_t cid_track_counter;
 static void
 coap_test_cid_tuple_change(coap_session_t *session) {
   if (session->type == COAP_SESSION_TYPE_CLIENT &&
+      session->negotiated_cid &&
       session->state == COAP_SESSION_STATE_ESTABLISHED &&
-      COAP_PROTO_NOT_RELIABLE(session->proto) && session->context->testing_cids) {
+      session->proto == COAP_PROTO_DTLS && session->context->testing_cids) {
     if ((++cid_track_counter) % session->context->testing_cids == 0) {
       coap_address_t local_if = session->addr_info.local;
       uint16_t port = coap_address_get_port(&local_if);

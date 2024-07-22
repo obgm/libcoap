@@ -235,8 +235,10 @@ void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds);
  *
  * @param context        The coap_context_t object.
  * @param every          Change the client's source port @p every packets sent.
+ *
+ * @return @c 1 if frequency change set (CID supported), else @c 0.
  */
-void coap_context_set_cid_tuple_change(coap_context_t *context, uint8_t every);
+int coap_context_set_cid_tuple_change(coap_context_t *context, uint8_t every);
 
 /**
  * Set the maximum token size (RFC8974).

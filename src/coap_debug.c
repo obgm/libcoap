@@ -1233,6 +1233,7 @@ coap_string_tls_support(char *buffer, size_t bufsize) {
   const int have_pki = coap_dtls_pki_is_supported();
   const int have_pkcs11 = coap_dtls_pkcs11_is_supported();
   const int have_rpk = coap_dtls_rpk_is_supported();
+  const int have_cid = coap_dtls_cid_is_supported();
   const int have_oscore = coap_oscore_is_supported();
   const int have_ws = coap_ws_is_supported();
 
@@ -1241,13 +1242,14 @@ coap_string_tls_support(char *buffer, size_t bufsize) {
     return buffer;
   }
   snprintf(buffer, bufsize,
-           "(%sDTLS and %sTLS support; %sPSK, %sPKI, %sPKCS11, and %sRPK support)\n(%sOSCORE)\n(%sWebSockets)",
+           "(%sDTLS and %sTLS support; %sPSK, %sPKI, %sPKCS11, %sRPK and %sCID support)\n(%sOSCORE)\n(%sWebSockets)",
            have_dtls ? "" : "No ",
            have_tls ? "" : "no ",
            have_psk ? "" : "no ",
            have_pki ? "" : "no ",
            have_pkcs11 ? "" : "no ",
            have_rpk ? "" : "no ",
+           have_cid ? "" : "no ",
            have_oscore ? "Have " : "No ",
            have_ws ? "Have " : "No ");
   return buffer;

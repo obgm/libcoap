@@ -459,13 +459,14 @@ coap_context_set_keepalive(coap_context_t *context, unsigned int seconds) {
   context->ping_timeout = seconds;
 }
 
-void
+int
 coap_context_set_cid_tuple_change(coap_context_t *context, uint8_t every) {
 #if COAP_CLIENT_SUPPORT
-  context->testing_cids = every;
+  return coap_dtls_set_cid_tuple_change(context, every);
 #else /* ! COAP_CLIENT_SUPPORT */
   (void)context;
   (void)every;
+  return 0;
 #endif /* ! COAP_CLIENT_SUPPORT */
 }
 

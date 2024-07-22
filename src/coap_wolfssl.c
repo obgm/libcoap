@@ -63,6 +63,11 @@
  * If wolfSSL RPK support is required, then the wolfSSL library needs to be built with
  *  $ ./configure CFLAGS="-DHAVE_RPK"
  *
+ * If wolfSSL CID support is required, then the wolfSSL library needs to be built with
+ *  $ ./configure --enable-dtls13 --enable-dtlscid CFLAGS="-DDTLS_CID_MAX_SIZE=8"
+ * NOTE: For interoperability with MbedTLS, https://github.com/wolfSSL/wolfssl/pull/7841
+ * needs to be installed.
+ *
  * When building the wolfSSL library from scratch, it is suggested that the library
  * built with
  *  $ ./configure --enable-all
@@ -368,12 +373,35 @@ coap_dtls_pkcs11_is_supported(void) {
  */
 int
 coap_dtls_rpk_is_supported(void) {
+  return 0;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_cid_is_supported(void) {
 #if defined(HAVE_RPK) && LIBWOLFSSL_VERSION_HEX >= 0x05006004
   return 1;
 #else /* ! HAVE_RPK || LIBWOLFSSL_VERSION_HEX < 0x05006004 */
   return 0;
 #endif /* ! HAVE_RPK || LIBWOLFSSL_VERSION_HEX < 0x05006004 */
 }
+
+#if COAP_CLIENT_SUPPORT
+int
+coap_dtls_set_cid_tuple_change(coap_context_t *c_context, uint8_t every) {
+#if defined(WOLFSSL_DTLS_CID)
+  c_context->testing_cids = every;
+  return 1;
+#else /* ! WOLFSSL_DTLS_CID */
+  (void)c_context;
+  (void)every;
+  return 0;
+#endif /* ! WOLFSSL_DTLS_CID */
+}
+#endif /* COAP_CLIENT_SUPPORT */
 
 coap_tls_version_t *
 coap_get_tls_library_version(void) {
@@ -1067,7 +1095,9 @@ coap_dtls_context_set_cpsk(coap_context_t *c_context,
     coap_log_warn("wolfSSL has no EC-JPAKE support\n");
   }
   if (setup_data->use_cid) {
+#if ! defined(WOLFSSL_DTLS_CID)
     coap_log_warn("wolfSSL has no Connection-ID support\n");
+#endif /* ! WOLFSSL_DTLS_CID */
   }
   w_context->psk_pki_enabled |= IS_PSK;
   return 1;
@@ -1768,7 +1798,9 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
 
   w_context->psk_pki_enabled |= IS_PKI;
   if (setup_data->use_cid) {
+#if ! defined(WOLFSSL_DTLS_CID)
     coap_log_warn("wolfSSL has no Connection-ID support\n");
+#endif /* ! WOLFSSL_DTLS_CID */
   }
   return 1;
 }
@@ -1908,6 +1940,24 @@ coap_dtls_new_server_session(coap_session_t *session) {
   }
 #endif /* WOLFSSL_DTLS_CH_FRAG && WOLFSSL_DTLS13 */
 
+#if defined(WOLFSSL_DTLS_CID) && defined(WOLFSSL_DTLS13)
+
+#if COAP_DTLS_CID_LENGTH > DTLS_CID_MAX_SIZE
+#bad COAP_DTLS_CID_LENGTH > DTLS_CID_MAX_SIZE
+#endif /* COAP_DTLS_CID_LENGTH > DTLS_CID_MAX_SIZE */
+
+  if (wolfSSL_dtls_cid_use(ssl) != WOLFSSL_SUCCESS)
+    goto error;
+  u_char cid[COAP_DTLS_CID_LENGTH];
+  /*
+   * Enable server DTLS CID support.
+   */
+  coap_prng_lkd(cid, sizeof(cid));
+  if (wolfSSL_dtls_cid_set(ssl, cid, sizeof(cid)) != WOLFSSL_SUCCESS)
+    goto error;
+  session->client_cid = coap_new_bin_const(cid, sizeof(cid));
+#endif /* WOLFSSL_DTLS_CID && WOLFSSL_DTLS13 */
+
   coap_ticks(&now);
   w_env->last_timeout = now;
   w_env->ssl = ssl;
@@ -1965,6 +2015,18 @@ setup_client_ssl_session(coap_session_t *session, WOLFSSL *ssl) {
                     setup_data->client_sni);
     }
     wolfSSL_set_psk_client_callback(ssl, coap_dtls_psk_client_callback);
+
+#if defined(WOLFSSL_DTLS_CID) && defined(WOLFSSL_DTLS13)
+    if (setup_data->use_cid) {
+      if (wolfSSL_dtls_cid_use(ssl) != WOLFSSL_SUCCESS)
+        return 0;
+      /*
+       * Enable client DTLS CID negotiation.
+       */
+      if (wolfSSL_dtls_cid_set(ssl, NULL, 0) != WOLFSSL_SUCCESS)
+        return 0;
+    }
+#endif /* WOLFSSL_DTLS_CID && WOLFSSL_DTLS13 */
   }
   if (w_context->psk_pki_enabled & IS_PKI) {
     coap_dtls_pki_t *setup_data = &w_context->setup_data;
@@ -2008,6 +2070,18 @@ setup_client_ssl_session(coap_session_t *session, WOLFSSL *ssl) {
     /* Check CA Chain */
     if (setup_data->cert_chain_validation)
       wolfSSL_set_verify_depth(ssl, setup_data->cert_chain_verify_depth + 1);
+
+#if defined(WOLFSSL_DTLS_CID) && defined(WOLFSSL_DTLS13)
+    if (setup_data->use_cid) {
+      if (wolfSSL_dtls_cid_use(ssl) != WOLFSSL_SUCCESS)
+        return 0;
+      /*
+       * Enable client DTLS CID negotiation.
+       */
+      if (wolfSSL_dtls_cid_set(ssl, NULL, 0) != WOLFSSL_SUCCESS)
+        return 0;
+    }
+#endif /* WOLFSSL_DTLS_CID && WOLFSSL_DTLS13 */
 
   }
   return 1;
@@ -2270,6 +2344,22 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
       if (in_init && wolfSSL_is_init_finished(ssl)) {
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                       coap_session_str(session), wolfSSL_get_cipher((ssl)));
+#if defined(WOLFSSL_DTLS_CID) && defined(WOLFSSL_DTLS13) && COAP_CLIENT_SUPPORT
+        if (session->type == COAP_SESSION_TYPE_CLIENT &&
+            session->proto == COAP_PROTO_DTLS) {
+          if (wolfSSL_dtls_cid_is_enabled(ssl)) {
+            session->negotiated_cid = 1;
+          } else {
+            coap_log_info("** %s: CID was not negotiated\n", coap_session_str(session));
+            session->negotiated_cid = 0;
+          }
+        }
+#endif /* WOLFSSL_DTLS_CID && WOLFSSL_DTLS13 && COAP_CLIENT_SUPPORT */
+        if (!strcmp(wolfSSL_get_version(ssl), "DTLSv1.3")) {
+          session->is_dtls13 = 1;
+        } else {
+          session->is_dtls13 = 0;
+        }
         coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CONNECTED, session);
         session->sock.lfunc[COAP_LAYER_TLS].l_establish(session);
       }

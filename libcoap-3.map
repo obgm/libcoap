@@ -81,6 +81,7 @@ global:
   coap_delete_str_const;
   coap_delete_string;
   coap_delete_uri;
+  coap_dtls_cid_is_supported;
   coap_dtls_get_log_level;
   coap_dtls_is_supported;
   coap_dtls_pkcs11_is_supported;
