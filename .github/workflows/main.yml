@@ -36,7 +36,7 @@ jobs:
       - name: check
         run: |
           ./configure --disable-documentation --disable-doxygen --disable-man --enable-examples --enable-tests --disable-dtls
-          scan-build make V=0
+          scan-build --status-bugs make V=0
   check-missing-updates:
     runs-on: ubuntu-latest
     steps:

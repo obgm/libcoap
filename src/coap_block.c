@@ -3150,8 +3150,13 @@ give_app_data:
                        lg_srcv->observe_length, lg_srcv->observe);
   }
   coap_remove_option(pdu, block_option);
-  pdu->body_data = lg_srcv->body_data->s;
-  pdu->body_length = lg_srcv->total_len;
+  if (lg_srcv->body_data) {
+    pdu->body_data = lg_srcv->body_data->s;
+    pdu->body_length = lg_srcv->total_len;
+  } else {
+    pdu->body_data = NULL;
+    pdu->body_length = 0;
+  }
   pdu->body_offset = 0;
   pdu->body_total = lg_srcv->total_len;
   coap_log_debug("Server app version of updated PDU\n");
