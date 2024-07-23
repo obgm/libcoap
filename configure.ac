@@ -520,12 +520,15 @@ if test "x$build_dtls" = "xyes"; then
       # Attempt to find MbedTLS using pkg-config.
 
       # When statically linking against libcoap, all transitive dependencies need to be specified as linker flags
-      # as well. Use PKG_CHECK_MODULES_STATIC for that.
+      # as well. Use pkg-config --static for that.
       if test "x$enable_static" = "xyes"; then
-        PKG_CHECK_MODULES_STATIC([MbedTLS],
-                                 [mbedtls],
-                                 [have_mbedtls="yes"; mbedtls_has_pkgconfig="yes"],
-                                 [have_mbedtls="no"; mbedtls_has_pkgconfig="no"])
+        KEEP_PKG_CONFIG=$PKG_CONFIG
+        PKG_CONFIG="$PKG_CONFIG --static"
+        PKG_CHECK_MODULES([MbedTLS],
+                          [mbedtls],
+                          [have_mbedtls="yes"; mbedtls_has_pkgconfig="yes"],
+                          [have_mbedtls="no"; mbedtls_has_pkgconfig="no"])
+        PKG_CONFIG=$KEEP_PKG_CONFIG
       else
         PKG_CHECK_MODULES([MbedTLS],
                           [mbedtls],
