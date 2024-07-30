@@ -45,6 +45,7 @@ TXT3 = coap_address.txt \
 	coap_resource.txt \
 	coap_session.txt \
 	coap_string.txt \
+	coap_supported.txt \
 	coap_tls_library.txt \
 	coap_uri.txt \
 	coap_websockets.txt
@@ -132,6 +133,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_deprecated.3" > coap_run_once.3
 	@echo ".so man3/coap_deprecated.3" > coap_set_event_handler.3
 	@echo ".so man3/coap_deprecated.3" > coap_write.3
+	@echo ".so man3/coap_io.3" > coap_io_pending.3
 	@echo ".so man3/coap_io.3" > coap_can_exit.3
 	@echo ".so man3/coap_locking.3" > coap_lock_callback_ret_release.3
 	@echo ".so man3/coap_locking.3" > coap_lock_invert.3
@@ -155,7 +157,6 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_logging.3" > coap_session_str.3
 	@echo ".so man3/coap_logging.3" > coap_print_addr.3
 	@echo ".so man3/coap_logging.3" > coap_print_ip_addr.3
-	@echo ".so man3/coap_oscore.3" > coap_context_oscore_server.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_set.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_filter_unset.3
 	@echo ".so man3/coap_pdu_access.3" > coap_option_iterator_init.3
@@ -214,11 +215,19 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_string.3" > coap_make_str_const.3
 	@echo ".so man3/coap_string.3" > coap_string_equal.3
 	@echo ".so man3/coap_string.3" > coap_binary_equal.3
-	@echo ".so man3/coap_tls_library.3" > coap_string_tls_support.3
-	@echo ".so man3/coap_tls_library.3" > coap_string_tls_version.3
-	@echo ".so man3/coap_tls_library.3" > coap_show_tls_version.3
-	@echo ".so man3/coap_tls_library.3" > coap_tls_engine_configure.3
-	@echo ".so man3/coap_tls_library.3" > coap_tls_engine_remove.3
+	@echo ".so man3/coap_supported.3" > coap_dtls_rpk_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_epoll_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_ipv4_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_ipv6_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_observe_persist_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_oscore_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_proxy_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_server_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_tcp_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_threadsafe_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_tls_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_ws_is_supported.3
+	@echo ".so man3/coap_supported.3" > coap_wss_is_supported.3
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_3) "$(DESTDIR)$(man3dir)"
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_5) "$(DESTDIR)$(man5dir)"
 

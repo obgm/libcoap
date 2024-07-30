@@ -26,20 +26,6 @@
  */
 
 /**
- * Check whether WebSockets is available.
- *
- * @return @c 1 if support for WebSockets is available, or @c 0 otherwise.
- */
-int coap_ws_is_supported(void);
-
-/**
- * Check whether Secure WebSockets is available.
- *
- * @return @c 1 if support for Secure WebSockets is available, or @c 0 otherwise.
- */
-int coap_wss_is_supported(void);
-
-/**
  * Set the host for the HTTP Host: Header in the WebSockets Request.
  *
  * @return @c 1 if successful, else @c 0 if failure of some sort.

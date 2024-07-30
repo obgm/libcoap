@@ -495,7 +495,7 @@ main(int argc, char *argv[]) {
 
 SEE ALSO
 --------
-*coap_block*(3), *coap_context*(3) and *coap_init*(3)
+*coap_block*(3), *coap_context*(3), *coap_init*(3) and *coap_supported*(3)
 
 FURTHER INFORMATION
 -------------------

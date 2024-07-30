@@ -11,7 +11,6 @@ coap_async(3)
 NAME
 ----
 coap_async,
-coap_async_is_supported,
 coap_register_async,
 coap_async_trigger,
 coap_async_set_delay,
@@ -24,8 +23,6 @@ coap_async_get_app_data
 SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
-
-*int coap_async_is_supported(void);*
 
 *coap_async_t *coap_register_async(coap_session_t *_session_,
 const coap_pdu_t *_request_, coap_tick_t _delay_);*
@@ -74,11 +71,6 @@ when received, so no need to use the async support.
 
 FUNCTIONS
 ---------
-
-*Function: coap_async_is_supported()*
-
-The *coap_async_is_supported*() function is used to determine if there is
-async support or not compiled into libcoap.
 
 *Function: coap_register_async()*
 
@@ -129,8 +121,6 @@ application data from the  _async_ definition.
 
 RETURN VALUES
 -------------
-
-*coap_async_is_supported*() returns 1 if support is available, 0 otherwise.
 
 *coap_register_async*() and *coap_find_async*() return a pointer to an async
 definition or NULL if there is an error.
@@ -208,7 +198,7 @@ hnd_get_with_delay(coap_session_t *session,
 
 SEE ALSO
 --------
-*coap_handler*(3)
+*coap_handler*(3) and *coap_supported*(3)
 
 FURTHER INFORMATION
 -------------------

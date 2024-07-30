@@ -94,6 +94,7 @@ examples/riot/pkg_libcoap/patches
 
 # the include/ folder
 include/coap3/coap.h
+include/coap3/coap_defines.h
 
 # the tests/ folder
 tests/.deps

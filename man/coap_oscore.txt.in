@@ -11,7 +11,6 @@ coap_oscore(3)
 NAME
 ----
 coap_oscore,
-coap_oscore_is_supported,
 coap_new_oscore_conf,
 coap_delete_oscore_conf,
 coap_new_oscore_recipient,
@@ -25,8 +24,6 @@ coap_context_oscore_server
 SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
-
-*int coap_oscore_is_supported(void);*
 
 *coap_oscore_conf_t *coap_new_oscore_conf(coap_str_const_t _conf_mem_,
 coap_oscore_save_seq_num_t _save_seq_num_func_,
@@ -96,11 +93,6 @@ typedef int (*coap_oscore_save_seq_num_t)(uint64_t sender_seq_num, void *param);
 
 FUNCTIONS
 ---------
-
-*Function: coap_oscore_is_supported()*
-
-The *coap_oscore_is_supported*() function returns 1 if OSCORE is supported,
-otherwise 0.
 
 *Function: coap_new_oscore_conf()*
 
@@ -210,9 +202,9 @@ client session or NULL if there is a malloc or parameter failure.
 *coap_new_oscore_conf*() returns a _coap_oscore_conf_t_
 or NULL on failure.
 
-*coap_oscore_is_supported*(), *coap_context_oscore_server*(),
-*coap_delete_oscore_conf*(), *coap_new_oscore_recipient*() and
-*coap_delete_oscore_recipient*() return 0 on failure, 1 on success.
+*coap_context_oscore_server*(), *coap_delete_oscore_conf*(),
+*coap_new_oscore_recipient*() and *coap_delete_oscore_recipient*()
+return 0 on failure, 1 on success.
 
 EXAMPLES
 --------
@@ -380,7 +372,8 @@ setup_context(void) {
 
 SEE ALSO
 --------
-*coap_endpoint_client*(3), *coap_endpoint_server*(3) and *coap-oscore-conf*(5)
+*coap_endpoint_client*(3), *coap_endpoint_server*(3), *coap-oscore-conf*(5) and
+*coap_supported*(3)
 
 FURTHER INFORMATION
 -------------------

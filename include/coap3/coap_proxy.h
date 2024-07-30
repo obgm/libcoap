@@ -17,8 +17,6 @@
 #ifndef COAP_PROXY_H_
 #define COAP_PROXY_H_
 
-int coap_proxy_is_supported(void);
-
 /**
  * @ingroup application_api
  * @defgroup proxy Proxy

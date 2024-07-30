@@ -70,12 +70,6 @@ typedef struct {
 /* WARNING: Added defined values must not encroach into 0xff000000 which are defined elsewhere */
 
 /**
- * Returns @c 1 if libcoap was built with option Q-BlockX support,
- * @c 0 otherwise.
- */
-int coap_q_block_is_supported(void);
-
-/**
  * Returns the value of the least significant byte of a Block option @p opt.
  * For zero-length options (i.e. num == m == szx == 0), COAP_OPT_BLOCK_LAST
  * returns @c NULL.

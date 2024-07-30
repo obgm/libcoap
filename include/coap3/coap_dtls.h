@@ -29,8 +29,6 @@
  * @{
  */
 
-int coap_dtls_cid_is_supported(void);
-
 typedef struct coap_dtls_pki_t coap_dtls_pki_t;
 
 #ifndef COAP_DTLS_HINT_LENGTH
@@ -49,48 +47,6 @@ typedef enum coap_dtls_role_t {
 } coap_dtls_role_t;
 
 #define COAP_DTLS_RPK_CERT_CN "RPK"
-
-/**
- * Check whether DTLS is available.
- *
- * @return @c 1 if support for DTLS is available, or @c 0 otherwise.
- */
-int coap_dtls_is_supported(void);
-
-/**
- * Check whether TLS is available.
- *
- * @return @c 1 if support for TLS is available, or @c 0 otherwise.
- */
-int coap_tls_is_supported(void);
-
-/**
- * Check whether (D)TLS PSK is available.
- *
- * @return @c 1 if support for (D)TLS PSK is available, or @c 0 otherwise.
- */
-int coap_dtls_psk_is_supported(void);
-
-/**
- * Check whether (D)TLS PKI is available.
- *
- * @return @c 1 if support for (D)TLS PKI is available, or @c 0 otherwise.
- */
-int coap_dtls_pki_is_supported(void);
-
-/**
- * Check whether (D)TLS PKCS11 is available.
- *
- * @return @c 1 if support for (D)TLS PKCS11 is available, or @c 0 otherwise.
- */
-int coap_dtls_pkcs11_is_supported(void);
-
-/**
- * Check whether (D)TLS RPK is available.
- *
- * @return @c 1 if support for (D)TLS RPK is available, or @c 0 otherwise.
- */
-int coap_dtls_rpk_is_supported(void);
 
 /**
  * Configure an ENGINE for a TLS library.

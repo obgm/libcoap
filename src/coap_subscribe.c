@@ -20,6 +20,15 @@
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+int
+coap_observe_persist_is_supported(void) {
+#if COAP_SERVER_SUPPORT && COAP_WITH_OBSERVE_PERSIST
+  return 1;
+#else /* ! (COAP_SERVER_SUPPORT && COAP_WITH_OBSERVE_PERSIST) */
+  return 0;
+#endif /* ! (COAP_SERVER_SUPPORT && COAP_WITH_OBSERVE_PERSIST) */
+}
+
 #if COAP_SERVER_SUPPORT
 void
 coap_subscription_init(coap_subscription_t *s) {

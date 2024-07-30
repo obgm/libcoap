@@ -172,6 +172,10 @@ get unlocked, _locking_function_ with all of its parameters called, and then
 *global_lock* re-locked.  If for any reason locking fails, then _failed_statement_
 will get executed.
 
+SEE ALSO
+--------
+*coap_supported*(3)
+
 FURTHER INFORMATION
 -------------------
 See

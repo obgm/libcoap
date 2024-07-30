@@ -723,6 +723,9 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/coap_config.h)
 
+configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_defines.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_defines.h)
+
 configure_file(${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h.in
                ${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h)
 
@@ -797,6 +800,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_session.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_str.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_subscribe.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_supported.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_time.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_uri.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_ws.h)
