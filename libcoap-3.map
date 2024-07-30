@@ -18,6 +18,7 @@ global:
   coap_address_init;
   coap_address_set_port;
   coap_address_set_unix_domain;
+  coap_af_unix_is_supported;
   coap_async_get_app_data;
   coap_async_is_supported;
   coap_async_set_app_data;
@@ -39,6 +40,7 @@ global:
   coap_check_option;
   coap_cleanup;
   coap_clear_event_handler;
+  coap_client_is_supported;
   coap_clock_init;
   coap_clone_uri;
   coap_context_get_app_data;
@@ -94,6 +96,7 @@ global:
   coap_encode_var_safe;
   coap_endpoint_set_default_mtu;
   coap_endpoint_str;
+  coap_epoll_is_supported;
   coap_find_async;
   coap_find_attr;
   coap_fls;
@@ -124,6 +127,8 @@ global:
   coap_io_prepare_io;
   coap_io_process;
   coap_io_process_with_fds;
+  coap_ipv4_is_supported;
+  coap_ipv6_is_supported;
   coap_is_af_unix;
   coap_is_bcast;
   coap_is_mcast;
@@ -156,6 +161,7 @@ global:
   coap_new_str_const;
   coap_new_string;
   coap_new_uri;
+  coap_observe_persist_is_supported;
   coap_opt_block_num;
   coap_opt_encode;
   coap_opt_encode_size;
@@ -232,6 +238,7 @@ global:
   coap_send_error;
   coap_send_message_type;
   coap_send_rst;
+  coap_server_is_supported;
   coap_session_disconnected;
   coap_session_get_ack_random_factor;
   coap_session_get_ack_timeout;
@@ -295,6 +302,7 @@ global:
   coap_string_tls_support;
   coap_string_tls_version;
   coap_tcp_is_supported;
+  coap_threadsafe_is_supported;
   coap_ticks;
   coap_ticks_from_rt_us;
   coap_ticks_to_rt;

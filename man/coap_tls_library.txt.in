@@ -11,13 +11,6 @@ coap_tls_library(3)
 NAME
 ----
 coap_tls_library,
-coap_dtls_is_supported,
-coap_tls_is_supported,
-coap_dtls_psk_is_supported,
-coap_dtls_pki_is_supported,
-coap_dtls_pkcs11_is_supported,
-coap_dtls_rpk_is_supported,
-coap_tcp_is_supported,
 coap_get_tls_library_version,
 coap_string_tls_support,
 coap_string_tls_version,
@@ -29,20 +22,6 @@ coap_tls_engine_remove
 SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
-
-*int coap_dtls_is_supported(void);*
-
-*int coap_tls_is_supported(void);*
-
-*int coap_dtls_psk_is_supported(void);*
-
-*int coap_dtls_pki_is_supported(void);*
-
-*int coap_dtls_pkcs11_is_supported(void);*
-
-*int coap_dtls_rpk_is_supported(void);*
-
-*int coap_tcp_is_supported(void);*
 
 *coap_tls_version_t *coap_get_tls_library_version(void);*
 
@@ -98,41 +77,6 @@ match the TLS implementation type.
 
 FUNCTIONS
 ---------
-
-*Function: coap_dtls_is_supported()*
-
-The *coap_dtls_is_supported*() function returns 1 if support for DTLS is
-available, otherwise 0;
-
-*Function: coap_tls_is_supported()*
-
-The *coap_tls_is_supported*() function returns 1 if support for TLS is
-available, otherwise 0;
-
-*Function: coap_dtls_psk_is_supported()*
-
-The *coap_dtls_psk_is_supported*() function returns 1 if support for (D)TLS PSK
-is available, otherwise 0;
-
-*Function: coap_dtls_pki_is_supported()*
-
-The *coap_dtls_pki_is_supported*() function returns 1 if support for (D)TLS PKI
-is available, otherwise 0;
-
-*Function: coap_dtls_pkcs11_is_supported()*
-
-The *coap_dtls_pkcs11_is_supported*() function returns 1 if support for (D)TLS
-PKCS11 is available, otherwise 0;
-
-*Function: coap_dtls_rpk_is_supported()*
-
-The *coap_dtls_rpk_is_supported*() function returns 1 if support for (D)TLS RPK
-is available, otherwise 0;
-
-*Function: coap_tcp_is_supported()*
-
-The *coap_tcp_is_supported*() function returns 1 if support for TCP is
-available, otherwise 0.
 
 *Function: coap_get_tls_library_version()*
 
@@ -194,16 +138,9 @@ ENGINE.  This function is called when coap_free_context() is called.
 
 RETURN VALUES
 -------------
-*coap_dtls_is_supported*(), *coap_tls_is_supported*(),
-*coap_dtls_psk_is_supported*(), *coap_dtls_pki_is_supported*(),
-*coap_dtls_pkcs11_is_supported*() and *coap_dtls_rpk_is_supported*()
-return 0 if there is no support, 1 if support is available.
 
 *coap_get_tls_library_version*() returns the TLS implementation type
 and library version in a coap_tls_version_t* structure.
-
-*coap_tcp_is_supported*() returns 1 if support for TCP is
-available, otherwise 0.
 
 *coap_string_tls_version*() and *coap_string_tls_support*() return
 a pointer to the provided buffer.
@@ -237,7 +174,7 @@ setup_server_context_pki(const char *public_cert_file,
   coap_context_t *context;
   coap_str_const_t *engine_conf = coap_make_str_const(ENGINE_CONFIG);
 
-  /* See coap_tls_library(3) */
+  /* See coap_supported(3) */
   if (!coap_dtls_is_supported())
     return NULL;
 
@@ -301,7 +238,7 @@ setup_server_context_pki(const char *public_cert_file,
 
 SEE ALSO
 --------
-*coap_encryption*(3)
+*coap_encryption*(3) and *coap_supported*(3)
 
 FURTHER INFORMATION
 -------------------

@@ -1,0 +1,254 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_supported(3)
+=================
+:doctype: manpage
+:man source:   coap_supported
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_supported,
+coap_af_unix_is_supported,
+coap_async_is_supported,
+coap_client_is_supported,
+coap_dtls_is_supported,
+coap_dtls_cid_is_supported,
+coap_dtls_psk_is_supported,
+coap_dtls_pki_is_supported,
+coap_dtls_pkcs11_is_supported,
+coap_dtls_rpk_is_supported,
+coap_epoll_is_supported,
+coap_ipv4_is_supported,
+coap_ipv6_is_supported,
+coap_observe_persist_is_supported,
+coap_oscore_is_supported,
+coap_proxy_is_supported,
+coap_server_is_supported,
+coap_tcp_is_supported,
+coap_threadsafe_is_supported,
+coap_tls_is_supported,
+coap_ws_is_supported,
+coap_wss_is_supported
+- Work with CoAP runtime functionality
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*int coap_af_unix_is_supported(void);*
+
+*int coap_async_is_supported(void);*
+
+*int coap_client_is_supported(void);*
+
+*int coap_dtls_is_supported(void);*
+
+*int coap_dtls_cid_is_supported(void);*
+
+*int coap_dtls_pkcs11_is_supported(void);*
+
+*int coap_dtls_pki_is_supported(void);*
+
+*int coap_dtls_psk_is_supported(void);*
+
+*int coap_dtls_rpk_is_supported(void);*
+
+*int coap_epoll_is_supported(void)*;
+
+*int coap_ipv4_is_supported(void);*
+
+*int coap_ipv6_is_supported(void);*
+
+*int coap_observe_persist_is_supported(void);*
+
+*int coap_oscore_is_supported(void);*
+
+*int coap_proxy_is_supported(void);*
+
+*int coap_server_is_supported(void);*
+
+*int coap_tcp_is_supported(void);*
+
+*int coap_threadsafe_is_supported(void);*
+
+*int coap_tls_is_supported(void);*
+
+*int coap_ws_is_supported(void);*
+
+*int coap_wss_is_supported(void);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*,
+*-lcoap-@LIBCOAP_API_VERSION@-wolfssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+These functions are used to determine run-time support in the libcoap library.
+
+libcoap has optional support that can be configured at library compilation time,
+as well as any underlying (D)TLS may, or may not, have certain functionality.
+
+The optional #include file *<coap@LIBCOAP_API_VERSION@/coap_defines.h>*, which
+is created whenever ./configure or cmake is run, has a list of #define that
+were used when the local libcoap library was built and can be used in
+applications for determining what support is available.
+
+*NOTE:* If doing cross-compiling, it is unsafe to use
+*<coap@LIBCOAP_API_VERSION@/coap_defines.h>* as the list of #define may not
+be correct.
+
+FUNCTIONS
+---------
+
+*Function: coap_af_unix_is_supported()*
+
+The *coap_af_unix_is_supported*() function is used to determine if there is
+socket type AF_UNIX support, or not, compiled into libcoap.
+
+*Function: coap_async_is_supported()*
+
+The *coap_async_is_supported*() function is used to determine if there is
+async support, or not, compiled into libcoap.
+
+*Function: coap_client_is_supported()*
+
+The *coap_client_is_supported*() function is used to determine if there is
+CoAP client support, or not, compiled into libcoap.
+
+*Function: coap_dtls_is_supported()*
+
+The *coap_dtls_is_supported*() function is used to determine if there is
+DTLS support available with the configured underlying TLS library.
+
+*Function: coap_dtls_cid_is_supported()*
+
+The *coap_dtls_cid_is_supported*() function is used to determine if there is
+Connection-ID (CID) support available with the configured underlying TLS library.
+
+*Function: coap_dtls_pkcs11_is_supported()*
+
+The *coap_dtls_pkcs11_is_supported*() function is used to determine if there is
+PKCS11 support available with the configured underlying TLS library.
+
+*Function: coap_dtls_pki_is_supported()*
+
+The *coap_dtls_pki_is_supported*() function is used to determine if there is
+PKI support available with the configured underlying TLS library.
+
+*Function: coap_dtls_psk_is_supported()*
+
+The *coap_dtls_psk_is_supported*() function is used to determine if there is
+PSK support available with the configured underlying TLS library.
+
+*Function: coap_dtls_rpk_is_supported()*
+
+The *coap_dtls_rpk_is_supported*() function is used to determine if there is
+RPK support available with the configured underlying TLS library.
+
+*Function: coap_epoll_is_supported()*
+
+The *coap_epoll_is_supported*() function is used to determine if there is
+epoll support, or not, compiled into libcoap.
+
+*Function: coap_ipv4_is_supported()*
+
+The *coap_ipv4_is_supported*() function is used to determine if there is
+IPv4 support, or not, compiled into libcoap.
+
+*Function: coap_ipv6_is_supported()*
+
+The *coap_ipv6_is_supported*() function is used to determine if there is
+IPv6 support, or not, compiled into libcoap.
+
+*Function: coap_observe_persist_is_supported()*
+
+The *coap_observe_persist_is_supported*() function is used to determine if there is
+Observe persist  support, or not, compiled into libcoap.
+
+*Function: coap_oscore_is_supported()*
+
+The *coap_oscore_is_supported*() function is used to determine if there is
+oscore support, or not, compiled into libcoap.
+
+*Function: coap_proxy_is_supported()*
+
+The *coap_proxy_is_supported*() function is used to determine if there is
+proxy code support, or not, compiled into libcoap.
+
+*Function: coap_server_is_supported()*
+
+The *coap_server_is_supported*() function is used to determine if there is
+CoAP server support, or not, compiled into libcoap.
+
+*Function: coap_tcp_is_supported()*
+
+The *coap_tcp_is_supported*() function is used to determine if there is
+TCP support, or not, compiled into libcoap.
+
+*Function: coap_threadsafe_is_supported()*
+
+The *coap_threadsafe_is_supported*() function is used to determine if there is
+thread safe support, or not, compiled into libcoap.
+
+*Function: coap_tls_is_supported()*
+
+The *coap_tls_is_supported*() function is used to determine if there is
+TLS support available with the configured underlying TLS library.
+
+*Function: coap_ws_is_supported()*
+
+The *coap_ws_is_supported*() function is used to determine if there is
+WebSockets support, or not, compiled into libcoap.
+
+*Function: coap_wss_is_supported()*
+
+The *coap_wss_is_supported*() function is used to determine if there is
+Secuere WebSockets support, or not, compiled into libcoap.
+
+RETURN VALUES
+-------------
+*coap_af_unix_is_supported*(), *coap_async_is_supported*(),
+*coap_client_is_supported*(), *coap_dtls_is_supported*(),
+*coap_dtls_cid_is_supported*(),*coap_dtls_pkcs11_is_supported*(),
+*coap_dtls_pki_is_supported*(), *coap_dtls_psk_is_supported*(),
+*coap_dtls_rpk_is_supported*(), *coap_epoll_is_supported*(),
+*coap_ipv4_is_supported*(), *coap_ipv6_is_supported*(),
+*coap_observe_persist_is_supported*(), *coap_oscore_is_supported*(),
+*coap_proxy_is_supported*(), *coap_server_is_supported*(),
+*coap_tcp_is_supported*(), *coap_threadsafe_is_supported*(),
+*coap_tls_is_supported*(), *coap_ws_is_supported*() and
+*coap_wss_is_supported*() return 0 if there is no support, 1 if
+support is available.
+
+SEE ALSO
+--------
+*coap_async*(3), *coap_io*(3), *coap_locking*(3), *coap_oscore*(3),
+*coap_proxy*(3), *coap_tls_library*(3) and *coap_websockets*(3).
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+"https://rfc-editor.org/rfc/rfc8323[RFC8323: CoAP (Constrained Application Protocol) over TCP, TLS, and WebSockets]"
+
+for further information.
+
+BUGS
+----
+Please raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues to report any bugs.
+
+Please raise a Pull Request at https://github.com/obgm/libcoap/pulls
+for any fixes.
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

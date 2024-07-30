@@ -11,18 +11,12 @@ coap_websockets(3)
 NAME
 ----
 coap_websockets,
-coap_ws_is_supported,
-coap_wss_is_supported,
 coap_ws_set_host_request
 - Work with CoAP WebSockets
 
 SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
-
-*int coap_ws_is_supported(void);*
-
-*int coap_wss_is_supported(void);*
 
 *int coap_ws_set_host_request(coap_session_t *_session_,
 coap_str_const_t *_ws_host_);*
@@ -39,16 +33,6 @@ and coaps+ws://.
 FUNCTIONS
 ---------
 
-*Function: coap_ws_is_supported()*
-
-The *coap_ws_is_supported*() function is used to determine whether WebSockets
-support is available in libcoap.
-
-*Function: coap_wss_is_supported()*
-
-The *coap_wss_is_supported*() function is used to determine whether Secure
-WebSockets support is available in libcoap.
-
 *Function: coap_ws_set_host_request()*
 
 The *coap_ws_set_host_request*() function is used to set _ws_host_ as the HTTP
@@ -56,17 +40,11 @@ Host: for the _session_ in a WebSockets request.
 
 RETURN VALUES
 -------------
-*coap_ws_is_supported*() returns 0 if there is no support, 1 if support is
-available.
-
-*coap_wss_is_supported*() returns 0 if there is no support, 1 if support is
-available.
-
 *coap_ws_set_host_request*() returns 1 if successful, else 0 if a failure.
 
 SEE ALSO
 --------
-*coap_uri*(3)
+*coap_supported*(3) and *coap_uri*(3)
 
 FURTHER INFORMATION
 -------------------

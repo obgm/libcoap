@@ -126,6 +126,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_str.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_supported.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_tcp_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_threadsafe_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_time.h" />

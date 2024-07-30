@@ -29,13 +29,6 @@
  */
 
 /**
- * Check whether OSCORE is available.
- *
- * @return @c 1 if support for OSCORE is enabled, or @c 0 otherwise.
- */
-int coap_oscore_is_supported(void);
-
-/**
  * Creates a new client session to the designated server, protecting the data
  * using OSCORE.
  *

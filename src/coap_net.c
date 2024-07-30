@@ -563,6 +563,69 @@ coap_context_get_coap_fd(const coap_context_t *context) {
 #endif /* ! COAP_EPOLL_SUPPORT */
 }
 
+int
+coap_epoll_is_supported(void) {
+#ifdef COAP_EPOLL_SUPPORT
+  return 1;
+#else /* ! COAP_EPOLL_SUPPORT */
+  return 0;
+#endif /* ! COAP_EPOLL_SUPPORT */
+}
+
+int
+coap_threadsafe_is_supported(void) {
+#ifdef COAP_THREAD_SAFE
+  return 1;
+#else /* ! COAP_THREAD_SAFE */
+  return 0;
+#endif /* ! COAP_THREAD_SAFE */
+}
+
+int
+coap_ipv4_is_supported(void) {
+#ifdef COAP_IPV4_SUPPORT
+  return 1;
+#else /* ! COAP_IPV4_SUPPORT */
+  return 0;
+#endif /* ! COAP_IPV4_SUPPORT */
+}
+
+int
+coap_ipv6_is_supported(void) {
+#ifdef COAP_IPV6_SUPPORT
+  return 1;
+#else /* ! COAP_IPV6_SUPPORT */
+  return 0;
+#endif /* ! COAP_IPV6_SUPPORT */
+}
+
+int
+coap_client_is_supported(void) {
+#ifdef COAP_CLIENT_SUPPORT
+  return 1;
+#else /* ! COAP_CLIENT_SUPPORT */
+  return 0;
+#endif /* ! COAP_CLIENT_SUPPORT */
+}
+
+int
+coap_server_is_supported(void) {
+#ifdef COAP_SERVER_SUPPORT
+  return 1;
+#else /* ! COAP_SERVER_SUPPORT */
+  return 0;
+#endif /* ! COAP_SERVER_SUPPORT */
+}
+
+int
+coap_af_unix_is_supported(void) {
+#ifdef COAP_AF_UNIX_SUPPORT
+  return 1;
+#else /* ! COAP_AF_UNIX_SUPPORT */
+  return 0;
+#endif /* ! COAP_AF_UNIX_SUPPORT */
+}
+
 void
 coap_context_set_app_data(coap_context_t *context, void *app_data) {
   assert(context);

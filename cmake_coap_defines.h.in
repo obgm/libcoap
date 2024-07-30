@@ -1,0 +1,81 @@
+/*
+ * cmake_coap_defines.h -- optional #defines used for building libcoap
+ *
+ * Copyright (C) 2024 Jon Shallow <supjps-libcoap@jpshallow.com>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
+ * This file is part of the CoAP library libcoap. Please see README for terms
+ * of use.
+ */
+
+#ifndef COAP_DEFINES_H_
+#define COAP_DEFINES_H_
+
+/* Define to 1 to build with Unix socket support. */
+#cmakedefine COAP_AF_UNIX_SUPPORT @COAP_AF_UNIX_SUPPORT@
+
+/* Define to 1 if the library has async separate response support. */
+#cmakedefine COAP_ASYNC_SUPPORT @COAP_ASYNC_SUPPORT@
+
+/* Define to 1 if the library has client support. */
+#cmakedefine COAP_CLIENT_SUPPORT @COAP_CLIENT_SUPPORT@
+
+/* Define to 1 if the system has small stack size. */
+#cmakedefine COAP_CONSTRAINED_STACK @COAP_CONSTRAINED_STACK@
+
+/* Define to 1 to build without TCP support. */
+#cmakedefine01 COAP_DISABLE_TCP
+
+/* Define to 1 if the system has epoll support. */
+#cmakedefine COAP_EPOLL_SUPPORT @COAP_EPOLL_SUPPORT@
+
+/* Define to 1 to build with IPv4 support. */
+#cmakedefine COAP_IPV4_SUPPORT @COAP_IPV4_SUPPORT@
+
+/* Define to 1 to build with IPv6 support. */
+#cmakedefine COAP_IPV6_SUPPORT @COAP_IPV6_SUPPORT@
+
+/* Define to 0-8 for maximum logging level. */
+#cmakedefine COAP_MAX_LOGGING_LEVEL @COAP_MAX_LOGGING_LEVEL@
+
+/* Define to 1 if the library has OSCORE support. */
+#cmakedefine COAP_OSCORE_SUPPORT @COAP_OSCORE_SUPPORT@
+
+/* Define to 1 if the library has proxy support. */
+#cmakedefine COAP_PROXY_SUPPORT @COAP_PROXY_SUPPORT@
+
+/* Define to 1 to build with Q-Block (RFC 9177) support. */
+#cmakedefine COAP_Q_BLOCK_SUPPORT @COAP_Q_BLOCK_SUPPORT@
+
+/* Define to 1 if the library has server support. */
+#cmakedefine COAP_SERVER_SUPPORT @COAP_SERVER_SUPPORT@
+
+/* Define to 1 if the library has thread deadlock detection support. */
+#cmakedefine COAP_THREAD_RECURSIVE_CHECK @COAP_THREAD_RECURSIVE_CHECK@
+
+/* Define to 1 if the library has thread safe support. */
+#cmakedefine COAP_THREAD_SAFE @COAP_THREAD_SAFE@
+
+/* Define to 1 if the system has libgnutls28 */
+#cmakedefine COAP_WITH_LIBGNUTLS @COAP_WITH_LIBGNUTLS@
+
+/* Define to 1 if the system has libmbedtls */
+#cmakedefine COAP_WITH_LIBMBEDTLS @COAP_WITH_LIBMBEDTLS@
+
+/* Define to 1 if the system has openssl */
+#cmakedefine COAP_WITH_LIBOPENSSL @COAP_WITH_LIBOPENSSL@
+
+/* Define to 1 if the system has libtinydtls */
+#cmakedefine COAP_WITH_LIBTINYDTLS @COAP_WITH_LIBTINYDTLS@
+
+/* Define to 1 if the system has wolfSSL */
+#cmakedefine COAP_WITH_LIBWOLFSSL @COAP_WITH_LIBWOLFSSL@
+
+/* Define to 1 if the library is to have observe persistence. */
+#cmakedefine COAP_WITH_OBSERVE_PERSIST @COAP_WITH_OBSERVE_PERSIST@
+
+/* Define to 1 if the library has WebSockets support. */
+#cmakedefine COAP_WS_SUPPORT @COAP_WS_SUPPORT@
+
+#endif /* COAP_DEFINES_H_ */

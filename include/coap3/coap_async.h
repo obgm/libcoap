@@ -30,12 +30,6 @@
  */
 
 /**
- * Returns @c 1 if libcoap was built with separate messages enabled,
- * @c 0 otherwise.
- */
-int coap_async_is_supported(void);
-
-/**
  * Allocates a new coap_async_t object and fills its fields according to
  * the given @p request. This function returns a pointer to the registered
  * coap_async_t object or @c NULL on error. Note that this function will

@@ -1358,6 +1358,7 @@ man/coap_recovery.txt
 man/coap_resource.txt
 man/coap_session.txt
 man/coap_string.txt
+man/coap_supported.txt
 man/coap_tls_library.txt
 man/coap_uri.txt
 man/coap_websockets.txt
@@ -1549,4 +1550,9 @@ if test "x$enable_static" = "xyes"; then
     AC_MSG_RESULT([      build static library           : "yes"])
 else
     AC_MSG_RESULT([      build static library           : "no"])
+fi
+
+LT_TEMP=`grep -B2 " COAP_" coap_config.h > include/coap$LIBCOAP_API_VERSION/coap_defines.h`
+if test "x$LT_TEMP" != "x" ; then
+    AC_MSG_ERROR([Unable to build coap_defines.h])
 fi

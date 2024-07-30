@@ -33,6 +33,7 @@ EXTRA_DIST = \
   LICENSE \
   CMakeLists.txt \
   cmake_coap_config.h.in \
+  cmake_coap_defines.h.in \
   cmake/Config.cmake.in \
   cmake/FindMbedTLS.cmake \
   cmake/FindTinyDTLS.cmake \
@@ -248,6 +249,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_block.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_cache.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_debug.h \
+  $(top_builddir)/include/coap$(LIBCOAP_API_VERSION)/coap_defines.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_dtls.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_encode.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_event.h \
@@ -264,6 +266,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_str.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_subscribe.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_supported.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_time.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_uri.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_ws.h
