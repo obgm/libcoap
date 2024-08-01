@@ -60,7 +60,6 @@ EXTRA_DIST = \
   examples/lwip/server-coap.c \
   examples/lwip/server-coap.h \
   examples/lwip/config/coap_config.h \
-  examples/lwip/config/coap_config.h.in \
   examples/lwip/config/lwipopts.h \
   examples/lwip/config/lwippools.h \
   examples/riot/examples_libcoap_client/client-coap.c \
@@ -125,9 +124,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_ws_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.riot \
-  include/coap$(LIBCOAP_API_VERSION)/coap.h.riot.in \
   include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
-  include/coap$(LIBCOAP_API_VERSION)/coap.h.windows.in \
   include/oscore/oscore_cbor.h \
   include/oscore/oscore_context.h \
   include/oscore/oscore_cose.h \
@@ -365,15 +362,7 @@ clean-local:
 
 distclean-local:
 	@rm -f src/*.o src/*.lo
-	rm -f libcoap-$(LIBCOAP_API_VERSION).map
-	rm -f libcoap-$(LIBCOAP_API_VERSION).sym
 	rm -f libcoap-$(LIBCOAP_NAME_SUFFIX).pc
-	@echo
-	@echo "     ---> Please note the following important advice! <---"
-	@echo "     The files libcoap-$(LIBCOAP_API_VERSION).{map,sym} are removed by the distclean target!"
-	@echo "     To regenerate this two files you need to call 'make update-map-file' first before any"
-	@echo "     other Make target. Otherwise the build of libcoap will fail!"
-	@echo
 
 ## Ensure we have actual *.{map,sym} files if we create a release tarball.
 dist-local: update-map-file

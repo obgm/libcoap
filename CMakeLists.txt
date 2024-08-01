@@ -1,9 +1,5 @@
 # CMakeLists.txt for libcoap
 #
-# [CMakeLists.txt is re-built from CMakeLists.txt.in by the libcoap
-#  ./configure command, so make any permanent changes to libcoap's
-#  CMakeLists.txt.in for a libcoap Pull Request]
-#
 # Copyright (C) 2020 Carlos Gomes Martinho <carlos.gomes_martinho@siemens.com>
 # Copyright (C) 2020-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
 #
