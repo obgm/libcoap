@@ -1,0 +1,24 @@
+#/bin/sh
+
+FILES="coap_config.h.contiki \
+  coap_config.h.riot \
+  coap_config.h.windows \
+  include/coap@LIBCOAP_API_VERSION@/coap.h.riot \
+  include/coap@LIBCOAP_API_VERSION@/coap.h.windows \
+  examples/lwip/config/coap_config.h"
+
+for file in $FILES ; do
+  sed -i $file -e 's/#define PACKAGE_NAME ".*"/#define PACKAGE_NAME "@PACKAGE_NAME@"/g'
+  sed -i $file -e 's/#define PACKAGE_STRING ".*"/#define PACKAGE_STRING "@PACKAGE_STRING@"/g'
+  sed -i $file -e 's/#define PACKAGE_VERSION ".*"/#define PACKAGE_VERSION "@PACKAGE_VERSION@"/g'
+  sed -i $file -e 's/#define PACKAGE_TARNAME ".*"/#define PACKAGE_TARNAME "@PACKAGE_TARNAME@"/g'
+  sed -i $file -e 's/#define LIBCOAP_VERSION (.*)/#define LIBCOAP_VERSION (@LIBCOAP_VERSION@U)/g'
+  sed -i $file -e 's/#define LIBCOAP_PACKAGE_STRING ".*"/#define LIBCOAP_PACKAGE_STRING "@PACKAGE_STRING@"/g'
+  sed -i $file -e 's/#define LIBCOAP_PACKAGE_VERSION ".*"/#define LIBCOAP_PACKAGE_VERSION "@PACKAGE_VERSION@"/g'
+done
+
+for file in CMakeLists.txt ; do
+  sed -i $file -e 's/^  VERSION .*$/  VERSION @LIBCOAP_PACKAGE_BASE@/g'
+  sed -i $file -e 's/set(LIBCOAP_API_VERSION .*)$/set(LIBCOAP_API_VERSION @LIBCOAP_API_VERSION@)/g'
+  sed -i $file -e 's/set(LIBCOAP_ABI_VERSION .*)$/set(LIBCOAP_ABI_VERSION @LIBCOAP_ABI_VERSION@)/g'
+done

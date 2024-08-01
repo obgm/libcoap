@@ -1,10 +1,6 @@
 /*
  * coap_config.h -- LwIP configuration for libcoap
  *
- * [coap_config.h is re-built from coap_config.h.in by the
- *  libcoap ./configure command, so make any permanent changes to libcoap's
- *  examples/lwip/config/coap_config.h.in for a libcoap Pull Request]
- *
  * Copyright (C) 2021-2024 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause

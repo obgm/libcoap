@@ -144,6 +144,13 @@ LT_INIT([shared static])
 # To add to the confusion, if LIBCOAP_SO_VERSION is set to 3:0:1 (c:r:a), then the
 # .so version naming ends up as 2.1.0 (c-a:a:r) (as decided by libtool).
 
+#
+# CAUTION
+#
+# You will need to manually update various configuration files by running the
+# ./configure built script file scripts/fix_version.sh .
+#
+
 LT_LIBCOAP_CURRENT=4
 LT_LIBCOAP_REVISION=2
 LT_LIBCOAP_AGE=1
@@ -1304,16 +1311,9 @@ CFLAGS="$CFLAGS $ADDITIONAL_CFLAGS"
 #
 AC_CONFIG_FILES([
 Makefile
-CMakeLists.txt
-coap_config.h.contiki
-coap_config.h.riot
-coap_config.h.windows
 doc/Makefile
 examples/Makefile
-examples/lwip/config/coap_config.h
 include/coap$LIBCOAP_API_VERSION/coap.h
-include/coap$LIBCOAP_API_VERSION/coap.h.riot
-include/coap$LIBCOAP_API_VERSION/coap.h.windows
 man/coap.txt
 man/coap_address.txt
 man/coap_async.txt
@@ -1350,6 +1350,7 @@ man/coap-server.txt
 man/coap-rd.txt
 man/coap-tls-engine-conf.txt
 man/Makefile
+scripts/fix_version.sh
 tests/test_common.h
 tests/Makefile
 tests/oss-fuzz/Makefile.ci
