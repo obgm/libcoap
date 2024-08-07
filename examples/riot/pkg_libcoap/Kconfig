@@ -220,6 +220,18 @@ config LIBCOAP_MAX_LG_SRCVS
 
 endif # LIBCOAP_SERVER_SUPPORT
 
+config LIBCOAP_PROXY_SUPPORT
+    bool "Enable Proxy functionality within CoAP"
+    depends on LIBCOAP_CLIENT_SUPPORT && LIBCOAP_SERVER_SUPPORT
+    default n
+    help
+        Enable Proxy functionality (ability to receive requests, pass
+        them to an upstream server and send back responses to client)
+        for CoAP.
+
+        If this option is disabled, redundant CoAP proxy only code is
+        removed.
+
 config LIBCOAP_MAX_LG_XMITS
     int "Max number of large transmits supported"
     default 2 if LIBCOAP_SERVER_SUPPORT
