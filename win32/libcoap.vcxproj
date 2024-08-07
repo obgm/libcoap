@@ -388,7 +388,8 @@ TYPE %(FullPath) &gt;&gt; "$(IntDir)$(TargetName).def"</Command>
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h
+copy /Y ..\coap_config.h.windows ..\$(LibCoAPIncludeDir)\coap_defines.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -431,7 +432,8 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h
+copy /Y ..\coap_config.h.windows ..\$(LibCoAPIncludeDir)\coap_defines.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -471,7 +473,8 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h
+copy /Y ..\coap_config.h.windows ..\$(LibCoAPIncludeDir)\coap_defines.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -496,7 +499,8 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h
+copy /Y ..\coap_config.h.windows ..\$(LibCoAPIncludeDir)\coap_defines.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -519,7 +523,8 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h
+copy /Y ..\coap_config.h.windows ..\$(LibCoAPIncludeDir)\coap_defines.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -564,7 +569,8 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h
+copy /Y ..\coap_config.h.windows ..\$(LibCoAPIncludeDir)\coap_defines.h</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Copying config files for windows</Message>
@@ -606,7 +612,8 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h
+copy /Y ..\coap_config.h.windows ..\$(LibCoAPIncludeDir)\coap_defines.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -634,7 +641,8 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h
+copy /Y ..\coap_config.h.windows ..\$(LibCoAPIncludeDir)\coap_defines.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -658,7 +666,8 @@ copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</C
     </Link>
     <PreBuildEvent>
       <Command>copy /Y ..\coap_config.h.windows ..\coap_config.h
-copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h</Command>
+copy /Y ..\$(LibCoAPIncludeDir)\coap.h.windows ..\$(LibCoAPIncludeDir)\coap.h
+copy /Y ..\coap_config.h.windows ..\$(LibCoAPIncludeDir)\coap_defines.h</Command>
       <Message>Copying config files for windows</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>

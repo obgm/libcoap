@@ -18,6 +18,11 @@
 /* Define to 1 if libcoap supports server mode code. */
 #define COAP_SERVER_SUPPORT 1
 
+#if COAP_CLIENT_SUPPORT && COAP_SERVER_SUPPORT
+/* Define to 1 if libcoap supports proxy code. */
+#define COAP_PROXY_SUPPORT 1
+#endif /* COAP_CLIENT_SUPPORT && COAP_SERVER_SUPPORT */
+
 /* Define to 1 if the system has small stack size. */
 #define COAP_CONSTRAINED_STACK 1
 

@@ -108,6 +108,13 @@
 #define COAP_SERVER_SUPPORT 1
 #endif
 
+#if COAP_CLIENT_SUPPORT && COAP_SERVER_SUPPORT
+#ifndef COAP_PROXY_SUPPORT
+/* Define if libcoap supports proxy code. */
+#define COAP_PROXY_SUPPORT 1
+#endif
+#endif /* COAP_CLIENT_SUPPORT && COAP_SERVER_SUPPORT */
+
 #ifndef COAP_WITH_OBSERVE_PERSIST
 /* Define to build support for persisting observes. */
 #define COAP_WITH_OBSERVE_PERSIST 0

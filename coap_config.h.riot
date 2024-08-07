@@ -121,6 +121,15 @@
 #endif /* COAP_SERVER_SUPPORT */
 #endif /* CONFIG_LIBCOAP_SERVER_SUPPORT */
 
+#ifdef CONFIG_LIBCOAP_PROXY_SUPPORT
+#if COAP_CLIENT_SUPPORT && COAP_SERVER_SUPPORT
+#ifndef COAP_PROXY_SUPPORT
+/* Define to 1 if the library has proxy code support. */
+#define COAP_PROXY_SUPPORT 1
+#endif /* COAP_CLIENT_SUPPORT && COAP_SERVER_SUPPORT */
+#endif /* COAP_PROXY_SUPPORT */
+#endif /* CONFIG_LIBCOAP_PROXY_SUPPORT */
+
 #ifdef CONFIG_LIBCOAP_ASYNC_SUPPORT
 #ifndef COAP_ASYNC_SUPPORT
 /* Define to 1 to build with support for async separate responses. */

@@ -54,18 +54,11 @@ strndup(const char *s1, size_t n) {
 #include <syslog.h>
 #endif
 
-/*
- * SERVER_CAN_PROXY=0 can be set by build system if
- * "./configure --disable-client-mode" is used.
- */
-#ifndef SERVER_CAN_PROXY
-#define SERVER_CAN_PROXY 1
-#endif
-
 /* Need to refresh time once per sec */
 #define COAP_RESOURCE_CHECK_TIME 1
 
 #include <coap3/coap.h>
+#include <coap3/coap_defines.h>
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -624,7 +617,7 @@ hnd_put_example_data(coap_resource_t *resource,
   }
 }
 
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
 
 #define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
                       * identity) in bytes. */
@@ -682,7 +675,7 @@ hnd_reverse_proxy_uri(coap_resource_t *resource,
   /* Leave response code as is */
 }
 
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
 
 typedef struct dynamic_resource_t {
   coap_string_t *uri_path;
@@ -1052,7 +1045,7 @@ hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
   hnd_put_post(r, session, request, query, response);
 }
 
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
 static int
 proxy_event_handler(coap_session_t *session COAP_UNUSED,
                     coap_event_t event) {
@@ -1120,13 +1113,13 @@ proxy_nack_handler(coap_session_t *session COAP_UNUSED,
   return;
 }
 
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
 
 static void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
   if (reverse_proxy.entry_count) {
     /* Create a reverse proxy resource to handle PUTs */
     r = coap_resource_unknown_init2(hnd_reverse_proxy_uri,
@@ -1143,7 +1136,7 @@ init_resources(coap_context_t *ctx) {
     coap_register_response_handler(ctx, reverse_response_handler);
     coap_register_nack_handler(ctx, proxy_nack_handler);
   } else {
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
     r = coap_resource_init(NULL, COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT);
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
@@ -1198,7 +1191,7 @@ init_resources(coap_context_t *ctx) {
     coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Example Data\""), 0);
     coap_add_resource(ctx, r);
 
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
   }
   if (proxy_host_name_count) {
     r = coap_resource_proxy_uri_init2(hnd_forward_proxy_uri, proxy_host_name_count,
@@ -1208,7 +1201,7 @@ init_resources(coap_context_t *ctx) {
     coap_register_response_handler(ctx, reverse_response_handler);
     coap_register_nack_handler(ctx, proxy_nack_handler);
   }
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
 }
 
 static int
@@ -1522,7 +1515,7 @@ fill_keystore(coap_context_t *ctx) {
   }
 }
 
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
 static void
 proxy_dtls_setup(coap_context_t *ctx, coap_proxy_server_list_t *proxy_info) {
   size_t i;
@@ -1553,7 +1546,7 @@ proxy_dtls_setup(coap_context_t *ctx, coap_proxy_server_list_t *proxy_info) {
      */
   }
 }
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
 
 
 static void
@@ -1813,7 +1806,7 @@ get_context(const char *node, const char *port) {
   return ctx;
 }
 
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
 static int
 cmdline_proxy(char *arg) {
   char *host_start = strchr(arg, ',');
@@ -1912,7 +1905,7 @@ cmdline_read_user(char *arg, unsigned char **buf, size_t maxlen) {
   /* 0 length Identity is valid */
   return len;
 }
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
 
 static FILE *oscore_seq_num_fp = NULL;
 static const char *oscore_conf_file = NULL;
@@ -2386,13 +2379,13 @@ main(int argc, char **argv) {
         fprintf(stderr, "Reverse Proxy support not available as libcoap proxy code not enabled\n");
         goto failed;
       }
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
       if (!cmdline_reverse_proxy(optarg)) {
         fprintf(stderr, "Reverse Proxy error specifying upstream address\n");
         goto failed;
       }
       block_mode |= COAP_BLOCK_SINGLE_BODY;
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
       break;
     case 'g' :
       group = optarg;
@@ -2460,13 +2453,13 @@ main(int argc, char **argv) {
         fprintf(stderr, "Proxy support not available as libcoap proxy code not enabled\n");
         goto failed;
       }
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
       if (!cmdline_proxy(optarg)) {
         fprintf(stderr, "error specifying proxy address or host names\n");
         goto failed;
       }
       block_mode |= COAP_BLOCK_SINGLE_BODY;
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
       break;
     case 'q':
       tls_engine_conf = optarg;
@@ -2501,9 +2494,9 @@ main(int argc, char **argv) {
         fprintf(stderr, "Proxy support not available as libcoap proxy code not enabled\n");
         goto failed;
       }
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
       user_length = cmdline_read_user(optarg, &user, MAX_USER);
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
       break;
     case 'U':
       if (!cmdline_unix(optarg)) {
@@ -2581,14 +2574,14 @@ main(int argc, char **argv) {
     if (get_oscore_conf(ctx) == NULL)
       goto failed;
   }
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
   if (reverse_proxy.entry_count) {
     proxy_dtls_setup(ctx, &reverse_proxy);
   }
   if (forward_proxy.entry_count) {
     proxy_dtls_setup(ctx, &forward_proxy);
   }
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
   if (extended_token_size > COAP_TOKEN_DEFAULT_MAX)
     coap_context_set_max_token_size(ctx, extended_token_size);
 
@@ -2742,14 +2735,14 @@ finish:
   }
   free(dynamic_entry);
   release_resource_data(NULL, example_data_value);
-#if SERVER_CAN_PROXY
+#if COAP_PROXY_SUPPORT
   free(reverse_proxy.entry);
   free(forward_proxy.entry);
 #if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning( disable : 4090 )
 #endif
   coap_free(proxy_host_name_list);
-#endif /* SERVER_CAN_PROXY */
+#endif /* COAP_PROXY_SUPPORT */
   if (oscore_seq_num_fp)
     fclose(oscore_seq_num_fp);
 
