@@ -729,23 +729,17 @@ coap_resolve_address_info(const coap_str_const_t *address,
 #elif defined(WITH_CONTIKI)
 
 #include <os/net/ipv6/uiplib.h>
-  uip_ipaddr_t *addr_ip;
+  uip_ipaddr_t addr_ip;
   coap_addr_info_t *info = NULL;
   coap_addr_info_t *info_prev = NULL;
   coap_addr_info_t *info_list = NULL;
   coap_uri_scheme_t scheme;
   int parsed_ip = 0;
-  uip_ipaddr_t all_zeros = {
-    {
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    }
-  };
 
   (void)ai_hints_flags;
 
   if (address == NULL || address->length == 0) {
-    addr_ip = &all_zeros;
+    memset(&addr_ip, 0, sizeof(addr_ip));
   } else {
 #if COAP_IPV6_SUPPORT
     if (uiplib_ip6addrconv((const char *)address->s, (uip_ip6addr_t *)&addr_ip) > 0) {
