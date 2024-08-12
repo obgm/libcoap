@@ -246,7 +246,7 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
     proxy_uri = coap_check_option(request, COAP_OPTION_PROXY_URI, &opt_iter);
     if (proxy_uri) {
       coap_log_info("Proxy URI '%.*s'\n",
-                    coap_opt_length(proxy_uri),
+                    (int)coap_opt_length(proxy_uri),
                     (const char *)coap_opt_value(proxy_uri));
       if (coap_split_proxy_uri(coap_opt_value(proxy_uri),
                                coap_opt_length(proxy_uri),
