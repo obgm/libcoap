@@ -20,11 +20,11 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: 3.x
-    - uses: pre-commit/action@v3.0.1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - uses: pre-commit/action@v3.0.1
   scan-build:
     runs-on: ubuntu-latest
     steps:
@@ -256,7 +256,7 @@ jobs:
           submodules: recursive
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libtool libtool-bin exuberant-ctags graphviz doxygen libxml2-utils xsltproc docbook-xml docbook-xsl asciidoc
+          sudo apt-get update && sudo apt-get install -y libtool libtool-bin exuberant-ctags graphviz doxygen libxml2-utils xsltproc docbook-xml docbook-xsl asciidoc pre-commit
           ./autogen.sh
       - name: configure
         run: ./configure --disable-tests --enable-documentation --prefix $GITHUB_WORKSPACE/test-install
@@ -265,7 +265,7 @@ jobs:
           make -C man
       - name: manual page examples check
         run: |
-          man/examples-code-check man
+          scripts/check_examples.sh
       - name: doxygen check
         run: |
           make -C doc
