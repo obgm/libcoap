@@ -153,12 +153,6 @@ jobs:
     - name: install macOS software
       run: |
         brew install make automake libtool
-    - name: setup
-      run: |
-        ./autogen.sh
-    - name: configure
-      run: |
-        ./configure --disable-doxygen --disable-manpages --disable-dtls --without-epoll --disable-examples --disable-examples-source --disable-tcp --disable-oscore --disable-q-block
     - name: compile
       run: |
         gmake -C examples/contiki
@@ -172,10 +166,6 @@ jobs:
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libc6-dev-i386
-          ./autogen.sh
-      - name: configure
-        run: |
-          $GITHUB_WORKSPACE/configure --disable-documentation --disable-examples --disable-tests --disable-dtls
       - name: compile
         run: |
           make -C examples/${{matrix.OS}} EXTRA_CFLAGS=-Werror

@@ -120,8 +120,6 @@ prior to running 'make'.
 RIOT
 ====
 
- ./autogen.sh
- ./configure --disable-tests --disable-documentation --disable-examples --disable-dtls
  cd examples/riot
  make
 
@@ -130,8 +128,6 @@ See examples/riot/README for further information.
 LwIP
 ====
 
- ./autogen.sh
- ./configure --disable-tests --disable-documentation --disable-examples --disable-dtls
  cd examples/lwip
  make
 
@@ -140,8 +136,6 @@ Executable is ./server. See examples/lwip/README for further information.
 Contiki-NG
 ==========
 
- ./autogen.sh
- ./configure --disable-tests --disable-documentation --disable-examples --disable-dtls
  cd examples/contiki
  make
 

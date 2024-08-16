@@ -124,9 +124,6 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_uthash_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_utlist_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_ws_internal.h \
-  include/coap$(LIBCOAP_API_VERSION)/coap.h.in \
-  include/coap$(LIBCOAP_API_VERSION)/coap.h.riot \
-  include/coap$(LIBCOAP_API_VERSION)/coap.h.windows \
   include/oscore/oscore_cbor.h \
   include/oscore/oscore_context.h \
   include/oscore/oscore_cose.h \
@@ -242,7 +239,7 @@ libcoap_includedir = $(includedir)/coap$(LIBCOAP_API_VERSION)/
 #  $(top_srcdir)/include/coap-$(LIBCOAP_API_VERSION)/*
 
 libcoap_include_HEADERS = \
-  $(top_builddir)/include/coap$(LIBCOAP_API_VERSION)/coap.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/libcoap.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_address.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_async.h \
