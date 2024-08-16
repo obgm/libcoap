@@ -3,18 +3,20 @@
 FILES="coap_config.h.contiki \
   coap_config.h.riot \
   coap_config.h.windows \
-  include/coap@LIBCOAP_API_VERSION@/coap.h.riot \
-  include/coap@LIBCOAP_API_VERSION@/coap.h.windows \
-  examples/lwip/config/coap_config.h"
+  examples/lwip/config/coap_config.h \
+  include/coap@LIBCOAP_API_VERSION@/coap.h"
 
 for file in $FILES ; do
   sed -i $file -e 's/#define PACKAGE_NAME ".*"/#define PACKAGE_NAME "@PACKAGE_NAME@"/g'
   sed -i $file -e 's/#define PACKAGE_STRING ".*"/#define PACKAGE_STRING "@PACKAGE_STRING@"/g'
   sed -i $file -e 's/#define PACKAGE_VERSION ".*"/#define PACKAGE_VERSION "@PACKAGE_VERSION@"/g'
   sed -i $file -e 's/#define PACKAGE_TARNAME ".*"/#define PACKAGE_TARNAME "@PACKAGE_TARNAME@"/g'
-  sed -i $file -e 's/#define LIBCOAP_VERSION (.*)/#define LIBCOAP_VERSION (@LIBCOAP_VERSION@U)/g'
+
+  sed -i $file -e 's/#define LIBCOAP_PACKAGE_BUGREPORT (.*)/#define LIBCOAP_PACKAGE_BUGREPORT (@PACKAGE_BUGREPORT@)/g'
   sed -i $file -e 's/#define LIBCOAP_PACKAGE_STRING ".*"/#define LIBCOAP_PACKAGE_STRING "@PACKAGE_STRING@"/g'
+  sed -i $file -e 's^#define LIBCOAP_PACKAGE_URL ".*"^#define LIBCOAP_PACKAGE_URL "@PACKAGE_URL@"^g'
   sed -i $file -e 's/#define LIBCOAP_PACKAGE_VERSION ".*"/#define LIBCOAP_PACKAGE_VERSION "@PACKAGE_VERSION@"/g'
+  sed -i $file -e 's/#define LIBCOAP_VERSION (.*)/#define LIBCOAP_VERSION (@LIBCOAP_VERSION@ULL)/g'
 done
 
 for file in CMakeLists.txt ; do

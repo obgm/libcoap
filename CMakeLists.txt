@@ -717,9 +717,6 @@ else(ENABLE_TCP)
 endif(ENABLE_TCP)
 
 # creates config header file in build directory
-configure_file(${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h)
-
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/coap_config.h)
 
@@ -994,8 +991,6 @@ install(
   COMPONENT dev
   FILES_MATCHING
   PATTERN "*.h"
-  PATTERN "coap.h" EXCLUDE
-  PATTERN "coap_riot.h" EXCLUDE
   PATTERN "*_internal.h" EXCLUDE
   PATTERN "oscore*" EXCLUDE)
 install(

@@ -1329,7 +1329,6 @@ AC_CONFIG_FILES([
 Makefile
 doc/Makefile
 examples/Makefile
-include/coap$LIBCOAP_API_VERSION/coap.h
 man/coap.txt
 man/coap_address.txt
 man/coap_async.txt
@@ -1552,6 +1551,7 @@ else
     AC_MSG_RESULT([      build static library           : "no"])
 fi
 
+mkdir -p include/coap$LIBCOAP_API_VERSION
 LT_TEMP=`grep -B2 " COAP_" coap_config.h > include/coap$LIBCOAP_API_VERSION/coap_defines.h`
 if test "x$LT_TEMP" != "x" ; then
     AC_MSG_ERROR([Unable to build coap_defines.h])

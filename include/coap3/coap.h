@@ -1,5 +1,5 @@
 /*
- * coap.h -- main header file for CoAP stack of libcoap (Windows)
+ * coap.h -- main header file for CoAP stack of libcoap
  *
  * Copyright (C) 2010-2012,2015-2024 Olaf Bergmann <bergmann@tzi.org>
  *               2015                Carsten Schoenert <c.schoenert@t-online.de>
@@ -34,7 +34,7 @@
 #define LIBCOAP_PACKAGE_VERSION "4.3.5rc3"
 
 /* Define the numeric version identifier for libcoap */
-#define LIBCOAP_VERSION (4003004U)
+#define LIBCOAP_VERSION (4003004ULL)
 
 #ifdef __cplusplus
 extern "C" {

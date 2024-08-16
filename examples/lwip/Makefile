@@ -30,7 +30,6 @@ LDLIBS := $(shell if [ -f $(libcoap_dir)/config.log ] ; then \
 all: lwip \
      check-version \
      check-tinydtls \
-     $(coap_include_dir)/coap.h \
      lib-server \
      server \
      lib-client \
@@ -204,13 +203,7 @@ SN_OBJS = ${SN_APP_OBJ} ${SN_LWIP_OBJ} ${SN_COAP_OBJ}
 CD_OBJS = ${CD_APP_OBJ} ${CD_LWIP_OBJ} ${CD_COAP_OBJ} ${CD_DTLS_OBJ}
 SD_OBJS = ${SD_APP_OBJ} ${SD_LWIP_OBJ} ${SD_COAP_OBJ} ${SD_DTLS_OBJ}
 
-$(coap_include_dir)/coap.h:
-	@(if [ ! -f $(coap_include_dir)/coap.h  ] ; then \
-		(cd $(libcoap_dir) ; ./autogen.sh ; ./configure --disable-dtls --disable-man) ; \
-		${MAKE}; \
-	fi)
-
-${SN_OBJS} ${SD_OBJS}: $(coap_include_dir)/coap.h server-coap.h
+${SN_OBJS} ${SD_OBJS}: server-coap.h
 
 server: ${SN_OBJS}
 	$(CC) $(CFLAGS) ${SN_OBJS} -o server ${LDLIBS}
@@ -218,7 +211,7 @@ server: ${SN_OBJS}
 server-dtls: ${SD_OBJS}
 	$(CC) $(CFLAGS) ${SD_OBJS} -o server-dtls ${LDLIBS}
 
-${CN_OBJS} ${CD_OBJS}: $(coap_include_dir)/coap.h client-coap.h
+${CN_OBJS} ${CD_OBJS}: client-coap.h
 
 client: ${CN_OBJS}
 	$(CC) $(CFLAGS) ${CN_OBJS} -o client ${LDLIBS}
