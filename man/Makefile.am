@@ -195,6 +195,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_recovery.3" > coap_session_set_probing_rate.3
 	@echo ".so man3/coap_recovery.3" > coap_session_get_probing_rate.3
 	@echo ".so man3/coap_recovery.3" > coap_debug_set_packet_loss.3
+	@echo ".so man3/coap_resource.3" > coap_delete_resource.3
 	@echo ".so man3/coap_resource.3" > coap_resource_set_mode.3
 	@echo ".so man3/coap_resource.3" > coap_resource_set_userdata.3
 	@echo ".so man3/coap_resource.3" > coap_resource_get_userdata.3

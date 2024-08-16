@@ -41,8 +41,11 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 DESCRIPTION
 -----------
 
-To simplify some of the CoAP proxy requirements, some of the functionaliy
-is provided by libcoap.
+To simplify some of the CoAP proxy requirements, some of the proxy forwarding
+functionality is provided by libcoap.
+
+The resourse handlers to handle forward or reverse proxy requests are defined using
+*coap_resource_proxy_uri_init2*(3) or coap_resource_reverse_proxy_init*(3).
 
 FUNCTIONS
 ---------
@@ -80,6 +83,124 @@ return 1 on success and 0 on failure.
 
 *coap_proxy_forward_response*() returns one of COAP_RESPONSE_OK or
 COAP_RESPONSE_FAIL.
+
+EXAMPLES
+--------
+*Forward Proxy Set Up*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+static size_t proxy_host_name_count = 0;
+static const char **proxy_host_name_list = NULL;
+static coap_proxy_server_list_t forward_proxy = { NULL, 0, 0, COAP_PROXY_FORWARD, 0, 300};
+
+static void
+hnd_forward_proxy_uri(coap_resource_t *resource,
+                      coap_session_t *session,
+                      const coap_pdu_t *request,
+                      const coap_string_t *query COAP_UNUSED,
+                      coap_pdu_t *response) {
+
+  if (!coap_proxy_forward_request(session, request, response, resource,
+                                  NULL, &forward_proxy)) {
+    coap_log_debug("hnd_forward_proxy_uri: Failed to forward PDU\n");
+    /* Non ACK response code set on error detection */
+  }
+
+  /* Leave response code as is */
+}
+
+static coap_response_t
+proxy_response_handler(coap_session_t *session,
+                       const coap_pdu_t *sent COAP_UNUSED,
+                       const coap_pdu_t *received,
+                       const coap_mid_t id COAP_UNUSED) {
+  return coap_proxy_forward_response(session, received, NULL);
+}
+
+static void
+init_resources(coap_context_t *ctx) {
+
+  coap_resource_t *r;
+
+  /* See coap_resource_proxy_uri_init2(3) */
+  r = coap_resource_proxy_uri_init2(hnd_forward_proxy_uri, proxy_host_name_count,
+                                    proxy_host_name_list, 0);
+  coap_add_resource(ctx, r);
+  coap_register_response_handler(ctx, proxy_response_handler);
+  /* Add in event or nack handlers if required */
+}
+
+static void
+init_proxy_info(coap_uri_t *proxy_uri, const char *proxy_host_name) {
+  coap_proxy_server_t *new_entry;
+
+  new_entry = realloc(forward_proxy.entry,
+                      (forward_proxy.entry_count + 1)*sizeof(forward_proxy.entry[0]));
+
+  if (!new_entry) {
+    coap_log_err("CoAP Proxy realloc() error\n");
+    return;
+  }
+  /* Can have multiple of these upstream proxy hosts for doing round robin etc. */
+  forward_proxy.entry = new_entry;
+  memset(&forward_proxy.entry[forward_proxy.entry_count], 0, sizeof(forward_proxy.entry[0]));
+  forward_proxy.entry[forward_proxy.entry_count].uri = *proxy_uri;
+  forward_proxy.entry_count++;
+
+  /* The proxy host could be known by multile names - add them all in */
+  proxy_host_name_count = 0;
+  proxy_host_name_list = coap_malloc(proxy_host_name_count * sizeof(char *));
+  proxy_host_name_list[0] = proxy_host_name;
+}
+----
+
+*Reverse Proxy Set Up*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+static coap_proxy_server_list_t reverse_proxy = { NULL, 0, 0, COAP_PROXY_REVERSE_STRIP, 0, 10};
+
+static void
+hnd_reverse_proxy_uri(coap_resource_t *resource,
+                      coap_session_t *session,
+                      const coap_pdu_t *request,
+                      const coap_string_t *query COAP_UNUSED,
+                      coap_pdu_t *response) {
+
+  if (!coap_proxy_forward_request(session, request, response, resource,
+                                  NULL, &reverse_proxy)) {
+    coap_log_debug("hnd_reverse_proxy: Failed to forward PDU\n");
+    /* Non ACK response code set on error detection */
+  }
+
+  /* Leave response code as is */
+}
+
+static coap_response_t
+proxy_response_handler(coap_session_t *session,
+                       const coap_pdu_t *sent COAP_UNUSED,
+                       const coap_pdu_t *received,
+                       const coap_mid_t id COAP_UNUSED) {
+  return coap_proxy_forward_response(session, received, NULL);
+}
+
+static void
+init_resources(coap_context_t *ctx) {
+
+  coap_resource_t *r;
+
+  /* See coap_resource_reverse_proxy_init(3) */
+  r = coap_resource_reverse_proxy_init(hnd_reverse_proxy_uri, 0);
+  coap_add_resource(ctx, r);
+  coap_register_response_handler(ctx, proxy_response_handler);
+  /* Add in event or nack handlers if required */
+}
+----
 
 FURTHER INFORMATION
 -------------------

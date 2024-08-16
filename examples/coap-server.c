@@ -1122,15 +1122,7 @@ init_resources(coap_context_t *ctx) {
 #if COAP_PROXY_SUPPORT
   if (reverse_proxy.entry_count) {
     /* Create a reverse proxy resource to handle PUTs */
-    r = coap_resource_unknown_init2(hnd_reverse_proxy_uri,
-                                    COAP_RESOURCE_HANDLE_WELLKNOWN_CORE);
-    /* Add in handling other requests as well */
-    coap_register_handler(r, COAP_REQUEST_GET, hnd_reverse_proxy_uri);
-    coap_register_handler(r, COAP_REQUEST_POST, hnd_reverse_proxy_uri);
-    coap_register_handler(r, COAP_REQUEST_DELETE, hnd_reverse_proxy_uri);
-    coap_register_handler(r, COAP_REQUEST_FETCH, hnd_reverse_proxy_uri);
-    coap_register_handler(r, COAP_REQUEST_PATCH, hnd_reverse_proxy_uri);
-    coap_register_handler(r, COAP_REQUEST_IPATCH, hnd_reverse_proxy_uri);
+    r = coap_resource_reverse_proxy_init(hnd_reverse_proxy_uri, 0);
     coap_add_resource(ctx, r);
     coap_register_event_handler(ctx, proxy_event_handler);
     coap_register_response_handler(ctx, reverse_response_handler);
@@ -1840,7 +1832,7 @@ cmdline_proxy(char *arg) {
   new_entry = realloc(forward_proxy.entry,
                       (forward_proxy.entry_count + 1)*sizeof(forward_proxy.entry[0]));
   if (!new_entry) {
-    coap_log_err("CoAP Reverse-Proxy realloc() error\n");
+    coap_log_err("CoAP Proxy realloc() error\n");
     return 0;
   }
   forward_proxy.entry = new_entry;
