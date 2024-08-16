@@ -16,6 +16,7 @@ coap_resource_unknown_init,
 coap_resource_unknown_init2,
 coap_resource_proxy_uri_init,
 coap_resource_proxy_uri_init2,
+coap_resource_reverse_proxy_init,
 coap_add_resource,
 coap_delete_resource,
 coap_resource_set_mode,
@@ -46,6 +47,9 @@ _proxy_handler_, size_t _host_name_count_, const char *_host_name_list_[]);*
 *coap_resource_t *coap_resource_proxy_uri_init2(coap_method_handler_t
 _proxy_handler_, size_t _host_name_count_, const char *_host_name_list_[],
 int _flags_);*
+
+*coap_resource_t *coap_resource_reverse_proxy_init(coap_method_handler_t
+_rev_proxy_handler_, int _flags_);*
 
 *void coap_add_resource(coap_context_t *_context_,
 coap_resource_t *_resource_);*
@@ -224,6 +228,9 @@ _resource_ to handle PUT requests to resources that are unknown. Additional
 handlers can be added to this resource if required. _flags_ can be zero or
 more of the COAP_RESOURCE_FLAGS MCAST definitions.
 
+*NOTE:* There can only be one reverse-proxy or unknown resource handler per
+context - attaching a new one overrides the previous definition.
+
 *Function: coap_resource_proxy_uri_init()*
 
 The *coap_resource_proxy_uri_init*() function returns a newly created
@@ -247,6 +254,20 @@ supplied in the array defined by _host_name_list_[] which has a count of
 _host_name_count_.  This is used to check whether the current endpoint is
 the proxy target address, or the request has to be passed on to an upstream
 server. _flags_ can be zero or more COAP_RESOURCE_FLAGS MCAST definitions.
+
+*NOTE:* There can only be one proxy resource handler per
+context - attaching a new one overrides the previous definition.
+
+*Function: coap_resource_reverse_proxy_init()*
+
+The *coap_resource_reverse_proxy_init*() function returns a newly created
+_resource_ of type _coap_resource_t_ *. _rev_proxy_handler_ is automatically added
+to the _resource_ to handle all the PUT/POST/GET etc. requests including
+.well-known/core. There is no need to add explicit request type handlers.
+_flags_ can be zero or more COAP_RESOURCE_FLAGS MCAST definitions.
+
+*NOTE:* There can only be one reverse-proxy or unknown resource handler per
+context - attaching a new one overrides the previous definition.
 
 *Function: coap_add_resource()*
 
@@ -319,9 +340,9 @@ The _query_filter_ is usually defined by the CoAP Uri-Query options as a query.
 RETURN VALUES
 -------------
 *coap_resource_init*(), *coap_resource_unknown_init*(),
-*coap_resource_unknown_init2*(), *coap_resource_proxy_uri_init*() and
-*coap_resource_proxy_uri_init2*() return a newly created resource
-or NULL if there is a malloc failure.
+*coap_resource_unknown_init2*(), *coap_resource_proxy_uri_init*(),
+*coap_resource_proxy_uri_init2*() and *coap_resource_reverse_proxy_init*()
+return a newly created resource or NULL if there is a malloc failure.
 
 *coap_delete_resource*() returns 0 on failure (_resource_ not
 found), 1 on success.

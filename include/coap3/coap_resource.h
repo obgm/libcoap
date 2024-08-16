@@ -226,8 +226,8 @@ coap_resource_t *coap_resource_unknown_init(coap_method_handler_t put_handler);
  * DELETE handler specified for the resource removal) or by maintaining an
  * active resource list.
  *
- * Note: There can only be one unknown resource handler per context - attaching
- *       a new one overrides the previous definition.
+ * Note: There can only be one unknown or reverse-proxy resource handler per
+ *       context - attaching a new one overrides the previous definition.
  *
  * Note: It is not possible to observe the unknown resource with a GET request
  *       - a separate resource needs to be created by the PUT (or POST)
@@ -285,6 +285,25 @@ coap_resource_t *coap_resource_proxy_uri_init2(coap_method_handler_t handler,
                                                size_t host_name_count,
                                                const char *host_name_list[],
                                                int flags);
+
+/**
+ * Creates a new resource object for the reverse-proxy resource handler with
+ * control over multicast request packets.
+ *
+ * Note: There can only be one reverse-proxy or unknown resource handler per
+ *       context - attaching a new one overrides the previous definition.
+ *
+ * This function returns the new coap_resource_t object.
+ *
+ * @param handler The PUT/POST/GET etc. handler that handles all the reverse-proxy
+ *                requests including .well-known-core.
+ * @param flags Zero or more COAP_RESOURCE_FLAGS_*MCAST* ored together to
+ *              indicate what to do with multicast packets.
+ *
+ * @return       A pointer to the new object or @c NULL on error.
+ */
+coap_resource_t *coap_resource_reverse_proxy_init(coap_method_handler_t handler,
+                                                  int flags);
 
 /**
  * Returns the resource identified by the unique string @p uri_path. If no
