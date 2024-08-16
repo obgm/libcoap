@@ -578,7 +578,8 @@ COAP_API int coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupna
 
 /**
  * Function interface for defining the hop count (ttl) for sending
- * multicast traffic
+ * multicast traffic.  The default is 1 so that the ttl expires after
+ * decrementing if the packet is trying to pass out of the local network.
  *
  * @param session The current session.
  * @param hops    The number of hops (ttl) to use before the multicast

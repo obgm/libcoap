@@ -15,7 +15,8 @@ coap_new_client_session,
 coap_new_client_session_psk2,
 coap_new_client_session_pki,
 coap_session_set_mtu,
-coap_session_max_pdu_size
+coap_session_max_pdu_size,
+coap_mcast_set_hops
 - Work with CoAP client endpoints
 
 SYNOPSIS
@@ -37,6 +38,8 @@ _proto_, coap_dtls_pki_t *_setup_data_);*
 *void coap_session_set_mtu(coap_session_t *_session_, unsigned _mtu_);*
 
 *size_t coap_session_max_pdu_size(const coap_session_t *_session_);*
+
+*int coap_mcast_set_hops(coap_session_t *_session_, size_t _hops_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -203,6 +206,14 @@ MTU is 1152.
 The *coap_session_max_pdu_size*() function is used to get the maximum MTU
 size of the data for the client endpoint's _session_.
 
+*Function: coap_mcast_set_hops()*
+
+The *coap_mcast_set_hops*() function is used to set the maximum number
+of _hops_ (ttl) that a transmitted multicast packet can pass through before
+getting dropped (default is 1, so that the ttl expires after decrementing
+if the packet is trying to pass out of the local network) for the specified
+_session_.
+
 RETURN VALUES
 -------------
 *coap_new_client_session*(), *coap_new_client_session_psk2*(),
@@ -210,6 +221,8 @@ RETURN VALUES
 session or NULL if there is a creation failure.
 
 *coap_session_max_pdu_size*() returns the MTU size.
+
+*coap_mcast_set_hops*() returns 1 on success, else 0 on failure.
 
 EXAMPLES
 --------
