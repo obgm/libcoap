@@ -1074,6 +1074,19 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     return session;
   }
 
+#if COAP_CLIENT_SUPPORT
+  if (coap_is_mcast(&packet->addr_info.local)) {
+    /* Check if this a proxy client packet we sent on another socket */
+    SESSIONS_ITER(endpoint->context->sessions, session, rtmp) {
+      if (coap_address_equals(&session->addr_info.remote, &packet->addr_info.local) &&
+          coap_address_get_port(&session->addr_info.local) ==
+          coap_address_get_port(&packet->addr_info.remote)) {
+        /* Drop looped back packet to stop recursion / confusion */
+        return NULL;
+      }
+    }
+  }
+#endif /* COAP_CLIENT_SUPPORT */
   SESSIONS_ITER(endpoint->sessions, session, rtmp) {
     if (session->ref == 0 && session->delayqueue == NULL) {
       if (session->type == COAP_SESSION_TYPE_SERVER) {
