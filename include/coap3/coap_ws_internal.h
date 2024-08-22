@@ -52,7 +52,7 @@ typedef struct coap_ws_state_t {
   uint8_t rd_header[COAP_MAX_FS]; /**< (Partial) frame */
   uint8_t mask_key[4];  /**< Masking key */
   uint32_t http_ofs;    /**< Current offset into http_hdr */
-  uint8_t http_hdr[80]; /**< (Partial) HTTP header */
+  uint8_t http_hdr[160]; /**< (Partial) HTTP header */
   size_t data_ofs;      /**< Offset into user provided buffer */
   size_t data_size;     /**< Data size as indicated by WebSocket frame */
   uint8_t key[16];      /**< Random, but agreed key value */

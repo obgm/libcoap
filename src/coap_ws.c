@@ -335,7 +335,8 @@ coap_ws_rd_http_header_server(coap_session_t *session) {
       coap_log_debug("WS: Duplicate Connection: header\n");
       return 0;
     }
-    if (strcasecmp(value, "Upgrade") != 0) {
+    if (strcasecmp(value, "Upgrade") != 0 &&
+        strcasecmp(value, "keep-alive, Upgrade") != 0) {
       coap_log_debug("WS: Invalid Connection: header\n");
       return 0;
     }
