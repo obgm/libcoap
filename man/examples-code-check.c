@@ -168,6 +168,9 @@ check_synopsis(const char *file) {
     exit_code = 1;
     return;
   }
+  if (!strcmp(file, "coap_lwip.txt.in")) {
+    fprintf(fpcode, "#define WITH_LWIP_MAN_CHECK\n");
+  }
   fprintf(fpcode, "#include <coap3/coap.h>\n");
   fprintf(fpcode, "#ifdef __GNUC__\n");
   fprintf(fpcode, "#define U __attribute__ ((unused))\n");

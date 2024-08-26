@@ -803,6 +803,7 @@ COAP_API void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events,
 
 /**@}*/
 
+#if defined(WITH_LWIP) || defined(WITH_LWIP_MAN_CHECK) || defined(__DOXYGEN__)
 /**
  * @ingroup application_api
  * @defgroup lwip LwIP specific API
@@ -848,6 +849,7 @@ void coap_lwip_set_input_wait_handler(coap_context_t *context,
                                       void *input_arg);
 
 /**@}*/
+#endif /* WITH_LWIP || WITH_LWIP_MAN_CHECK || defined(__DOXYGEN__) */
 
 /**
  * @deprecated Use coap_io_process() instead.
