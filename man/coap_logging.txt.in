@@ -110,7 +110,7 @@ The logging sub-system supports logging at different levels, and depending on
 the selected logging level, outputs the appropriate information.
 
 Logging by default is to stderr or stdout depending on the logging level of
-the log entry.  It ia possible to send the logging information to an
+the log entry.  It is possible to send the logging information to an
 application logging callback handler for processing by the application.
 
 Logging levels (*coap_log_t*) are defined as follows (based on the *syslog*()
