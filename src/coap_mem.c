@@ -480,7 +480,65 @@ coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
 }
 #else /* ! RIOT_VERSION && ! MODULE_MEMARRAY */
 
-#if defined(HAVE_MALLOC) || defined(__MINGW32__)
+#if defined(__ZEPHYR__)
+
+#include <zephyr/kernel.h>
+
+void
+coap_memory_init(void) {
+}
+
+void *
+coap_malloc_type(coap_memory_tag_t type, size_t size) {
+  void *ptr;
+
+  (void)type;
+  ptr = k_malloc(size);
+#if COAP_MEMORY_TYPE_TRACK
+  assert(type < COAP_MEM_TAG_LAST);
+  if (ptr) {
+    track_counts[type]++;
+    if (track_counts[type] > peak_counts[type])
+      peak_counts[type] = track_counts[type];
+  } else {
+    fail_counts[type]++;
+  }
+#endif /* COAP_MEMORY_TYPE_TRACK */
+  return ptr;
+}
+
+void *
+coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
+  void *ptr;
+
+  (void)type;
+  ptr = k_realloc(p, size);
+#if COAP_MEMORY_TYPE_TRACK
+  if (ptr) {
+    assert(type < COAP_MEM_TAG_LAST);
+    if (!p)
+      track_counts[type]++;
+    if (track_counts[type] > peak_counts[type])
+      peak_counts[type] = track_counts[type];
+  } else {
+    fail_counts[type]++;
+  }
+#endif /* COAP_MEMORY_TYPE_TRACK */
+  return ptr;
+}
+
+void
+coap_free_type(coap_memory_tag_t type, void *p) {
+  (void)type;
+#if COAP_MEMORY_TYPE_TRACK
+  assert(type < COAP_MEM_TAG_LAST);
+  if (p)
+    track_counts[type]--;
+#endif /* COAP_MEMORY_TYPE_TRACK */
+  k_free(p);
+}
+
+#elif defined(HAVE_MALLOC) || defined(__MINGW32__)
 #include <stdlib.h>
 
 void
@@ -537,7 +595,7 @@ coap_free_type(coap_memory_tag_t type, void *p) {
   free(p);
 }
 
-#else /* ! HAVE_MALLOC  && !__MINGW32__ */
+#else /* ! HAVE_MALLOC  && !__MINGW32__ && !__ZEPHYR__*/
 
 #ifdef WITH_CONTIKI
 #include "lib/heapmem.h"
