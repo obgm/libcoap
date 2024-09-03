@@ -1826,6 +1826,7 @@ cmdline_proxy(char *arg) {
     }
     forward_proxy.type = COAP_PROXY_FORWARD;
   } else {
+    memset(&uri, 0, sizeof(uri));
     forward_proxy.type = COAP_PROXY_DIRECT_STRIP;
   }
 

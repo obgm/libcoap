@@ -465,7 +465,7 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
           proxy_entry->ongoing =
               coap_new_client_session_oscore_pki_lkd(context, NULL, &dst,
                                                      proto, server_use->dtls_pki, server_use->oscore_conf);
-        } else if (server_use->dtls_pki) {
+        } else if (server_use->dtls_cpsk) {
           server_use->dtls_cpsk->client_sni = client_sni;
           proxy_entry->ongoing =
               coap_new_client_session_oscore_psk_lkd(context, NULL, &dst,
@@ -549,7 +549,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   size_t total;
   coap_binary_t *body_data = NULL;
   const uint8_t *data;
-  coap_pdu_t *pdu;
+  coap_pdu_t *pdu = NULL;
   coap_bin_const_t r_token = coap_pdu_get_token(request);
   uint8_t token[8];
   size_t token_len;
@@ -613,7 +613,6 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
     }
 
     if (!coap_add_token(pdu, token_len, token)) {
-      coap_delete_pdu(pdu);
       goto failed;
     }
 
@@ -687,6 +686,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   }
 
   if (coap_send_lkd(proxy_entry->ongoing, pdu) == COAP_INVALID_MID) {
+    pdu = NULL;
     coap_log_debug("proxy: upstream PDU send error\n");
     goto failed;
   }
@@ -700,6 +700,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
 
 failed:
   response->code = COAP_RESPONSE_CODE(500);
+  coap_delete_pdu(pdu);
   return 0;
 }
 
@@ -841,6 +842,7 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
                                      media_type, maxage, etag, size, data,
                                      coap_proxy_release_body_data,
                                      body_data);
+    body_data = NULL;
     coap_delete_string(l_query);
   }
 
@@ -862,6 +864,7 @@ remove_match:
               (proxy_entry->req_count-j) * sizeof(proxy_entry->req_list[0]));
     }
   }
+  coap_delete_binary(body_data);
   return COAP_RESPONSE_OK;
 }
 
