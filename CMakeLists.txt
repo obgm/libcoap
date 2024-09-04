@@ -12,7 +12,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(
   libcoap
-  VERSION 4.3.4
+  VERSION 4.3.5
   LANGUAGES CXX C)
 
 set(LIBCOAP_API_VERSION 3)
