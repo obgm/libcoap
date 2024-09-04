@@ -512,7 +512,16 @@ coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
   void *ptr;
 
   (void)type;
+#if KERNEL_VERSION_NUMBER >= 0x30700
   ptr = k_realloc(p, size);
+#else /* KERNEL_VERSION_NUMBER < 0x30700 */
+  if (!p) {
+    ptr = k_malloc(size);
+  } else {
+    /* Unfortunately do not know original size of p to take a copy of it */
+    ptr = NULL;
+  }
+#endif /* KERNEL_VERSION_NUMBER < 0x30700 */
 #if COAP_MEMORY_TYPE_TRACK
   if (ptr) {
     assert(type < COAP_MEM_TAG_LAST);
