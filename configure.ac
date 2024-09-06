@@ -151,9 +151,9 @@ LT_INIT([shared static])
 # ./configure built script file scripts/fix_version.sh .
 #
 
-LT_LIBCOAP_CURRENT=4
-LT_LIBCOAP_REVISION=2
-LT_LIBCOAP_AGE=1
+LT_LIBCOAP_CURRENT=5
+LT_LIBCOAP_REVISION=0
+LT_LIBCOAP_AGE=2
 LIBCOAP_SO_VERSION=$LT_LIBCOAP_CURRENT.$LT_LIBCOAP_REVISION.$LT_LIBCOAP_AGE
 
 # Announce the libtool version
