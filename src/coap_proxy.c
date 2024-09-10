@@ -18,6 +18,13 @@
 #if COAP_PROXY_SUPPORT
 #include <stdio.h>
 
+#if COAP_CLIENT_SUPPORT == 0
+#error For Proxy support, COAP_CLIENT_SUPPORT must be set
+#endif
+#if COAP_SERVER_SUPPORT == 0
+#error For Proxy support, COAP_SERVER_SUPPORT must be set
+#endif
+
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp

@@ -327,8 +327,14 @@ else()
 endif()
 
 if(${ENABLE_PROXY_CODE})
-  set(COAP_PROXY_SUPPORT "1")
-  message(STATUS "compiling with proxy support")
+  if(${ENABLE_CLIENT_MODE} AND ${ENABLE_SERVER_MODE})
+    set(COAP_PROXY_SUPPORT "1")
+    message(STATUS "compiling with proxy support")
+  else()
+    message(
+      FATAL_ERROR
+        "Both ENABLE_CLIENT_MODE and ENABLE_SERVER_MODE need to be set for ENABLE_PROXY_CODE")
+  endif()
 else()
   message(STATUS "compiling without proxy support")
 endif()
@@ -715,6 +721,15 @@ if(ENABLE_TCP)
 else(ENABLE_TCP)
   set(COAP_DISABLE_TCP 1)
 endif(ENABLE_TCP)
+
+# Get rid of any previously built coap.h now that it is provided
+if(NOT "${CMAKE_CURRENT_LIST_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
+  if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h)
+    message(
+      FATAL_ERROR
+        "${CMAKE_CURRENT_BINARY_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h exists and needs to be deleted")
+  endif()
+endif()
 
 # creates config header file in build directory
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_config.h.in
