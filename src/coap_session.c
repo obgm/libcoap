@@ -443,7 +443,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
     session->mtu = endpoint->default_mtu;
   else
 #endif /* COAP_SERVER_SUPPORT */
-    session->mtu = COAP_DEFAULT_MTU;
+    coap_session_set_mtu(session, COAP_DEFAULT_MTU);
   session->block_mode = context->block_mode;
   if (proto == COAP_PROTO_DTLS) {
     session->tls_overhead = 29;
@@ -604,10 +604,14 @@ coap_session_max_pdu_size_internal(const coap_session_t *session,
                                    size_t max_with_header) {
 #if COAP_DISABLE_TCP
   (void)session;
-  return max_with_header > 4 ? max_with_header - 4 : 0;
+  return max_with_header > COAP_PDU_MAX_UDP_HEADER_SIZE
+         ? max_with_header - COAP_PDU_MAX_UDP_HEADER_SIZE
+         : 0;
 #else /* !COAP_DISABLE_TCP */
   if (COAP_PROTO_NOT_RELIABLE(session->proto))
-    return max_with_header > 4 ? max_with_header - 4 : 0;
+    return max_with_header > COAP_PDU_MAX_UDP_HEADER_SIZE
+           ? max_with_header - COAP_PDU_MAX_UDP_HEADER_SIZE
+           : 0;
   /* we must assume there is no token to be on the safe side */
   if (max_with_header <= 2)
     return 0;
@@ -618,7 +622,7 @@ coap_session_max_pdu_size_internal(const coap_session_t *session,
   else if (max_with_header <= COAP_MAX_MESSAGE_SIZE_TCP16 + 4)
     return max_with_header - 4;
   else
-    return max_with_header - 6;
+    return max_with_header - COAP_PDU_MAX_TCP_HEADER_SIZE;
 #endif /* !COAP_DISABLE_TCP */
 }
 
@@ -741,7 +745,7 @@ coap_session_send_csm(coap_session_t *session) {
   session->state = COAP_SESSION_STATE_CSM;
   session->partial_write = 0;
   if (session->mtu == 0)
-    session->mtu = COAP_DEFAULT_MTU;  /* base value */
+    coap_session_set_mtu(session, COAP_DEFAULT_MTU);  /* base value */
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_CSM, 0, 20);
   if (pdu == NULL
       || coap_add_option_internal(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
