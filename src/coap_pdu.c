@@ -118,14 +118,16 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
   if (!pdu)
     return NULL;
 
-#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
-  assert(size <= COAP_DEFAULT_MAX_PDU_RX_SIZE);
-  if (size > COAP_DEFAULT_MAX_PDU_RX_SIZE)
-    return NULL;
+#if COAP_DEFAULT_MAX_PDU_RX_SIZE <= COAP_MAX_MESSAGE_SIZE_TCP16
+  /* on TCP, the CoAP header will also have a maximum length of 4 bytes */
   pdu->max_hdr_size = COAP_PDU_MAX_UDP_HEADER_SIZE;
 #else
   pdu->max_hdr_size = COAP_PDU_MAX_TCP_HEADER_SIZE;
 #endif
+  if (size > ((size_t)COAP_DEFAULT_MAX_PDU_RX_SIZE - pdu->max_hdr_size)) {
+    coap_free_type(COAP_PDU, pdu);
+    return NULL;
+  }
 
 #ifdef WITH_LWIP
   pdu->pbuf = pbuf_alloc(PBUF_TRANSPORT, size + pdu->max_hdr_size, PBUF_RAM);
