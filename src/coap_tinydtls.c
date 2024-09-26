@@ -882,7 +882,7 @@ coap_dtls_send(coap_session_t *session,
     if (coap_event_dtls != COAP_EVENT_DTLS_CLOSED)
       coap_handle_event_lkd(session->context, coap_event_dtls, session);
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED) {
-#if (DTLS_MAX_CID_LENGTH > 0)
+#if (DTLS_MAX_CID_LENGTH > 0) && COAP_CLIENT_SUPPORT
       if (session->type == COAP_SESSION_TYPE_CLIENT) {
         dtls_peer_t *peer = dtls_get_peer(dtls_context, (session_t *)session->tls);
         dtls_security_parameters_t *security = dtls_security_params(peer);
@@ -894,7 +894,7 @@ coap_dtls_send(coap_session_t *session,
           session->negotiated_cid = 0;
         }
       }
-#endif /* DTLS_MAX_CID_LENGTH > 0 */
+#endif /* DTLS_MAX_CID_LENGTH > 0 && COAP_CLIENT_SUPPORT */
       coap_session_connected(session);
     } else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR) {
       coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
@@ -966,7 +966,7 @@ coap_dtls_receive(coap_session_t *session,
       coap_handle_event_lkd(session->context, coap_event_dtls, session);
     if (coap_event_dtls == COAP_EVENT_DTLS_CONNECTED) {
       coap_session_connected(session);
-#if (DTLS_MAX_CID_LENGTH > 0)
+#if (DTLS_MAX_CID_LENGTH > 0) && COAP_CLIENT_SUPPORT
       if (session->type == COAP_SESSION_TYPE_CLIENT) {
         dtls_peer_t *peer = dtls_get_peer(dtls_context, (session_t *)session->tls);
         dtls_security_parameters_t *security = dtls_security_params(peer);
@@ -977,7 +977,7 @@ coap_dtls_receive(coap_session_t *session,
           session->negotiated_cid = 0;
         }
       }
-#endif /* DTLS_MAX_CID_LENGTH > 0 */
+#endif /* DTLS_MAX_CID_LENGTH > 0 && COAP_CLIENT_SUPPORT */
     } else if (coap_event_dtls == COAP_EVENT_DTLS_CLOSED || coap_event_dtls == COAP_EVENT_DTLS_ERROR) {
       coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
       err = -1;
