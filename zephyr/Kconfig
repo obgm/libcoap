@@ -85,6 +85,14 @@ config LIBCOAP_ASYNC_SUPPORT
 
         If this option is disabled, redundent CoAP async separate responses code is removed.
 
+config LIBCOAP_THREAD_SAFE_SUPPORT
+    bool "Enable thread safe support within CoAP"
+    default y
+    help
+        Enable thread safe support functionality for CoAP.
+
+        If this option is disabled, multi-thread safe use of libcoap is not available.
+
 config LIBCOAP_CLIENT_SUPPORT
     bool "Enable Client functionality within CoAP"
     default n
@@ -110,6 +118,57 @@ config LIBCOAP_SERVER_SUPPORT
         removed.
         If both this option and LIBCOAP_CLIENT_SUPPORT are disabled, then
         both are automatically enabled for backwards compatability.
+
+config LIBCOAP_DEBUGGING
+    bool "Enable CoAP debugging"
+    default y
+    help
+        Enable CoAP debugging functions at compile time for the example code.
+
+        If this option is enabled, call coap_set_log_level()
+        at runtime in order to enable CoAP debug output.
+
+choice LIBCOAP_DEBUGGING_LEVEL
+    bool "Set CoAP debugging level"
+    depends on LIBCOAP_DEBUGGING
+    default LIBCOAP_LOG_DEBUG
+    help
+        Set CoAP debugging level
+
+        Note: reducing the logging level also reduces the code size.
+
+    config LIBCOAP_LOG_EMERG
+        bool "Emergency"
+    config LIBCOAP_LOG_ALERT
+        bool "Alert"
+    config LIBCOAP_LOG_CRIT
+        bool "Critical"
+    config LIBCOAP_LOG_ERROR
+        bool "Error"
+    config LIBCOAP_LOG_WARNING
+        bool "Warning"
+    config LIBCOAP_LOG_NOTICE
+        bool "Notice"
+    config LIBCOAP_LOG_INFO
+        bool "Info"
+    config LIBCOAP_LOG_DEBUG
+        bool "Debug"
+    config LIBCOAP_LOG_OSCORE
+        bool "OSCORE"
+endchoice
+
+config LIBCOAP_LOG_DEFAULT_LEVEL
+    int
+    default 0 if !LIBCOAP_DEBUGGING
+    default 0 if LIBCOAP_LOG_EMERG
+    default 1 if LIBCOAP_LOG_ALERT
+    default 2 if LIBCOAP_LOG_CRIT
+    default 3 if LIBCOAP_LOG_ERROR
+    default 4 if LIBCOAP_LOG_WARNING
+    default 5 if LIBCOAP_LOG_NOTICE
+    default 6 if LIBCOAP_LOG_INFO
+    default 7 if LIBCOAP_LOG_DEBUG
+    default 8 if LIBCOAP_LOG_OSCORE
 
 if MBEDTLS
 
@@ -145,10 +204,10 @@ config MBEDTLS_KEY_EXCHANGE_ALL_ENABLED
     default y
 config MBEDTLS_CIPHER_ALL_ENABLED
     bool
-    default y
+    default n
 config MBEDTLS_ECP_ALL_ENABLED
     bool
-    default y
+    default n
 config MBEDTLS_MAC_ALL_ENABLED
     bool
     default y

@@ -142,6 +142,14 @@ Contiki-NG
 Executable is ./server.native. See examples/contiki/README for further
 information.
 
+Zephyr
+======
+
+ cd examples/zephyr
+ make
+
+See examples/zephyr/README for further information.
+
 Windows
 =======
 

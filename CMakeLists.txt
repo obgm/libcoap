@@ -25,15 +25,16 @@ option(
   BUILD_SHARED_LIBS
   "Build shared libs"
   OFF)
-else()
+else() # ! ZEPHYR_BASE
   # provided by the zephyr build system
-endif()
+endif() # ! ZEPHYR_BASE
 
 #
 # global compiler options
 # (need to do it before add_library())
 #
 
+if(NOT ZEPHYR_BASE)
 add_compile_options(
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-pedantic>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wall>
@@ -51,6 +52,9 @@ add_compile_options(
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wswitch-enum>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wunused>
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wwrite-strings>)
+else() # ! ZEPHYR_BASE
+  # provided by the zephyr build system
+endif() # ! ZEPHYR_BASE
 
 if(MINGW)
 add_compile_options(
@@ -76,7 +80,9 @@ endif()
 #
 
 add_library(${COAP_LIBRARY_NAME})
-set_property(TARGET ${COAP_LIBRARY_NAME} PROPERTY C_STANDARD 99)
+if(NOT ZEPHYR_BASE)
+#  set_property(TARGET ${COAP_LIBRARY_NAME} PROPERTY C_STANDARD 99)
+endif() # ! ZEPHYR_BASE
 if(${CMAKE_VERSION} VERSION_GREATER "3.20.0")
   cmake_policy(SET CMP0115 OLD) # Supresses libcoap configuration warning
 endif()
@@ -392,7 +398,6 @@ else()
   message(STATUS "compiling without Q-Block (RFC9177) support")
 endif()
 
-
 if(${WITH_OBSERVE_PERSIST})
   set(COAP_WITH_OBSERVE_PERSIST "1")
   message(STATUS "compiling with observe persistence support")
@@ -413,17 +418,17 @@ else()
   message(STATUS "compiling without epoll support")
 endif()
 
-if(ENABLE_THREAD_SAFE)
+if(${ENABLE_THREAD_SAFE})
   set(COAP_THREAD_SAFE "${ENABLE_THREAD_SAFE}")
   message(STATUS "compiling with thread safe support")
 endif()
 
-if(ENABLE_THREAD_RECURSIVE_LOCK_CHECK)
+if(${ENABLE_THREAD_RECURSIVE_LOCK_CHECK})
   set(COAP_THREAD_RECURSIVE_CHECK "${ENABLE_THREAD_RECURSIVE_LOCK_CHECK}")
   message(STATUS "compiling with thread recursive lock detection support")
 endif()
 
-if(ENABLE_SMALL_STACK)
+if(${ENABLE_SMALL_STACK})
   set(COAP_CONSTRAINED_STACK "${ENABLE_SMALL_STACK}")
   message(STATUS "compiling with small stack support")
 endif()
@@ -646,6 +651,7 @@ if(WITH_WOLFSSL)
 endif()
 
 execute_process(COMMAND git describe --tags --dirty --always
+		WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
                 RESULT_VARIABLE USING_GIT
                 OUTPUT_VARIABLE LIBCOAP_PACKAGE_BUILD
                 OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -847,7 +853,7 @@ if(ZEPHYR_BASE)
 target_compile_options(
   ${COAP_LIBRARY_NAME}
   PUBLIC -DMBEDTLS_CONFIG_FILE="${CONFIG_MBEDTLS_CFG_FILE}" -I${ZEPHYR_MBEDTLS_CMAKE_DIR}/configs)
-endif()
+endif() # ! ZEPHYR_BASE
 
 add_library(
   ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
@@ -984,7 +990,7 @@ install(
   DESTINATION ${LIBCOAP_CONFIG_INSTALL_DIR}
   NAMESPACE ${PROJECT_NAME}::
   COMPONENT dev)
-endif()
+endif() # ! ZEPHYR_BASE
 
 configure_package_config_file(
   cmake/Config.cmake.in
