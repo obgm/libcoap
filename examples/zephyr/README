@@ -1,0 +1,12 @@
+Example of libcoap running in Zephyr
+====================================
+
+The Zephyr project environment needs to be pre-installed.  By default, the
+libcoap Makefile assumes that this is located at ~/zephyrproject .
+
+To build the coap-client example, do
+
+    $ make
+
+The executable gets built in ~/zephyrproject/zephyr/build/zephyr/zephyr.exe
+which is then copied to coap-client .

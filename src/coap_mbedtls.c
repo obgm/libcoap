@@ -1733,9 +1733,13 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
 #endif /* ESPIDF_VERSION && CONFIG_MBEDTLS_DEBUG */
   if ((ret = mbedtls_ctr_drbg_seed(&m_env->ctr_drbg,
                                    mbedtls_entropy_func, &m_env->entropy, NULL, 0)) != 0) {
+    if (ret != MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED) {
+      coap_log_info("mbedtls_ctr_drbg_seed returned -0x%x: '%s'\n",
+                    -ret, get_error_string(ret));
+      goto fail;
+    }
     coap_log_err("mbedtls_ctr_drbg_seed returned -0x%x: '%s'\n",
                  -ret, get_error_string(ret));
-    goto fail;
   }
 
   if (role == COAP_DTLS_ROLE_CLIENT) {

@@ -1,0 +1,33 @@
+# Private config options for coap-client sample app
+
+# Copyright (c) 2020 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Networking coap-client sample application"
+
+config LIBCOAP_TARGET_DOMAIN_URI
+    string "Target Uri"
+    default "coaps://libcoap.net"
+    help
+        Target uri for the example to use. Use coaps:// prefix for encrypted traffic
+        using Pre-Shared Key (PSK) or Public Key Infrastructure (PKI).
+
+if MBEDTLS
+config LIBCOAP_PSK_KEY
+    string "Preshared Key (PSK) to used in the connection to the CoAP server"
+    default "secretPSK"
+    help
+        The Preshared Key to use to encrypt the communicatons. The same key must be
+        used at both ends of the CoAP connection, and the CoaP client must request
+        an URI prefixed with coaps:// instead of coap:// for DTLS to be used.
+
+config LIBCOAP_PSK_IDENTITY
+    string "PSK Client identity (username)"
+    default "user"
+    help
+        The identity (or username) to use to identify to the CoAP server which
+        PSK key to use.
+
+endif # MBEDTLS
+
+source "Kconfig.zephyr"
