@@ -9,6 +9,11 @@
  * of use.
  */
 
+/**
+ * @file coap_defines.h
+ * @brief List of libcoap library build defines
+ */
+
 #ifndef COAP_DEFINES_H_
 #define COAP_DEFINES_H_
 
