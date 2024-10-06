@@ -85,6 +85,11 @@
 /*
  * Include all the header files that are for internal use only.
  */
+#if COAP_OSCORE_SUPPORT && defined(WITH_CONTIKI)
+#include "lib/aes-128.h"
+#include "lib/ccm-star.h"
+#include "lib/sha-256.h"
+#endif /*COAP_OSCORE_SUPPORT && WITH_CONTIKI */
 
 #if defined(COAP_OSCORE_SUPPORT) || defined(COAP_WS_SUPPORT)
 /* Specific OSCORE general .h files */
