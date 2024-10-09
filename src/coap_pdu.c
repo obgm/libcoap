@@ -47,6 +47,7 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
     pdu->alloc_size = size;
   pdu->type = 0;
   pdu->code = 0;
+  pdu->ref = 0;
   pdu->hdr_size = 0;
   pdu->actual_token.length = 0;
   pdu->e_token_length = 0;
@@ -62,6 +63,7 @@ coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   pdu->body_total = 0;
   pdu->lg_xmit = NULL;
   pdu->session = NULL;
+  pdu->data_free = NULL;
 }
 
 #ifdef WITH_LWIP
@@ -180,12 +182,17 @@ coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
 void
 coap_delete_pdu(coap_pdu_t *pdu) {
   if (pdu != NULL) {
+    if (pdu->ref) {
+      pdu->ref--;
+      return;
+    }
 #ifdef WITH_LWIP
     pbuf_free(pdu->pbuf);
 #else
     if (pdu->token != NULL)
       coap_free_type(COAP_PDU_BUF, pdu->token - pdu->max_hdr_size);
 #endif
+    coap_delete_binary(pdu->data_free);
     coap_free_type(COAP_PDU, pdu);
   }
 }

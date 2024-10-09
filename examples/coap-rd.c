@@ -132,6 +132,7 @@ static int quit = 0;
 static void
 handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
+  coap_send_recv_terminate();
 }
 
 static void

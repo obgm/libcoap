@@ -1,0 +1,358 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_pdu_transmit(3)
+====================
+:doctype: manpage
+:man source:   coap_pdu_transmit
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_pdu_transmit,
+coap_send,
+coap_send_recv,
+coap_send_recv_terminate,
+coap_delete_pdu
+- Transmitting CoAP PDUs
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*coap_mid_t coap_send(coap_session_t *_session_, coap_pdu_t *_pdu_);*
+
+*int coap_send_recv(coap_session_t *_session_, coap_pdu_t *_request_pdu_,
+coap_pdu_t **_response_pdu_, uint32_t _timeout_ms_);*
+
+*void coap_send_recv_terminate(void);*
+
+*void coap_delete_pdu(coap_pdu_t *_pdu_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*,
+*-lcoap-@LIBCOAP_API_VERSION@-wolfssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+The CoAP PDU should be set up as described in *coap_pdu_setup*(3). This man page
+describes how the PDU can be transmitted.
+
+FUNCTIONS
+---------
+
+*Function: coap_send()*
+
+The *coap_send*() function is used to initiate the transmission of the _pdu_
+associated with the _session_. The caller must not access or delete _pdu_
+after calling *coap_send*() - even if there is a return error.
+
+*NOTE:* For request handlers, returning from the request handler will cause
+the response PDU to be transmitted as appropriate and so *coap_send*() must not
+be called for the response PDU from within the request handler.
+
+*Function: coap_send_recv()*
+
+The *coap_send_recv*() function is used to initiate the transmission of the
+_request_pdu_ associated with the _session_ and wait for a response. If there is
+a response, _response_pdu_ will get updated with the received response. The request
+may cause a block transfer and the response is only returned after all the blocks
+have been transferred.
+
+_timeout_ms_ is set to the positive number of milliseconds to wait
+for the response. If this is a blocked transfer, the timeout is used for between each
+individual (re-)request and response. For CON type transmissions, this does not need to be
+much bigger than (MAX_TRANSMIT_WAIT - MAX_TRANSMIT_SPAN) (default is 48 seconds).
+
+It is then the responsibility of the caller to analyze _response_pdu_ and following
+analysis to release both the _request_pdu_ and _response_pdu_ by calling
+*coap_delete_pdu*() for both the _request_pdu_ and _response_pdu_.
+
+*NOTE:* If *coap_send_recv*() is being used, *coap_send_recv_terminate*() must be
+used to terminate the call from, say, a *signal*(2) handler, otherwise
+*coap_send_recv*() may not return if there is a lot of traffic for _session_.
+
+*Function: coap_send_recv_terminate()*
+
+The *coap_send_recv_terminate*() function is used to terminate any outstanding
+sessions currently using the *coap_send_recv*() function.  Typically this would
+be called within a signal or sigaction handler when the application is to close
+down following the receipt of a signal.
+
+*Function: coap_delete_pdu()*
+
+The *coap_delete_pdu*() function is used to delete any created _pdu_. _pdu_ can
+be NULL.
+
+*NOTE:* The *coap_send*() will always internally call *coap_delete_pdu*(), even
+if there is an error, so *coap_delete*() must not be called after calling
+*coap_send*() (or for that matter further code must not reference _pdu_).
+However, *coap_send_recv*() does not delete either of _request_pdu_ or
+_response_pdu_, so _request_pdu_ must always be deleted, as well as _response_pdu_
+if returned.
+
+RETURN VALUES
+-------------
+*coap_send*() returns the CoAP message ID on success or
+COAP_INVALID_MID on failure.
+
+*coap_send_recv*() returns the following values:
+
+[source, c]
+----
+ 0 or +ve Time in function in ms after successful transfer (which can be
+          bigger than timeout_ms)
+       -1 Invalid timeout parameter
+       -2 Failed to transmit PDU
+       -3 Nack or Event handler invoked, cancelling request
+       -4 coap_io_process returned error (fail to re-lock or select())
+       -5 Response not received in the given time
+       -6 Terminated by user
+       -7 Client mode code not enabled
+----
+
+EXAMPLES
+--------
+*Setup PDU and Transmit*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+static int
+build_send_pdu(coap_context_t *context, coap_session_t *session,
+               uint8_t msgtype, uint8_t request_code, const char *path,
+               const char *query, unsigned char *data, size_t length,
+               int observe) {
+  coap_pdu_t *pdu;
+  uint8_t buf[8];
+  size_t buflen;
+  coap_optlist_t *optlist_chain = NULL;
+
+  /* Remove (void) definition if variable is used */
+  (void)context;
+
+  /* Create the pdu with the appropriate options */
+  pdu = coap_pdu_init(msgtype, request_code, coap_new_message_id(session),
+                      coap_session_max_pdu_size(session));
+  if (!pdu)
+    return 0;
+
+  /*
+   * Create unique token for this request for handling unsolicited /
+   * delayed responses
+   */
+  coap_session_new_token(session, &buflen, buf);
+  if (!coap_add_token(pdu, buflen, buf)) {
+    coap_log_debug("cannot add token to request\n");
+    goto error;
+  }
+
+  if (path) {
+    /* Add in the Uri-Path options */
+    if (!coap_path_into_optlist((const uint8_t *)path, strlen(path),
+                                COAP_OPTION_URI_PATH, &optlist_chain))
+      goto error;
+  }
+
+  if (query) {
+    /* Add in the Uri-Query options */
+    if (!coap_query_into_optlist((const uint8_t *)query, strlen(query),
+                                 COAP_OPTION_URI_QUERY, &optlist_chain))
+      goto error;
+  }
+
+  if (request_code == COAP_REQUEST_GET && observe) {
+    /* Indicate that we want to observe this resource */
+    if (!coap_insert_optlist(&optlist_chain,
+                             coap_new_optlist(COAP_OPTION_OBSERVE,
+                                              coap_encode_var_safe(buf, sizeof(buf),
+                                                  COAP_OBSERVE_ESTABLISH), buf)
+                            ))
+      goto error;
+  }
+
+  /* ... Other code / options etc. ... */
+
+  /* Add in all the options (after internal sorting) to the pdu */
+  if (!coap_add_optlist_pdu(pdu, &optlist_chain))
+    goto error;
+
+  if (data && length) {
+    /* Add in the specified data */
+    if (!coap_add_data(pdu, length, data))
+      goto error;
+  }
+
+  if (coap_send(session, pdu) == COAP_INVALID_MID)
+    goto error;
+  return 1;
+
+error:
+
+  if (pdu)
+    coap_delete_pdu(pdu);
+  return 0;
+
+}
+----
+
+*Setup PDU, then Send and Receive*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+/*
+ * SIGINT/SIGTERM handler: terminate any outstanding coap_send_recv().
+ * Handle configure using signal(2) or sigaction(2) */
+static void
+handle_sigint(int signum COAP_UNUSED) {
+  coap_send_recv_terminate();
+}
+
+static int
+build_send_recv_pdu(coap_context_t *context, coap_session_t *session,
+                    uint8_t msgtype, uint8_t request_code, const char *path,
+                    const char *query, unsigned char *data, size_t length,
+                    int observe) {
+  coap_pdu_t *pdu;
+  coap_pdu_t *resp_pdu = NULL;
+  uint8_t buf[8];
+  size_t buflen;
+  coap_optlist_t *optlist_chain = NULL;
+  int result;
+  uint32_t wait_ms = 60*1000;
+  int ret = 0;
+
+  /* Remove (void) definition if variable is used */
+  (void)context;
+
+  /* Create the pdu with the appropriate options */
+  pdu = coap_pdu_init(msgtype, request_code, coap_new_message_id(session),
+                      coap_session_max_pdu_size(session));
+  if (!pdu)
+    return 0;
+
+  /*
+   * Create unique token for this request for handling unsolicited /
+   * delayed responses
+   */
+  coap_session_new_token(session, &buflen, buf);
+  if (!coap_add_token(pdu, buflen, buf)) {
+    coap_log_debug("cannot add token to request\n");
+    goto error;
+  }
+
+  if (path) {
+    /* Add in the Uri-Path options */
+    if (!coap_path_into_optlist((const uint8_t *)path, strlen(path),
+                                COAP_OPTION_URI_PATH, &optlist_chain))
+      goto error;
+  }
+
+  if (query) {
+    /* Add in the Uri-Query options */
+    if (!coap_query_into_optlist((const uint8_t *)query, strlen(query),
+                                 COAP_OPTION_URI_QUERY, &optlist_chain))
+      goto error;
+  }
+
+  if (request_code == COAP_REQUEST_GET && observe) {
+    /* Indicate that we want to observe this resource */
+    if (!coap_insert_optlist(&optlist_chain,
+                             coap_new_optlist(COAP_OPTION_OBSERVE,
+                                              coap_encode_var_safe(buf, sizeof(buf),
+                                                  COAP_OBSERVE_ESTABLISH), buf)
+                            ))
+      goto error;
+  }
+
+  /* ... Other code / options etc. ... */
+
+  /* Add in all the options (after internal sorting) to the pdu */
+  if (!coap_add_optlist_pdu(pdu, &optlist_chain))
+    goto error;
+
+  if (data && length) {
+    /* Add in the specified data */
+    if (!coap_add_data(pdu, length, data))
+      goto error;
+  }
+
+  result = coap_send_recv(session, pdu, &resp_pdu, wait_ms);
+  if (result >= 0) {
+    /* ... Process response PDU ... */
+
+    if (result < (int)wait_ms) {
+      wait_ms -= result;
+    } else {
+      wait_ms = 0;
+    }
+    ret = 1;
+  } else {
+    switch (result) {
+    case -1:
+      coap_log_err("coap_send_recv: Invalid timeout value %u\n", wait_ms);
+      break;
+    case -2:
+      coap_log_err("coap_send_recv: Failed to transmit PDU\n");
+      break;
+    case -3:
+      coap_log_err("coap_send_recv: Critical Nack / Event occurred\n");
+      break;
+    case -4:
+      coap_log_err("coap_send_recv: Internal coap_io_process() failed\n");
+      break;
+    case -5:
+      coap_log_err("coap_send_recv: No response received within the timeout\n");
+      break;
+    case -6:
+      coap_log_err("coap_send_recv: Terminated by user\n");
+      break;
+    case -7:
+      coap_log_err("coap_send_recv: Client Mode code not enabled\n");
+      break;
+    default:
+      coap_log_err("coap_send_recv: Invalid return value %d\n", result);
+      break;
+    }
+    ret = 0;
+  }
+
+error:
+
+  coap_delete_pdu(pdu);
+  coap_delete_pdu(resp_pdu);
+
+  return ret;
+}
+----
+
+SEE ALSO
+--------
+*coap_pdu_setup*(3) and *coap_pdu_access*(3)
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
+
+BUGS
+----
+Please raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues to report any bugs.
+
+Please raise a Pull Request at https://github.com/obgm/libcoap/pulls
+for any fixes.
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

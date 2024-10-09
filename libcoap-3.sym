@@ -237,6 +237,8 @@ coap_send
 coap_send_ack
 coap_send_error
 coap_send_message_type
+coap_send_recv
+coap_send_recv_terminate
 coap_send_rst
 coap_server_is_supported
 coap_session_disconnected

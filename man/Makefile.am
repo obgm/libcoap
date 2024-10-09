@@ -39,6 +39,7 @@ TXT3 = coap_address.txt \
 	coap_oscore.txt \
 	coap_pdu_access.txt \
 	coap_pdu_setup.txt \
+	coap_pdu_transmit.txt \
 	coap_persist.txt \
 	coap_proxy.txt \
 	coap_recovery.txt \
@@ -175,7 +176,6 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_setup.3" > coap_add_option.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_add_data.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_add_data_blocked_response.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_send.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_path_into_optlist.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_split_path.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_query_into_optlist.3

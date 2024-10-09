@@ -163,6 +163,7 @@ static int quit = 0;
 static void
 handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
+  coap_send_recv_terminate();
 }
 
 static int
@@ -387,10 +388,10 @@ nack_handler(coap_session_t *session COAP_UNUSED,
  * Response handler used for coap_send() responses
  */
 static coap_response_t
-message_handler(coap_session_t *session COAP_UNUSED,
-                const coap_pdu_t *sent,
-                const coap_pdu_t *received,
-                const coap_mid_t id COAP_UNUSED) {
+response_handler(coap_session_t *session COAP_UNUSED,
+                 const coap_pdu_t *sent,
+                 const coap_pdu_t *received,
+                 const coap_mid_t id COAP_UNUSED) {
 
   coap_opt_t *block_opt;
   coap_opt_iterator_t opt_iter;
@@ -1672,6 +1673,7 @@ main(int argc, char **argv) {
   size_t data_len = 0;
   coap_addr_info_t *info_list = NULL;
   uint8_t cid_every = 0;
+  coap_pdu_t *resp_pdu;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1924,7 +1926,7 @@ main(int argc, char **argv) {
   coap_context_set_block_mode(ctx, block_mode);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
-  coap_register_response_handler(ctx, message_handler);
+  coap_register_response_handler(ctx, response_handler);
   coap_register_event_handler(ctx, event_handler);
   coap_register_nack_handler(ctx, nack_handler);
   if (the_token.length > COAP_TOKEN_DEFAULT_MAX)
@@ -1997,8 +1999,52 @@ main(int argc, char **argv) {
   if (coap_get_log_level() < COAP_LOG_DEBUG)
     coap_show_pdu(COAP_LOG_INFO, pdu);
 
-  if (coap_send(session, pdu) == COAP_INVALID_MID) {
-    coap_log_err("cannot send CoAP pdu\n");
+  resp_pdu = NULL;
+  result = coap_send_recv(session, pdu, &resp_pdu, wait_ms);
+  if (result >= 0) {
+    if (response_handler(session, pdu, resp_pdu, coap_pdu_get_mid(resp_pdu))
+        != COAP_RESPONSE_OK) {
+      coap_log_err("Response PDU issue\n");
+    }
+    if (result < (int)wait_ms) {
+      wait_ms -= result;
+    } else {
+      wait_ms = 0;
+      quit = 1;
+    }
+  } else {
+    switch (result) {
+    case -1:
+      coap_log_info("coap_send_recv: Invalid timeout value %u\n", wait_ms);
+      break;
+    case -2:
+      coap_log_info("coap_send_recv: Failed to transmit PDU\n");
+      break;
+    case -3:
+      /* Nack / Event handler already reported issue */
+      break;
+    case -4:
+      coap_log_info("coap_send_recv: Internal coap_io_process() failed\n");
+      break;
+    case -5:
+      coap_log_info("coap_send_recv: No response received within the timeout\n");
+      break;
+    case -6:
+      coap_log_info("coap_send_recv: Terminated by user\n");
+      break;
+    case -7:
+      coap_log_info("coap_send_recv: Client Mode code not enabled\n");
+      break;
+    default:
+      coap_log_info("coap_send_recv: Invalid return value %d\n", result);
+      break;
+    }
+    quit = 1;
+  }
+  coap_delete_pdu(pdu);
+  coap_delete_pdu(resp_pdu);
+
+  if (!doing_observe && repeat_count == 1) {
     quit = 1;
   }
   repeat_count--;

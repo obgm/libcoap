@@ -26,7 +26,6 @@ coap_add_optlist_pdu,
 coap_add_option,
 coap_add_data,
 coap_add_data_blocked_response,
-coap_send,
 coap_path_into_optlist,
 coap_split_path,
 coap_query_into_optlist,
@@ -81,8 +80,6 @@ const uint8_t *_data_);*
 *void coap_add_data_blocked_response(const coap_pdu_t *_request_,
 coap_pdu_t *_response_, uint16_t _media_type_, int _maxage_, size_t _length_,
 const uint8_t *_data_);*
-
-*coap_mid_t coap_send(coap_session_t *_session_, coap_pdu_t *_pdu_);*
 
 *int coap_path_into_optlist(const uint8_t *_path_, size_t _length_,
 coap_option_num_t _optnum_, coap_optlist_t **_optlist_chain_);*
@@ -558,19 +555,6 @@ by this function.
 *NOTE:* This function has been superseded by *coap_add_data_large_response*().
 See *coap_block*(3).
 
-PDU TRANSMIT FUNCTIONS
-----------------------
-
-*Function: coap_send()*
-
-The *coap_send*() function is used to initiate the transmission of the _pdu_
-associated with the _session_. The caller must not access or delete _pdu_
-after calling *coap_send*() - even if there is a return error.
-
-*NOTE:* For request handlers, returning from the request handler will cause
-the response PDU to be transmitted as appropriate and there is no need to call
-*coap_send*() to do this.
-
 RETURN VALUES
 -------------
 *coap_new_pdu*() and *coap_pdu_init*() return a newly created
@@ -590,9 +574,6 @@ encoded (which can be 0 when encoding 0) or 0 on failure.
 
 *coap_add_option*() returns the size of option added, or 0 on
 failure.
-
-*coap_send*() returns the CoAP message ID on success or
-COAP_INVALID_MID on failure.
 
 *coap_path_into_optlist*() and *coap_query_into_optlist*() return 1 on
 success or 0 on failure.
@@ -752,8 +733,8 @@ hnd_get_time(coap_resource_t *resource, coap_session_t *session,
 
 SEE ALSO
 --------
-*coap_block*(3), *coap_observe*(3), *coap_oscore*(3), *coap_pdu_access*(3)
-and *coap_resource*(3)
+*coap_block*(3), *coap_observe*(3), *coap_oscore*(3), *coap_pdu_access*(3),
+*coap_pdu_transmit*(3) and *coap_resource*(3)
 
 FURTHER INFORMATION
 -------------------

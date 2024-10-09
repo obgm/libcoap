@@ -587,6 +587,7 @@ coap_session_free(coap_session_t *session) {
       if (session->context->sessions)
         SESSIONS_DELETE(session->context->sessions, session);
     }
+  coap_delete_bin_const(session->req_token);
 #endif /* COAP_CLIENT_SUPPORT */
   coap_delete_bin_const(session->last_token);
   coap_delete_bin_const(session->echo);
@@ -920,6 +921,11 @@ coap_handle_nack(coap_session_t *session,
       coap_update_token(sent, token.length, token.s);
     }
   }
+#if COAP_CLIENT_SUPPORT
+  if (reason != COAP_NACK_ICMP_ISSUE) {
+    session->doing_send_recv = 0;
+  }
+#endif /* COAP_CLIENT_SUPPORT */
 }
 
 COAP_API void
@@ -969,6 +975,9 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
         sent_nack = 1;
       }
 
+#if COAP_CLIENT_SUPPORT
+      session->doing_send_recv = 0;
+#endif /* COAP_CLIENT_SUPPORT */
       coap_delete_node_lkd(q);
     }
   }
@@ -1014,6 +1023,9 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
     q->next = NULL;
     coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
                    coap_session_str(session), q->id);
+#if COAP_CLIENT_SUPPORT
+    session->doing_send_recv = 0;
+#endif /* COAP_CLIENT_SUPPORT */
     coap_delete_node_lkd(q);
   }
 

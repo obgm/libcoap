@@ -1353,6 +1353,7 @@ man/coap_observe.txt
 man/coap_oscore.txt
 man/coap_pdu_access.txt
 man/coap_pdu_setup.txt
+man/coap_pdu_transmit.txt
 man/coap_persist.txt
 man/coap_proxy.txt
 man/coap_recovery.txt

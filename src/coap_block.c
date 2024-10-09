@@ -4038,7 +4038,7 @@ give_to_app:
             rcvd->body_total = size2;
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
           }
-          if (context->response_handler) {
+          if (context->response_handler || session->doing_send_recv) {
             coap_response_t ret;
 
             /* need to put back original token into rcvd */
@@ -4054,18 +4054,37 @@ give_to_app:
                                   lg_crcv->app_token->s);
               coap_remove_option(sent, lg_crcv->block_option);
             }
-            coap_lock_callback_ret_release(ret, session->context,
-                                           context->response_handler(session, sent, rcvd,
-                                                                     rcvd->mid),
-                                           /* context is being freed off */
-                                           assert(0));
-            if (ret == COAP_RESPONSE_FAIL) {
-              coap_send_rst_lkd(session, rcvd);
+            if (!session->doing_send_recv || !session->req_token ||
+                !coap_binary_equal(session->req_token, &rcvd->actual_token)) {
+              if (context->response_handler) {
+                coap_lock_callback_ret_release(ret, session->context,
+                                               context->response_handler(session, sent, rcvd,
+                                                                         rcvd->mid),
+                                               /* context is being freed off */
+                                               assert(0));
+              } else {
+                ret = COAP_RESPONSE_OK;
+              }
+              if (ret == COAP_RESPONSE_FAIL && rcvd->type != COAP_MESSAGE_ACK) {
+                coap_send_rst_lkd(session, rcvd);
+                session->last_con_handler_res = COAP_RESPONSE_FAIL;
+              } else {
+                coap_send_ack_lkd(session, rcvd);
+                session->last_con_handler_res = COAP_RESPONSE_OK;
+              }
             } else {
+              /* processing coap_send_recv() call */
+              session->resp_pdu = rcvd;
+              rcvd->ref++;
+              /* Will get freed off when PDU is freed off */
+              rcvd->data_free = lg_crcv->body_data;
+              lg_crcv->body_data = NULL;
               coap_send_ack_lkd(session, rcvd);
+              session->last_con_handler_res = COAP_RESPONSE_OK;
             }
           } else {
             coap_send_ack_lkd(session, rcvd);
+            session->last_con_handler_res = COAP_RESPONSE_OK;
           }
           ack_rst_sent = 1;
           if (lg_crcv->observe_set == 0) {

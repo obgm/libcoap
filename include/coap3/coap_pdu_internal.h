@@ -145,6 +145,7 @@ struct coap_pdu_t {
   uint16_t max_opt;         /**< highest option number in PDU */
   uint32_t e_token_length;  /**< length of Token space (includes leading
                                  extended bytes */
+  unsigned ref;             /**< reference count */
   coap_bin_const_t actual_token; /**< Actual token in pdu */
   size_t alloc_size;        /**< allocated storage for token, options and
                                  payload */
@@ -165,13 +166,15 @@ struct coap_pdu_t {
                              *   to the pdu, and the pbuf stays exclusive to
                              *   this pdu. */
 #endif
-  const uint8_t *body_data; /**< Holds ptr to re-assembled data or NULL */
+  const uint8_t *body_data; /**< Holds ptr to re-assembled data or NULL. This
+                                 does not get released by coap_delete_pdu() */
   size_t body_length;       /**< Holds body data length */
   size_t body_offset;       /**< Holds body data offset */
   size_t body_total;        /**< Holds body data total size */
   coap_lg_xmit_t *lg_xmit;  /**< Holds ptr to lg_xmit if sending a set of
                                  blocks */
   coap_session_t *session;  /**< Session responsible for PDU or NULL */
+  coap_binary_t *data_free; /**< Data to be freed off by coap_delete_pdu() */
 };
 
 /**

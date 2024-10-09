@@ -205,6 +205,7 @@ struct coap_session_t {
                                            coap_ext_token_check_t */
 #if COAP_CLIENT_SUPPORT
   uint8_t negotiated_cid;         /**< Set for a client if CID negotiated */
+  uint8_t doing_send_recv;        /**< Set if coap_send_recv() active */
 #endif /* COAP_CLIENT_SUPPORT */
   uint8_t is_dtls13;              /**< Set if session is DTLS1.3 */
   coap_mid_t remote_test_mid;     /**< mid used for checking remote
@@ -222,6 +223,10 @@ struct coap_session_t {
 #if COAP_SERVER_SUPPORT
   coap_bin_const_t *client_cid;     /**< Contains client CID or NULL */
 #endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+  coap_pdu_t *resp_pdu;           /**< PDU returned in coap_send_recv() call */
+  coap_bin_const_t *req_token;    /**< Token in request pdu of coap_send_recv() */
+#endif /* COAP_CLIENT_SUPPORT */
 };
 
 #if COAP_SERVER_SUPPORT

@@ -181,6 +181,7 @@ static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
 static void
 handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
+  coap_send_recv_terminate();
 }
 
 #ifndef _WIN32

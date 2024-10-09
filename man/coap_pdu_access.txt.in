@@ -416,7 +416,7 @@ get_pdu_information(coap_pdu_t *pdu) {
 
 SEE ALSO
 --------
-*coap_block*(3) and *coap_pdu_setup*(3)
+*coap_block*(3), *coap_pdu_setup*(3) and *coap_pdu_transmit*(3)
 
 FURTHER INFORMATION
 -------------------

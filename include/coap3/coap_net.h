@@ -528,6 +528,38 @@ COAP_API coap_mid_t coap_send(coap_session_t *session, coap_pdu_t *pdu);
 
 #define coap_send_large(session, pdu) coap_send(session, pdu)
 
+/*
+ * Send a request PDU and wait for the response PDU.
+ *
+ * @param session     The CoAP session.
+ * @param request_pdu The requesting PDU. If this PDU contains the Observe
+ *                    option, the unsolocited responses will get handled by the
+ *                    defined response handler. This PDU must be freed off by the
+ *                    caller after processing.
+ * @param response_pdu If there is a response, the response PDU is put here.
+ *                     This PDU must be freed off by the caller after processing.
+ * @param timeout_ms Positive maximum number of milliseconds to wait for response
+ *                   packet following the request. If there is a large block transfer
+ *                   this timeout is for between each request and response.
+ *
+ * @return 0 or +ve Time in function in ms after successful transfer (which can be
+ *                  bigger than timeout_ms).
+ *               -1 Invalid timeout parameter
+ *               -2 Failed to transmit PDU
+ *               -3 Nack or Event handler invoked, cancelling request
+ *               -4 coap_io_process returned error (fail to re-lock or select())
+ *               -5 Response not received in the given time
+ *               -6 Terminated by user
+ *               -7 Client mode code not enabled
+ */
+COAP_API int coap_send_recv(coap_session_t *session, coap_pdu_t *request_pdu,
+                            coap_pdu_t **response_pdu, uint32_t timeout_ms);
+
+/**
+ * Terminate any active coap_send_recv() sessions
+ */
+void coap_send_recv_terminate(void);
+
 /**
  * Invokes the event handler of @p context for the given @p event and
  * @p data.
