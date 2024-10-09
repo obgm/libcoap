@@ -246,6 +246,23 @@ oscore_ctx_t *oscore_find_context(const coap_context_t *c_context,
                                   uint8_t *oscore_r2,
                                   oscore_recipient_ctx_t **recipient_ctx);
 
+/**
+ *  oscore_find_context_in_ram - Locate recipient context (and hence OSCORE context) in RAM only
+ *
+ * @param c_context The CoAP Context to search.
+ * @param rcpkey_id The Recipient kid.
+ * @param ctxkey_id The ID Context to match (or NULL if no check).
+ * @param oscore_r2 Partial id_context to match against or NULL.
+ * @param recipient_ctx The recipient context to update.
+ *
+ * return The OSCORE context and @p recipient_ctx updated, or NULL is error.
+ */
+oscore_ctx_t *oscore_find_context_in_ram(const coap_context_t *c_context,
+                                         const coap_bin_const_t rcpkey_id,
+                                         const coap_bin_const_t *ctxkey_id,
+                                         uint8_t *oscore_r2,
+                                         oscore_recipient_ctx_t **recipient_ctx);
+
 void oscore_free_association(oscore_association_t *association);
 
 int oscore_new_association(coap_session_t *session,
