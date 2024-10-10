@@ -4706,7 +4706,14 @@ coap_join_mcast_group_intf_lkd(coap_context_t *ctx, const char *group_name,
       }
     }
   }
-#endif /* ! _WIN32 */
+#else /* _WIN32 */
+  /*
+   * On Windows this function ignores the ifname variable so we unset this
+   * variable on this platform in any case in order to enable the interface
+   * selection from the bind address below.
+   */
+  ifname = 0;
+#endif /* _WIN32 */
 
   /* Add in mcast address(es) to appropriate interface */
   for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
