@@ -18,7 +18,8 @@ coap_delete_oscore_recipient,
 coap_new_client_session_oscore,
 coap_new_client_session_oscore_pki,
 coap_new_client_session_oscore_psk,
-coap_context_oscore_server
+coap_context_oscore_server,
+coap_register_oscore_context_handler
 - Work with CoAP OSCORE
 
 SYNOPSIS
@@ -53,6 +54,9 @@ coap_oscore_conf_t *_oscore_conf_);*
 
 *int coap_context_oscore_server(coap_context_t *_context_,
 coap_oscore_conf_t *_oscore_conf_);*
+
+*void coap_register_oscore_context_handler(coap_context_t *context,
+external_oscore_find_context_handler_t handler);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -192,6 +196,17 @@ The session will initially have a reference count of 1.
 The *coap_context_oscore_server*() function is used to enable the server to
 support OSCORE incoming sessions. It updates _context_ with the OSCORE
 configure _oscore_conf_ (which is freed off by this call).
+
+*Function: coap_register_oscore_context_handler()*
+
+The *coap_register_oscore_context_handler*() function is used to register
+an optional, external callback, which will be called if no OSCORE context
+is found by oscore_find_context. It can be used by the user to provide an
+external source of OSCORE contexts, e.g. a non-volatile memory.
+Together with user-defined coap_oscore_save_seq_num_t callback provided
+while creating the context, this mechanism may be used to periodically
+store Sender Sequence Number field - thus providing a way to fully restore
+the context after the device reboots.
 
 RETURN VALUES
 -------------
