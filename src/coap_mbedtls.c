@@ -137,6 +137,7 @@ typedef struct coap_mbedtls_env_t {
   coap_tick_t last_timeout;
   unsigned int retry_scalar;
   coap_ssl_t coap_ssl_data;
+  uint32_t server_hello_cnt;
 } coap_mbedtls_env_t;
 
 typedef struct pki_sni_entry {
@@ -1495,6 +1496,16 @@ do_mbedtls_handshake(coap_session_t *c_session,
     break;
   case MBEDTLS_ERR_SSL_WANT_READ:
   case MBEDTLS_ERR_SSL_WANT_WRITE:
+    if (m_env->ssl.state == MBEDTLS_SSL_SERVER_HELLO
+#if MBEDTLS_VERSION_NUMBER >= 0x03030000
+        || m_env->ssl.state == MBEDTLS_SSL_NEW_SESSION_TICKET
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03030000 */
+       ) {
+      if (++m_env->server_hello_cnt > 10) {
+        /* retried this too many times */
+        goto fail;
+      }
+    }
     errno = EAGAIN;
     ret = 0;
     break;
