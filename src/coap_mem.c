@@ -654,7 +654,8 @@ coap_free_type(coap_memory_tag_t type, void *ptr) {
   if (ptr)
     track_counts[type]--;
 #endif /* COAP_MEMORY_TYPE_TRACK */
-  heapmem_free(ptr);
+  if (ptr)
+    heapmem_free(ptr);
 }
 
 #endif /* WITH_CONTIKI */
