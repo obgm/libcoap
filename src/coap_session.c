@@ -535,13 +535,11 @@ coap_session_mfree(coap_session_t *session) {
   }
 #endif /* COAP_SERVER_SUPPORT */
   LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
-    if (q->pdu->type==COAP_MESSAGE_CON && session->context->nack_handler) {
-      coap_check_update_token(session, q->pdu);
-      coap_lock_callback(session->context,
-                         session->context->nack_handler(session, q->pdu,
-                                                        session->proto == COAP_PROTO_DTLS ?
-                                                        COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE,
-                                                        q->id));
+    if (q->pdu->type==COAP_MESSAGE_CON) {
+      coap_handle_nack(session, q->pdu,
+                       session->proto == COAP_PROTO_DTLS ?
+                       COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE,
+                       q->id);
     }
     coap_delete_node_lkd(q);
   }
@@ -904,6 +902,26 @@ coap_nack_name(coap_nack_reason_t reason) {
 }
 #endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
 
+void
+coap_handle_nack(coap_session_t *session,
+                 coap_pdu_t *sent,
+                 const coap_nack_reason_t reason,
+                 const coap_mid_t mid) {
+  if (session->context->nack_handler) {
+    coap_bin_const_t token;
+
+    if (sent) {
+      coap_check_update_token(session, sent);
+      token = sent->actual_token;
+    }
+    coap_lock_callback(session->context,
+                       session->context->nack_handler(session, sent, reason, mid));
+    if (sent) {
+      coap_update_token(sent, token.length, token.s);
+    }
+  }
+}
+
 COAP_API void
 coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
   coap_lock_lock(session->context, return);
@@ -923,57 +941,47 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
 #if COAP_CLIENT_SUPPORT
   coap_lg_crcv_t *cq, *etmp;
 #endif /* COAP_CLIENT_SUPPORT */
+  int sent_nack = 0;
+  coap_queue_t *q;
 
   coap_lock_check_locked(session->context);
-  if (session->context->nack_handler) {
-    int sent_nack = 0;
-    coap_queue_t *q = session->context->sendqueue;
+  q = session->context->sendqueue;
 
-    while (q) {
-      if (q->session == session) {
-        /* Take the first one */
-        coap_bin_const_t token = q->pdu->actual_token;
-
-        coap_check_update_token(session, q->pdu);
-        coap_lock_callback(session->context,
-                           session->context->nack_handler(session, q->pdu, reason, q->id));
-        coap_update_token(q->pdu, token.length, token.s);
-        sent_nack = 1;
-        break;
-      }
-      q = q->next;
-    }
-
-    if (reason != COAP_NACK_ICMP_ISSUE) {
-      while (session->delayqueue) {
-        q = session->delayqueue;
-        session->delayqueue = q->next;
-        q->next = NULL;
-        coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
-                       coap_session_str(session), q->id);
-        if (q->pdu->type == COAP_MESSAGE_CON) {
-          coap_check_update_token(session, q->pdu);
-          coap_lock_callback(session->context,
-                             session->context->nack_handler(session, q->pdu, reason, q->id));
-          sent_nack = 1;
-        }
-        coap_delete_node_lkd(q);
-      }
-    }
-#if COAP_CLIENT_SUPPORT
-    if (!sent_nack && session->lg_crcv) {
+  while (q) {
+    if (q->session == session) {
       /* Take the first one */
-      coap_lock_callback(session->context,
-                         session->context->nack_handler(session, &session->lg_crcv->pdu, reason,
-                                                        session->lg_crcv->pdu.mid));
+      coap_handle_nack(session, q->pdu, reason, q->id);
       sent_nack = 1;
+      break;
     }
+    q = q->next;
+  }
+
+  if (reason != COAP_NACK_ICMP_ISSUE) {
+    while (session->delayqueue) {
+      q = session->delayqueue;
+      session->delayqueue = q->next;
+      q->next = NULL;
+      coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
+                     coap_session_str(session), q->id);
+      if (q->pdu->type == COAP_MESSAGE_CON) {
+        coap_handle_nack(session, q->pdu, reason, q->id);
+        sent_nack = 1;
+      }
+
+      coap_delete_node_lkd(q);
+    }
+  }
+#if COAP_CLIENT_SUPPORT
+  if (!sent_nack && session->lg_crcv) {
+    /* Take the first one */
+    coap_handle_nack(session, &session->lg_crcv->pdu, reason, session->lg_crcv->pdu.mid);
+    sent_nack = 1;
+  }
 #endif /* COAP_CLIENT_SUPPORT */
-    if (!sent_nack) {
-      /* Unable to determine which request disconnection was for */
-      coap_lock_callback(session->context,
-                         session->context->nack_handler(session, NULL, reason, 0));
-    }
+  if (!sent_nack) {
+    /* Unable to determine which request disconnection was for */
+    coap_handle_nack(session, NULL, reason, 0);
   }
   if (reason == COAP_NACK_ICMP_ISSUE) {
     coap_log_debug("***%s: session ICMP issue (%s)\n",
@@ -1001,7 +1009,7 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
 
   /* Not done if nack handler called above */
   while (session->delayqueue) {
-    coap_queue_t *q = session->delayqueue;
+    q = session->delayqueue;
     session->delayqueue = q->next;
     q->next = NULL;
     coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
