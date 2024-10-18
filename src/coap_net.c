@@ -1997,11 +1997,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   }
 
   /* And finally delete the node */
-  if (node->pdu->type == COAP_MESSAGE_CON && context->nack_handler) {
-    coap_check_update_token(node->session, node->pdu);
-    coap_lock_callback(context,
-                       context->nack_handler(node->session, node->pdu,
-                                             COAP_NACK_TOO_MANY_RETRIES, node->id));
+  if (node->pdu->type == COAP_MESSAGE_CON) {
+    coap_handle_nack(node->session, node->pdu, COAP_NACK_TOO_MANY_RETRIES, node->id);
   }
   coap_delete_node_lkd(node);
   return COAP_INVALID_MID;
@@ -2579,10 +2576,8 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
     context->sendqueue = q->next;
     coap_log_debug("** %s: mid=0x%04x: removed (3)\n",
                    coap_session_str(session), q->id);
-    if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler) {
-      coap_check_update_token(session, q->pdu);
-      coap_lock_callback(context,
-                         context->nack_handler(session, q->pdu, reason, q->id));
+    if (q->pdu->type == COAP_MESSAGE_CON) {
+      coap_handle_nack(session, q->pdu, reason, q->id);
     }
     coap_delete_node_lkd(q);
   }
@@ -2598,10 +2593,8 @@ coap_cancel_session_messages(coap_context_t *context, coap_session_t *session,
       p->next = q->next;
       coap_log_debug("** %s: mid=0x%04x: removed (4)\n",
                      coap_session_str(session), q->id);
-      if (q->pdu->type == COAP_MESSAGE_CON && context->nack_handler) {
-        coap_check_update_token(session, q->pdu);
-        coap_lock_callback(context,
-                           context->nack_handler(session, q->pdu, reason, q->id));
+      if (q->pdu->type == COAP_MESSAGE_CON) {
+        coap_handle_nack(session, q->pdu, reason, q->id);
       }
       coap_delete_node_lkd(q);
       q = p->next;
@@ -4132,11 +4125,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       coap_cancel(context, sent);
 
       if (!is_ping_rst && !is_ext_token_rst) {
-        if (sent->pdu->type==COAP_MESSAGE_CON && context->nack_handler) {
-          coap_check_update_token(sent->session, sent->pdu);
-          coap_lock_callback(context,
-                             context->nack_handler(sent->session, sent->pdu,
-                                                   COAP_NACK_RST, sent->id));
+        if (sent->pdu->type==COAP_MESSAGE_CON) {
+          coap_handle_nack(sent->session, sent->pdu, COAP_NACK_RST, sent->id);
         }
       } else if (is_ping_rst) {
         if (context->pong_handler) {
@@ -4156,21 +4146,14 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
             /* Need to do this now as session may get de-referenced */
             coap_session_reference_lkd(session);
             coap_delete_observer(r, session, &obs->pdu->actual_token);
-            if (context->nack_handler) {
-              coap_lock_callback(context,
-                                 context->nack_handler(session, NULL,
-                                                       COAP_NACK_RST, pdu->mid));
-            }
+            coap_handle_nack(session, NULL, COAP_NACK_RST, pdu->mid);
             coap_session_release_lkd(session);
             goto cleanup;
           }
         }
       }
 #endif /* COAP_SERVER_SUPPORT */
-      if (context->nack_handler) {
-        coap_lock_callback(context,
-                           context->nack_handler(session, NULL, COAP_NACK_RST, pdu->mid));
-      }
+      coap_handle_nack(session, NULL, COAP_NACK_RST, pdu->mid);
     }
     goto cleanup;
 
@@ -4265,12 +4248,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 cleanup:
   if (packet_is_bad) {
     if (sent) {
-      if (context->nack_handler) {
-        coap_check_update_token(session, sent->pdu);
-        coap_lock_callback(context,
-                           context->nack_handler(session, sent->pdu,
-                                                 COAP_NACK_BAD_RESPONSE, sent->id));
-      }
+      coap_handle_nack(session, sent->pdu, COAP_NACK_BAD_RESPONSE, sent->id);
     } else {
       coap_handle_event_lkd(context, COAP_EVENT_BAD_PACKET, session);
     }

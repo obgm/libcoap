@@ -585,6 +585,11 @@ void coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t
 
 void coap_connect_session(coap_session_t *session, coap_tick_t now);
 
+void coap_handle_nack(coap_session_t *session,
+                      coap_pdu_t *sent,
+                      const coap_nack_reason_t reason,
+                      const coap_mid_t mid);
+
 #define COAP_SESSION_REF(s) ((s)->ref
 
 /* RFC7252 */

@@ -1470,11 +1470,8 @@ coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now,
 
       if (lg_crcv->rec_blocks.retry >= COAP_NON_MAX_RETRANSMIT(session)) {
         /* Done NON_MAX_RETRANSMIT retries */
-        coap_update_token(&lg_crcv->pdu, lg_crcv->app_token->length, lg_crcv->app_token->s);
-        coap_lock_callback(session->context,
-                           session->context->nack_handler(session, &lg_crcv->pdu,
-                                                          COAP_NACK_TOO_MANY_RETRIES,
-                                                          lg_crcv->pdu.mid));
+        coap_handle_nack(session, &lg_crcv->pdu,
+                         COAP_NACK_TOO_MANY_RETRIES, lg_crcv->pdu.mid);
         goto expire;
       }
       if (lg_crcv->rec_blocks.last_seen + scaled_timeout <= now) {
