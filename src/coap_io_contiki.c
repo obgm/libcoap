@@ -17,11 +17,15 @@
 #include "coap3/coap_libcoap_build.h"
 #include "contiki-net.h"
 
+static process_event_t prepare_event = PROCESS_EVENT_NONE;
 static void prepare_io(coap_context_t *ctx);
 PROCESS(libcoap_io_process, "libcoap I/O");
 
 void
 coap_start_io_process(void) {
+  if (prepare_event == PROCESS_EVENT_NONE) {
+    prepare_event = process_alloc_event();
+  }
   process_start(&libcoap_io_process, NULL);
 }
 
@@ -43,7 +47,7 @@ coap_update_io_timer(coap_context_t *ctx, coap_tick_t delay) {
     ctimer_stop(&ctx->io_timer);
   }
   if (!delay) {
-    process_post(&libcoap_io_process, PROCESS_EVENT_POLL, ctx);
+    process_post(&libcoap_io_process, prepare_event, ctx);
   } else {
     ctimer_set(&ctx->io_timer,
                CLOCK_SECOND * delay / 1000,
@@ -87,7 +91,7 @@ PROCESS_THREAD(libcoap_io_process, ev, data) {
         coap_io_do_io_lkd(coap_socket->context, now);
       }
     }
-    if (ev == PROCESS_EVENT_POLL) {
+    if (ev == prepare_event) {
       coap_context_t *ctx = (coap_context_t *)data;
       if (!ctx) {
         coap_log_crit("libcoap_io_process: ctx should never be NULL\n");
