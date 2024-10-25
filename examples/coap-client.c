@@ -798,6 +798,7 @@ get_oscore_conf(void) {
       if (oscore_seq_num_fp == NULL) {
         fprintf(stderr, "OSCORE save restart info file error: %s\n",
                 oscore_seq_save_file);
+        coap_free(buf);
         return NULL;
       }
     }

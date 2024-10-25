@@ -697,9 +697,6 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
   if (coap_request) {
     association = oscore_find_association(session, &pdu_token);
     if (association) {
-      if (doing_observe && observe_value == 1) {
-        association->is_observe = 0;
-      }
       /* Refresh the association */
       coap_delete_bin_const(association->nonce);
       association->nonce =
@@ -710,7 +707,12 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
       association->aad = coap_new_bin_const(cose->aad.s, cose->aad.length);
       if (association->aad == NULL)
         goto error;
-      coap_delete_bin_const(association->partial_iv);
+      if (doing_observe && observe_value == 1) {
+        coap_delete_bin_const(association->obs_partial_iv);
+        association->obs_partial_iv = association->partial_iv;
+      } else {
+        coap_delete_bin_const(association->partial_iv);
+      }
       association->partial_iv =
           coap_new_bin_const(cose->partial_iv.s, cose->partial_iv.length);
       if (association->partial_iv == NULL)
@@ -831,6 +833,8 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   coap_bin_const_t aad;
   coap_bin_const_t nonce;
   int pltxt_size = 0;
+  int got_resp_piv = 0;
+  int doing_resp_observe = 0;
   uint8_t coap_request = COAP_PDU_IS_REQUEST(pdu);
   coap_bin_const_t pdu_token;
   uint8_t *st_encrypt;
@@ -1065,6 +1069,8 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                             session);
       goto error;
     }
+    got_resp_piv = cose->partial_iv.length ? 1 : 0;
+
     association = oscore_find_association(session, &pdu_token);
     if (association) {
       rcp_ctx = association->recipient_ctx;
@@ -1281,7 +1287,11 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
 
     /* External AAD */
     cose_encrypt0_set_key_id(cose, snd_ctx->sender_id);
-    cose_encrypt0_set_partial_iv(cose, association->partial_iv);
+    if (association->is_observe && association->obs_partial_iv && got_resp_piv) {
+      cose_encrypt0_set_partial_iv(cose, association->obs_partial_iv);
+    } else {
+      cose_encrypt0_set_partial_iv(cose, association->partial_iv);
+    }
 #ifdef OSCORE_EXTRA_DEBUG
     dump_cose(cose, "!req pre aad");
 #endif /* OSCORE_EXTRA_DEBUG */
@@ -1549,6 +1559,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                 session);
           goto error;
         }
+        doing_resp_observe = 1;
         break;
       }
       association = oscore_find_association(session, &pdu_token);
@@ -1569,6 +1580,11 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
         goto error;
       }
       break;
+    }
+  }
+  if (!coap_request && !doing_resp_observe) {
+    if (association) {
+      association->is_observe = 0;
     }
   }
   /* Need to copy across any data */
