@@ -1843,6 +1843,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
 
 #if COAP_OSCORE_SUPPORT
   if (session->oscore_encryption &&
+      pdu->type != COAP_MESSAGE_RST &&
       !(pdu->type == COAP_MESSAGE_ACK && pdu->code == COAP_EMPTY_CODE)) {
     /* Refactor PDU as appropriate RFC8613 */
     coap_pdu_t *osc_pdu = coap_oscore_new_pdu_encrypted_lkd(session, pdu, NULL,

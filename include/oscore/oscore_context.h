@@ -147,6 +147,7 @@ struct oscore_association_t {
   coap_bin_const_t *aad;
   coap_bin_const_t *nonce;
   coap_bin_const_t *partial_iv;
+  coap_bin_const_t *obs_partial_iv;
   coap_tick_t last_seen;
   uint8_t is_observe;
 };
