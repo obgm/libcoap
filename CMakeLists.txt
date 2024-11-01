@@ -498,8 +498,8 @@ function(compile_tinydtls)
     IMPORTED)
   set_target_properties(
     tinydtls
-    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-               "${CMAKE_CURRENT_BINARY_DIR}/include"
+    PROPERTIES "${CMAKE_CURRENT_BINARY_DIR}/include"
+               INTERFACE_INCLUDE_DIRECTORIES
                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                IMPORTED_LOCATION "${LIBTINYDTLS_PATH}")
 
