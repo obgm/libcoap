@@ -535,6 +535,13 @@ The *coap_add_data*() function adds in the specified payload _data_ of length
 _length_ to the PDU _pdu_. Adding the payload data must be done after any
 token or options are added.  This function must only be called once per _pdu_.
 
+*NOTE:* *coap_add_data*() cannot add data that will exceed the available space
+within a single CoAP PDU.
+It is recommended that *coap_add_data_large_request*(3) or
+*coap_add_data_large_response*(3) (depending on whether _pdu_ is a request or response)
+is used instead if there is a possibility of the PDU space being insufficient.
+See *coap_block*(3).
+
 *Function: coap_add_data_blocked_response()*
 
 The *coap_add_data_blocked_response*() function adds in the appropriate part
@@ -552,7 +559,7 @@ received a part of the data and request the next block (with the appropriate
 Block options) from the server.  Returning the next requested block is handled
 by this function.
 
-*NOTE:* This function has been superseded by *coap_add_data_large_response*().
+*NOTE:* This function has been superseded by *coap_add_data_large_response*(3).
 See *coap_block*(3).
 
 RETURN VALUES

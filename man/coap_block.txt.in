@@ -290,7 +290,7 @@ according to
 Model]").
 
 The application request handler for the resource is only called once instead of
-potentially multiple times.
+potentially multiple times, unless if COAP_BLOCK_STLESS_BLOCK2 is set.
 
 *NOTE:* This function must only be called once per _pdu_.
 

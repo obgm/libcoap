@@ -163,7 +163,6 @@ struct coap_context_t {
   uint32_t csm_timeout_ms;         /**< Timeout for waiting for a CSM from
                                            the remote side. */
   uint32_t csm_max_message_size;   /**< Value for CSM Max-Message-Size */
-  uint64_t etag;                   /**< Next ETag to use */
 
 #if COAP_SERVER_SUPPORT
   coap_cache_entry_t *cache;       /**< CoAP cache-entry cache */

@@ -19,6 +19,14 @@
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+/* Can be 1 - 8 bytes long */
+#ifndef COAP_ETAG_MAX_BYTES
+#define COAP_ETAG_MAX_BYTES 4
+#endif
+#if COAP_ETAG_MAX_BYTES < 1 || COAP_ETAG_MAX_BYTES > 8
+#error COAP_ETAG_MAX_BYTES byte size invalid
+#endif
+
 #if COAP_Q_BLOCK_SUPPORT
 int
 coap_q_block_is_supported(void) {
@@ -273,10 +281,14 @@ coap_add_data_blocked_response(const coap_pdu_t *request,
                                size_t length,
                                const uint8_t *data
                               ) {
-  coap_key_t etag;
   unsigned char buf[4];
   coap_block_t block2;
   int block2_requested = 0;
+#if COAP_SERVER_SUPPORT
+  uint64_t etag = 0;
+  coap_digest_t digest;
+  coap_digest_ctx_t *dctx = NULL;
+#endif /* COAP_SERVER_SUPPORT */
 
   memset(&block2, 0, sizeof(block2));
   /*
@@ -297,10 +309,29 @@ coap_add_data_blocked_response(const coap_pdu_t *request,
   }
   response->code = COAP_RESPONSE_CODE(205);
 
-  /* add etag for the resource */
-  memset(etag, 0, sizeof(etag));
-  coap_hash(data, length, etag);
-  coap_insert_option(response, COAP_OPTION_ETAG, sizeof(etag), etag);
+#if COAP_SERVER_SUPPORT
+  /* add ETag for the resource data */
+  if (length) {
+    dctx =  coap_digest_setup();
+    if (!dctx)
+      goto error;
+    if (!coap_digest_update(dctx, data, length))
+      goto error;
+    if (!coap_digest_final(dctx, &digest))
+      goto error;
+    dctx = NULL;
+    memcpy(&etag, digest.key, sizeof(etag));
+#if COAP_ETAG_MAX_BYTES != 8
+    etag = etag >> 8*(8 - COAP_ETAG_MAX_BYTES);
+#endif
+    if (!etag)
+      etag = 1;
+    coap_update_option(response,
+                       COAP_OPTION_ETAG,
+                       coap_encode_var_safe8(buf, sizeof(buf), etag),
+                       buf);
+  }
+#endif /* COAP_SERVER_SUPPORT */
 
   coap_insert_option(response, COAP_OPTION_CONTENT_FORMAT,
                      coap_encode_var_safe(buf, sizeof(buf),
@@ -366,6 +397,9 @@ coap_add_data_blocked_response(const coap_pdu_t *request,
   return;
 
 error:
+#if COAP_SERVER_SUPPORT
+  coap_digest_free(dctx);
+#endif /* COAP_SERVER_SUPPORT */
   coap_add_data(response,
                 strlen(coap_response_phrase(response->code)),
                 (const unsigned char *)coap_response_phrase(response->code));
@@ -664,6 +698,10 @@ coap_add_data_large_internal(coap_session_t *session,
   uint16_t alt_option;
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
+#if !COAP_SERVER_SUPPORT
+  (void)etag;
+#endif /* COAP_SERVER_SUPPORT */
+
   assert(pdu);
   if (pdu->data) {
     coap_log_warn("coap_add_data_large: PDU already contains data\n");
@@ -696,6 +734,61 @@ coap_add_data_large_internal(coap_session_t *session,
     length = MAX_BLK_LEN;
   }
 #endif /* UINT_MAX > MAX_BLK_LEN */
+
+#if COAP_SERVER_SUPPORT
+  if (COAP_PDU_IS_RESPONSE(pdu) && length) {
+    coap_opt_t *etag_opt = coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter);
+
+    if (etag_opt) {
+      /* Have to use ETag as supplied in the response PDU */
+      etag = coap_decode_var_bytes8(coap_opt_value(etag_opt),
+                                    coap_opt_length(etag_opt));
+    } else {
+      if (!etag) {
+        /* calculate ETag for the response */
+        coap_digest_t digest;
+        coap_digest_ctx_t *dctx =  coap_digest_setup();
+
+        if (dctx) {
+          if (coap_digest_update(dctx, data, length)) {
+            if (coap_digest_final(dctx, &digest)) {
+              memcpy(&etag, digest.key, sizeof(etag));
+#if COAP_ETAG_MAX_BYTES != 8
+              etag = etag >> 8*(8 - COAP_ETAG_MAX_BYTES);
+#endif
+              dctx = NULL;
+            }
+          }
+          coap_digest_free(dctx);
+        }
+        if (!etag)
+          etag = 1;
+      }
+      coap_update_option(pdu,
+                         COAP_OPTION_ETAG,
+                         coap_encode_var_safe8(buf, sizeof(buf), etag),
+                         buf);
+    }
+    if (request) {
+      etag_opt = coap_check_option(request, COAP_OPTION_ETAG, &opt_iter);
+      if (etag_opt) {
+        /* There may be multiple ETag - need to check each one */
+        coap_option_iterator_init(request, &opt_iter, COAP_OPT_ALL);
+        while ((etag_opt = coap_option_next(&opt_iter))) {
+          if (opt_iter.number == COAP_OPTION_ETAG) {
+            uint64_t etag_r = coap_decode_var_bytes8(coap_opt_value(etag_opt),
+                                                     coap_opt_length(etag_opt));
+
+            if (etag == etag_r) {
+              pdu->code = COAP_RESPONSE_CODE(203);
+              return 1;
+            }
+          }
+        }
+      }
+    }
+  }
+#endif /* COAP_SERVER_SUPPORT */
 
   /* Determine the block size to use, adding in sensible options if needed */
   if (COAP_PDU_IS_REQUEST(pdu)) {
@@ -820,29 +913,13 @@ coap_add_data_large_internal(coap_session_t *session,
     size_t rem;
 
     if (length >= block.num * chunk) {
-      if (session->block_mode & COAP_BLOCK_STLESS_BLOCK2 && session->type != COAP_SESSION_TYPE_CLIENT) {
 #if COAP_SERVER_SUPPORT
+      if (session->block_mode & COAP_BLOCK_STLESS_BLOCK2 && session->type != COAP_SESSION_TYPE_CLIENT) {
         /* We are running server stateless */
         coap_update_option(pdu,
                            COAP_OPTION_SIZE2,
                            coap_encode_var_safe(buf, sizeof(buf),
                                                 (unsigned int)length),
-                           buf);
-        if (etag == 0) {
-          coap_digest_t digest;
-          coap_digest_ctx_t *dctx =  coap_digest_setup();
-
-          if (!dctx)
-            goto fail;
-          if (!coap_digest_update(dctx, data, length))
-            goto fail;
-          if (!coap_digest_final(dctx, &digest))
-            goto fail;
-          memcpy(&etag, digest.key, sizeof(etag));
-        }
-        coap_update_option(pdu,
-                           COAP_OPTION_ETAG,
-                           coap_encode_var_safe8(buf, sizeof(buf), etag),
                            buf);
         if (request) {
           if (!coap_get_block_b(session, request, option, &block))
@@ -858,8 +935,8 @@ coap_add_data_large_internal(coap_session_t *session,
                            coap_encode_var_safe(buf, sizeof(buf),
                                                 (block.num << 4) | (block.m << 3) | block.aszx),
                            buf);
-#endif /* COAP_SERVER_SUPPORT */
       }
+#endif /* COAP_SERVER_SUPPORT */
       rem = chunk;
       if (chunk > length - block.num * chunk)
         rem = length - block.num * chunk;
@@ -969,15 +1046,6 @@ coap_add_data_large_internal(coap_session_t *session,
                          coap_encode_var_safe(buf, sizeof(buf),
                                               (unsigned int)length),
                          buf);
-      if (etag == 0) {
-        if (++session->context->etag == 0)
-          ++session->context->etag;
-        etag = session->context->etag;
-      }
-      coap_update_option(pdu,
-                         COAP_OPTION_ETAG,
-                         coap_encode_var_safe8(buf, sizeof(buf), etag),
-                         buf);
     }
 
     if (!setup_block_b(session, pdu, &block, block.num,
@@ -1051,12 +1119,6 @@ coap_add_data_large_internal(coap_session_t *session,
     LL_PREPEND(session->lg_xmit,lg_xmit);
   } else {
     /* No need to use blocks */
-    if (etag) {
-      coap_update_option(pdu,
-                         COAP_OPTION_ETAG,
-                         coap_encode_var_safe8(buf, sizeof(buf), etag),
-                         buf);
-    }
     if (have_block_defined) {
       coap_update_option(pdu,
                          option,
@@ -2474,18 +2536,23 @@ coap_handle_request_send_block(coap_session_t *session,
 
   etag_opt = coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter);
   if (etag_opt) {
-    uint64_t etag = coap_decode_var_bytes8(coap_opt_value(etag_opt),
-                                           coap_opt_length(etag_opt));
-    if (etag != lg_xmit->b.b2.etag) {
+    /* There may be multiple ETag - need to check each one */
+    coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
+    while ((etag_opt = coap_option_next(&opt_iter))) {
+      if (opt_iter.number == COAP_OPTION_ETAG) {
+        uint64_t etag = coap_decode_var_bytes8(coap_opt_value(etag_opt),
+                                               coap_opt_length(etag_opt));
+        if (etag == lg_xmit->b.b2.etag) {
+          break;
+        }
+      }
+    }
+    if (!etag_opt) {
       /* Not a match - pass up to a higher level */
       return 0;
     }
-    out_pdu->code = COAP_RESPONSE_CODE(203);
-    coap_ticks(&lg_xmit->last_sent);
-    goto skip_app_handler;
-  } else {
-    out_pdu->code = lg_xmit->pdu.code;
   }
+  out_pdu->code = lg_xmit->pdu.code;
   coap_ticks(&lg_xmit->last_obs);
   lg_xmit->last_all_sent = 0;
 
@@ -2683,10 +2750,10 @@ coap_handle_request_send_block(coap_session_t *session,
       }
     }
 
-    if (!etag_opt && !coap_add_block_b_data(out_pdu,
-                                            lg_xmit->length,
-                                            lg_xmit->data,
-                                            &block)) {
+    if (!coap_add_block_b_data(out_pdu,
+                               lg_xmit->length,
+                               lg_xmit->data,
+                               &block)) {
       goto internal_issue;
     }
     if (i + 1 < request_cnt) {
