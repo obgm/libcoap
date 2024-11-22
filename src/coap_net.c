@@ -2331,6 +2331,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
           p += n;
           bytes_read -= n;
           if (n == len) {
+            /* Header now all in */
             size_t size = coap_pdu_parse_size(session->proto, session->read_header,
                                               hdr_size + tok_ext_bytes);
             if (size > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
@@ -2364,9 +2365,11 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
               session->partial_read = 0;
             }
           } else {
-            session->partial_read += bytes_read;
+            /* More of the header to go */
+            session->partial_read += n;
           }
         } else {
+          /* Get in first byte of the header */
           session->read_header[0] = *p++;
           bytes_read -= 1;
           if (!coap_pdu_parse_header_size(session->proto,
