@@ -84,6 +84,8 @@
 #define mbedtls_realloc(a,b) realloc(a,b)
 #define mbedtls_strdup(a) strdup(a)
 #define mbedtls_strndup(a,b) strndup(a,b)
+#undef mbedtls_free
+#define mbedtls_free(a) free(a)
 
 #ifndef MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED
 /* definition changed in later mbedtls code versions */

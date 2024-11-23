@@ -208,5 +208,5 @@ fail:
 	coap_free_context(coap_context);
 
 	coap_cleanup();
-	return 0;
+	exit(0);
 }

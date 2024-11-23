@@ -106,6 +106,7 @@ if(CONFIG_LIBCOAP)
 
   add_subdirectory(.. build)
   target_compile_definitions(coap-3 PUBLIC WITH_ZEPHYR)
+  target_compile_definitions(coap-3 PUBLIC COAP_MEMORY_TYPE_TRACK=1)
   target_link_libraries(coap-3 PUBLIC zephyr_interface)
   set_property(GLOBAL APPEND PROPERTY ZEPHYR_INTERFACE_LIBS coap-3)
 
