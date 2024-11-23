@@ -2964,7 +2964,8 @@ coap_digest_setup(void) {
 
 void
 coap_digest_free(coap_digest_ctx_t *digest_ctx) {
-  gnutls_hash_deinit(digest_ctx, NULL);
+  if (digest_ctx)
+    gnutls_hash_deinit(digest_ctx, NULL);
 }
 
 int
