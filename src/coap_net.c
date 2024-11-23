@@ -1851,6 +1851,8 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
 
     if (osc_pdu == NULL) {
       coap_log_warn("OSCORE: PDU could not be encrypted\n");
+      if (coap_get_log_level() < COAP_LOG_DEBUG)
+        coap_show_pdu(COAP_LOG_WARN, pdu);
       goto error;
     }
     bytes_written = coap_send_pdu(session, osc_pdu, NULL);
