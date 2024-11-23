@@ -2859,7 +2859,8 @@ coap_digest_setup(void) {
 
 void
 coap_digest_free(coap_digest_ctx_t *digest_ctx) {
-  wolfSSL_EVP_MD_CTX_free(digest_ctx);
+  if (digest_ctx)
+    wolfSSL_EVP_MD_CTX_free(digest_ctx);
 }
 
 int
