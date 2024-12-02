@@ -61,3 +61,11 @@
  * (Needs MEMP_STATS set) when coap_free_context() is called.
  */
 #define LWIP_STATS_DISPLAY              1
+
+/*
+ * Set to 1 for debugging UDP traffic
+ */
+#if 0
+#define LWIP_DEBUG 1
+#define UDP_DEBUG LWIP_DBG_ON
+#endif

@@ -56,8 +56,6 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
 
 #define _coap_address_isany_impl(A)  ip_addr_isany(&(A)->addr)
 
-#define _coap_is_mcast_impl(Address) ip_addr_ismulticast(&(Address)->addr)
-
 #elif defined(WITH_CONTIKI)
 
 #include "uip.h"
@@ -298,7 +296,7 @@ coap_address_isany(const coap_address_t *a) {
   return _coap_address_isany_impl(a);
 }
 
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
+#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
 
 /**
  * Checks if given address @p a denotes a multicast address. This function
@@ -318,7 +316,7 @@ int coap_is_bcast(const coap_address_t *a);
  */
 int coap_is_af_unix(const coap_address_t *a);
 
-#else /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
+#else /* WITH_CONTIKI || RIOT_VERSION */
 
 /**
  * Checks if given address @p a denotes a multicast address. This function
@@ -339,6 +337,6 @@ coap_is_af_unix(const coap_address_t *a) {
   return 0;
 }
 
-#endif /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
+#endif /* WITH_CONTIKI || RIOT_VERSION */
 
 #endif /* COAP_ADDRESS_H_ */

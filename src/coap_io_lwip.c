@@ -174,8 +174,6 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   coap_session_t *session = (coap_session_t *)arg;
   int result = -1;
   (void)upcb;
-  (void)addr;
-  (void)port;
 
   assert(session);
   LWIP_ASSERT("Proto not supported for LWIP", COAP_PROTO_NOT_RELIABLE(session->proto));
@@ -184,6 +182,8 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     /* Minimum size of CoAP header - ignore runt */
     return;
   }
+  memcpy(&session->addr_info.remote.addr, addr, sizeof(session->addr_info.remote.addr));
+  coap_address_set_port(&session->addr_info.remote, port);
 
   coap_log_debug("*  %s: lwip:  recv %4d bytes\n",
                  coap_session_str(session), p->len);
@@ -429,11 +429,12 @@ coap_socket_connect_udp(coap_socket_t *sock,
                         coap_address_t *remote_addr) {
   err_t err;
   struct udp_pcb *pcb;
+  int is_mcast = coap_is_mcast(server);
+  coap_address_t connect_addr;
 
-  (void)local_if;
-  (void)default_port;
-  (void)local_addr;
-  (void)remote_addr;
+  coap_address_copy(&connect_addr, server);
+  if (connect_addr.port == 0)
+    connect_addr.port = default_port;
 
   coap_lock_invert(sock->session->context,
                    LOCK_TCPIP_CORE(),
@@ -445,6 +446,10 @@ coap_socket_connect_udp(coap_socket_t *sock,
     goto err_unlock;
   }
 
+  if (local_if) {
+    pcb->local_ip = local_if->addr;
+    pcb->local_port = local_if->port;
+  }
   err = udp_bind(pcb, &pcb->local_ip, pcb->local_port);
   if (err) {
     LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS,
@@ -452,11 +457,24 @@ coap_socket_connect_udp(coap_socket_t *sock,
     goto err_udp_remove;
   }
 
+  if (local_addr) {
+    local_addr->addr = pcb->local_ip;
+    local_addr->port = pcb->local_port;
+  }
   sock->session->addr_info.local.port = pcb->local_port;
 
-  err = udp_connect(pcb, &server->addr, server->port);
-  if (err) {
-    goto err_udp_unbind;
+  if (remote_addr) {
+    coap_address_copy(remote_addr, &connect_addr);
+  }
+
+  if (is_mcast) {
+    coap_address_copy(&sock->mcast_addr, &connect_addr);
+    sock->flags |= COAP_SOCKET_MULTICAST;
+  } else {
+    err = udp_connect(pcb, &connect_addr.addr, connect_addr.port);
+    if (err) {
+      goto err_udp_unbind;
+    }
   }
 
 #if LWIP_IPV6 && LWIP_IPV4
@@ -793,4 +811,100 @@ coap_socket_close(coap_socket_t *sock) {
   }
 #endif /* !COAP_DISABLE_TCP */
   return;
+}
+
+int
+coap_is_mcast(const coap_address_t *a) {
+  if (!a)
+    return 0;
+
+  /* Treat broadcast in same way as multicast */
+  if (coap_is_bcast(a))
+    return 1;
+
+  return ip_addr_ismulticast(&(a)->addr);
+}
+
+#ifndef COAP_BCST_CNT
+#define COAP_BCST_CNT 15
+#endif /* COAP_BCST_CNT */
+
+/* How frequently to refresh the list of valid IPv4 broadcast addresses */
+#ifndef COAP_BCST_REFRESH_SECS
+#define COAP_BCST_REFRESH_SECS 30
+#endif /* COAP_BCST_REFRESH_SECS */
+
+#if COAP_IPV4_SUPPORT
+static int bcst_cnt = -1;
+static coap_tick_t last_refresh;
+static uint32_t b_ipv4[COAP_BCST_CNT];
+#endif /* COAP_IPV4_SUPPORT */
+
+int
+coap_is_bcast(const coap_address_t *a) {
+  int i;
+  coap_tick_t now;
+#if COAP_IPV4_SUPPORT
+  const ip4_addr_t *ipv4;
+#endif /* COAP_IPV4_SUPPORT */
+
+  if (!a)
+    return 0;
+
+  if (IP_IS_V6(&(a)->addr))
+    return 0;
+
+#if COAP_IPV4_SUPPORT
+#ifndef INADDR_BROADCAST
+#define INADDR_BROADCAST ((uint32_t)0xffffffffUL)
+#endif /* !INADDR_BROADCAST */
+  ipv4 = ip_2_ip4(&(a)->addr);
+  if (ipv4->addr == INADDR_BROADCAST)
+    return 1;
+
+  coap_ticks(&now);
+  if (bcst_cnt == -1 ||
+      (now - last_refresh) > (COAP_BCST_REFRESH_SECS * COAP_TICKS_PER_SECOND)) {
+    /* Determine the list of broadcast interfaces */
+    struct netif *netif;
+
+    bcst_cnt = 0;
+    last_refresh = now;
+
+    LWIP_ASSERT_CORE_LOCKED();
+
+    NETIF_FOREACH(netif) {
+      if (bcst_cnt < COAP_BCST_CNT) {
+        const ip4_addr_t *ip_addr;
+        const ip4_addr_t *netmask;
+
+        ip_addr = ip_2_ip4(&netif->ip_addr);
+        netmask = ip_2_ip4(&netif->netmask);
+        if (netmask->addr != 0xffffffff) {
+          b_ipv4[bcst_cnt] = ip_addr->addr | ~(netmask->addr);
+          bcst_cnt++;
+        }
+      }
+    }
+
+    if (bcst_cnt == COAP_BCST_CNT) {
+      coap_log_warn("coap_is_bcst: Insufficient space for broadcast addresses\n");
+    }
+  }
+  for (i = 0; i < bcst_cnt; i++) {
+    if (ipv4->addr == b_ipv4[i])
+      return 1;
+  }
+#endif /* COAP_IPV4_SUPPORT */
+  return 0;
+}
+
+/**
+ * Checks if given address @p a denotes a AF_UNIX address. This function
+ * returns @c 1 if @p a is of type AF_UNIX, @c 0 otherwise.
+ */
+int
+coap_is_af_unix(const coap_address_t *a) {
+  (void)a;
+  return 0;
 }
