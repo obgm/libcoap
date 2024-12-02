@@ -41,6 +41,7 @@ typedef struct l_coap_tiny_context_t {
   coap_dtls_pki_t setup_data;
   coap_binary_t *priv_key;
   coap_binary_t *pub_key;
+  uint8_t use_cid;
 } l_coap_tiny_context_t;
 
 #endif /* LWIP_TINYDTLS_LOCAL_FIX */
