@@ -24,6 +24,11 @@
 #include <string.h>
 #include <ctype.h>
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#endif
+
 /**
  * A length-safe version of strchr(). This function returns a pointer
  * to the first occurrence of @p c  in @p s, or @c NULL if not found.
@@ -324,9 +329,9 @@ coap_uri_into_optlist(const coap_uri_t *uri, const coap_address_t *dst,
 
       if (coap_print_ip_addr(dst, addr, sizeof(addr)) &&
           (strlen(addr) != uri_host_len ||
-           memcmp(addr, uri->host.s, uri_host_len) != 0)) {
+           strncasecmp(addr, (const char *)uri->host.s, uri_host_len) != 0)) {
         /* add Uri-Host */
-        optlist = coap_new_optlist(COAP_OPTION_URI_HOST, uri->host.length,
+        optlist = coap_new_optlist(COAP_OPTION_URI_HOST, uri_host_len,
                                    uri->host.s);
         if (!coap_host_is_unix_domain(&uri->host)) {
           coap_replace_percents(optlist);
