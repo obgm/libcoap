@@ -38,6 +38,12 @@
 
 #include <lwip/init.h>
 #include <lwip/timeouts.h>
+#if LWIP_IGMP && LWIP_IPV4
+#include <lwip/igmp.h>
+#endif /* LWIP_IGMP && LWIP_IPV4 */
+#if LWIP_IPV6_MLD && LWIP_IPV6
+#include <lwip/mld6.h>
+#endif /* LWIP_IPV6_MLD && LWIP_IPV6 */
 
 #include <netif/etharp.h>
 #include <netif/tapif.h>
@@ -46,7 +52,16 @@
 
 #if LWIP_IPV4
 static ip4_addr_t ipaddr, netmask, gw;
+#if LWIP_IGMP
+static ip4_addr_t v4group;
+#endif /* LWIP_IGMP */
 #endif /* LWIP_IPV4 */
+
+#if LWIP_IPV6
+#if LWIP_IPV6_MLD
+static ip6_addr_t v6group;
+#endif /* LWIP_IPV6_MLD */
+#endif /* LWIP_IPV6 */
 
 static int quit = 0;
 
@@ -100,7 +115,13 @@ main(int argc, char **argv) {
   IP4_ADDR(&gw, 192,168,113,1);
   IP4_ADDR(&ipaddr, 192,168,113,2);
   IP4_ADDR(&netmask, 255,255,255,0);
+#if LWIP_IGMP
+  IP4_ADDR(&v4group, 224,0,1,187);
+#endif /* LWIP_IGMP */
 #endif /* LWIP_IPV4 */
+#if LWIP_IPV6_MLD
+  IP6_ADDR(&v6group, PP_HTONL(0xff020000),0,0,PP_HTONL(0xfd));
+#endif /* LWIP_IPV6_MLD */
 
 #if NO_SYS
   lwip_init();
@@ -120,6 +141,11 @@ main(int argc, char **argv) {
   netif_set_up(&netif);
 #if LWIP_IPV4
   printf("IP4 %s\n", ip4addr_ntoa(ip_2_ip4(&netif.ip_addr)));
+#if LWIP_IGMP
+  if (igmp_joingroup_netif(&netif, &v4group) == ERR_OK) {
+    printf("mIP4 %s\n", ip4addr_ntoa(&v4group));
+  }
+#endif /* LWIP_IGMP */
 #endif /* LWIP_IPV4 */
 #if LWIP_IPV6
   netif_create_ip6_linklocal_address(&netif, 1);
@@ -128,6 +154,11 @@ main(int argc, char **argv) {
 #else /* ! LWIP_IPV4 */
   printf("IP6 [%s]\n", ip6addr_ntoa(&netif.ip6_addr[0].addr));
 #endif /* ! LWIP_IPV4 */
+#if LWIP_IPV6_MLD
+  if (mld6_joingroup_netif(&netif, &v6group) == ERR_OK) {
+    printf("mIP6 [%s]\n", ip6addr_ntoa(&v6group));
+  }
+#endif /* LWIP_IPV6_MLD */
 #endif /* LWIP_IPV6 */
 
   /* start applications here */

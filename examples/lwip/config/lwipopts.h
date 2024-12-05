@@ -27,11 +27,20 @@
 #define LWIP_IPV6                       1
 #define LWIP_IPV6_REASS                 0
 
-#define LWIP_IPV6_MLD                   0
 #define LWIP_ICMP6                 (LWIP_IPV6==1)
 
 /* Set to 1 if TCP support is required */
 #define LWIP_TCP                        0
+
+#if LWIP_IPV4
+/* Set to 1 if Multicast registration support is required for IPv4 */
+#define LWIP_IGMP                       0
+#endif
+
+#if LWIP_IPV6
+/* Set to 1 if Multicast registration support is required for IPv6 */
+#define LWIP_IPV6_MLD                   0
+#endif
 
 #ifndef netif_get_index
 #define netif_get_index(netif)      ((u8_t)((netif)->num + 1))
