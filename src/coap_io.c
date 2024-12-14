@@ -534,10 +534,14 @@ coap_update_io_timer(coap_context_t *context, coap_tick_t delay) {
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
     }
   }
-#else /* COAP_EPOLL_SUPPORT */
-  (void)context;
-  (void)delay;
-#endif /* COAP_EPOLL_SUPPORT */
+#else /* ! COAP_EPOLL_SUPPORT */
+  coap_tick_t now;
+
+  coap_ticks(&now);
+  if (context->next_timeout == 0 || context->next_timeout > now + delay) {
+    context->next_timeout = now + delay;
+  }
+#endif /* ! COAP_EPOLL_SUPPORT */
 }
 #endif /* ! WITH_CONTIKI */
 
@@ -1576,6 +1580,147 @@ release_2:
   return (unsigned int)((timeout * 1000 + COAP_TICKS_PER_SECOND - 1) / COAP_TICKS_PER_SECOND);
 }
 
+/*
+ * return  0 Insufficient space to hold fds, or fds not supported
+ *         1 All fds found
+ */
+COAP_API unsigned int
+coap_io_get_fds(coap_context_t *ctx,
+                coap_fd_t read_fds[],
+                unsigned int *have_read_fds,
+                unsigned int max_read_fds,
+                coap_fd_t write_fds[],
+                unsigned int *have_write_fds,
+                unsigned int max_write_fds,
+                unsigned int *rem_timeout_ms) {
+  unsigned int ret;
+
+  coap_lock_lock(ctx, return 0);
+  ret = coap_io_get_fds_lkd(ctx, read_fds, have_read_fds, max_read_fds, write_fds,
+                            have_write_fds, max_write_fds, rem_timeout_ms);
+  coap_lock_unlock(ctx);
+  return ret;
+}
+
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+static int
+coap_add_fd(coap_fd_t fd, coap_fd_t this_fds[], unsigned int *have_this_fds,
+            unsigned int max_this_fds) {
+  if (*have_this_fds < max_this_fds) {
+    this_fds[(*have_this_fds)++] = fd;
+    return 1;
+  }
+  coap_log_warn("coap_io_get_fds: Insufficient space for new fd (%u >= %u)\n", *have_this_fds,
+                max_this_fds);
+  return 0;
+}
+
+/*
+ * return  0 Insufficient space to hold fds, or fds not supported
+ *         1 All fds found
+ */
+unsigned int
+coap_io_get_fds_lkd(coap_context_t *ctx,
+                    coap_fd_t read_fds[],
+                    unsigned int *have_read_fds,
+                    unsigned int max_read_fds,
+                    coap_fd_t write_fds[],
+                    unsigned int *have_write_fds,
+                    unsigned int max_write_fds,
+                    unsigned int *rem_timeout_ms) {
+  *have_read_fds = 0;
+  *have_write_fds = 0;
+
+#ifdef COAP_EPOLL_SUPPORT
+  (void)write_fds;
+  (void)max_write_fds;;
+
+  if (!coap_add_fd(ctx->epfd, read_fds, have_read_fds, max_read_fds))
+    return 0;
+  /* epoll is making use of timerfd, so no need to return any timeout */
+  *rem_timeout_ms = 0;
+  return 1;
+#else /* ! COAP_EPOLL_SUPPORT */
+  coap_session_t *s, *rtmp;
+  coap_tick_t now;
+  unsigned int timeout_ms;
+#if COAP_SERVER_SUPPORT
+  coap_endpoint_t *ep;
+
+  LL_FOREACH(ctx->endpoint, ep) {
+    if (ep->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_ACCEPT)) {
+      if (!coap_add_fd(ep->sock.fd, read_fds, have_read_fds, max_read_fds))
+        return 0;
+    }
+    if (ep->sock.flags & (COAP_SOCKET_WANT_WRITE | COAP_SOCKET_WANT_CONNECT)) {
+      if (!coap_add_fd(ep->sock.fd, write_fds, have_write_fds, max_write_fds))
+        return 0;
+    }
+    SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
+      if (s->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_ACCEPT)) {
+        if (!coap_add_fd(s->sock.fd, read_fds, have_read_fds, max_read_fds))
+          return 0;
+      }
+      if (s->sock.flags & (COAP_SOCKET_WANT_WRITE | COAP_SOCKET_WANT_CONNECT)) {
+        if (!coap_add_fd(s->sock.fd, write_fds, have_write_fds, max_write_fds))
+          return 0;
+      }
+    }
+  }
+#endif /* COAP_SERVER_SUPPORT */
+
+#if COAP_CLIENT_SUPPORT
+  SESSIONS_ITER_SAFE(ctx->sessions, s, rtmp) {
+    if (s->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_ACCEPT)) {
+      if (!coap_add_fd(s->sock.fd, read_fds, have_read_fds, max_read_fds))
+        return 0;
+    }
+    if (s->sock.flags & (COAP_SOCKET_WANT_WRITE | COAP_SOCKET_WANT_CONNECT)) {
+      if (!coap_add_fd(s->sock.fd, write_fds, have_write_fds, max_write_fds))
+        return 0;
+    }
+  }
+#endif /* COAP_CLIENT_SUPPORT */
+
+  coap_ticks(&now);
+  timeout_ms = (unsigned int)(ctx->next_timeout ? ctx->next_timeout > now ?
+                              ctx->next_timeout - now : 0 : 0) *
+               1000 / COAP_TICKS_PER_SECOND;
+  *rem_timeout_ms = timeout_ms;
+  return 1;
+#endif /* ! COAP_EPOLL_SUPPORT */
+}
+
+#else /* WITH_LWIP || WITH_CONTIKI */
+
+/*
+ * return  0 Insufficient space to hold fds, or fds not supported
+ *         1 All fds found
+ */
+unsigned int
+coap_io_get_fds_lkd(coap_context_t *ctx,
+                    coap_fd_t read_fds[],
+                    unsigned int *have_read_fds,
+                    unsigned int max_read_fds,
+                    coap_fd_t write_fds[],
+                    unsigned int *have_write_fds,
+                    unsigned int max_write_fds,
+                    unsigned int *rem_timeout_ms) {
+  (void)ctx;
+  (void)read_fds;
+  (void)max_read_fds;
+  (void)write_fds;
+  (void)max_write_fds;
+
+  *have_read_fds = 0;
+  *have_write_fds = 0;
+  *rem_timeout_ms = 0;
+
+  coap_log_warn("coap_io_get_fds: Not supported\n");
+  return 0;
+}
+#endif /* WITH_LWIP || WITH_CONTIKI */
+
 #if !defined(WITH_LWIP) && !defined(CONTIKI) && !defined(RIOT_VERSION)
 COAP_API int
 coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
@@ -1626,6 +1771,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   timeout = coap_io_prepare_io_lkd(ctx, ctx->sockets,
                                    (sizeof(ctx->sockets) / sizeof(ctx->sockets[0])),
                                    &ctx->num_sockets, before);
+  ctx->next_timeout = timeout ? timeout + before : 0;
 
   if (ereadfds) {
     ctx->readfds = *ereadfds;
@@ -1730,6 +1876,11 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
 
   coap_ticks(&now);
   coap_io_do_io_lkd(ctx, now);
+  coap_ticks(&now);
+  timeout = coap_io_prepare_io_lkd(ctx, ctx->sockets,
+                                   (sizeof(ctx->sockets) / sizeof(ctx->sockets[0])),
+                                   &ctx->num_sockets, now);
+  ctx->next_timeout = timeout ? timeout + now : 0;
 
 #else /* COAP_EPOLL_SUPPORT */
   (void)ereadfds;

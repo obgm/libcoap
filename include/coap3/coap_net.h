@@ -845,6 +845,28 @@ COAP_API void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events,
  */
 COAP_API coap_fd_t coap_socket_get_fd(coap_socket_t *socket);
 
+/*
+ * Get the current libcoap usage of file descriptors that are in a read or write pending state.
+ *
+ * @param context The current CoAP context.
+ * @param read_fds Array to populate with file descriptors in the read pending state.
+ * @param have_read_fds Updated wth the number of fds found in read pending state.
+ * @param max_read_fds Maximum size of read_fds[] array.
+ * @param write_fds Array to populate with file descriptors in the write pending state.
+ * @param have_write_fds Updated wth the number of fds found in write pending state.
+ * @param max_write_fds Maximum size of write_fds[] array.
+ * @param rem_timeout_ms Remaining timeout time to next libcoap activity in milli-secs.
+ *
+ * @return @c 1 if successful, else @c 0 if error.
+ */
+COAP_API unsigned int coap_io_get_fds(coap_context_t *context, coap_fd_t read_fds[],
+                                      unsigned int *have_read_fds,
+                                      unsigned int max_read_fds,
+                                      coap_fd_t write_fds[],
+                                      unsigned int *have_write_fds,
+                                      unsigned int max_write_fds,
+                                      unsigned int *rem_timeout_ms);
+
 /**
  * Get the libcoap internal flags for a socket. This can be used to
  * integrate libcoap in an external event loop instead of using one of its

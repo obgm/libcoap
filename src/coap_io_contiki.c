@@ -39,6 +39,8 @@ on_io_timer_expired(void *ptr) {
 
 void
 coap_update_io_timer(coap_context_t *ctx, coap_tick_t delay) {
+  coap_tick_t now;
+
   if (!ctimer_expired(&ctx->io_timer)) {
     ctimer_stop(&ctx->io_timer);
   }
@@ -49,6 +51,10 @@ coap_update_io_timer(coap_context_t *ctx, coap_tick_t delay) {
                CLOCK_SECOND * delay / 1000,
                on_io_timer_expired,
                ctx);
+  }
+  coap_ticks(&now);
+  if (ctx->next_timeout == 0 || ctx->next_timeout > now + delay) {
+    ctx->next_timeout = now + delay;
   }
 }
 

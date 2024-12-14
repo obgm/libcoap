@@ -173,10 +173,10 @@ struct coap_context_t {
 #endif /* COAP_SERVER_SUPPORT */
   void *app;                       /**< application-specific data */
   uint32_t max_token_size;         /**< Largest token size supported RFC8974 */
+  coap_tick_t next_timeout;        /**< When the next timeout is to occur */
 #ifdef COAP_EPOLL_SUPPORT
   int epfd;                        /**< External FD for epoll */
   int eptimerfd;                   /**< Internal FD for timeout */
-  coap_tick_t next_timeout;        /**< When the next timeout is to occur */
 #else /* ! COAP_EPOLL_SUPPORT */
 #if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
   fd_set readfds, writefds, exceptfds; /**< Used for select call
@@ -778,6 +778,30 @@ int coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
                                  int nfds, fd_set *readfds, fd_set *writefds,
                                  fd_set *exceptfds);
 #endif /* ! RIOT_VERSION && ! WITH_CONTIKI */
+
+/*
+ * Get the current libcoap usage of file descriptors that are in a read or write pending state.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context The current CoAP context.
+ * @param read_fds Array to populate with file descriptors in the read pending state.
+ * @param have_read_fds Updated wth the number of fds found in read pending state.
+ * @param max_read_fds Maximum size of read_fds[] array.
+ * @param write_fds Array to populate with file descriptors in the write pending state.
+ * @param have_write_fds Updated wth the number of fds found in write pending state.
+ * @param max_write_fds Maximum size of write_fds[] array.
+ * @param rem_timeout_ms Remaining timeout time to next libcoap activity in milli-secs.
+ *
+ * @return @c 1 if successful, else @c 0 if error.
+ */
+unsigned int coap_io_get_fds_lkd(coap_context_t *context, coap_fd_t read_fds[],
+                                 unsigned int *have_read_fds,
+                                 unsigned int max_read_fds,
+                                 coap_fd_t write_fds[],
+                                 unsigned int *have_write_fds,
+                                 unsigned int max_write_fds,
+                                 unsigned int *rem_timeout_ms);
 
 /**
 * Sends a CoAP message to given peer. The memory that is

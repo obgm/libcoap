@@ -19,6 +19,7 @@ coap_io_do_io,
 coap_io_prepare_epoll,
 coap_io_do_epoll,
 coap_io_pending,
+coap_io_get_fds,
 coap_can_exit,
 coap_socket_get_fd,
 coap_socket_get_flags,
@@ -51,6 +52,11 @@ size_t _nevents_)*;
 
 *int coap_io_pending(coap_context_t *_context_)*;
 
+*unsigned int coap_io_get_fds(coap_context_t *_context_, coap_fd_t _read_fds_[],
+unsigned int *_have_read_fds_, unsigned int _max_read_fds_, coap_fd_t _write_fds_[],
+unsigned int *_have_write_fds_, unsigned int _max_write_dfs_,
+unsigned int *rem_timeout_ms)*;
+
 *int coap_can_exit(coap_context_t *_context_)*;
 
 *coap_fd_t coap_socket_get_fd(coap_socket_t *socket);*
@@ -69,7 +75,7 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 DESCRIPTION
 -----------
 After setting up all the contexts, resources, endpoints sessions etc., the
-underlying CoAP and (D)TLS need to send (and possible re-send) created packets
+underlying CoAP and (D)TLS need to send (and possibly re-send) created packets
 as well as receive packets for processing.
 
 The *coap_io_process*() function is the primary function applications should
@@ -204,6 +210,24 @@ The *coap_io_pending*() function checks to see if there are any outstanding
 i/o requests / responses associated with _context_ as well as if Observe has
 been set up (client only) and large transfers are in process.
 
+*Function: coap_io_get_fds()*
+
+The *coap_io_get_fds*() function is used to get all of the libcoap internally
+used file descriptors associated with _context_ in a read or write pending state.
+
+_read_fds_[] is a defined array to hold all the file descriptors that are in a
+read pending state with a size of _max_read_fds_.  _have_read_fds_ is returned
+with the number of file descriptors in _read_fds_[].
+
+_write_fds_[] is a defined array to hold all the file descriptors that are in a
+write pending state with a size of _max_write_fds_.  _have_write_fds_ is returned
+with the number of file descriptors in _write_fds_[].
+
+_rem_timeout_ms_ is updated with the remaining milli-seconds before coap_io_process()
+needs to be called again to handle any internal timeouts. If _rem_timeout_ms_ is 0,
+then there is no timeout and the next event will be a change in state of one of
+the file descriptors.
+
 *Function: coap_can_exit()*
 
 The *coap_can_exit*() function checks to see if there are any outstanding
@@ -240,6 +264,8 @@ descriptor to monitor, or -1 if epoll is not configured in libcoap.
 milli-seconds that need to be waited before the function should next be called.
 
 *coap_io_pending*() returns 1 if there is outstanding i/o else returns 0.
+
+*coap_io_get_fds*() returns 1 if file descriptors returned, else returns 0.
 
 *coap_can_exit*() returns 1 if there is nothing outstanding to transmit else
 returns 0.
