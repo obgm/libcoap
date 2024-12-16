@@ -45,3 +45,26 @@ a.st-synopsis:visited {
 a.st-synopsis:hover {
 	text-decoration: underline;
 }
+
+/* Set appropriate text colors if dark mode is used. */
+@media(prefers-color-scheme: dark) {
+	body pre {
+		color: deepskyblue;
+	}
+
+	a.st-desc {
+		color: white;
+	}
+
+	a.st-desc:visited {
+		color: white;
+	}
+
+	a.st-synopsis {
+		color: white;
+	}
+
+	a.st-synopsis:visited {
+		color: white;
+	}
+}
