@@ -1875,27 +1875,16 @@ coap_io_pending_lkd(coap_context_t *context) {
   return 0;
 }
 
-#ifdef _WIN32
 const char *
 coap_socket_format_errno(int error) {
-  static char szError[256];
-  if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                    NULL, (DWORD)error, MAKELANGID(LANG_NEUTRAL,
-                                                   SUBLANG_DEFAULT), (LPSTR)szError, (DWORD)sizeof(szError),
-                    NULL) == 0)
-    strcpy(szError, "Unknown error");
-  return szError;
+  return strerror(error);
 }
-
+#ifdef _WIN32
 const char *
 coap_socket_strerror(void) {
   return coap_socket_format_errno(WSAGetLastError());
 }
 #else /* _WIN32 */
-const char *
-coap_socket_format_errno(int error) {
-  return strerror(error);
-}
 const char *
 coap_socket_strerror(void) {
   return coap_socket_format_errno(errno);
