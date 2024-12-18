@@ -20,8 +20,6 @@
 
 #include "coap_internal.h"
 
-#if COAP_SERVER_SUPPORT
-
 /**
  * @ingroup internal_api
  * @defgroup subscribe_internal Observe Subscription
@@ -29,6 +27,7 @@
  * @{
  */
 
+#if COAP_SERVER_SUPPORT
 /**
  * Number of notifications that may be sent non-confirmable before a confirmable
  * message is sent to detect if observers are alive. The maximum allowed value
