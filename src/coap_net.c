@@ -4318,8 +4318,6 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     goto cleanup;
 
   case COAP_MESSAGE_NON:
-    /* find transaction in sendqueue in case large response */
-    coap_remove_from_queue(&context->sendqueue, session, pdu->mid, &sent);
     /* check for unknown critical options */
     if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
       packet_is_bad = 1;
