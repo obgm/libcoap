@@ -3662,6 +3662,8 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
   session->dtls_event = -1;
   r = SSL_read(ssl, pdu, (int)sizeof(pdu));
   if (r > 0) {
+    coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
+                   coap_session_str(session), r);
     r =  coap_handle_dgram(session->context, session, pdu, (size_t)r);
     goto finished;
   } else {
@@ -3700,10 +3702,6 @@ finished:
     coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", r, ssl_data->pdu_len);
     ssl_data->pdu_len = 0;
     ssl_data->pdu = NULL;
-  }
-  if (r > 0) {
-    coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
-                   coap_session_str(session), r);
   }
   return r;
 }

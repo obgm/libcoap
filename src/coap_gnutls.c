@@ -2485,6 +2485,8 @@ coap_dtls_receive(coap_session_t *c_session, const uint8_t *data,
     }
     ret = gnutls_record_recv(g_env->g_session, pdu, (int)sizeof(pdu));
     if (ret > 0) {
+      coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
+                     coap_session_str(c_session), ret);
       return coap_handle_dgram(c_session->context, c_session, pdu, (size_t)ret);
     } else if (ret == 0) {
       c_session->dtls_event = COAP_EVENT_DTLS_CLOSED;
@@ -2541,10 +2543,6 @@ coap_dtls_receive(coap_session_t *c_session, const uint8_t *data,
     coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
     ssl_data->pdu_len = 0;
     ssl_data->pdu = NULL;
-  }
-  if (ret > 0) {
-    coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
-                   coap_session_str(c_session), ret);
   }
   return ret;
 }

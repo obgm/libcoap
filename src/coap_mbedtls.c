@@ -2396,6 +2396,8 @@ coap_dtls_receive(coap_session_t *c_session,
 
     ret = mbedtls_ssl_read(&m_env->ssl, pdu, sizeof(pdu));
     if (ret > 0) {
+      coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
+                     coap_session_str(c_session), ret);
       ret = coap_handle_dgram(c_session->context, c_session, pdu, (size_t)ret);
       goto finish;
     }
@@ -2448,10 +2450,6 @@ finish:
     coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
     ssl_data->pdu_len = 0;
     ssl_data->pdu = NULL;
-  }
-  if (ret > 0) {
-    coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
-                   coap_session_str(c_session), ret);
   }
   return ret;
 }
