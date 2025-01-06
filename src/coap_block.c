@@ -1657,9 +1657,14 @@ check_if_next_block(coap_rblock_t *rec_blocks, uint32_t block_num) {
 #endif /* COAP_SERVER_SUPPORT */
 
 static int
-check_all_blocks_in(coap_rblock_t *rec_blocks, size_t total_blocks) {
+check_all_blocks_in(coap_rblock_t *rec_blocks) {
   uint32_t i;
   uint32_t block = 0;
+
+  if (rec_blocks->total_blocks == 0) {
+    /* Not seen block with More bit unset yet */
+    return 0;
+  }
 
   for (i = 0; i < rec_blocks->used; i++) {
     if (block < rec_blocks->range[i].begin)
@@ -1667,10 +1672,6 @@ check_all_blocks_in(coap_rblock_t *rec_blocks, size_t total_blocks) {
     if (block < rec_blocks->range[i].end)
       block = rec_blocks->range[i].end;
   }
-  /* total_blocks counts from 1 */
-  if (block + 1 < total_blocks)
-    return 0;
-
   return 1;
 }
 
@@ -2785,8 +2786,13 @@ skip_app_handler:
 #endif /* COAP_SERVER_SUPPORT */
 
 static int
-update_received_blocks(coap_rblock_t *rec_blocks, uint32_t block_num) {
+update_received_blocks(coap_rblock_t *rec_blocks, uint32_t block_num, uint32_t block_m) {
   uint32_t i;
+
+  if (rec_blocks->total_blocks && block_num + 1 > rec_blocks->total_blocks) {
+    /* received block number greater than Block No defined when More bit unset */
+    return 0;
+  }
 
   /* Reset as there is activity */
   rec_blocks->retry = 0;
@@ -2834,6 +2840,9 @@ update_received_blocks(coap_rblock_t *rec_blocks, uint32_t block_num) {
     rec_blocks->range[i].begin = rec_blocks->range[i].end = block_num;
     rec_blocks->used++;
   }
+  if (!block_m)
+    rec_blocks->total_blocks = block_num + 1;
+
   coap_ticks(&rec_blocks->last_seen);
   return 1;
 }
@@ -2872,7 +2881,6 @@ coap_handle_request_put_block(coap_context_t *context,
   size_t rtag_length;
   const uint8_t *rtag;
   uint32_t max_block_szx;
-  size_t chunk;
   int update_data;
   unsigned int saved_num;
   size_t saved_offset;
@@ -3065,7 +3073,6 @@ coap_handle_request_put_block(coap_context_t *context,
   lg_srcv->last_mid = pdu->mid;
   lg_srcv->last_type = pdu->type;
 
-  chunk = (size_t)1 << (block.szx + 4);
   update_data = 0;
   saved_num = block.num;
   saved_offset = offset;
@@ -3073,7 +3080,7 @@ coap_handle_request_put_block(coap_context_t *context,
   while (offset < saved_offset + length) {
     if (!check_if_received_block(&lg_srcv->rec_blocks, block.num)) {
       /* Update list of blocks received */
-      if (!update_received_blocks(&lg_srcv->rec_blocks, block.num)) {
+      if (!update_received_blocks(&lg_srcv->rec_blocks, block.num, block.m)) {
         coap_handle_event_lkd(context, COAP_EVENT_PARTIAL_BLOCK, session);
         coap_add_data(response, sizeof("Too many missing blocks")-1,
                       (const uint8_t *)"Too many missing blocks");
@@ -3107,16 +3114,14 @@ coap_handle_request_put_block(coap_context_t *context,
   }
 
   if (block.m ||
-      !check_all_blocks_in(&lg_srcv->rec_blocks,
-                           (uint32_t)(lg_srcv->total_len + chunk -1)/chunk)) {
+      !check_all_blocks_in(&lg_srcv->rec_blocks)) {
     /* Not all the payloads of the body have arrived */
     if (block.m) {
       uint8_t buf[4];
 
 #if COAP_Q_BLOCK_SUPPORT
       if (block_option == COAP_OPTION_Q_BLOCK1) {
-        if (check_all_blocks_in(&lg_srcv->rec_blocks,
-                                (uint32_t)(lg_srcv->total_len + chunk -1)/chunk)) {
+        if (check_all_blocks_in(&lg_srcv->rec_blocks)) {
           goto give_app_data;
         }
         if (lg_srcv->rec_blocks.used == 1 &&
@@ -3148,8 +3153,7 @@ coap_handle_request_put_block(coap_context_t *context,
        * complete payload to application and acknowledge this current
        * block.
        */
-      if (!check_all_blocks_in(&lg_srcv->rec_blocks,
-                               (uint32_t)(lg_srcv->total_len + chunk -1)/chunk)) {
+      if ((total == 0 && block.m) || !check_all_blocks_in(&lg_srcv->rec_blocks)) {
         /* Ask for the next block */
         coap_insert_option(response, block_option,
                            coap_encode_var_safe(buf, sizeof(buf),
@@ -3169,8 +3173,10 @@ coap_handle_request_put_block(coap_context_t *context,
           tmp_pdu->code = COAP_RESPONSE_CODE(231);
           coap_send_internal(session, tmp_pdu);
         }
-        coap_update_token(response, lg_srcv->last_token->length, lg_srcv->last_token->s);
-        coap_update_token(pdu, lg_srcv->last_token->length, lg_srcv->last_token->s);
+        if (lg_srcv->last_token) {
+          coap_update_token(response, lg_srcv->last_token->length, lg_srcv->last_token->s);
+          coap_update_token(pdu, lg_srcv->last_token->length, lg_srcv->last_token->s);
+        }
         /* Pass the assembled pdu and body to the application */
         goto give_app_data;
       }
@@ -3869,6 +3875,7 @@ reinit:
           lg_crcv->block_option = block_opt;
           lg_crcv->last_type = rcvd->type;
           lg_crcv->rec_blocks.used = 0;
+          lg_crcv->rec_blocks.total_blocks = 0;
 #if COAP_Q_BLOCK_SUPPORT
           lg_crcv->rec_blocks.processing_payload_set = 0;
 #endif /* COAP_Q_BLOCK_SUPPORT */
@@ -3963,7 +3970,7 @@ reinit:
             lg_crcv->rec_blocks.latest_payload_set = this_payload_set;
 #endif /* COAP_Q_BLOCK_SUPPORT */
             /* Update list of blocks received */
-            if (!update_received_blocks(&lg_crcv->rec_blocks, block.num)) {
+            if (!update_received_blocks(&lg_crcv->rec_blocks, block.num, block.m)) {
               coap_handle_event_lkd(context, COAP_EVENT_PARTIAL_BLOCK, session);
               goto fail_resp;
             }
@@ -3987,8 +3994,7 @@ reinit:
               goto fail_resp;
             }
           }
-          if (block.m || !check_all_blocks_in(&lg_crcv->rec_blocks,
-                                              (size2 + chunk -1) / chunk)) {
+          if (block.m || !check_all_blocks_in(&lg_crcv->rec_blocks)) {
             /* Not all the payloads of the body have arrived */
             size_t len;
             coap_pdu_t *pdu;
@@ -3998,8 +4004,7 @@ reinit:
 #if COAP_Q_BLOCK_SUPPORT
               if (block_opt == COAP_OPTION_Q_BLOCK2) {
                 /* Blocks could arrive in wrong order */
-                if (check_all_blocks_in(&lg_crcv->rec_blocks,
-                                        (size2 + chunk -1) / chunk)) {
+                if (check_all_blocks_in(&lg_crcv->rec_blocks)) {
                   goto give_to_app;
                 }
                 if (check_all_blocks_in_for_payload_set(session,

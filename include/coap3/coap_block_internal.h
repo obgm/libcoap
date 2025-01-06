@@ -104,7 +104,7 @@ struct coap_lg_range {
  * Structure to keep track of received blocks
  */
 typedef struct coap_rblock_t {
-  uint32_t used;
+  uint32_t used; /**< Number of range blocks in use */
   uint32_t retry;
 #if COAP_Q_BLOCK_SUPPORT
   uint32_t processing_payload_set;
@@ -112,6 +112,7 @@ typedef struct coap_rblock_t {
 #endif /* COAP_Q_BLOCK_SUPPORT */
   struct coap_lg_range range[COAP_RBLOCK_CNT];
   coap_tick_t last_seen;
+  uint32_t total_blocks;  /**< Set to block no + 1 when More bit unset */
 } coap_rblock_t;
 
 /**
