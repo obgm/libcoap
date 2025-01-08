@@ -2043,23 +2043,23 @@ coap_socket_strerror(void) {
 #endif /* _WIN32 */
 
 COAP_API coap_fd_t
-coap_socket_get_fd(coap_socket_t *socket) {
+coap_socket_get_fd(coap_socket_t *sock) {
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-  return socket->fd;
+  return sock->fd;
 #else
-  (void)(socket);
+  (void)(sock);
   return COAP_INVALID_SOCKET;
 #endif
 }
 
 COAP_API coap_socket_flags_t
-coap_socket_get_flags(coap_socket_t *socket) {
-  return socket->flags;
+coap_socket_get_flags(coap_socket_t *sock) {
+  return sock->flags;
 }
 
 COAP_API void
-coap_socket_set_flags(coap_socket_t *socket, coap_socket_flags_t flags) {
-  socket->flags = flags;
+coap_socket_set_flags(coap_socket_t *sock, coap_socket_flags_t flags) {
+  sock->flags = flags;
 }
 
 #undef SIN6
