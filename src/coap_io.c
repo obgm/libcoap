@@ -1328,7 +1328,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
                        unsigned int *num_sockets,
                        coap_tick_t now) {
   coap_queue_t *nextpdu;
-  coap_session_t *s, *rtmp;
+  coap_session_t *s, *stmp;
   coap_tick_t timeout = 0;
   coap_tick_t s_timeout;
 #if COAP_SERVER_SUPPORT
@@ -1403,7 +1403,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
         sockets[(*num_sockets)++] = &ep->sock;
     }
 #endif /* ! COAP_EPOLL_SUPPORT && ! WITH_LWIP && ! RIOT_VERSION */
-    SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
+    SESSIONS_ITER_SAFE(ep->sessions, s, stmp) {
       /* Check whether any idle server sessions should be released */
       if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
           s->delayqueue == NULL &&
@@ -1411,6 +1411,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
            s->state == COAP_SESSION_STATE_NONE)) {
         coap_handle_event_lkd(ctx, COAP_EVENT_SERVER_SESSION_DEL, s);
         coap_session_free(s);
+        continue;
       } else {
         if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
             s->delayqueue == NULL) {
@@ -1474,11 +1475,42 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
 release_1:
         coap_session_release_lkd(s);
       }
+      if (s->type == COAP_SESSION_TYPE_SERVER &&
+          s->state == COAP_SESSION_STATE_ESTABLISHED &&
+          s->ref_subscriptions &&
+          ctx->ping_timeout > 0) {
+        /* Only do this if this session is observing */
+        if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
+          /* Time to send a ping */
+          if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID)
+            /* Some issue - not safe to continue processing */
+            continue;
+          if (s->last_ping > 0 && s->last_pong < s->last_ping) {
+            coap_handle_event_lkd(s->context, COAP_EVENT_KEEPALIVE_FAILURE, s);
+            coap_session_reference_lkd(s);
+            RESOURCES_ITER(s->context->resources, r) {
+              coap_cancel_all_messages(s->context, s, NULL);
+              coap_delete_observer(r, s, NULL);
+            }
+            coap_session_release_lkd(s);
+            /* Force session to go away */
+            coap_session_set_type_client_lkd(s);
+            coap_session_release_lkd(s);
+            /* check the next session */
+            continue;
+          }
+          s->last_rx_tx = now;
+          s->last_ping = now;
+        }
+        s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
+        if (timeout == 0 || s_timeout < timeout)
+          timeout = s_timeout;
+      }
     }
   }
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_CLIENT_SUPPORT
-  SESSIONS_ITER_SAFE(ctx->sessions, s, rtmp) {
+  SESSIONS_ITER_SAFE(ctx->sessions, s, stmp) {
     if (s->type == COAP_SESSION_TYPE_CLIENT &&
         s->state == COAP_SESSION_STATE_ESTABLISHED &&
         ctx->ping_timeout > 0) {

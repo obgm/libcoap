@@ -875,6 +875,7 @@ coap_add_observer(coap_resource_t *resource,
   }
   s->cache_key = cache_key;
   s->session = coap_session_reference_lkd(session);
+  session->ref_subscriptions++;
 
   /* add subscriber to resource */
   LL_PREPEND(resource->subscribers, s);
@@ -1022,6 +1023,8 @@ coap_delete_observer_internal(coap_resource_t *resource, coap_session_t *session
   if (resource->subscribers) {
     LL_DELETE(resource->subscribers, s);
     coap_session_release_lkd(session);
+    assert(session->ref_subscriptions > 0);
+    session->ref_subscriptions--;
     coap_delete_pdu(s->pdu);
     coap_delete_cache_key(s->cache_key);
     coap_free_type(COAP_SUBSCRIPTION, s);

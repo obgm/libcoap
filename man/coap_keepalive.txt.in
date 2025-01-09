@@ -60,10 +60,17 @@ If the keepalive fails to solicit a response, then this can be tracked by
 defining the handler to use by using *coap_register_event_handler*() which will
 be called with a reason of COAP_EVENT_KEEPALIVE_FAILURE.
 
+*NOTE:* A keepalive will only be transmitted when there has been no traffic on
+the session for _seconds_. It does not regularily repeat every _seconds_.
+
 *NOTE:* As this may be used to keep an interim NAT device "warm", the
 exponentially increasing retransmit times for CON requests is limited to
 _seconds_, but the retransmit counter is not affected. Unless needed,
 _seconds_ shold not be set to less than 30.
+
+*NOTE:* If this is used at the server end of a CoAP session (set up by using
+*coap_new_endpoint*(3)), keepalives will only be transmitted for sessions
+that have an active observe subscription.
 
 SEE ALSO
 --------

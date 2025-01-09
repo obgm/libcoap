@@ -1844,10 +1844,10 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
 #if COAP_OSCORE_SUPPORT
   if (session->oscore_encryption &&
       pdu->type != COAP_MESSAGE_RST &&
-      !(pdu->type == COAP_MESSAGE_ACK && pdu->code == COAP_EMPTY_CODE)) {
+      !(pdu->type == COAP_MESSAGE_ACK && pdu->code == COAP_EMPTY_CODE) &&
+      !(COAP_PROTO_RELIABLE(session->proto) && pdu->code == COAP_SIGNALING_CODE_PONG)) {
     /* Refactor PDU as appropriate RFC8613 */
-    coap_pdu_t *osc_pdu = coap_oscore_new_pdu_encrypted_lkd(session, pdu, NULL,
-                                                            0);
+    coap_pdu_t *osc_pdu = coap_oscore_new_pdu_encrypted_lkd(session, pdu, NULL, 0);
 
     if (osc_pdu == NULL) {
       coap_log_warn("OSCORE: PDU could not be encrypted\n");
@@ -2773,7 +2773,7 @@ coap_cancel_all_messages(coap_context_t *context, coap_session_t *session,
 
   while (q) {
     if (q->session == session &&
-        coap_binary_equal(&q->pdu->actual_token, token)) {
+        (!token || coap_binary_equal(&q->pdu->actual_token, token))) {
       *p = q->next;
       coap_log_debug("** %s: mid=0x%04x: removed (6)\n",
                      coap_session_str(session), q->id);
@@ -4282,7 +4282,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     coap_remove_from_queue(&context->sendqueue, session, pdu->mid, &sent);
 
     if (sent) {
-      coap_cancel(context, sent);
+      if (!is_ping_rst)
+        coap_cancel(context, sent);
 
       if (!is_ping_rst && !is_ext_token_rst) {
         if (sent->pdu->type==COAP_MESSAGE_CON) {

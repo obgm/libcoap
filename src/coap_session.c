@@ -1985,9 +1985,18 @@ coap_session_get_type(const coap_session_t *session) {
   return 0;
 }
 
-#if COAP_CLIENT_SUPPORT
-int
+COAP_API int
 coap_session_set_type_client(coap_session_t *session) {
+  int ret;
+
+  coap_lock_lock(session->context, return 0);
+  ret = coap_session_set_type_client_lkd(session);
+  coap_lock_unlock(session->context);
+  return ret;
+}
+
+int
+coap_session_set_type_client_lkd(coap_session_t *session) {
 #if COAP_SERVER_SUPPORT
   if (session && session->type == COAP_SESSION_TYPE_SERVER) {
     coap_session_reference_lkd(session);
@@ -1999,7 +2008,6 @@ coap_session_set_type_client(coap_session_t *session) {
 #endif /* ! COAP_SERVER_SUPPORT */
   return 0;
 }
-#endif /* COAP_CLIENT_SUPPORT */
 
 coap_session_state_t
 coap_session_get_state(const coap_session_t *session) {

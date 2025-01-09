@@ -220,7 +220,7 @@ coap_context_t *coap_session_get_context(const coap_session_t *session);
  *
  * @return @c 1 if updated, @c 0 on failure.
  */
-int coap_session_set_type_client(coap_session_t *session);
+COAP_API int coap_session_set_type_client(coap_session_t *session);
 
 /**
  * Set the session MTU. This is the maximum message size that can be sent,

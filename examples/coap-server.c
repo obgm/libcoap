@@ -2563,6 +2563,7 @@ main(int argc, char **argv) {
     coap_mcast_per_resource(ctx);
   coap_context_set_block_mode(ctx, block_mode);
   coap_context_set_max_block_size(ctx, max_block_size);
+  coap_context_set_keepalive(ctx, 30);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
   if (doing_tls_engine) {

@@ -78,6 +78,7 @@ struct coap_session_t {
   UT_hash_handle hh;
   coap_addr_tuple_t addr_info;      /**< remote/local address info */
   int ifindex;                      /**< interface index */
+  unsigned ref_subscriptions;       /**< reference count of current subscriptions */
   coap_socket_t sock;               /**< socket object for the session, if
                                          any */
 #if COAP_SERVER_SUPPORT
@@ -377,6 +378,24 @@ void coap_session_establish(coap_session_t *session);
  * @return same as session
  */
 coap_session_t *coap_session_reference_lkd(coap_session_t *session);
+
+/**
+ * Set the session type to client. Typically used in a call-home server.
+ * The session initially needs to be of type COAP_SESSION_TYPE_SERVER,
+ * which is then made COAP_SESSION_TYPE_CLIENT.
+ * Note: If this function is successful, the session reference count is
+ * incremented and a subsequent coap_session_release() taking the
+ * reference count to 0 will cause the (now client) session to be freed off.
+ * Note: This function will fail for a DTLS server type session if done before
+ * the ClientHello is seen.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ *
+ * @return @c 1 if updated, @c 0 on failure.
+ */
+int coap_session_set_type_client_lkd(coap_session_t *session);
 
 /**
  * Decrement reference counter on a session.
