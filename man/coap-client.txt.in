@@ -321,6 +321,13 @@ the known resources along with their attribute definitions.
 
 * Example
 ----
+coap-client -m get -N coap://[ff02::fd%ens32]/.well-known/core
+----
+Discover the available resources along with their attribute definitions using
+a multicast IP sent out over the ethernet interface ens32.
+
+* Example
+----
 echo -n "mode=on" | coap-client -m put \
 coap://[2001:db8:c001:f00d:221:2eff:ff00:2704]:5683/actuators/leds?color=r -f-
 ----

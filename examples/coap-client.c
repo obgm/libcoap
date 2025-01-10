@@ -651,6 +651,7 @@ usage(const char *program, const char *version) {
           "\tcoap-client -m get coap+tcp://%%2Funix%%2Fdomain%%2Fpath%%2Fstream/.well-known/core\n"
           "\tcoap-client -m get coaps://[::1]/.well-known/core\n"
           "\tcoap-client -m get coaps+tcp://[::1]/.well-known/core\n"
+          "\tcoap-client -m get -N coap://[ff02::fd%%ens32]/.well-known/core\n"
           "\tcoap-client -m get coaps://%%2Funix%%2Fdomain%%2Fpath%%2Fdtls/.well-known/core\n"
           "\tcoap-client -m get coaps+tcp://%%2Funix%%2Fdomain%%2Fpath%%2Ftls/.well-known/core\n"
           "\tcoap-client -m get -T cafe coap://[::1]/time\n"
@@ -1613,11 +1614,11 @@ get_session(coap_context_t *ctx,
 
     local.s = (const uint8_t *)local_addr;
     local.length = strlen(local_addr);
-    /* resolve local address where data should be sent from */
+    /* resolve local address where data should be sent from (don't update port number */
     info_list = coap_resolve_address_info(&local, port, port, port, port,
                                           AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL,
                                           1 << scheme,
-                                          COAP_RESOLVE_TYPE_LOCAL);
+                                          COAP_RESOLVE_TYPE_REMOTE);
     if (!info_list) {
       fprintf(stderr, "coap_resolve_address_info: %s: failed\n", local_addr);
       return NULL;

@@ -547,7 +547,7 @@ coap_resolve_address_info(const coap_str_const_t *address,
   error = getaddrinfo(addrstr, NULL, &hints, &res);
 
   if (error != 0) {
-    coap_log_warn("getaddrinfo: %s\n", gai_strerror(error));
+    coap_log_warn("getaddrinfo: %s: %s\n", addrstr, gai_strerror(error));
     return NULL;
   }
 

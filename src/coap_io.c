@@ -920,7 +920,11 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
 
           pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
 
-          pktinfo->ipi6_ifindex = session->ifindex;
+          if (coap_is_mcast(&session->addr_info.remote)) {
+            pktinfo->ipi6_ifindex = session->addr_info.remote.addr.sin6.sin6_scope_id;
+          } else {
+            pktinfo->ipi6_ifindex = session->ifindex;
+          }
           memcpy(&pktinfo->ipi6_addr,
                  &session->addr_info.local.addr.sin6.sin6_addr,
                  sizeof(pktinfo->ipi6_addr));
