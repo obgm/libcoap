@@ -46,6 +46,7 @@ coap_proxy_cleanup(coap_context_t *context) {
       coap_delete_cache_key(context->proxy_list[i].req_list[j].cache_key);
     }
     coap_free_type(COAP_STRING, context->proxy_list[i].req_list);
+    coap_free_type(COAP_STRING, context->proxy_list[i].uri_host_keep);
   }
   coap_free_type(COAP_STRING, context->proxy_list);
 }
@@ -86,7 +87,6 @@ coap_get_uri_proxy_scheme_info(const coap_pdu_t *request,
                                coap_uri_t *uri,
                                coap_string_t **uri_path,
                                coap_string_t **uri_query) {
-
   const char *opt_val = (const char *)coap_opt_value(opt);
   int opt_len = coap_opt_length(opt);
   coap_opt_iterator_t opt_iter;
@@ -126,6 +126,8 @@ coap_get_uri_proxy_scheme_info(const coap_pdu_t *request,
     uri->host.length = coap_opt_length(opt);
     uri->host.s = coap_opt_value(opt);
   } else {
+    uri->host.s = NULL;
+    uri->host.length = 0;
     coap_log_warn("Proxy Scheme requires Uri-Host\n");
     return 0;
   }
@@ -207,7 +209,9 @@ static coap_proxy_list_t *
 coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
                        coap_pdu_t *response,
                        coap_proxy_server_list_t *server_list,
-                       coap_proxy_server_t *server_use) {
+                       coap_proxy_server_t *server_use,
+                       coap_string_t **uri_path,
+                       coap_string_t **uri_query) {
   size_t i;
   coap_proxy_list_t *new_proxy_list;
   coap_proxy_list_t *proxy_list = session->context->proxy_list;
@@ -216,8 +220,6 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
   coap_opt_iterator_t opt_iter;
   coap_opt_t *proxy_scheme;
   coap_opt_t *proxy_uri;
-  coap_string_t *uri_path = NULL;
-  coap_string_t *uri_query = NULL;
 
   /* Round robin the defined next server list (which usually is just one */
   server_list->next_entry++;
@@ -241,8 +243,9 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
      */
     proxy_scheme = coap_check_option(request, COAP_OPTION_PROXY_SCHEME, &opt_iter);
     if (proxy_scheme) {
-      if (!coap_get_uri_proxy_scheme_info(request, proxy_scheme, &server_use->uri, &uri_path,
-                                          &uri_query)) {
+      if (!coap_get_uri_proxy_scheme_info(request, proxy_scheme, &server_use->uri,
+                                          uri_path,
+                                          uri_query)) {
         response->code = COAP_RESPONSE_CODE(505);
         return NULL;
       }
@@ -313,7 +316,21 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
   session->context->proxy_list = proxy_list = new_proxy_list;
   memset(&proxy_list[i], 0, sizeof(proxy_list[i]));
 
+  /* Keep a copy of the host as PDU pointed to will be going away */
   proxy_list[i].uri = server_use->uri;
+  proxy_list[i].uri_host_keep = coap_malloc_type(COAP_STRING,
+                                                 server_use->uri.host.length);
+  if (! proxy_list[i].uri_host_keep)
+    return NULL;
+  memcpy(proxy_list[i].uri_host_keep, server_use->uri.host.s,
+         server_use->uri.host.length);
+  proxy_list[i].uri.host.s = proxy_list[i].uri_host_keep;
+  /* Unset uri parts which point to going away PDU */
+  proxy_list[i].uri.path.s = NULL;
+  proxy_list[i].uri.path.length = 0;
+  proxy_list[i].uri.query.s = NULL;
+  proxy_list[i].uri.query.length = 0;
+
   if (server_list->track_client_session) {
     proxy_list[i].incoming = session;
   }
@@ -405,7 +422,9 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
                                const coap_pdu_t *request,
                                coap_pdu_t *response,
                                coap_proxy_server_list_t *server_list,
-                               coap_proxy_server_t *server_use) {
+                               coap_proxy_server_t *server_use,
+                               coap_string_t **uri_path,
+                               coap_string_t **uri_query) {
 
   coap_address_t dst;
   coap_proto_t proto;
@@ -414,7 +433,8 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
   coap_context_t *context = session->context;
   static char client_sni[256];
 
-  proxy_entry = coap_proxy_get_session(session, request, response, server_list, server_use);
+  proxy_entry = coap_proxy_get_session(session, request, response, server_list,
+                                       server_use, uri_path, uri_query);
   if (!proxy_entry) {
     /* Response code should be set */
     return NULL;
@@ -565,14 +585,18 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   coap_opt_t *option;
   coap_opt_iterator_t opt_iter;
   coap_proxy_server_t server_use;
+  coap_string_t *uri_path = NULL;
+  coap_string_t *uri_query = NULL;
 
   /* Set up ongoing session (if not already done) */
 
   proxy_entry = coap_proxy_get_ongoing_session(session, request, response,
-                                               server_list, &server_use);
-  if (!proxy_entry)
+                                               server_list, &server_use,
+                                               &uri_path, &uri_query);
+  if (!proxy_entry) {
     /* response code already set */
     return 0;
+  }
 
   /* Need to save the request pdu entry */
   new_req_list = coap_realloc_type(COAP_STRING, proxy_entry->req_list,
@@ -629,6 +653,9 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
       coap_log_err("Failed to create options for URI\n");
       goto failed;
     }
+    /* Finished with server_use, so release computed options */
+    coap_delete_string(uri_path);
+    coap_delete_string(uri_query);
 
     /* Copy the remaining options across */
     coap_option_iterator_init(request, &opt_iter, COAP_OPT_ALL);

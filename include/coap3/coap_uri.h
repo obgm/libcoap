@@ -61,6 +61,9 @@ typedef enum coap_uri_scheme_t {
  * coap_split_uri() or coap_split_proxy_uri() and can be used as input for
  * option-creation functions. Alternatively, coap_uri_into_optlist() can
  * be used to convert coap_uri_t into CoAP options.
+ *
+ * Note: host, path and query point to data which must remain there for the
+ * lifetime of the coap_uri_t.
  */
 typedef struct {
   coap_str_const_t host;  /**< The host part of the URI */
