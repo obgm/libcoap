@@ -673,7 +673,7 @@ oscore_delete_recipient(oscore_ctx_t *osc_ctx, coap_bin_const_t *rid) {
 void
 oscore_free_association(oscore_association_t *association) {
   if (association) {
-    coap_delete_pdu(association->sent_pdu);
+    coap_delete_pdu_lkd(association->sent_pdu);
     coap_delete_bin_const(association->token);
     coap_delete_bin_const(association->aad);
     coap_delete_bin_const(association->nonce);

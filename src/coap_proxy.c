@@ -42,7 +42,7 @@ coap_proxy_cleanup(coap_context_t *context) {
 
   for (i = 0; i < context->proxy_list_count; i++) {
     for (j = 0; j < context->proxy_list[i].req_count; j++) {
-      coap_delete_pdu(context->proxy_list[i].req_list[j].pdu);
+      coap_delete_pdu_lkd(context->proxy_list[i].req_list[j].pdu);
       coap_delete_cache_key(context->proxy_list[i].req_list[j].cache_key);
     }
     coap_free_type(COAP_STRING, context->proxy_list[i].req_list);
@@ -352,7 +352,7 @@ coap_proxy_remove_association(coap_session_t *session, int send_failure) {
     /* Check for incoming match */
     for (j = 0; j < proxy_list[i].req_count; j++) {
       if (proxy_list[i].req_list[j].incoming == session) {
-        coap_delete_pdu(proxy_list[i].req_list[j].pdu);
+        coap_delete_pdu_lkd(proxy_list[i].req_list[j].pdu);
         coap_delete_bin_const(proxy_list[i].req_list[j].token_used);
         coap_delete_cache_key(proxy_list[i].req_list[j].cache_key);
         if (proxy_list[i].req_count-j > 1) {
@@ -398,7 +398,7 @@ coap_proxy_remove_association(coap_session_t *session, int send_failure) {
             coap_log_info("Failed to send PDU with 5.02 gateway issue\n");
           }
 cleanup:
-          coap_delete_pdu(proxy_list[i].req_list[j].pdu);
+          coap_delete_pdu_lkd(proxy_list[i].req_list[j].pdu);
           coap_delete_bin_const(proxy_list[i].req_list[j].token_used);
           coap_delete_cache_key(proxy_list[i].req_list[j].cache_key);
         }
@@ -734,7 +734,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
 
 failed:
   response->code = COAP_RESPONSE_CODE(500);
-  coap_delete_pdu(pdu);
+  coap_delete_pdu_lkd(pdu);
   return 0;
 }
 
@@ -889,7 +889,7 @@ remove_match:
   option = coap_check_option(received, COAP_OPTION_OBSERVE, &opt_iter);
   /* Need to remove matching token entry (apart from on Observe response) */
   if (option == NULL && proxy_entry->req_count) {
-    coap_delete_pdu(proxy_entry->req_list[j].pdu);
+    coap_delete_pdu_lkd(proxy_entry->req_list[j].pdu);
     coap_delete_bin_const(proxy_entry->req_list[j].token_used);
     /* Do not delete cache key here - caller's responsibility */
     proxy_entry->req_count--;

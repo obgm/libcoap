@@ -517,7 +517,7 @@ coap_free_resource(coap_resource_t *resource) {
       resource->context->observe_deleted(obs->session, obs,
                                          resource->context->observe_user_data);
     coap_session_release_lkd(obs->session);
-    coap_delete_pdu(obs->pdu);
+    coap_delete_pdu_lkd(obs->pdu);
     coap_delete_cache_key(obs->cache_key);
     coap_free_type(COAP_SUBSCRIPTION, obs);
   }
@@ -867,7 +867,7 @@ coap_add_observer(coap_resource_t *resource,
                                                cache_ignore_options,
                                                sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
     if (cache_key == NULL) {
-      coap_delete_pdu(s->pdu);
+      coap_delete_pdu_lkd(s->pdu);
       coap_delete_cache_key(cache_key);
       coap_free_type(COAP_SUBSCRIPTION, s);
       return NULL;
@@ -1025,7 +1025,7 @@ coap_delete_observer_internal(coap_resource_t *resource, coap_session_t *session
     coap_session_release_lkd(session);
     assert(session->ref_subscriptions > 0);
     session->ref_subscriptions--;
-    coap_delete_pdu(s->pdu);
+    coap_delete_pdu_lkd(s->pdu);
     coap_delete_cache_key(s->cache_key);
     coap_free_type(COAP_SUBSCRIPTION, s);
   }
@@ -1089,7 +1089,7 @@ coap_delete_observers(coap_context_t *context, coap_session_t *session) {
         assert(resource->subscribers);
         LL_DELETE(resource->subscribers, s);
         coap_session_release_lkd(session);
-        coap_delete_pdu(s->pdu);
+        coap_delete_pdu_lkd(s->pdu);
         coap_delete_cache_key(s->cache_key);
         coap_free_type(COAP_SUBSCRIPTION, s);
       }
@@ -1165,7 +1165,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         context->observe_pending = 1;
         coap_log_debug("coap_check_notify: cannot add token, resource stays "
                        "partially dirty\n");
-        coap_delete_pdu(response);
+        coap_delete_pdu_lkd(response);
         continue;
       }
 
@@ -1228,7 +1228,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
           coap_log_warn("handle_request: Invalid PDU response code (%d.%02d)\n",
                         COAP_RESPONSE_CLASS(response->code),
                         response->code & 0x1f);
-          coap_delete_pdu(response);
+          coap_delete_pdu_lkd(response);
           return;
         }
 

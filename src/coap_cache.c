@@ -195,7 +195,7 @@ coap_new_cache_entry_lkd(coap_session_t *session, const coap_pdu_t *pdu,
     entry->pdu = coap_pdu_init(pdu->type, pdu->code, pdu->mid, pdu->alloc_size);
     if (entry->pdu) {
       if (!coap_pdu_resize(entry->pdu, pdu->alloc_size)) {
-        coap_delete_pdu(entry->pdu);
+        coap_delete_pdu_lkd(entry->pdu);
         coap_free_type(COAP_CACHE_ENTRY, entry);
         return NULL;
       }
@@ -288,7 +288,7 @@ coap_delete_cache_entry(coap_context_t *ctx, coap_cache_entry_t *cache_entry) {
     HASH_DELETE(hh, ctx->cache, cache_entry);
   }
   if (cache_entry->pdu) {
-    coap_delete_pdu(cache_entry->pdu);
+    coap_delete_pdu_lkd(cache_entry->pdu);
   }
   coap_delete_cache_key(cache_entry->cache_key);
   if (cache_entry->callback && cache_entry->app_data) {
