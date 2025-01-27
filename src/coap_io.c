@@ -1870,7 +1870,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
     coap_win_error_to_errno();
 #endif
     if (errno != EINTR) {
-      coap_log_debug("%s", coap_socket_strerror());
+      coap_log_err("select: %s", coap_socket_strerror());
       return -1;
     }
   }

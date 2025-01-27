@@ -4147,7 +4147,7 @@ give_to_app:
             } else {
               /* processing coap_send_recv() call */
               session->resp_pdu = rcvd;
-              rcvd->ref++;
+              coap_pdu_reference_lkd(session->resp_pdu);
               /* Will get freed off when PDU is freed off */
               rcvd->data_free = lg_crcv->body_data;
               lg_crcv->body_data = NULL;

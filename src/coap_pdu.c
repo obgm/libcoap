@@ -1618,3 +1618,11 @@ coap_pdu_set_mid(coap_pdu_t *pdu, coap_mid_t mid) {
 #endif /* UINT_MAX > 65535 */
   pdu->mid = mid;
 }
+
+coap_pdu_t *
+coap_pdu_reference_lkd(coap_pdu_t *pdu) {
+  if (pdu != NULL) {
+    ++pdu->ref;
+  }
+  return pdu;
+}
