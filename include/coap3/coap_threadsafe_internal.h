@@ -319,7 +319,6 @@ int coap_lock_lock_func(void);
  * @param c Context.
  */
 #define coap_lock_unlock(c) do { \
-    assert(c); \
     coap_lock_unlock_func(); \
   } while (0)
 

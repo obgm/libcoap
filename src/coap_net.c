@@ -228,7 +228,7 @@ coap_delete_node_lkd(coap_queue_t *node) {
   if (!node)
     return 0;
 
-  coap_delete_pdu(node->pdu);
+  coap_delete_pdu_lkd(node->pdu);
   if (node->session) {
     /*
      * Need to remove out of context->sendqueue as added in by coap_wait_ack()
@@ -1203,7 +1203,7 @@ coap_send_test_extended_token(coap_session_t *session) {
 
   token = coap_new_binary(session->max_token_size);
   if (token == NULL) {
-    coap_delete_pdu(pdu);
+    coap_delete_pdu_lkd(pdu);
     return COAP_INVALID_MID;
   }
   for (i = 0; i < session->max_token_size; i++) {
@@ -1495,7 +1495,7 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
       ret = coap_cancel_observe_lkd(session, &tmp, pdu->type);
       if (ret == 1) {
         /* Observe Cancel successfully sent */
-        coap_delete_pdu(pdu);
+        coap_delete_pdu_lkd(pdu);
         return ret;
       }
       /* Some mismatch somewhere - continue to send original packet */
@@ -1671,7 +1671,7 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
   return mid;
 
 error:
-  coap_delete_pdu(pdu);
+  coap_delete_pdu_lkd(pdu);
   return COAP_INVALID_MID;
 }
 
@@ -1725,13 +1725,13 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
         if (hop_limit == 1) {
           coap_log_warn("Proxy loop detected '%s'\n",
                         (char *)pdu->data);
-          coap_delete_pdu(pdu);
+          coap_delete_pdu_lkd(pdu);
           return (coap_mid_t)COAP_DROPPED_RESPONSE;
         } else if (hop_limit < 1 || hop_limit > 255) {
           /* Something is bad - need to drop this pdu (TODO or delete option) */
           coap_log_warn("Proxy return has bad hop limit count '%zu'\n",
                         hop_limit);
-          coap_delete_pdu(pdu);
+          coap_delete_pdu_lkd(pdu);
           return (coap_mid_t)COAP_DROPPED_RESPONSE;
         }
         hop_limit--;
@@ -1761,7 +1761,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
              a_match[len] == ' ')) {
           coap_log_warn("Proxy loop detected '%s'\n",
                         (char *)pdu->data);
-          coap_delete_pdu(pdu);
+          coap_delete_pdu_lkd(pdu);
           return (coap_mid_t)COAP_DROPPED_RESPONSE;
         }
       }
@@ -1856,7 +1856,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
       goto error;
     }
     bytes_written = coap_send_pdu(session, osc_pdu, NULL);
-    coap_delete_pdu(pdu);
+    coap_delete_pdu_lkd(pdu);
     pdu = osc_pdu;
   } else
 #endif /* COAP_OSCORE_SUPPORT */
@@ -1886,7 +1886,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
   if (pdu->type != COAP_MESSAGE_CON
       || COAP_PROTO_RELIABLE(session->proto)) {
     coap_mid_t id = pdu->mid;
-    coap_delete_pdu(pdu);
+    coap_delete_pdu_lkd(pdu);
     return id;
   }
 
@@ -1903,7 +1903,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
   node->timeout = coap_calc_timeout(session, r);
   return coap_wait_ack(session->context, session, node);
 error:
-  coap_delete_pdu(pdu);
+  coap_delete_pdu_lkd(pdu);
   return COAP_INVALID_MID;
 }
 
@@ -2033,7 +2033,7 @@ fail:
   session->doing_send_recv = 0;
   if (session->resp_pdu && session->resp_pdu->ref)
     session->resp_pdu->ref--;
-  coap_delete_pdu(session->resp_pdu);
+  coap_delete_pdu_lkd(session->resp_pdu);
   session->resp_pdu = NULL;
   coap_delete_bin_const(session->req_token);
   session->req_token = NULL;
@@ -2278,12 +2278,12 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       if (!coap_pdu_parse(session->proto, packet->payload, bytes_read, pdu)) {
         coap_handle_event_lkd(session->context, COAP_EVENT_BAD_PACKET, session);
         coap_log_warn("discard malformed PDU\n");
-        coap_delete_pdu(pdu);
+        coap_delete_pdu_lkd(pdu);
         return;
       }
 
       coap_dispatch(ctx, session, pdu);
-      coap_delete_pdu(pdu);
+      coap_delete_pdu_lkd(pdu);
       return;
     }
   } else {
@@ -2315,7 +2315,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
                 && coap_pdu_parse_opt(session->partial_pdu)) {
               coap_dispatch(ctx, session, session->partial_pdu);
             }
-            coap_delete_pdu(session->partial_pdu);
+            coap_delete_pdu_lkd(session->partial_pdu);
             session->partial_pdu = NULL;
             session->partial_read = 0;
           } else {
@@ -2362,7 +2362,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
               if (coap_pdu_parse_header(session->partial_pdu, session->proto)) {
                 coap_dispatch(ctx, session, session->partial_pdu);
               }
-              coap_delete_pdu(session->partial_pdu);
+              coap_delete_pdu_lkd(session->partial_pdu);
               session->partial_pdu = NULL;
               session->partial_read = 0;
             }
@@ -2661,7 +2661,7 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
   }
 
   coap_dispatch(ctx, session, pdu);
-  coap_delete_pdu(pdu);
+  coap_delete_pdu_lkd(pdu);
   return 0;
 
 error:
@@ -2670,7 +2670,7 @@ error:
    * https://rfc-editor.org/rfc/rfc7252#section-4.3 MAY send RST
    */
   coap_send_rst_lkd(session, pdu);
-  coap_delete_pdu(pdu);
+  coap_delete_pdu_lkd(pdu);
   return -1;
 }
 
@@ -2878,7 +2878,7 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
     if (!coap_add_token(response, request->actual_token.length,
                         request->actual_token.s)) {
       coap_log_debug("cannot add token to error response\n");
-      coap_delete_pdu(response);
+      coap_delete_pdu_lkd(response);
       return NULL;
     }
 
@@ -3754,7 +3754,7 @@ skip_handler:
                    response->mid);
     coap_show_pdu(COAP_LOG_DEBUG, response);
 drop_it_no_debug:
-    coap_delete_pdu(response);
+    coap_delete_pdu_lkd(response);
   }
   if (query)
     coap_delete_string(query);
@@ -3781,7 +3781,7 @@ finish:
   return;
 
 fail_response:
-  coap_delete_pdu(response);
+  coap_delete_pdu_lkd(response);
   response =
       coap_new_error_response(pdu, COAP_RESPONSE_CODE(resp),
                               &opt_filter);
@@ -4414,7 +4414,7 @@ cleanup:
   }
   coap_delete_node_lkd(sent);
 #if COAP_OSCORE_SUPPORT
-  coap_delete_pdu(dec_pdu);
+  coap_delete_pdu_lkd(dec_pdu);
 #endif /* COAP_OSCORE_SUPPORT */
 }
 

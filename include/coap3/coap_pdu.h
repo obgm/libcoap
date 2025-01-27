@@ -400,14 +400,19 @@ COAP_API coap_pdu_t *coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
                                   coap_session_t *session);
 
 /**
- * Dispose of an CoAP PDU and frees associated storage.
- * Not that in general you should not call this function directly.
+ * Dispose of an CoAP PDU and free off associated storage.
+ *
+ * Note: In general you should not call this function directly.
  * When a PDU is sent with coap_send(), coap_delete_pdu() will be called
- * automatically for you.
+ * automatically for you. This is not for the case for coap_send_recv()
+ * where the sending and receiving PDUs need to be explicitly deleted.
+ *
+ * Note: If called with a reference count > 0, the reference count is
+ * decremented and the PDU still exists.
  *
  * @param pdu The PDU for free off.
  */
-void coap_delete_pdu(coap_pdu_t *pdu);
+COAP_API void coap_delete_pdu(coap_pdu_t *pdu);
 
 /**
  * Duplicate an existing PDU. Specific options can be ignored and not copied

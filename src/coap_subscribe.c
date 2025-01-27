@@ -305,14 +305,14 @@ oscore_fail:
 #else /* ! COAP_OSCORE_SUPPORT */
   (void)oscore_info;
 #endif /* ! COAP_OSCORE_SUPPORT */
-  coap_delete_pdu(pdu);
+  coap_delete_pdu_lkd(pdu);
   return s;
 
 malformed:
   coap_log_warn("coap_persist_observe_add: discard malformed PDU\n");
 fail:
   coap_delete_string(uri_path);
-  coap_delete_pdu(pdu);
+  coap_delete_pdu_lkd(pdu);
   return NULL;
 }
 
@@ -967,9 +967,9 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
                                  goto fail);
       coap_delete_string(query);
       query = NULL;
-      coap_delete_pdu(request);
+      coap_delete_pdu_lkd(request);
       request = NULL;
-      coap_delete_pdu(response);
+      coap_delete_pdu_lkd(response);
       response = NULL;
     }
     coap_delete_string(name);
@@ -979,8 +979,8 @@ fail:
   coap_delete_string(name);
   coap_delete_binary(raw_packet);
   coap_delete_string(query);
-  coap_delete_pdu(request);
-  coap_delete_pdu(response);
+  coap_delete_pdu_lkd(request);
+  coap_delete_pdu_lkd(response);
   fclose(fp_orig);
   coap_free_type(COAP_SESSION, session);
 }

@@ -179,8 +179,15 @@ coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
   return pdu;
 }
 
-void
+COAP_API void
 coap_delete_pdu(coap_pdu_t *pdu) {
+  coap_lock_lock(NULL, return);
+  coap_delete_pdu_lkd(pdu);
+  coap_lock_unlock(NULL);
+}
+
+void
+coap_delete_pdu_lkd(coap_pdu_t *pdu) {
   if (pdu != NULL) {
     if (pdu->ref) {
       pdu->ref--;
@@ -278,7 +285,7 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
   return pdu;
 
 fail:
-  coap_delete_pdu(pdu);
+  coap_delete_pdu_lkd(pdu);
   return NULL;
 }
 
