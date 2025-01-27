@@ -178,7 +178,7 @@ int coap_digest_update(coap_digest_ctx_t *digest_ctx,
 
 /**
  * Finalize the coap_digest information  into the provided
- * @p digest_buffer.
+ * @p digest_buffer. coap_digest_free() is always called, even if error.
  *
  * Internal function.
  *

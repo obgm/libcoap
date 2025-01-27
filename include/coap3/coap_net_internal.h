@@ -446,7 +446,8 @@ int coap_check_code_class(coap_session_t *session, coap_pdu_t *pdu);
  *
  * @param session   The CoAP session.
  * @param pdu       The CoAP PDU to send.
- * @param request_pdu Not currently used.
+ * @param request_pdu The request pdu if caching last CON request / response,
+ *                    else NULL (the usual calling case).
  *
  * @return          The message id of the sent message or @c
  *                  COAP_INVALID_MID on error.

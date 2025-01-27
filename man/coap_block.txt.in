@@ -159,6 +159,7 @@ session _block_mode_.
 #define COAP_BLOCK_STLESS_FETCH  0x20 /* (Client) Assume server supports stateless FETCH */
 #define COAP_BLOCK_STLESS_BLOCK2 0x40 /* (Server) Server is stateless for Block2 transfers */
 #define COAP_BLOCK_NOT_RANDOM_BLOCK1 0x80 /* (Server) Disable server handling random order block1 */
+#define COAP_BLOCK_CACHE_RESPONSE 0x100 /* (Server) Cache CON request's response */
 ----
 _block_mode_ is an or'd set of zero or more COAP_BLOCK_* definitions.
 
@@ -223,6 +224,11 @@ the arrival of UDP packets, in particular this may happen if NON is being used
 for Block1 by the client.
 
 *NOTE:* This is ignored if Q-Block1 is being used.
+
+If *COAP_BLOCK_CACHE_RESPONSE* is set, then the server will cache the response
+for the latest unreliable CON request so that if the CON request is repeated,
+the cached response gets re-transmitted. If it is not set, then the response is
+sent as a separate response (empty ACK sent first) using CON.
 
 *Function: coap_context_set_max_block_size()*
 

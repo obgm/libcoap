@@ -222,7 +222,9 @@ struct coap_session_t {
   coap_response_t last_con_handler_res; /**< The result of calling the response handler
                                        of the last CON */
 #if COAP_SERVER_SUPPORT
-  coap_bin_const_t *client_cid;     /**< Contains client CID or NULL */
+  coap_bin_const_t *client_cid;   /**< Contains client CID or NULL */
+  coap_pdu_t *cached_pdu;         /**< Cached copy of last ACK response PDU */
+  coap_digest_t cached_pdu_cksum; /**< Checksum of last CON request PDU */
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_CLIENT_SUPPORT
   coap_pdu_t *resp_pdu;           /**< PDU returned in coap_send_recv() call */
