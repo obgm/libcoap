@@ -5,7 +5,10 @@ size_t coap_pdu_encode_header(coap_pdu_t *, coap_proto_t);
 
 int
 LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-  coap_pdu_t *pdu = coap_pdu_init(0, 0, 0, size);
+  coap_pdu_t *pdu;
+
+  coap_startup();
+  pdu = coap_pdu_init(0, 0, 0, size);
   if (pdu) {
     coap_set_log_level(COAP_LOG_ERR);
     if (coap_pdu_parse(COAP_PROTO_TCP, data, size, pdu)) {
@@ -19,5 +22,6 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     }
     coap_delete_pdu(pdu);
   }
+  coap_cleanup();
   return 0;
 }
