@@ -552,10 +552,10 @@ coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
         if (using_q_block1) {
           mid = coap_send_q_block1(session, block, pdu, COAP_SEND_INC_PDU);
         } else {
-          mid = coap_send_internal(session, pdu);
+          mid = coap_send_internal(session, pdu, NULL);
         }
 #else /* ! COAP_Q_BLOCK_SUPPORT */
-        mid = coap_send_internal(session, pdu);
+        mid = coap_send_internal(session, pdu, NULL);
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
         if (mid != COAP_INVALID_MID)
           return 1;
@@ -614,7 +614,7 @@ coap_retransmit_oscore_pdu(coap_session_t *session,
       coap_add_data(resend_pdu, data_len, data);
     }
 
-    return coap_send_internal(session, resend_pdu);
+    return coap_send_internal(session, resend_pdu, NULL);
   }
 error:
   return COAP_INVALID_MID;
@@ -1489,7 +1489,7 @@ coap_request_missing_q_block2(coap_session_t *session, coap_lg_crcv_t *lg_crcv) 
   }
 send_it:
   if (pdu)
-    coap_send_internal(session, pdu);
+    coap_send_internal(session, pdu, NULL);
   lg_crcv->rec_blocks.retry++;
   if (block_payload_set != -1)
     lg_crcv->rec_blocks.processing_payload_set = block_payload_set;
@@ -1810,7 +1810,7 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now,
           }
         }
         if (pdu)
-          coap_send_internal(session, pdu);
+          coap_send_internal(session, pdu, NULL);
         lg_srcv->rec_blocks.retry++;
         coap_ticks(&lg_srcv->rec_blocks.last_seen);
       }
@@ -1846,7 +1846,7 @@ expire:
             coap_add_token(pdu, lg_srcv->last_token->length, lg_srcv->last_token->s);
           coap_add_data(pdu, sizeof("Missing interim block")-1,
                         (const uint8_t *)"Missing interim block");
-          coap_send_internal(session, pdu);
+          coap_send_internal(session, pdu, NULL);
         }
       }
       LL_DELETE(session->lg_srcv, lg_srcv);
@@ -1884,7 +1884,7 @@ coap_send_q_blocks(coap_session_t *session,
 
   if (!lg_xmit) {
     if (send_pdu == COAP_SEND_INC_PDU)
-      return coap_send_internal(session, pdu);
+      return coap_send_internal(session, pdu, NULL);
     return COAP_INVALID_MID;
   }
 
@@ -1928,7 +1928,7 @@ coap_send_q_blocks(coap_session_t *session,
 
   /* Send initial pdu (which deletes 'pdu') */
   if (send_pdu == COAP_SEND_INC_PDU &&
-      (mid = coap_send_internal(session, pdu)) == COAP_INVALID_MID) {
+      (mid = coap_send_internal(session, pdu, NULL)) == COAP_INVALID_MID) {
     /* Not expected, underlying issue somewhere */
     coap_delete_pdu_lkd(block_pdu);
     return COAP_INVALID_MID;
@@ -1991,7 +1991,7 @@ coap_send_q_blocks(coap_session_t *session,
     if (COAP_PDU_IS_RESPONSE(block_pdu)) {
       lg_xmit->last_block = block.num;
     }
-    mid = coap_send_internal(session, block_pdu);
+    mid = coap_send_internal(session, block_pdu, NULL);
     if (mid == COAP_INVALID_MID) {
       /* Not expected, underlying issue somewhere */
       coap_delete_pdu_lkd(t_pdu);
@@ -2267,7 +2267,7 @@ coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual) {
                                           (0 << 4) | (0 << 3) | 0),
                      buf);
   set_block_mode_probe_q(session->block_mode);
-  mid = coap_send_internal(session, pdu);
+  mid = coap_send_internal(session, pdu, NULL);
   if (mid == COAP_INVALID_MID)
     return COAP_INVALID_MID;
   session->remote_test_mid = mid;
@@ -2759,7 +2759,7 @@ coap_handle_request_send_block(coap_session_t *session,
     }
     if (i + 1 < request_cnt) {
       coap_ticks(&lg_xmit->last_sent);
-      coap_send_internal(session, out_pdu);
+      coap_send_internal(session, out_pdu, NULL);
     }
   }
   coap_ticks(&lg_xmit->last_payload);
@@ -3171,7 +3171,7 @@ coap_handle_request_put_block(coap_context_t *context,
                                                      NULL);
         if (tmp_pdu) {
           tmp_pdu->code = COAP_RESPONSE_CODE(231);
-          coap_send_internal(session, tmp_pdu);
+          coap_send_internal(session, tmp_pdu, NULL);
         }
         if (lg_srcv->last_token) {
           coap_update_token(response, lg_srcv->last_token->length, lg_srcv->last_token->s);
@@ -3350,7 +3350,7 @@ check_freshness(coap_session_t *session, coap_pdu_t *rcvd, coap_pdu_t *sent,
         }
       }
 #endif /* COAP_OSCORE_SUPPORT */
-      mid = coap_send_internal(session, echo_pdu);
+      mid = coap_send_internal(session, echo_pdu, NULL);
       if (mid == COAP_INVALID_MID)
         goto not_sent;
       return 1;
@@ -3531,10 +3531,10 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                                  COAP_SEND_INC_PDU) == COAP_INVALID_MID)
             goto fail_body;
           return 1;
-        } else if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
+        } else if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
           goto fail_body;
 #else /* ! COAP_Q_BLOCK_SUPPORT */
-        if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
+        if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
           goto fail_body;
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
         return 1;
@@ -3642,7 +3642,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                               block.num,
                               block.szx))
             goto fail_body;
-          if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
+          if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
             goto fail_body;
         }
         return 1;
@@ -3919,7 +3919,7 @@ reinit:
                                                     (0 << 4) | (0 << 3) | block.aszx),
                                buf);
 
-            if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
+            if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
               goto fail_resp;
 
             goto skip_app_handler;
@@ -4055,7 +4055,7 @@ reinit:
                 (void)coap_get_data(&lg_crcv->pdu, &length, &data);
                 coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0, length, data, NULL, NULL, 0, 0);
               }
-              if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
+              if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
                 goto fail_resp;
             }
             if ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) ||  block.bert)

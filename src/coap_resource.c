@@ -1272,7 +1272,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         }
 #endif /* COAP_Q_BLOCK_SUPPORT */
       }
-      mid = coap_send_internal(obs_session, response);
+      mid = coap_send_internal(obs_session, response, NULL);
 
 #if COAP_Q_BLOCK_SUPPORT
 finish:
