@@ -811,7 +811,7 @@ coap_session_send_ping_lkd(coap_session_t *session) {
 #endif /* !COAP_DISABLE_TCP */
   if (!ping)
     return COAP_INVALID_MID;
-  return coap_send_internal(session, ping);
+  return coap_send_internal(session, ping, NULL);
 }
 
 void

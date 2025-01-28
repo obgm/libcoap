@@ -680,7 +680,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
                                       osc_pdu->mid,
                                       0);
     if (empty) {
-      if (coap_send_internal(session, empty) != COAP_INVALID_MID) {
+      if (coap_send_internal(session, empty, NULL) != COAP_INVALID_MID) {
         osc_pdu->mid = coap_new_message_id_lkd(session);
         osc_pdu->type = COAP_MESSAGE_CON;
       }
@@ -799,11 +799,11 @@ build_and_send_error_pdu(coap_session_t *session,
     if (!osc_pdu)
       goto fail_resp;
     session->oscore_encryption = 0;
-    coap_send_internal(session, osc_pdu);
+    coap_send_internal(session, osc_pdu, NULL);
     coap_delete_pdu_lkd(err_pdu);
     err_pdu = NULL;
   } else {
-    coap_send_internal(session, err_pdu);
+    coap_send_internal(session, err_pdu, NULL);
     err_pdu = NULL;
   }
 fail_resp:

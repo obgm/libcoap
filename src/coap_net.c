@@ -992,7 +992,7 @@ coap_send_ack_lkd(coap_session_t *session, const coap_pdu_t *request) {
       COAP_PROTO_NOT_RELIABLE(session->proto)) {
     response = coap_pdu_init(COAP_MESSAGE_ACK, 0, request->mid, 0);
     if (response)
-      result = coap_send_internal(session, response);
+      result = coap_send_internal(session, response, NULL);
   }
   return result;
 }
@@ -1075,7 +1075,7 @@ coap_send_error_lkd(coap_session_t *session,
 
   response = coap_new_error_response(request, code, opts);
   if (response)
-    result = coap_send_internal(session, response);
+    result = coap_send_internal(session, response, NULL);
 
   return result;
 }
@@ -1101,7 +1101,7 @@ coap_send_message_type_lkd(coap_session_t *session, const coap_pdu_t *request,
   if (request && COAP_PROTO_NOT_RELIABLE(session->proto)) {
     response = coap_pdu_init(type, 0, request->mid, 0);
     if (response)
-      result = coap_send_internal(session, response);
+      result = coap_send_internal(session, response, NULL);
   }
   return result;
 }
@@ -1215,7 +1215,7 @@ coap_send_test_extended_token(coap_session_t *session) {
   coap_insert_option(pdu, COAP_OPTION_IF_NONE_MATCH, 0, NULL);
 
   session->max_token_checked = COAP_EXT_T_CHECKING; /* Checking out this one */
-  if ((mid = coap_send_internal(session, pdu)) == COAP_INVALID_MID)
+  if ((mid = coap_send_internal(session, pdu, NULL)) == COAP_INVALID_MID)
     return COAP_INVALID_MID;
   session->remote_test_mid = mid;
   return mid;
@@ -1447,7 +1447,7 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
 #endif /* COAP_OSCORE_SUPPORT */
 
   if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
-    return coap_send_internal(session, pdu);
+    return coap_send_internal(session, pdu, NULL);
   }
 
   if (COAP_PDU_IS_REQUEST(pdu)) {
@@ -1655,9 +1655,9 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
     mid = coap_send_q_block1(session, block, pdu, COAP_SEND_INC_PDU);
   } else
 #endif /* COAP_Q_BLOCK_SUPPORT */
-    mid = coap_send_internal(session, pdu);
+    mid = coap_send_internal(session, pdu, NULL);
 #else /* !COAP_CLIENT_SUPPORT */
-  mid = coap_send_internal(session, pdu);
+  mid = coap_send_internal(session, pdu, NULL);
 #endif /* !COAP_CLIENT_SUPPORT */
 #if COAP_CLIENT_SUPPORT
   if (lg_crcv) {
@@ -1676,10 +1676,12 @@ error:
 }
 
 coap_mid_t
-coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
+coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request_pdu) {
   uint8_t r;
   ssize_t bytes_written;
   coap_opt_iterator_t opt_iter;
+
+  (void)request_pdu;
 
   pdu->session = session;
   if (pdu->code == COAP_RESPONSE_CODE(508)) {
@@ -3715,7 +3717,7 @@ skip_handler:
         goto finish;
       }
 #endif /* COAP_Q_BLOCK_SUPPORT */
-      if (coap_send_internal(session, response) == COAP_INVALID_MID) {
+      if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID) {
         coap_log_debug("cannot send response for mid=0x%04x\n", mid);
       }
     } else {
@@ -3972,7 +3974,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
     }
     if (pong) {
       coap_add_option_internal(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
-      coap_send_internal(session, pong);
+      coap_send_internal(session, pong, NULL);
     }
   } else if (pdu->code == COAP_SIGNALING_CODE_PONG) {
     session->last_pong = session->last_rx_tx;
@@ -4008,7 +4010,7 @@ check_token_size(coap_session_t *session, const coap_pdu_t *pdu) {
          * Note - have to leave in oversize token as per
          * https://rfc-editor.org/rfc/rfc7252#section-5.3.1
          */
-        if (coap_send_internal(session, response) == COAP_INVALID_MID)
+        if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
           coap_log_warn("coap_dispatch: error sending response\n");
       }
     } else {
@@ -4067,7 +4069,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         if (!response) {
           coap_log_warn("coap_dispatch: cannot create error response\n");
         } else {
-          if (coap_send_internal(session, response) == COAP_INVALID_MID)
+          if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
             coap_log_warn("coap_dispatch: error sending response\n");
         }
       } else {
@@ -4341,7 +4343,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         if (!response) {
           coap_log_warn("coap_dispatch: cannot create error response\n");
         } else {
-          if (coap_send_internal(session, response) == COAP_INVALID_MID)
+          if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
             coap_log_warn("coap_dispatch: error sending response\n");
         }
       } else {

@@ -446,11 +446,13 @@ int coap_check_code_class(coap_session_t *session, coap_pdu_t *pdu);
  *
  * @param session   The CoAP session.
  * @param pdu       The CoAP PDU to send.
+ * @param request_pdu Not currently used.
  *
  * @return          The message id of the sent message or @c
  *                  COAP_INVALID_MID on error.
  */
-coap_mid_t coap_send_internal(coap_session_t *session, coap_pdu_t *pdu);
+coap_mid_t coap_send_internal(coap_session_t *session, coap_pdu_t *pdu,
+                              coap_pdu_t *request_pdu);
 
 /**
  * Delay the sending of the first client request until some other negotiation
