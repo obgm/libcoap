@@ -763,9 +763,9 @@ coap_free_context_lkd(coap_context_t *context) {
 #endif /* COAP_SERVER_SUPPORT */
 
   coap_delete_all(context->sendqueue);
+  context->sendqueue = NULL;
 
 #ifdef WITH_LWIP
-  context->sendqueue = NULL;
   if (context->timer_configured) {
     LOCK_TCPIP_CORE();
     sys_untimeout(coap_io_process_timeout, (void *)context);
@@ -2167,8 +2167,14 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 #if COAP_SERVER_SUPPORT
   /* Check if subscriptions exist that should be canceled after
      COAP_OBS_MAX_FAIL */
-  if (COAP_RESPONSE_CLASS(node->pdu->code) >= 2) {
-    coap_handle_failed_notify(context, node->session, &node->pdu->actual_token);
+  if (COAP_RESPONSE_CLASS(node->pdu->code) >= 2 && node->session->ref_subscriptions) {
+    if (context->ping_timeout) {
+      coap_session_server_keepalive_failed(node->session);
+      coap_delete_node_lkd(node);
+      return COAP_INVALID_MID;
+    } else {
+      coap_handle_failed_notify(context, node->session, &node->pdu->actual_token);
+    }
   }
 #endif /* COAP_SERVER_SUPPORT */
   if (node->session->con_active) {

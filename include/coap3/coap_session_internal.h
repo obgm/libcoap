@@ -604,6 +604,16 @@ coap_session_t *coap_new_client_session_psk2_lkd(coap_context_t *ctx,
 coap_session_t *coap_session_new_dtls_session(coap_session_t *session,
                                               coap_tick_t now);
 
+/**
+ * Clear down a session following a keepalive failure.
+ * The event handler will get notified of the failure.
+ * Note: the @p session cannot be used after this function is called.
+ *
+ * @param session Session to clear down.
+ *
+ */
+void coap_session_server_keepalive_failed(coap_session_t *session);
+
 void coap_session_free(coap_session_t *session);
 void coap_session_mfree(coap_session_t *session);
 

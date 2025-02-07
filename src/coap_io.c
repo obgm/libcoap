@@ -1490,16 +1490,7 @@ release_1:
             /* Some issue - not safe to continue processing */
             continue;
           if (s->last_ping > 0 && s->last_pong < s->last_ping) {
-            coap_handle_event_lkd(s->context, COAP_EVENT_KEEPALIVE_FAILURE, s);
-            coap_session_reference_lkd(s);
-            RESOURCES_ITER(s->context->resources, r) {
-              coap_cancel_all_messages(s->context, s, NULL);
-              coap_delete_observer(r, s, NULL);
-            }
-            coap_session_release_lkd(s);
-            /* Force session to go away */
-            coap_session_set_type_client_lkd(s);
-            coap_session_release_lkd(s);
+            coap_session_server_keepalive_failed(s);
             /* check the next session */
             continue;
           }
