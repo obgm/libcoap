@@ -168,6 +168,18 @@ int coap_delete_observer_request(coap_resource_t *resource,
 void coap_delete_observers(coap_context_t *context, coap_session_t *session);
 
 /**
+ * Removes specific subscription for @p session for @p resource and releases
+ * the allocated storage.
+ *
+ * @param resource The resource
+ * @param session  The observer's session.
+ * @param subscription  The observer's subscription.
+ */
+void coap_delete_observer_internal(coap_resource_t *resource,
+                                   coap_session_t *session,
+                                   coap_subscription_t *subscription);
+
+/**
  * Initiate the sending of an Observe packet for all observers of @p resource,
  * optionally matching @p query if not NULL
  *

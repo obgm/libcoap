@@ -513,13 +513,7 @@ coap_free_resource(coap_resource_t *resource) {
 
   /* free all elements from resource->subscribers */
   LL_FOREACH_SAFE(resource->subscribers, obs, otmp) {
-    if (resource->context->observe_deleted)
-      resource->context->observe_deleted(obs->session, obs,
-                                         resource->context->observe_user_data);
-    coap_session_release_lkd(obs->session);
-    coap_delete_pdu_lkd(obs->pdu);
-    coap_delete_cache_key(obs->cache_key);
-    coap_free_type(COAP_SUBSCRIPTION, obs);
+    coap_delete_observer_internal(resource, obs->session, obs);
   }
   if (resource->proxy_name_count && resource->proxy_name_list) {
     size_t i;
@@ -996,7 +990,7 @@ coap_touch_observer(coap_context_t *context, coap_session_t *session,
   }
 }
 
-static void
+void
 coap_delete_observer_internal(coap_resource_t *resource, coap_session_t *session,
                               coap_subscription_t *s) {
   if (!s)
@@ -1005,6 +999,8 @@ coap_delete_observer_internal(coap_resource_t *resource, coap_session_t *session
   if (coap_get_log_level() >= COAP_LOG_DEBUG) {
     char outbuf[2 * 8 + 1] = "";
     unsigned int i;
+    coap_string_t *uri_path;
+    coap_string_t *uri_query;
 
     for (i = 0; i < s->pdu->actual_token.length; i++) {
       size_t size = strlen(outbuf);
@@ -1012,9 +1008,18 @@ coap_delete_observer_internal(coap_resource_t *resource, coap_session_t *session
       snprintf(&outbuf[size], sizeof(outbuf)-size, "%02x",
                s->pdu->actual_token.s[i]);
     }
-    coap_log_debug("removed subscription %p with token '%s' key 0x%02x%02x%02x%02x\n",
+    uri_path = coap_get_uri_path(s->pdu);
+    uri_query = coap_get_query(s->pdu);
+    coap_log_debug("removed subscription '/%*.*s%s%*.*s' (%p) with token '%s' key 0x%02x%02x%02x%02x\n",
+                   uri_path ? (int)uri_path->length : 0, uri_path ? (int)uri_path->length : 0,
+                   uri_path ? (char *)uri_path->s : "",
+                   uri_query ? "?" : "",
+                   uri_query ? (int)uri_query->length : 0, uri_query ? (int)uri_query->length : 0,
+                   uri_query ? (char *)uri_query->s : "",
                    (void *)s, outbuf, s->cache_key->key[0], s->cache_key->key[1],
                    s->cache_key->key[2], s-> cache_key->key[3]);
+    coap_delete_string(uri_path);
+    coap_delete_string(uri_query);
   }
   if (session->context->observe_deleted)
     session->context->observe_deleted(session, s,
@@ -1022,9 +1027,9 @@ coap_delete_observer_internal(coap_resource_t *resource, coap_session_t *session
 
   if (resource->subscribers) {
     LL_DELETE(resource->subscribers, s);
-    coap_session_release_lkd(session);
     assert(session->ref_subscriptions > 0);
     session->ref_subscriptions--;
+    coap_session_release_lkd(session);
     coap_delete_pdu_lkd(s->pdu);
     coap_delete_cache_key(s->cache_key);
     coap_free_type(COAP_SUBSCRIPTION, s);

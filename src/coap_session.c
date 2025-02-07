@@ -601,6 +601,35 @@ coap_session_free(coap_session_t *session) {
   coap_free_type(COAP_SESSION, session);
 }
 
+#if COAP_SERVER_SUPPORT
+void
+coap_session_server_keepalive_failed(coap_session_t *session) {
+  coap_session_reference_lkd(session);
+  coap_handle_event_lkd(session->context, COAP_EVENT_KEEPALIVE_FAILURE, session);
+  coap_cancel_all_messages(session->context, session, NULL);
+  RESOURCES_ITER(session->context->resources, r) {
+    int i;
+
+    /* In case code is broken somewhere */
+    for (i = 0; i < 1000; i++) {
+      if (!coap_delete_observer(r, session, NULL))
+        break;
+    }
+  }
+  while (session->delayqueue) {
+    coap_queue_t *q = session->delayqueue;
+
+    session->delayqueue = q->next;
+    coap_delete_node_lkd(q);
+  }
+  /* Force session to go away */
+  coap_session_set_type_client_lkd(session);
+  coap_session_release_lkd(session);
+
+  coap_session_release_lkd(session);
+}
+#endif /* COAP_SERVER_SUPPORT */
+
 static size_t
 coap_session_max_pdu_size_internal(const coap_session_t *session,
                                    size_t max_with_header) {

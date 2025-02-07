@@ -2101,7 +2101,7 @@ main(int argc, char **argv) {
           obs_ms -= result;
         }
       }
-      if (ready && repeat_count) {
+      if ((ready || obs_ms) && repeat_count) {
         /* Send off next request if appropriate */
         if (repeat_ms > (unsigned)result) {
           repeat_ms -= (unsigned)result;
