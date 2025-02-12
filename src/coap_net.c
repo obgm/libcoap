@@ -3569,7 +3569,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
     uint32_t block_mode = session->block_mode;
 
-    if (pdu->code == COAP_REQUEST_CODE_FETCH ||
+    if (observe ||
         resource->flags & COAP_RESOURCE_FLAGS_FORCE_SINGLE_BODY)
       session->block_mode |= COAP_BLOCK_SINGLE_BODY;
     if (coap_handle_request_put_block(context, session, pdu, response,
@@ -3617,10 +3617,10 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
         uint8_t buf[4];
 
         coap_touch_observer(context, session, &pdu->actual_token);
-        coap_add_option_internal(response, COAP_OPTION_OBSERVE,
-                                 coap_encode_var_safe(buf, sizeof(buf),
-                                                      resource->observe),
-                                 buf);
+        coap_insert_option(response, COAP_OPTION_OBSERVE,
+                           coap_encode_var_safe(buf, sizeof(buf),
+                                                resource->observe),
+                           buf);
       }
     } else if (observe_action == COAP_OBSERVE_CANCEL) {
       coap_delete_observer_request(resource, session, &pdu->actual_token, pdu);
