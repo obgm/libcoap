@@ -2283,9 +2283,27 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu,
   uint64_t state_token = STATE_TOKEN_FULL(++session->tx_token, 1);
   size_t token_options = pdu->data ? (size_t)(pdu->data - pdu->token) :
                          pdu->used_size;
-  size_t data_len = lg_xmit ? lg_xmit->length :
-                    pdu->data ?
-                    pdu->used_size - (pdu->data - pdu->token) : 0;
+  size_t data_len;
+  int observe_action = -1;
+
+  if (lg_xmit) {
+    coap_opt_iterator_t opt_iter;
+    coap_opt_t *opt;
+
+    opt = coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter);
+
+    if (opt) {
+      observe_action = coap_decode_var_bytes(coap_opt_value(opt),
+                                             coap_opt_length(opt));
+    }
+  }
+  if (observe_action == COAP_OBSERVE_ESTABLISH) {
+    data_len = lg_xmit->length;
+  } else {
+    lg_xmit = NULL;
+    data_len = pdu->data ?
+               pdu->used_size - (pdu->data - pdu->token) : 0;
+  }
 
   lg_crcv = coap_malloc_type(COAP_LG_CRCV, sizeof(coap_lg_crcv_t));
 
