@@ -887,7 +887,7 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
 
 remove_match:
   option = coap_check_option(received, COAP_OPTION_OBSERVE, &opt_iter);
-  /* Need to remove matching token entry (apart from on Observe response) */
+  /* Need to remove matching token entry (apart from an Observe response) */
   if (option == NULL && proxy_entry->req_count) {
     coap_delete_pdu_lkd(proxy_entry->req_list[j].pdu);
     coap_delete_bin_const(proxy_entry->req_list[j].token_used);
