@@ -1,7 +1,7 @@
 /*
  * coap_supported.h -- CoAP optional functionality
  *
- * Copyright (C) 2024 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2024-2025 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

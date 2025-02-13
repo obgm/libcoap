@@ -1,7 +1,7 @@
 /*
  * coap.h -- main header file for CoAP stack of libcoap
  *
- * Copyright (C) 2010-2012,2015-2024 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2012,2015-2025 Olaf Bergmann <bergmann@tzi.org>
  *               2015                Carsten Schoenert <c.schoenert@t-online.de>
  *
  * SPDX-License-Identifier: BSD-2-Clause
