@@ -1379,7 +1379,13 @@ coap_resource_release_userdata_handler(coap_context_t *context,
 
 void
 coap_resource_set_get_observable(coap_resource_t *resource, int mode) {
-  resource->observable = mode ? 1 : 0;
+  if (resource->is_unknown || resource->is_proxy_uri) {
+    /* We cannot observe these */
+    coap_log_debug("coap_resource_set_get_observable: Not supported for Unknown or Proxy URIs\n");
+    resource->observable = 0;
+  } else {
+    resource->observable = mode ? 1 : 0;
+  }
 }
 
 coap_str_const_t *
