@@ -26,7 +26,7 @@ coap_resource_t *_resource_, coap_cache_key_t *_cache_key_,
 coap_proxy_server_list_t *_server_list_);*
 
 *coap_response_t coap_proxy_forward_response(coap_session_t *_session_,
-                            const coap_pdu_t *received_,
+                            const coap_pdu_t *_received_,
                             coap_cache_key_t **_cache_key_);*
 
 *int coap_verify_proxy_scheme_supported(coap_uri_scheme_t _scheme_);*
@@ -45,36 +45,85 @@ To simplify some of the CoAP proxy requirements, some of the proxy forwarding
 functionality is provided by libcoap.
 
 The resourse handlers to handle forward or reverse proxy requests are defined using
-*coap_resource_proxy_uri_init2*(3) or coap_resource_reverse_proxy_init*(3).
+*coap_resource_proxy_uri_init2*(3) or *coap_resource_reverse_proxy_init*(3).
 
 FUNCTIONS
 ---------
 
 *Function: coap_proxy_forward_request()*
 
+[source, c]
+----
+typedef enum {
+  COAP_PROXY_REVERSE,       /* Act as a reverse proxy */
+  COAP_PROXY_REVERSE_STRIP, /* Act as a reverse proxy, strip out proxy options */
+  COAP_PROXY_FORWARD,       /* Act as a forward proxy */
+  COAP_PROXY_FORWARD_STRIP, /* Act as a forward proxy, strip out proxy options */
+  COAP_PROXY_DIRECT,        /* Act as a direct proxy */
+  COAP_PROXY_DIRECT_STRIP,  /* Act as a direct proxy, strip out proxy options */
+} coap_proxy_t;
+
+typedef struct coap_proxy_server_t {
+  coap_uri_t uri;          /* host and port define the server, scheme method */
+  coap_dtls_pki_t *dtls_pki;       /* PKI configuration to use if not NULL */
+  coap_dtls_cpsk_t *dtls_cpsk;     /* PSK configuration to use if not NULL */
+  coap_oscore_conf_t *oscore_conf; /* OSCORE configuration if not NULL */
+} coap_proxy_server_t;
+
+typedef struct coap_proxy_server_list_t {
+  coap_proxy_server_t *entry; /* Set of servers to connect to */
+  size_t entry_count;         /* The number of servers */
+  size_t next_entry;          /* Next server to use (% entry_count) */
+  coap_proxy_t type;          /* The proxy type */
+  int track_client_session;   /* If 1, track individual connections to upstream
+                                 server, else 0 for all clients to share the same
+                                 ongoing session */
+  unsigned int idle_timeout_secs; /* Proxy session idle timeout (0 is no timeout) */
+} coap_proxy_server_list_t;
+----
+
 The *coap_proxy_forward_request*() function is called from a request handler
 when the request needs to be forwarded to an upstream server with a possible
-change in protocol.
+change in protocol. _server_, _request_, _response_ and _resource_ are provided to
+the application's request handler. _cache_key_ can be a cache_key generated from
+the _request_ PDU or NULL.  This _cache_key_ will get passed into
+*coap_proxy_forward_response*(). _server_list_ defines the characteristics of one
+or more of the upstream servers to connect to. The definitions can cover the following
+
+[source, c]
+----
+Acting as a reverse proxy - connect to internal server
+ (possibly round robin load balancing over multiple servers).
+Acting as a forward proxy - connect to host defined in Proxy-Uri
+ or Proxy-Scheme with Uri-Host (and maybe Uri-Port).
+Acting as a relay proxy - connect to defined upstream server
+ (possibly round robin load balancing over multiple servers).
+----
+
+If the entry_count of coap_proxy_server_list_t is more than 1, then the
+ongoing session for each new request will get round-robined through the set
+of defined servers.
+
+The _response_ PDU is updated with the appropriate CoAP response code, and so the
+caller does not need to update this on error detection.
 
 *Function: coap_proxy_forward_response()*
 
-The *coap_proxy_forward_response*() function is used to cleanup / free any information set
-up by the *coap_startup*() function and should be the last *coap_**() function
-called. The only safe function that can be called after *coap_cleanup*() is
-*coap_startup*() to re-initialize the libcoap logic.
-
-*NOTE:* Calling *coap_cleanup*() in one thread while continuing to use other
-*coap_**() function calls in a different thread is not supported - even if they
-are using a different coap_context_t.
-
-*NOTE:* All other libcoap cleanups should called prior to *coap_cleanup*(), e.g.
-*coap_free_context*(3).
+The *coap_proxy_forward_response*() function is used to forward on any response
+that comes back from the back-end server and given to the application's response
+handler. It will be forwarded on to the originating client doing any necessary
+changes in protocol. _session_ is the session given to the application's
+response handler, _received_ is the received PDU.  If the _cache_key_ parameter
+is not NULL, then it will get updated with the _cache_key_ provided to the
+*coap_proxy_forward_request*(). The caller should delete this cache key (unless
+the client request set up an Observe and there will be unsolicited responses).
+If _cache_key_ is not defined, but if a _cache_key_ was passed into
+*coap_proxy_forward_request*() it will get deleted.
 
 *Function: coap_verify_proxy_scheme_supported()*
 
-The *coap_proxy_forward_request*() function is called from a request handler
-when the request needs to be forwarded to an upstream server with a possible
-change in protocol.
+The *coap_verify_proxy_scheme_supported*() function verifies that the
+requested URI scheme type _scheme_ is supported for an ongoing connection.
 
 RETURN VALUES
 -------------

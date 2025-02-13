@@ -43,10 +43,11 @@ typedef struct coap_proxy_server_t {
 typedef struct coap_proxy_server_list_t {
   coap_proxy_server_t *entry; /**< Set of servers to connect to */
   size_t entry_count;         /**< The number of servers */
-  size_t next_entry;          /**< Next server to us (% entry_count) */
+  size_t next_entry;          /**< Next server to use (% entry_count) */
   coap_proxy_t type;          /**< The proxy type */
   int track_client_session;   /**< If 1, track individual connections to upstream
-                                   server, else 0 */
+                                   server, else 0 for all clients to share the same
+                                   ongoing session */
   unsigned int idle_timeout_secs; /**< Proxy session idle timeout (0 is no timeout) */
 } coap_proxy_server_list_t;
 
@@ -96,7 +97,7 @@ int COAP_API coap_proxy_forward_request(coap_session_t *session,
  * @param received The received PDU.
  * @param cache_key Updated with the cache key pointer provided to
  *                  coap_proxy_forward_request().  The caller should
- *                  delete this cach key (unless the client request set up an
+ *                  delete this cache key (unless the client request set up an
  *                  Observe and there will be unsolicited responses).
  *
  * @return One of COAP_RESPONSE_FAIL or COAP_RESPONSE_OK.
