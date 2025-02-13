@@ -99,11 +99,13 @@ observable status of the _resource_ by the setting of _mode_.  If _mode_ is
 _resource_ is no longer observable.
 
 *NOTE:* It is not possible for the Unknown Resource, created by
-*coap_resource_unknown_init*(3), to be observable as the Uri-Path is not known
+*coap_resource_unknown_init2*(3), to be observable as the Uri-Path is not known
 when libcoap creates a "fake GET/FETCH request".  The Unknown Resource PUT
 handler must create a new resource and mark the resource as "observable" if
 a specific resource needs to be observable.  The application must then
-manage the deletion of the resource at the appropriate time.
+manage the deletion of the resource at the appropriate time. Similarily,
+it is not possible to observe the resource set up by
+*coap_resource_proxy_uri_init2*() or *coap_resource_reverse_proxy_init*().
 
 *NOTE:* The type (confirmable or non-confirmable) of the triggered observe
 GET response is determined not by the initial GET/FETCH request, but
