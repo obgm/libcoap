@@ -1,7 +1,7 @@
 /*
  * coap_proxy_internal.h -- Proxy functions for libcoap
  *
- * Copyright (C) 2024 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2024-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

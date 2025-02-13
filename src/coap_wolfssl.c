@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017      Jean-Claude Michelou <jcm@spinetix.com>
  * Copyright (C) 2023      Javier Blanco <frblanco@pa.uc3m.es>
- * Copyright (C) 2018-2024 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
