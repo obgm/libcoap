@@ -831,7 +831,7 @@ coap_sock_read(WOLFSSL *ssl, char *out, int outl, void *ctx) {
     }
   }
   if (out != NULL) {
-    ret =(int)session->sock.lfunc[COAP_LAYER_TLS].l_read(session, (u_char *)out,
+    ret =(int)session->sock.lfunc[COAP_LAYER_TLS].l_read(session, (uint8_t *)out,
                                                          outl);
     if (ret == 0) {
       ret = WANT_READ;
@@ -1948,7 +1948,7 @@ coap_dtls_new_server_session(coap_session_t *session) {
 
   if (wolfSSL_dtls_cid_use(ssl) != WOLFSSL_SUCCESS)
     goto error;
-  u_char cid[COAP_DTLS_CID_LENGTH];
+  uint8_t cid[COAP_DTLS_CID_LENGTH];
   /*
    * Enable server DTLS CID support.
    */

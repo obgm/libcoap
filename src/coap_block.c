@@ -2249,9 +2249,9 @@ coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual) {
   coap_add_token(pdu, token_len, token);
   /* Use a resource that the server MUST support (.well-known/core) */
   coap_add_option(pdu, COAP_OPTION_URI_PATH,
-                  11, (const u_char *)".well-known");
+                  11, (const uint8_t *)".well-known");
   coap_add_option(pdu, COAP_OPTION_URI_PATH,
-                  4, (const u_char *)"core");
+                  4, (const uint8_t *)"core");
   /*
    * M needs to be unset as 'asking' for only the first block using
    * Q-Block2 as a test for server support.
