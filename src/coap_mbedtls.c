@@ -1809,7 +1809,7 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
 #endif /* COAP_CLIENT_SUPPORT */
       } else {
 #if COAP_SERVER_SUPPORT
-        u_char cid[COAP_DTLS_CID_LENGTH];
+        uint8_t cid[COAP_DTLS_CID_LENGTH];
         /*
          * Enable server DTLS CID support.
          *

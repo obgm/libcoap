@@ -981,7 +981,7 @@ coap_sock_read(BIO *a, char *out, int outl) {
   coap_session_t *session = (coap_session_t *)BIO_get_data(a);
 
   if (out != NULL) {
-    ret =(int)session->sock.lfunc[COAP_LAYER_TLS].l_read(session, (u_char *)out,
+    ret =(int)session->sock.lfunc[COAP_LAYER_TLS].l_read(session, (uint8_t *)out,
                                                          outl);
     /* Translate layer returns into what OpenSSL expects */
     if (ret == 0) {
