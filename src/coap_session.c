@@ -604,15 +604,29 @@ coap_session_free(coap_session_t *session) {
 #if COAP_SERVER_SUPPORT
 void
 coap_session_server_keepalive_failed(coap_session_t *session) {
+  int i;
+
   coap_session_reference_lkd(session);
   coap_handle_event_lkd(session->context, COAP_EVENT_KEEPALIVE_FAILURE, session);
   coap_cancel_all_messages(session->context, session, NULL);
   RESOURCES_ITER(session->context->resources, r) {
-    int i;
-
     /* In case code is broken somewhere */
     for (i = 0; i < 1000; i++) {
       if (!coap_delete_observer(r, session, NULL))
+        break;
+    }
+  }
+  if (session->context->unknown_resource) {
+    /* In case code is broken somewhere */
+    for (i = 0; i < 1000; i++) {
+      if (!coap_delete_observer(session->context->unknown_resource, session, NULL))
+        break;
+    }
+  }
+  if (session->context->proxy_uri_resource) {
+    /* In case code is broken somewhere */
+    for (i = 0; i < 1000; i++) {
+      if (!coap_delete_observer(session->context->proxy_uri_resource, session, NULL))
         break;
     }
   }
