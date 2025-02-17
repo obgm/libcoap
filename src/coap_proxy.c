@@ -84,9 +84,7 @@ coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
 static int
 coap_get_uri_proxy_scheme_info(const coap_pdu_t *request,
                                coap_opt_t *opt,
-                               coap_uri_t *uri,
-                               coap_string_t **uri_path,
-                               coap_string_t **uri_query) {
+                               coap_uri_t *uri) {
   const char *opt_val = (const char *)coap_opt_value(opt);
   int opt_len = coap_opt_length(opt);
   coap_opt_iterator_t opt_iter;
@@ -136,22 +134,6 @@ coap_get_uri_proxy_scheme_info(const coap_pdu_t *request,
     uri->port =
         coap_decode_var_bytes(coap_opt_value(opt),
                               coap_opt_length(opt));
-  }
-  *uri_path = coap_get_uri_path(request);
-  if (*uri_path) {
-    uri->path.s = (*uri_path)->s;
-    uri->path.length = (*uri_path)->length;
-  } else {
-    uri->path.s = NULL;
-    uri->path.length = 0;
-  }
-  *uri_query = coap_get_query(request);
-  if (*uri_query) {
-    uri->query.s = (*uri_query)->s;
-    uri->query.length = (*uri_query)->length;
-  } else {
-    uri->query.s = NULL;
-    uri->query.length = 0;
   }
   return 1;
 }
@@ -209,9 +191,7 @@ static coap_proxy_list_t *
 coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
                        coap_pdu_t *response,
                        coap_proxy_server_list_t *server_list,
-                       coap_proxy_server_t *server_use,
-                       coap_string_t **uri_path,
-                       coap_string_t **uri_query) {
+                       coap_proxy_server_t *server_use) {
   size_t i;
   coap_proxy_list_t *new_proxy_list;
   coap_proxy_list_t *proxy_list = session->context->proxy_list;
@@ -226,26 +206,28 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
   if (server_list->next_entry >= server_list->entry_count)
     server_list->next_entry = 0;
 
-  memcpy(server_use, &server_list->entry[server_list->next_entry], sizeof(*server_use));
+  if (server_list->entry_count) {
+    memcpy(server_use, &server_list->entry[server_list->next_entry], sizeof(*server_use));
+  } else {
+    memset(server_use, 0, sizeof(*server_use));
+  }
 
   switch (server_list->type) {
   case COAP_PROXY_REVERSE:
-  case COAP_PROXY_FORWARD:
-  case COAP_PROXY_DIRECT:
-    /* Nothing else needs to be done */
-    break;
   case COAP_PROXY_REVERSE_STRIP:
-  case COAP_PROXY_FORWARD_STRIP:
-  case COAP_PROXY_DIRECT_STRIP:
-    /* Need to get actual server from CoAP options */
+  case COAP_PROXY_FORWARD_STATIC:
+  case COAP_PROXY_FORWARD_STATIC_STRIP:
+    /* Nothing else needs to be done here */
+    break;
+  case COAP_PROXY_FORWARD_DYNAMIC:
+  case COAP_PROXY_FORWARD_DYNAMIC_STRIP:
+    /* Need to get actual server from CoAP Proxy-Uri or Proxy-Scheme options */
     /*
      * See if Proxy-Scheme
      */
     proxy_scheme = coap_check_option(request, COAP_OPTION_PROXY_SCHEME, &opt_iter);
     if (proxy_scheme) {
-      if (!coap_get_uri_proxy_scheme_info(request, proxy_scheme, &server_use->uri,
-                                          uri_path,
-                                          uri_query)) {
+      if (!coap_get_uri_proxy_scheme_info(request, proxy_scheme, &server_use->uri)) {
         response->code = COAP_RESPONSE_CODE(505);
         return NULL;
       }
@@ -272,20 +254,20 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
       response->code = COAP_RESPONSE_CODE(404);
       return NULL;
     }
-
-    if (server_use->uri.host.length == 0) {
-      /* Ongoing connection not well formed */
-      response->code = COAP_RESPONSE_CODE(505);
-      return NULL;
-    }
-
-    if (!coap_verify_proxy_scheme_supported(server_use->uri.scheme)) {
-      response->code = COAP_RESPONSE_CODE(505);
-      return NULL;
-    }
     break;
   default:
     assert(0);
+    return NULL;
+  }
+
+  if (server_use->uri.host.length == 0) {
+    /* Ongoing connection not well formed */
+    response->code = COAP_RESPONSE_CODE(505);
+    return NULL;
+  }
+
+  if (!coap_verify_proxy_scheme_supported(server_use->uri.scheme)) {
+    response->code = COAP_RESPONSE_CODE(505);
     return NULL;
   }
 
@@ -316,16 +298,18 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
   session->context->proxy_list = proxy_list = new_proxy_list;
   memset(&proxy_list[i], 0, sizeof(proxy_list[i]));
 
-  /* Keep a copy of the host as PDU pointed to will be going away */
+  /* Keep a copy of the host as server_use->uri pointed to will be going away */
   proxy_list[i].uri = server_use->uri;
   proxy_list[i].uri_host_keep = coap_malloc_type(COAP_STRING,
                                                  server_use->uri.host.length);
-  if (! proxy_list[i].uri_host_keep)
+  if (!proxy_list[i].uri_host_keep) {
+    response->code = COAP_RESPONSE_CODE(500);
     return NULL;
+  }
   memcpy(proxy_list[i].uri_host_keep, server_use->uri.host.s,
          server_use->uri.host.length);
   proxy_list[i].uri.host.s = proxy_list[i].uri_host_keep;
-  /* Unset uri parts which point to going away PDU */
+  /* Unset uri parts which point to going away information */
   proxy_list[i].uri.path.s = NULL;
   proxy_list[i].uri.path.length = 0;
   proxy_list[i].uri.query.s = NULL;
@@ -421,10 +405,7 @@ static coap_proxy_list_t *
 coap_proxy_get_ongoing_session(coap_session_t *session,
                                const coap_pdu_t *request,
                                coap_pdu_t *response,
-                               coap_proxy_server_list_t *server_list,
-                               coap_proxy_server_t *server_use,
-                               coap_string_t **uri_path,
-                               coap_string_t **uri_query) {
+                               coap_proxy_server_list_t *server_list) {
 
   coap_address_t dst;
   coap_proto_t proto;
@@ -432,25 +413,27 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
   coap_proxy_list_t *proxy_entry;
   coap_context_t *context = session->context;
   static char client_sni[256];
+  coap_proxy_server_t server_use;
 
   proxy_entry = coap_proxy_get_session(session, request, response, server_list,
-                                       server_use, uri_path, uri_query);
+                                       &server_use);
   if (!proxy_entry) {
-    /* Response code should be set */
+    /* Error response code already set */
     return NULL;
   }
 
   if (!proxy_entry->ongoing) {
     /* Need to create a new session */
+    coap_address_t *local_addr = NULL;
 
     /* resolve destination address where data should be sent */
-    info_list = coap_resolve_address_info(&server_use->uri.host,
-                                          server_use->uri.port,
-                                          server_use->uri.port,
-                                          server_use->uri.port,
-                                          server_use->uri.port,
+    info_list = coap_resolve_address_info(&server_use.uri.host,
+                                          server_use.uri.port,
+                                          server_use.uri.port,
+                                          server_use.uri.port,
+                                          server_use.uri.port,
                                           0,
-                                          1 << server_use->uri.scheme,
+                                          1 << server_use.uri.scheme,
                                           COAP_RESOLVE_TYPE_REMOTE);
 
     if (info_list == NULL) {
@@ -462,22 +445,42 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
     memcpy(&dst, &info_list->addr, sizeof(dst));
     coap_free_address_info(info_list);
 
-    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)server_use->uri.host.length,
-             (int)server_use->uri.host.length, server_use->uri.host.s);
+#if COAP_AF_UNIX_SUPPORT
+    coap_address_t bind_addr;
+    if (coap_is_af_unix(&dst)) {
+      char buf[COAP_UNIX_PATH_MAX];
 
-    switch (server_use->uri.scheme) {
+      /* Need a unique 'client' address */
+      snprintf(buf, COAP_UNIX_PATH_MAX,
+               "/tmp/coap-proxy-client");
+      if (!coap_address_set_unix_domain(&bind_addr, (const uint8_t *)buf,
+                                        strlen(buf))) {
+        fprintf(stderr, "coap_address_set_unix_domain: %s: failed\n",
+                buf);
+        remove(buf);
+        return NULL;
+      }
+      (void)remove(buf);
+      local_addr = &bind_addr;
+    }
+#endif /* COAP_AF_UNIX_SUPPORT */
+
+    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)server_use.uri.host.length,
+             (int)server_use.uri.host.length, server_use.uri.host.s);
+
+    switch (server_use.uri.scheme) {
     case COAP_URI_SCHEME_COAP:
     case COAP_URI_SCHEME_COAP_TCP:
     case COAP_URI_SCHEME_COAP_WS:
 #if COAP_OSCORE_SUPPORT
-      if (server_use->oscore_conf) {
+      if (server_use.oscore_conf) {
         proxy_entry->ongoing =
-            coap_new_client_session_oscore_lkd(context, NULL, &dst,
-                                               proto, server_use->oscore_conf);
+            coap_new_client_session_oscore_lkd(context, local_addr, &dst,
+                                               proto, server_use.oscore_conf);
       } else {
 #endif /* COAP_OSCORE_SUPPORT */
         proxy_entry->ongoing =
-            coap_new_client_session_lkd(context, NULL, &dst, proto);
+            coap_new_client_session_lkd(context, local_addr, &dst, proto);
 #if COAP_OSCORE_SUPPORT
       }
 #endif /* COAP_OSCORE_SUPPORT */
@@ -486,35 +489,37 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
     case COAP_URI_SCHEME_COAPS_TCP:
     case COAP_URI_SCHEME_COAPS_WS:
 #if COAP_OSCORE_SUPPORT
-      if (server_use->oscore_conf) {
-        if (server_use->dtls_pki) {
-          server_use->dtls_pki->client_sni = client_sni;
+      if (server_use.oscore_conf) {
+        if (server_use.dtls_pki) {
+          server_use.dtls_pki->client_sni = client_sni;
           proxy_entry->ongoing =
-              coap_new_client_session_oscore_pki_lkd(context, NULL, &dst,
-                                                     proto, server_use->dtls_pki, server_use->oscore_conf);
-        } else if (server_use->dtls_cpsk) {
-          server_use->dtls_cpsk->client_sni = client_sni;
+              coap_new_client_session_oscore_pki_lkd(context, local_addr, &dst,
+                                                     proto, server_use.dtls_pki, server_use.oscore_conf);
+        } else if (server_use.dtls_cpsk) {
+          server_use.dtls_cpsk->client_sni = client_sni;
           proxy_entry->ongoing =
-              coap_new_client_session_oscore_psk_lkd(context, NULL, &dst,
-                                                     proto, server_use->dtls_cpsk, server_use->oscore_conf);
+              coap_new_client_session_oscore_psk_lkd(context, local_addr, &dst,
+                                                     proto, server_use.dtls_cpsk, server_use.oscore_conf);
         } else {
           coap_log_warn("Proxy: (D)TLS not configured for secure session\n");
         }
       } else {
 #endif /* COAP_OSCORE_SUPPORT */
         /* Not doing OSCORE */
-        if (server_use->dtls_pki) {
-          server_use->dtls_pki->client_sni = client_sni;
+        if (server_use.dtls_pki) {
+          server_use.dtls_pki->client_sni = client_sni;
           proxy_entry->ongoing =
-              coap_new_client_session_pki_lkd(context, NULL, &dst,
-                                              proto, server_use->dtls_pki);
-        } else if (server_use->dtls_cpsk) {
-          server_use->dtls_cpsk->client_sni = client_sni;
+              coap_new_client_session_pki_lkd(context, local_addr, &dst,
+                                              proto, server_use.dtls_pki);
+        } else if (server_use.dtls_cpsk) {
+          server_use.dtls_cpsk->client_sni = client_sni;
           proxy_entry->ongoing =
-              coap_new_client_session_psk2_lkd(context, NULL, &dst,
-                                               proto, server_use->dtls_cpsk);
+              coap_new_client_session_psk2_lkd(context, local_addr, &dst,
+                                               proto, server_use.dtls_cpsk);
         } else {
-          coap_log_warn("Proxy: (D)TLS not configured for secure session\n");
+          /* Using client anonymous PKI */
+          proxy_entry->ongoing =
+              coap_new_client_session_lkd(context, local_addr, &dst, proto);
         }
 #if COAP_OSCORE_SUPPORT
       }
@@ -584,17 +589,14 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   coap_optlist_t *optlist = NULL;
   coap_opt_t *option;
   coap_opt_iterator_t opt_iter;
-  coap_proxy_server_t server_use;
-  coap_string_t *uri_path = NULL;
-  coap_string_t *uri_query = NULL;
+  coap_uri_t uri;
 
   /* Set up ongoing session (if not already done) */
 
   proxy_entry = coap_proxy_get_ongoing_session(session, request, response,
-                                               server_list, &server_use,
-                                               &uri_path, &uri_query);
+                                               server_list);
   if (!proxy_entry) {
-    /* response code already set */
+    /* Error response code already set */
     return 0;
   }
 
@@ -626,11 +628,11 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
 
   switch (server_list->type) {
   case COAP_PROXY_REVERSE_STRIP:
-  case COAP_PROXY_FORWARD_STRIP:
-  case COAP_PROXY_DIRECT_STRIP:
+  case COAP_PROXY_FORWARD_STATIC_STRIP:
+  case COAP_PROXY_FORWARD_DYNAMIC_STRIP:
     /*
      * Need to replace Proxy-Uri with Uri-Host (and Uri-Port)
-     * or strip out Proxy-Scheme.
+     * and strip out Proxy-Scheme.
      */
 
     /*
@@ -647,21 +649,23 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
       goto failed;
     }
 
-    if (!coap_uri_into_optlist(&server_use.uri,
-                               &proxy_entry->ongoing->addr_info.remote,
-                               &optlist, 1)) {
-      coap_log_err("Failed to create options for URI\n");
-      goto failed;
-    }
-    /* Finished with server_use, so release computed options */
-    coap_delete_string(uri_path);
-    coap_delete_string(uri_query);
-
     /* Copy the remaining options across */
     coap_option_iterator_init(request, &opt_iter, COAP_OPT_ALL);
     while ((option = coap_option_next(&opt_iter))) {
       switch (opt_iter.number) {
       case COAP_OPTION_PROXY_URI:
+        if (coap_split_proxy_uri(coap_opt_value(option),
+                                 coap_opt_length(option),
+                                 &uri) < 0) {
+          /* Need to return a 5.05 RFC7252 Section 5.7.2 */
+          coap_log_warn("Proxy URI not decodable\n");
+          coap_delete_pdu_lkd(pdu);
+          return 0;
+        }
+        if (!coap_uri_into_optlist(&uri, NULL, &optlist, 0)) {
+          coap_log_err("Failed to create options for URI\n");
+          goto failed;
+        }
         break;
       case COAP_OPTION_PROXY_SCHEME:
         break;
@@ -670,6 +674,9 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
       case COAP_OPTION_Q_BLOCK1:
       case COAP_OPTION_Q_BLOCK2:
         /* These are not passed on */
+        break;
+      case COAP_OPTION_URI_HOST:
+      case COAP_OPTION_URI_PORT:
         break;
       default:
         coap_insert_optlist(&optlist,
@@ -685,8 +692,8 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
     coap_delete_optlist(optlist);
     break;
   case COAP_PROXY_REVERSE:
-  case COAP_PROXY_FORWARD:
-  case COAP_PROXY_DIRECT:
+  case COAP_PROXY_FORWARD_STATIC:
+  case COAP_PROXY_FORWARD_DYNAMIC:
   default:
     /*
      * Duplicate request PDU for onward transmission (with new token).

@@ -325,10 +325,6 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
                               const char *host_name_list[], int flags) {
   coap_resource_t *r;
 
-  if (host_name_count == 0) {
-    coap_log_err("coap_resource_proxy_uri_init: Must have one or more host names defined\n");
-    return NULL;
-  }
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     size_t i;
@@ -386,6 +382,7 @@ coap_resource_reverse_proxy_init(coap_method_handler_t handler, int flags) {
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
     r->is_unknown = 1;
+    r->is_reverse_proxy = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_rev_proxy_resource_uri,
                                      sizeof(coap_rev_proxy_resource_uri)-1);

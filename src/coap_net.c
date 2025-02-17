@@ -3286,20 +3286,22 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 #endif /* COAP_ASYNC_SUPPORT */
 
   coap_option_filter_clear(&opt_filter);
-  opt = coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &opt_iter);
-  if (opt) {
-    opt = coap_check_option(pdu, COAP_OPTION_URI_HOST, &opt_iter);
-    if (!opt) {
-      coap_log_debug("Proxy-Scheme requires Uri-Host\n");
-      resp = 402;
-      goto fail_response;
+  if (!(context->unknown_resource && context->unknown_resource->is_reverse_proxy)) {
+    opt = coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &opt_iter);
+    if (opt) {
+      opt = coap_check_option(pdu, COAP_OPTION_URI_HOST, &opt_iter);
+      if (!opt) {
+        coap_log_debug("Proxy-Scheme requires Uri-Host\n");
+        resp = 402;
+        goto fail_response;
+      }
+      is_proxy_scheme = 1;
     }
-    is_proxy_scheme = 1;
-  }
 
-  opt = coap_check_option(pdu, COAP_OPTION_PROXY_URI, &opt_iter);
-  if (opt)
-    is_proxy_uri = 1;
+    opt = coap_check_option(pdu, COAP_OPTION_PROXY_URI, &opt_iter);
+    if (opt)
+      is_proxy_uri = 1;
+  }
 
   if (is_proxy_scheme || is_proxy_uri) {
     coap_uri_t uri;

@@ -236,7 +236,8 @@ context - attaching a new one overrides the previous definition.
 The *coap_resource_proxy_uri_init*() function returns a newly created
 _resource_ of type _coap_resource_t_ *. _proxy_handler_ is automatically added
 to the _resource_ to handle PUT/POST/GET etc. requests that use the Proxy-Uri
-option.  There is no need to add explicit request type handlers. One or more
+or Proxy-Scheme option.  There is no need to add explicit request type handlers.
+One or more
 names by which the proxy is known by (IP address, DNS name etc.) must be
 supplied in the array defined by _host_name_list_[] which has a count of
 _host_name_count_.  This is used to check whether the current endpoint is
@@ -248,12 +249,16 @@ server.
 The *coap_resource_proxy_uri_init2*() function returns a newly created
 _resource_ of type _coap_resource_t_ *. _proxy_handler_ is automatically added
 to the _resource_ to handle PUT/POST/GET etc. requests that use the Proxy-Uri
-option.  There is no need to add explicit request type handlers. One or more
+or Proxy-Scheme option.  There is no need to add explicit request type handlers.
+One or more
 names by which the proxy is known by (IP address, DNS name etc.) must be
 supplied in the array defined by _host_name_list_[] which has a count of
 _host_name_count_.  This is used to check whether the current endpoint is
 the proxy target address, or the request has to be passed on to an upstream
 server. _flags_ can be zero or more COAP_RESOURCE_FLAGS MCAST definitions.
+
+*NOTE:* If _host_name_count_ is 0, then _proxy_handler_ is not invoked and
+all traffic is handled on the local server.
 
 *NOTE:* There can only be one proxy resource handler per
 context - attaching a new one overrides the previous definition.
@@ -265,6 +270,9 @@ _resource_ of type _coap_resource_t_ *. _rev_proxy_handler_ is automatically add
 to the _resource_ to handle all the PUT/POST/GET etc. requests including
 .well-known/core. There is no need to add explicit request type handlers.
 _flags_ can be zero or more COAP_RESOURCE_FLAGS MCAST definitions.
+
+*NOTE:* All incoming request packets (including for .well-known/core) will
+get passed into _rev_proxy_handler_ unless it is for a locally defined resource.
 
 *NOTE:* There can only be one reverse-proxy or unknown resource handler per
 context - attaching a new one overrides the previous definition.
