@@ -20,12 +20,12 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*int coap_proxy_forward_request(coap_session_t *_session_,
+*int coap_proxy_forward_request(coap_session_t *_req_session_,
 const coap_pdu_t *_request_, coap_pdu_t *_response_,
 coap_resource_t *_resource_, coap_cache_key_t *_cache_key_,
 coap_proxy_server_list_t *_server_list_);*
 
-*coap_response_t coap_proxy_forward_response(coap_session_t *_session_,
+*coap_response_t coap_proxy_forward_response(coap_session_t *_rsp_session_,
                             const coap_pdu_t *_received_,
                             coap_cache_key_t **_cache_key_);*
 
@@ -41,11 +41,63 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 DESCRIPTION
 -----------
 
-To simplify some of the CoAP proxy requirements, some of the proxy forwarding
-functionality is provided by libcoap.
+To simplify CoAP proxy requirements, proxy forwarding functionality is
+provided by libcoap for matching forwarded requests with returning responses.
 
-The resourse handlers to handle forward or reverse proxy requests are defined using
-*coap_resource_proxy_uri_init2*(3) or *coap_resource_reverse_proxy_init*(3).
+Two principal types of Proxy are supported.
+
+*Reverse*
+
+The *reverse* proxy intercepts all the traffic from the clients and sends off
+all of the requests to a defined (usually internal and protected) upstream
+server and passes back any responses to the requesting client. There is no
+differentiation between requests that contain a Proxy-Uri or Proxy-Scheme
+option and those that do not.
+
+*Forward*
+
+The *forward* proxy receives any request from the client that contains a Proxy-Uri
+or Proxy-Scheme option and then forwards the request to an upstream server. This
+server can either be derived from the Proxy-Uri or Proxy-Scheme option or be an
+explicitly configured server. The returning response is then sent back to the
+initiating client. If the determined IP address of the forward server matches
+one of the list of defined names this proxy server is known by, then the
+request is handled locally and not forwarded.
+
+The *forward* proxy has two modes of working.  The first, *forward-dynamic*,
+takes the information from the Proxy-Uri or Proxy-Scheme and forwards the
+request to the dynamically derived upstream server.  The second, *forward-static*
+always forwards the request to the defined upstream server.
+
+Before any of the proxy types pass on any information they, optionally,
+can strip out and appropriately replace any Proxy-Uri or Proxy-Scheme options to
+stop the upstream server from trying to do any further Proxy operations.
+
+*NOTE:* In the general case, *reverse* and *forward-dynamic* should be stripped,
+but *forward-static* not.
+
+It is possible to define multiple upstream servers for *reverse* and
+*forward-static* proxy types.  These will then be allocated to each new client
+session in a round-robin fashion.
+
+For the *forward-dynamic* proxy type, a dummy server needs to be defined if any
+specific PKI/PSK or OSCORE is required for the ongoing session to the dynamically
+determined upstream server. If client anonymous PKI only is required for
+ongoing encrypted sessions, then this dummy server does not need to be defined.
+
+For each upstream server, client sessions can all be multiplexed over a single
+upstream server session, or there can be the same number of upstream server
+sessions as there are client sessions.
+
+The proxy logic will convert between supported protocals - e.g. coap <> coaps+tcp
+for the incoming and upstream session. Conversions to/from http(s) are not
+currently supported.
+
+The resourse handler to handle *forward* proxy requests is defined using
+*coap_resource_proxy_uri_init2*(3).
+
+The resource handler to handle *reverse* proxy requests is defined using
+*coap_resource_reverse_proxy_init*(3).
 
 FUNCTIONS
 ---------
@@ -55,12 +107,18 @@ FUNCTIONS
 [source, c]
 ----
 typedef enum {
-  COAP_PROXY_REVERSE,       /* Act as a reverse proxy */
-  COAP_PROXY_REVERSE_STRIP, /* Act as a reverse proxy, strip out proxy options */
-  COAP_PROXY_FORWARD,       /* Act as a forward proxy */
-  COAP_PROXY_FORWARD_STRIP, /* Act as a forward proxy, strip out proxy options */
-  COAP_PROXY_DIRECT,        /* Act as a direct proxy */
-  COAP_PROXY_DIRECT_STRIP,  /* Act as a direct proxy, strip out proxy options */
+  COAP_PROXY_REVERSE,               /* Act as a reverse proxy */
+  COAP_PROXY_REVERSE_STRIP,         /* Act as a reverse proxy,
+                                       strip out any proxy options */
+  COAP_PROXY_FORWARD_STATIC,        /* Act as a forward-static proxy */
+  COAP_PROXY_FORWARD_STATIC_STRIP,  /* Act as a forward-static proxy,
+                                       strip out any proxy options */
+  COAP_PROXY_FORWARD_DYNAMIC,       /* Act as a forward-dynamic proxy
+                                       using the request's Proxy-Uri or
+                                       Proxy-Scheme options to determine
+                                       server */
+  COAP_PROXY_FORWARD_DYNAMIC_STRIP, /* Act as a forward-dynamic proxy,
+                                       strip out proxy options */
 } coap_proxy_t;
 
 typedef struct coap_proxy_server_t {
@@ -72,53 +130,61 @@ typedef struct coap_proxy_server_t {
 
 typedef struct coap_proxy_server_list_t {
   coap_proxy_server_t *entry; /* Set of servers to connect to */
-  size_t entry_count;         /* The number of servers */
+  size_t entry_count;         /* The number of servers in entry list */
   size_t next_entry;          /* Next server to use (% entry_count) */
   coap_proxy_t type;          /* The proxy type */
   int track_client_session;   /* If 1, track individual connections to upstream
-                                 server, else 0 for all clients to share the same
-                                 ongoing session */
-  unsigned int idle_timeout_secs; /* Proxy session idle timeout (0 is no timeout) */
+                                 server, else 0 for all clients to share the
+                                 same ongoing session */
+  unsigned int idle_timeout_secs; /* Proxy upstream session idle timeout
+                                     (0 is no timeout) */
 } coap_proxy_server_list_t;
 ----
 
 The *coap_proxy_forward_request*() function is called from a request handler
 when the request needs to be forwarded to an upstream server with a possible
-change in protocol. _server_, _request_, _response_ and _resource_ are provided to
-the application's request handler. _cache_key_ can be a cache_key generated from
-the _request_ PDU or NULL.  This _cache_key_ will get passed into
-*coap_proxy_forward_response*(). _server_list_ defines the characteristics of one
-or more of the upstream servers to connect to. The definitions can cover the following
+change in protocol. _req_session_, _request_, _response_ and _resource_ are as
+provided to the application's request handler. _cache_key_ can be a cache_key
+generated from the _request_ PDU or NULL.  This _cache_key_ will get passed into
+*coap_proxy_forward_response*() when handling the response. _server_list_ defines
+the characteristics of zero or more of the upstream servers to connect to. The
+definitions can cover the following
 
 [source, c]
 ----
-Acting as a reverse proxy - connect to internal server
+Acting as a reverse proxy - connect to defined internal server
  (possibly round robin load balancing over multiple servers).
-Acting as a forward proxy - connect to host defined in Proxy-Uri
+Acting as a forward-dynamic proxy - connect to host defined in Proxy-Uri
  or Proxy-Scheme with Uri-Host (and maybe Uri-Port).
-Acting as a relay proxy - connect to defined upstream server
+Acting as a forward-static proxy - connect to defined upstream server
  (possibly round robin load balancing over multiple servers).
 ----
 
-If the entry_count of coap_proxy_server_list_t is more than 1, then the
+If the entry_count of *coap_proxy_server_list_t* is more than 1, then the
 ongoing session for each new request will get round-robined through the set
-of defined servers.
+of defined servers. If the entry_count of *coap_proxy_server_list_t* is 0,
+then the proxy type can only be *forward-dynamic*.
 
 The _response_ PDU is updated with the appropriate CoAP response code, and so the
-caller does not need to update this on error detection.
+caller does not need to update this on error detection after calling
+*coap_proxy_forward_request*().
+
+*coap_proxy_forward_request*() will establish a new ongoing session to the upstream
+server as and when required.
 
 *Function: coap_proxy_forward_response()*
 
 The *coap_proxy_forward_response*() function is used to forward on any response
 that comes back from the back-end server and given to the application's response
 handler. It will be forwarded on to the originating client doing any necessary
-changes in protocol. _session_ is the session given to the application's
-response handler, _received_ is the received PDU.  If the _cache_key_ parameter
-is not NULL, then it will get updated with the _cache_key_ provided to the
-*coap_proxy_forward_request*(). The caller should delete this cache key (unless
-the client request set up an Observe and there will be unsolicited responses).
-If _cache_key_ is not defined, but if a _cache_key_ was passed into
-*coap_proxy_forward_request*() it will get deleted.
+changes in protocol. _rsp_session_ is the session given to the application's
+response handler (created by *coap_proxy_forward_request*()), _received_ is the
+received PDU.  If the _cache_key_ parameter is not NULL, then it will get updated
+with the _cache_key_ provided to the *coap_proxy_forward_request*() request. The
+caller should delete this cache key (unless the client request set up an Observe
+and there will be unsolicited responses).
+If _cache_key_ is not defined, but a _cache_key_ was passed into
+*coap_proxy_forward_request*() then it will get deleted.
 
 *Function: coap_verify_proxy_scheme_supported()*
 
@@ -135,93 +201,48 @@ COAP_RESPONSE_FAIL.
 
 EXAMPLES
 --------
-*Forward Proxy Set Up*
-
-[source, c]
-----
-#include <coap@LIBCOAP_API_VERSION@/coap.h>
-
-static size_t proxy_host_name_count = 0;
-static const char **proxy_host_name_list = NULL;
-static coap_proxy_server_list_t forward_proxy = { NULL, 0, 0, COAP_PROXY_FORWARD, 0, 300};
-
-static void
-hnd_forward_proxy_uri(coap_resource_t *resource,
-                      coap_session_t *session,
-                      const coap_pdu_t *request,
-                      const coap_string_t *query COAP_UNUSED,
-                      coap_pdu_t *response) {
-
-  if (!coap_proxy_forward_request(session, request, response, resource,
-                                  NULL, &forward_proxy)) {
-    coap_log_debug("hnd_forward_proxy_uri: Failed to forward PDU\n");
-    /* Non ACK response code set on error detection */
-  }
-
-  /* Leave response code as is */
-}
-
-static coap_response_t
-proxy_response_handler(coap_session_t *session,
-                       const coap_pdu_t *sent COAP_UNUSED,
-                       const coap_pdu_t *received,
-                       const coap_mid_t id COAP_UNUSED) {
-  return coap_proxy_forward_response(session, received, NULL);
-}
-
-static void
-init_resources(coap_context_t *ctx) {
-
-  coap_resource_t *r;
-
-  /* See coap_resource_proxy_uri_init2(3) */
-  r = coap_resource_proxy_uri_init2(hnd_forward_proxy_uri, proxy_host_name_count,
-                                    proxy_host_name_list, 0);
-  coap_add_resource(ctx, r);
-  coap_register_response_handler(ctx, proxy_response_handler);
-  /* Add in event or nack handlers if required */
-}
-
-static void
-init_proxy_info(coap_uri_t *proxy_uri, const char *proxy_host_name) {
-  coap_proxy_server_t *new_entry;
-
-  new_entry = realloc(forward_proxy.entry,
-                      (forward_proxy.entry_count + 1)*sizeof(forward_proxy.entry[0]));
-
-  if (!new_entry) {
-    coap_log_err("CoAP Proxy realloc() error\n");
-    return;
-  }
-  /* Can have multiple of these upstream proxy hosts for doing round robin etc. */
-  forward_proxy.entry = new_entry;
-  memset(&forward_proxy.entry[forward_proxy.entry_count], 0, sizeof(forward_proxy.entry[0]));
-  forward_proxy.entry[forward_proxy.entry_count].uri = *proxy_uri;
-  forward_proxy.entry_count++;
-
-  /* The proxy host could be known by multile names - add them all in */
-  proxy_host_name_count = 0;
-  proxy_host_name_list = coap_malloc(proxy_host_name_count * sizeof(char *));
-  proxy_host_name_list[0] = proxy_host_name;
-}
-----
-
 *Reverse Proxy Set Up*
 
 [source, c]
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
-static coap_proxy_server_list_t reverse_proxy = { NULL, 0, 0, COAP_PROXY_REVERSE_STRIP, 0, 10};
+static const coap_uri_t uri = {
+  .host = {sizeof("1.2.3.4")-1, (const uint8_t *)"1.2.3.4"},
+  .port = 5683,
+  .path = {0, NULL},
+  .query = {0, NULL},
+  .scheme = COAP_URI_SCHEME_COAP /* Set to COAPS or COAPS_TCP for PSK/PKI */
+};
+static coap_proxy_server_t redirect_server[] = {
+  /*
+   * Could be multiple of these with different uri/encryption for doing
+   * a round-robin
+   */
+  {
+    .uri = uri,
+    .dtls_pki = NULL,     /* Define if PKI is to be used for upstream session */
+    .dtls_cpsk = NULL,    /* Define if PSK is to be used for upstream session */
+    .oscore_conf = NULL   /* Define if OSCORE is to be used for upstream session */
+  }
+};
+static coap_proxy_server_list_t reverse_proxy = {
+  .entry = redirect_server,
+  .entry_count = sizeof(redirect_server)/sizeof(redirect_server[0]),
+  .next_entry = 0,
+  .type = COAP_PROXY_REVERSE_STRIP,
+  .track_client_session = 0,
+  .idle_timeout_secs = 300
+};
 
 static void
 hnd_reverse_proxy_uri(coap_resource_t *resource,
-                      coap_session_t *session,
+                      coap_session_t *req_session,
                       const coap_pdu_t *request,
                       const coap_string_t *query COAP_UNUSED,
                       coap_pdu_t *response) {
 
-  if (!coap_proxy_forward_request(session, request, response, resource,
+  if (!coap_proxy_forward_request(req_session, request, response, resource,
                                   NULL, &reverse_proxy)) {
     coap_log_debug("hnd_reverse_proxy: Failed to forward PDU\n");
     /* Non ACK response code set on error detection */
@@ -231,11 +252,11 @@ hnd_reverse_proxy_uri(coap_resource_t *resource,
 }
 
 static coap_response_t
-proxy_response_handler(coap_session_t *session,
+proxy_response_handler(coap_session_t *rsp_session,
                        const coap_pdu_t *sent COAP_UNUSED,
                        const coap_pdu_t *received,
                        const coap_mid_t id COAP_UNUSED) {
-  return coap_proxy_forward_response(session, received, NULL);
+  return coap_proxy_forward_response(rsp_session, received, NULL);
 }
 
 static void
@@ -245,6 +266,138 @@ init_resources(coap_context_t *ctx) {
 
   /* See coap_resource_reverse_proxy_init(3) */
   r = coap_resource_reverse_proxy_init(hnd_reverse_proxy_uri, 0);
+  coap_add_resource(ctx, r);
+  coap_register_response_handler(ctx, proxy_response_handler);
+  /* Add in event or nack handlers if required */
+}
+----
+
+*Forward-dynamic Proxy Set Up (server derived from Proxy-Uri or Proxy-Scheme options*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+static const char *proxy_host_name_list[2] = {
+  "myservername",
+  "1.2.3.5"          /* my server IP */
+};
+static coap_proxy_server_list_t forward_dynamic_proxy = {
+  .entry = NULL, /* Include dummy server with encryption definitions if needed */
+  .entry_count = 0, /* if 0 and encryption, client anonymous PKI used */
+  .next_entry = 0,
+  .type = COAP_PROXY_FORWARD_DYNAMIC_STRIP,
+  .track_client_session = 0,
+  .idle_timeout_secs = 10
+};
+
+static void
+hnd_forward_proxy_uri(coap_resource_t *resource,
+                      coap_session_t *req_session,
+                      const coap_pdu_t *request,
+                      const coap_string_t *query COAP_UNUSED,
+                      coap_pdu_t *response) {
+
+  if (!coap_proxy_forward_request(req_session, request, response, resource,
+                                  NULL, &forward_dynamic_proxy)) {
+    coap_log_debug("hnd_forward_proxy_uri: Failed to forward PDU\n");
+    /* Non ACK response code set on error detection */
+  }
+
+  /* Leave response code as is */
+}
+
+static coap_response_t
+proxy_response_handler(coap_session_t *rsp_session,
+                       const coap_pdu_t *sent COAP_UNUSED,
+                       const coap_pdu_t *received,
+                       const coap_mid_t id COAP_UNUSED) {
+  return coap_proxy_forward_response(rsp_session, received, NULL);
+}
+
+static void
+init_resources(coap_context_t *ctx) {
+
+  coap_resource_t *r;
+
+  /* See coap_resource_proxy_uri_init2(3) */
+  r = coap_resource_proxy_uri_init2(hnd_forward_proxy_uri,
+                                    sizeof(proxy_host_name_list)/sizeof(proxy_host_name_list[0]),
+                                    proxy_host_name_list, 0);
+  coap_add_resource(ctx, r);
+  coap_register_response_handler(ctx, proxy_response_handler);
+  /* Add in event or nack handlers if required */
+}
+----
+
+*Forward-static Proxy Set Up (to relay to defined server)*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+static const char *proxy_host_name_list[2] = {
+  "myservername",
+  "1.2.3.5"          /* my server IP */
+};
+static const coap_uri_t uri = {
+  .host = {sizeof("1.2.3.4")-1, (const uint8_t *)"1.2.3.4"},
+  .port = 5683,
+  .path = {0, NULL},
+  .query = {0, NULL},
+  .scheme = COAP_URI_SCHEME_COAP /* Set to COAPS or COAPS_TCP for PSK/PKI */
+};
+static coap_proxy_server_t forward_static_server[] = {
+  /* Could be multiple of these with different uri for doing a round-robin */
+  {
+    .uri = uri,
+    .dtls_pki = NULL,     /* Define if PKI is to be used for upstream session */
+    .dtls_cpsk = NULL,    /* Define if PSK is to be used for upstream session */
+    .oscore_conf = NULL   /* Define if OSCORE is to be used for upstream session */
+  }
+};
+static coap_proxy_server_list_t forward_static_proxy = {
+  .entry = forward_static_server,
+  .entry_count = sizeof(forward_static_server)/sizeof(forward_static_server[0]),
+  .next_entry = 0,
+  .type = COAP_PROXY_FORWARD_STATIC,
+  .track_client_session = 0,
+  .idle_timeout_secs = 300
+};
+
+static void
+hnd_onward_proxy_uri(coap_resource_t *resource,
+                     coap_session_t *req_session,
+                     const coap_pdu_t *request,
+                     const coap_string_t *query COAP_UNUSED,
+                     coap_pdu_t *response) {
+
+  if (!coap_proxy_forward_request(req_session, request, response, resource,
+                                  NULL, &forward_static_proxy)) {
+    coap_log_debug("hnd_onward_proxy: Failed to forward PDU\n");
+    /* Non ACK response code set on error detection */
+  }
+
+  /* Leave response code as is */
+}
+
+static coap_response_t
+proxy_response_handler(coap_session_t *rsp_session,
+                       const coap_pdu_t *sent COAP_UNUSED,
+                       const coap_pdu_t *received,
+                       const coap_mid_t id COAP_UNUSED) {
+  return coap_proxy_forward_response(rsp_session, received, NULL);
+}
+
+static void
+init_resources(coap_context_t *ctx) {
+
+  coap_resource_t *r;
+
+  /* See coap_resource_proxy_uri_init2(3) */
+  r = coap_resource_proxy_uri_init2(hnd_onward_proxy_uri,
+                                    sizeof(proxy_host_name_list)/sizeof(proxy_host_name_list[0]),
+                                    proxy_host_name_list, 0);
   coap_add_resource(ctx, r);
   coap_register_response_handler(ctx, proxy_response_handler);
   /* Add in event or nack handlers if required */

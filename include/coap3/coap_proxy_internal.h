@@ -71,7 +71,7 @@ void coap_proxy_remove_association(coap_session_t *session, int send_failure);
  * Forward incoming request upstream to the next proxy/server.
  *
  * Possible scenarios:
- *  Acting as a reverse proxy - connect to internal server
+ *  Acting as a reverse proxy - connect to defined internal server
  *   (possibly round robin load balancing over multiple servers).
  *  Acting as a forward proxy - connect to host defined in Proxy-Uri
  *   or Proxy-Scheme with Uri-Host (and maybe Uri-Port).

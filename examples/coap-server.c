@@ -627,7 +627,7 @@ static ssize_t user_length = -1;
 
 static size_t proxy_host_name_count = 0;
 static const char **proxy_host_name_list = NULL;
-static coap_proxy_server_list_t forward_proxy = { NULL, 0, 0, COAP_PROXY_FORWARD, 0, 300};
+static coap_proxy_server_list_t forward_proxy = { NULL, 0, 0, COAP_PROXY_FORWARD_STATIC, 0, 300};
 static coap_proxy_server_list_t reverse_proxy = { NULL, 0, 0, COAP_PROXY_REVERSE_STRIP, 0, 10};
 
 static coap_dtls_cpsk_t *
@@ -646,12 +646,12 @@ setup_cpsk(char *client_sni) {
 
 static void
 hnd_forward_proxy_uri(coap_resource_t *resource,
-                      coap_session_t *session,
+                      coap_session_t *req_session,
                       const coap_pdu_t *request,
                       const coap_string_t *query COAP_UNUSED,
                       coap_pdu_t *response) {
 
-  if (!coap_proxy_forward_request(session, request, response, resource,
+  if (!coap_proxy_forward_request(req_session, request, response, resource,
                                   NULL, &forward_proxy)) {
     coap_log_debug("hnd_forward_proxy_uri: Failed to forward PDU\n");
     /* Non ACK response code set on error detection */
@@ -662,12 +662,12 @@ hnd_forward_proxy_uri(coap_resource_t *resource,
 
 static void
 hnd_reverse_proxy_uri(coap_resource_t *resource,
-                      coap_session_t *session,
+                      coap_session_t *rsp_session,
                       const coap_pdu_t *request,
                       const coap_string_t *query COAP_UNUSED,
                       coap_pdu_t *response) {
 
-  if (!coap_proxy_forward_request(session, request, response, resource,
+  if (!coap_proxy_forward_request(rsp_session, request, response, resource,
                                   NULL, &reverse_proxy)) {
     coap_log_debug("hnd_reverse_proxy_uri: Failed to forward PDU\n");
     /* Non ACK response code set on error detection */
@@ -1085,11 +1085,11 @@ proxy_event_handler(coap_session_t *session COAP_UNUSED,
 }
 
 static coap_response_t
-reverse_response_handler(coap_session_t *session,
+reverse_response_handler(coap_session_t *rsp_session,
                          const coap_pdu_t *sent COAP_UNUSED,
                          const coap_pdu_t *received,
                          const coap_mid_t id COAP_UNUSED) {
-  return coap_proxy_forward_response(session, received, NULL);
+  return coap_proxy_forward_response(rsp_session, received, NULL);
 }
 
 static void
@@ -1517,7 +1517,9 @@ proxy_dtls_setup(coap_context_t *ctx, coap_proxy_server_list_t *proxy_info) {
   for (i = 0; i < proxy_info->entry_count; i++) {
     coap_proxy_server_t *proxy_server = &proxy_info->entry[i];
 
-    if (proxy_info->type == COAP_PROXY_DIRECT || proxy_info->type == COAP_PROXY_DIRECT_STRIP) {
+    if (proxy_info->type == COAP_PROXY_FORWARD_DYNAMIC ||
+        proxy_info->type == COAP_PROXY_FORWARD_DYNAMIC_STRIP) {
+      /* This will get filled in by the libcoap proxy logic */
       memset(client_sni, 0, sizeof(client_sni));
     } else {
       snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)proxy_server->uri.host.length,
@@ -1581,7 +1583,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tuntil one of the dynamic resources has been deleted\n"
           "\t-e     \t\tEcho back the data sent with a PUT\n"
           "\t-f scheme://address[:port]\n"
-          "\t       \t\tAct as a reverse proxy where scheme, address, optional\n"
+          "\t       \t\tAct as a reverse proxy where scheme, address and optional\n"
           "\t       \t\tport define how to connect to the internal server.\n"
           "\t       \t\tScheme is one of coap, coaps, coap+tcp, coaps+tcp,\n"
           "\t       \t\tcoap+ws, and coaps+ws. http(s) is not currently supported.\n"
@@ -1826,10 +1828,12 @@ cmdline_proxy(char *arg) {
       coap_log_err("Unsupported CoAP Proxy protocol\n");
       return 0;
     }
-    forward_proxy.type = COAP_PROXY_FORWARD;
+    forward_proxy.type = COAP_PROXY_FORWARD_STATIC;
+    forward_proxy.idle_timeout_secs = 300;
   } else {
     memset(&uri, 0, sizeof(uri));
-    forward_proxy.type = COAP_PROXY_DIRECT_STRIP;
+    forward_proxy.type = COAP_PROXY_FORWARD_DYNAMIC_STRIP;
+    forward_proxy.idle_timeout_secs = 10;
   }
 
   new_entry = realloc(forward_proxy.entry,

@@ -25,12 +25,23 @@
  */
 
 typedef enum {
-  COAP_PROXY_REVERSE,       /**< Act as a reverse proxy */
-  COAP_PROXY_REVERSE_STRIP, /**< Act as a reverse proxy, strip out proxy options */
-  COAP_PROXY_FORWARD,       /**< Act as a forward proxy */
-  COAP_PROXY_FORWARD_STRIP, /**< Act as a forward proxy, strip out proxy options */
-  COAP_PROXY_DIRECT,        /**< Act as a direct proxy */
-  COAP_PROXY_DIRECT_STRIP,  /**< Act as a direct proxy, strip out proxy options */
+  COAP_PROXY_REVERSE,               /**< Act as a reverse proxy */
+  COAP_PROXY_REVERSE_STRIP,         /**< Act as a reverse proxy,
+                                         strip out proxy options */
+  COAP_PROXY_FORWARD_STATIC,        /**< Act as a forward-static proxy */
+  COAP_PROXY_FORWARD_STATIC_STRIP,  /**< Act as a forward-static proxy,
+                                         strip out proxy options */
+  COAP_PROXY_FORWARD_DYNAMIC,       /**< Act as a forward-dynamic proxy
+                                         using the request's Proxy-Uri or
+                                         Proxy-Scheme options to determine
+                                         server */
+  COAP_PROXY_FORWARD_DYNAMIC_STRIP, /**< Act as a forward-dynamic proxy,
+                                         strip out proxy options */
+  /* For backward compatability */
+  COAP_PROXY_FORWARD = COAP_PROXY_FORWARD_STATIC,
+  COAP_PROXY_FORWARD_STRIP = COAP_PROXY_FORWARD_STATIC_STRIP,
+  COAP_PROXY_DIRECT = COAP_PROXY_FORWARD_DYNAMIC,
+  COAP_PROXY_DIRECT_STRIP = COAP_PROXY_FORWARD_DYNAMIC_STRIP,
 } coap_proxy_t;
 
 typedef struct coap_proxy_server_t {
@@ -42,13 +53,14 @@ typedef struct coap_proxy_server_t {
 
 typedef struct coap_proxy_server_list_t {
   coap_proxy_server_t *entry; /**< Set of servers to connect to */
-  size_t entry_count;         /**< The number of servers */
+  size_t entry_count;         /**< The number of servers in entry list */
   size_t next_entry;          /**< Next server to use (% entry_count) */
   coap_proxy_t type;          /**< The proxy type */
   int track_client_session;   /**< If 1, track individual connections to upstream
                                    server, else 0 for all clients to share the same
                                    ongoing session */
-  unsigned int idle_timeout_secs; /**< Proxy session idle timeout (0 is no timeout) */
+  unsigned int idle_timeout_secs; /**< Proxy upstream session idle timeout
+                                       (0 is no timeout) */
 } coap_proxy_server_list_t;
 
 /**
@@ -64,16 +76,16 @@ int coap_verify_proxy_scheme_supported(coap_uri_scheme_t scheme);
  * Forward incoming request upstream to the next proxy/server.
  *
  * Possible scenarios:
- *  Acting as a reverse proxy - connect to internal server
+ *  Acting as a reverse proxy - connect to defined internal server
  *   (possibly round robin load balancing over multiple servers).
- *  Acting as a forward proxy - connect to host defined in Proxy-Uri
+ *  Acting as a forward-dynamic proxy - connect to host defined in Proxy-Uri
  *   or Proxy-Scheme with Uri-Host (and maybe Uri-Port).
- *  Acting as a relay proxy - connect to defined upstream server
+ *  Acting as a forward-static proxy - connect to defined upstream server
  *   (possibly round robin load balancing over multiple servers).
  *
  * A request that should go direct to this server is not supported here.
  *
- * @param session The client session.
+ * @param req_session The client session.
  * @param request The client's request PDU.
  * @param response The response PDU that will get sent back to the client.
  * @param resource The resource associated with this request.
@@ -83,7 +95,7 @@ int coap_verify_proxy_scheme_supported(coap_uri_scheme_t scheme);
  * @return @c 1 if success, or @c 0 if failure (@p response code set to
  *         appropriate value).
  */
-int COAP_API coap_proxy_forward_request(coap_session_t *session,
+int COAP_API coap_proxy_forward_request(coap_session_t *req_session,
                                         const coap_pdu_t *request,
                                         coap_pdu_t *response,
                                         coap_resource_t *resource,
@@ -93,7 +105,7 @@ int COAP_API coap_proxy_forward_request(coap_session_t *session,
 /**
  * Forward the returning response back to the appropriate client.
  *
- * @param session The session handling the response.
+ * @param rsp_session The upstream session receiving the response.
  * @param received The received PDU.
  * @param cache_key Updated with the cache key pointer provided to
  *                  coap_proxy_forward_request().  The caller should
@@ -102,7 +114,7 @@ int COAP_API coap_proxy_forward_request(coap_session_t *session,
  *
  * @return One of COAP_RESPONSE_FAIL or COAP_RESPONSE_OK.
  */
-coap_response_t COAP_API coap_proxy_forward_response(coap_session_t *session,
+coap_response_t COAP_API coap_proxy_forward_response(coap_session_t *rsp_session,
                                                      const coap_pdu_t *received,
                                                      coap_cache_key_t **cache_key);
 

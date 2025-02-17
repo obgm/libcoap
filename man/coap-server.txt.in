@@ -61,7 +61,7 @@ OPTIONS - General
    Echo back the data sent with a PUT.
 
 *-f* scheme://address[:port]::
-   Act as a reverse proxy where scheme, address, optional
+   Act as a reverse proxy where scheme, address and optional
    port define how to connect to the internal server.
    Scheme is one of coap, coaps, coap+tcp, coaps+tcp,
    coap+ws, and coaps+ws. http(s) is not currently supported.
