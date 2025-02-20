@@ -567,7 +567,7 @@ typedef coap_mutex_t coap_lock_t;
  * @param failed Code to execute on lock failure.
  *
  */
-#define coap_lock_invert(c,alt_lock,failed) func
+#define coap_lock_invert(c,alt_lock,failed) alt_lock
 
 #endif /* ! COAP_THREAD_SAFE */
 
