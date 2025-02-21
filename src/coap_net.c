@@ -4681,6 +4681,8 @@ coap_check_async(coap_context_t *context, coap_tick_t now) {
   LL_FOREACH_SAFE(context->async_state, async, tmp) {
     if (async->delay != 0 && async->delay <= now) {
       /* Send off the request to the application */
+      coap_log_debug("Async PDU presented to app.\n");
+      coap_show_pdu(COAP_LOG_DEBUG, async->pdu);
       handle_request(context, async->session, async->pdu, NULL);
 
       /* Remove this async entry as it has now fired */
