@@ -202,6 +202,7 @@ typedef struct coap_mbedtls_context_t {
   psk_sni_entry *psk_sni_entry_list;
   char *root_ca_file;
   char *root_ca_path;
+  int trust_store_defined;
   int psk_pki_enabled;
 } coap_mbedtls_context_t;
 
@@ -1196,9 +1197,6 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
    * Configure the CA
    */
   if (
-#if MBEDTLS_VERSION_NUMBER < 0x03060000
-      setup_data->check_common_ca &&
-#endif /* MBEDTLS_VERSION_NUMBER < 0x03060000 */
       key.key.define.ca.u_byte &&
       key.key.define.ca.u_byte[0]) {
     switch (key.key.define.ca_def) {
@@ -1296,6 +1294,42 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
                                     &key, role, ret);
     }
     mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
+  }
+  if (m_context->trust_store_defined) {
+    /* Until Trust Store is implemented in MbedTLS */
+    const char *trust_list[] = {
+      "/etc/ssl/ca-bundle.pem",
+      "/etc/ssl/certs/ca-certificates.crt",
+      "/etc/pki/tls/cert.pem",
+      "/usr/local/share/certs/ca-root-nss.crt",
+      "/etc/ssl/cert.pem"
+    };
+    static const char *trust_file_found = NULL;
+    static int trust_file_done = 0;
+    unsigned int i;
+
+    if (trust_file_found) {
+      ret = mbedtls_x509_crt_parse_file(cacert, trust_file_found);
+      if (ret >= 0) {
+        mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
+      } else {
+        coap_log_warn("Unable to load trusted root CAs (%s)\n",
+                      trust_file_found);
+      }
+    } else if (!trust_file_done) {
+      trust_file_done = 1;
+      for (i = 0; i < sizeof(trust_list)/sizeof(trust_list[0]); i++) {
+        ret = mbedtls_x509_crt_parse_file(cacert, trust_list[i]);
+        if (ret >= 0) {
+          mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
+          trust_file_found = trust_list[i];
+          break;
+        }
+      }
+      if (i == sizeof(trust_list)/sizeof(trust_list[0])) {
+        coap_log_warn("Unable to load trusted root CAs\n");
+      }
+    }
   }
 #else /* ! MBEDTLS_FS_IO */
   (void)m_context;
@@ -1840,10 +1874,26 @@ setup_client_ssl_session(coap_session_t *c_session,
      * If neither PSK or PKI have been set up, use PKI basics.
      * This works providing COAP_PKI_KEY_PEM has a value of 0.
      */
+    coap_dtls_pki_t *setup_data = &m_context->setup_data;
+
+    if (!(m_context->psk_pki_enabled & IS_PKI)) {
+      /* PKI not defined - set up some defaults */
+      setup_data->verify_peer_cert        = 1;
+      setup_data->check_common_ca         = 0;
+      setup_data->allow_self_signed       = 1;
+      setup_data->allow_expired_certs     = 1;
+      setup_data->cert_chain_validation   = 1;
+      setup_data->cert_chain_verify_depth = 2;
+      setup_data->check_cert_revocation   = 1;
+      setup_data->allow_no_crl            = 1;
+      setup_data->allow_expired_crl       = 1;
+      setup_data->is_rpk_not_cert         = 0;
+      setup_data->use_cid                 = 0;
+    }
     mbedtls_ssl_conf_authmode(&m_env->conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
     ret = setup_pki_credentials(&m_env->cacert, &m_env->public_cert,
                                 &m_env->private_key, m_env, m_context,
-                                c_session, &m_context->setup_data,
+                                c_session, setup_data,
                                 COAP_DTLS_ROLE_CLIENT);
     if (ret < 0) {
       coap_log_err("PKI setup failed\n");
@@ -2589,6 +2639,27 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *c_context,
   }
   return 1;
 }
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_context_load_pki_trust_store(coap_context_t *c_context) {
+  coap_mbedtls_context_t *m_context =
+      ((coap_mbedtls_context_t *)c_context->dtls_context);
+
+  if (!m_context) {
+    coap_log_warn("coap_context_load_pki_trust_store: (D)TLS environment "
+                  "not set up\n");
+    return 0;
+  }
+  m_context->trust_store_defined = 1;
+
+  /* No proper support for this in MbedTLS at this point */
+  return 1;
+}
+
 
 int
 coap_dtls_context_check_keys_enabled(coap_context_t *c_context) {

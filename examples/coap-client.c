@@ -109,6 +109,7 @@ static char *pkcs11_pin = NULL; /* PKCS11 pin to unlock access to token */
 static char *ca_file = NULL;   /* CA for cert_file - for cert checking in PEM,
                                   DER or PKCS11 URI */
 static char *root_ca_file = NULL; /* List of trusted Root CAs in PEM */
+static int no_trust_store = 0; /* Trust store not to be installed. */
 static int is_rpk_not_cert = 0; /* Cert is RPK if set */
 static uint8_t *cert_mem = NULL; /* certificate and private key in PEM_BUF */
 static uint8_t *key_mem = NULL; /* private key in PEM_BUF */
@@ -513,7 +514,7 @@ usage(const char *program, const char *version) {
           "\t\t[[-d count]]\n"
           "\t\t[[h match_hint_file] [-k key] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
-          "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile]] URI\n"
+          "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile] [-Y]] URI\n"
           "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
           "General Options\n"
           "\t-a addr\t\tThe local interface address to use\n"
@@ -609,6 +610,13 @@ usage(const char *program, const char *version) {
           "\t-c certfile\tPEM file or PKCS11 URI for the certificate. The private\n"
           "\t       \t\tkey can also be in the PEM file, or has the same PKCS11\n"
           "\t       \t\tURI. If not, the private key is defined by '-j keyfile'\n"
+          "\t       \t\tIf both the  '-c certfile' and '-k key' options are not\n"
+          "\t       \t\tprovided, but the protocol is using encryption (e.g.\n"
+          "\t       \t\tcoaps), then the client logic will use internally\n"
+          "\t       \t\tgenerated certificates (as do web browsers) but will\n"
+          "\t       \t\tcheck the server certificate based on the trust store\n"
+          "\t       \t\t(or the '-R trust_casfile' option) unless the '-n'\n"
+          "\t       \t\toption is specified\n"
           "\t-j keyfile\tPEM file or PKCS11 URI for the private key for the\n"
           "\t       \t\tcertificate in '-c certfile' if the parameter is\n"
           "\t       \t\tdifferent from certfile in '-c certfile'\n"
@@ -638,6 +646,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tUsing the -C or -R options will trigger the\n"
           "\t       \t\tvalidation of the server certificate unless overridden\n"
           "\t       \t\tby the -n option\n"
+          "\t-Y\n"
+          "\t       \t\tDo not load the default system Trusted Root CA Store\n"
          );
   fprintf(stderr,
           "Examples:\n"
@@ -1392,31 +1402,37 @@ setup_pki(coap_context_t *ctx) {
       coap_context_set_pki_root_cas(ctx, root_ca_file, NULL);
     }
   }
+  /*
+   * If trust store CAs are to be defined
+   *
+   * If need to verify server certificate
+   *  If Trust Store load is not disabled
+   *  If not mutually validating same CA signed client & server certs
+   */
+  if (verify_peer_cert && !no_trust_store && !ca_file && !root_ca_file) {
+    coap_context_load_pki_trust_store(ctx);
+  }
 
   memset(&dtls_pki, 0, sizeof(dtls_pki));
   dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
-  if (ca_file || root_ca_file) {
-    /*
-     * Add in additional certificate checking.
-     * This list of enabled can be tuned for the specific
-     * requirements - see 'man coap_encryption'.
-     *
-     * Note: root_ca_file is setup separately using
-     * coap_context_set_pki_root_cas(), but this is used to define what
-     * checking actually takes place.
-     */
-    dtls_pki.verify_peer_cert        = verify_peer_cert;
-    dtls_pki.check_common_ca         = !root_ca_file;
-    dtls_pki.allow_self_signed       = 1;
-    dtls_pki.allow_expired_certs     = 1;
-    dtls_pki.cert_chain_validation   = 1;
-    dtls_pki.cert_chain_verify_depth = 2;
-    dtls_pki.check_cert_revocation   = 1;
-    dtls_pki.allow_no_crl            = 1;
-    dtls_pki.allow_expired_crl       = 1;
-  } else if (is_rpk_not_cert) {
-    dtls_pki.verify_peer_cert        = verify_peer_cert;
-  }
+  /*
+   * Add in additional certificate checking.
+   * This list of enabled can be tuned for the specific
+   * requirements - see 'man coap_encryption'.
+   *
+   * Note: root_ca_file is setup separately using
+   * coap_context_set_pki_root_cas(), as well as the trust store is added in
+   * but this is used to define what checking actually takes place.
+   */
+  dtls_pki.verify_peer_cert        = verify_peer_cert;
+  dtls_pki.check_common_ca         = !root_ca_file;
+  dtls_pki.allow_self_signed       = 1;
+  dtls_pki.allow_expired_certs     = 1;
+  dtls_pki.cert_chain_validation   = 1;
+  dtls_pki.cert_chain_verify_depth = 2;
+  dtls_pki.check_cert_revocation   = 1;
+  dtls_pki.allow_no_crl            = 1;
+  dtls_pki.allow_expired_crl       = 1;
   dtls_pki.is_rpk_not_cert = is_rpk_not_cert;
   dtls_pki.use_cid = setup_cid;
   dtls_pki.validate_cn_call_back = verify_cn_callback;
@@ -1686,7 +1702,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:2")) != -1) {
+                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:Y2")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1704,6 +1720,9 @@ main(int argc, char **argv) {
       break;
     case 'C':
       ca_file = optarg;
+      break;
+    case 'Y':
+      no_trust_store = 1;
       break;
     case 'R':
       root_ca_file = optarg;

@@ -563,6 +563,17 @@ int coap_context_set_pki_root_cas_lkd(coap_context_t *context,
                                       const char *ca_dir);
 
 /**
+ * Load the context's default trusted CAs for a client or server.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context        The current coap_context_t object.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+int coap_context_load_pki_trust_store_lkd(coap_context_t *context);
+
+/**
  * Set the context's default PSK hint and/or key for a server.
  *
  * @deprecated Use coap_context_set_psk2() instead.

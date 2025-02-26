@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017      Jean-Claude Michelou <jcm@spinetix.com>
  * Copyright (C) 2023      Javier Blanco <frblanco@pa.uc3m.es>
- * Copyright (C) 2018-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -18,7 +18,7 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#ifdef COAP_WITH_LIBWOLFSSL
+#if COAP_WITH_LIBWOLFSSL
 
 /*
  * Implemented using wolfSSL's OpenSSL compatibility layer based on coap_openssl.c.
@@ -120,6 +120,7 @@ typedef struct coap_wolfssl_context_t {
   int psk_pki_enabled;
   char *root_ca_file;
   char *root_ca_dir;
+  int trust_store_defined;
 } coap_wolfssl_context_t;
 
 typedef struct coap_ssl_data_t {
@@ -182,7 +183,9 @@ static coap_wolfssl_env_t *
 coap_dtls_new_wolfssl_env(coap_session_t *c_session, coap_dtls_role_t role) {
   coap_wolfssl_env_t *w_env = (coap_wolfssl_env_t *)c_session->tls;
 
-  assert(w_env == NULL);
+  if (w_env)
+    return w_env;
+
   w_env = (coap_wolfssl_env_t *)wolfssl_malloc(sizeof(coap_wolfssl_env_t));
   if (!w_env) {
     return NULL;
@@ -569,8 +572,9 @@ coap_dgram_write(WOLFSSL *ssl, char *in, int inl, void *ctx) {
     if (ret > 0) {
       coap_ticks(&now);
       w_env->last_timeout = now;
-    } else if (ret < 0 && (errno == ENOTCONN || errno == ECONNREFUSED)) {
-      data->session->dtls_event = COAP_EVENT_DTLS_ERROR;
+    } else if (ret < 0) {
+      if (errno == ENOTCONN || errno == ECONNREFUSED)
+        data->session->dtls_event = COAP_EVENT_DTLS_ERROR;
     }
   } else {
     ret = -1;
@@ -662,6 +666,7 @@ coap_dtls_psk_client_callback(WOLFSSL *ssl,
   return max_psk_len;
 }
 
+#if !COAP_DISABLE_TCP
 static unsigned int
 coap_dtls_psk_client_cs_callback(WOLFSSL *ssl, const char *hint,
                                  char *identity, unsigned int max_identity_len,
@@ -677,6 +682,7 @@ coap_dtls_psk_client_cs_callback(WOLFSSL *ssl, const char *hint,
   (void)ciphersuite;
   return key_len;
 }
+#endif /* !COAP_DISABLE_TCP */
 
 #endif /* COAP_CLIENT_SUPPORT */
 
@@ -820,6 +826,7 @@ coap_dtls_info_callback(const WOLFSSL *ssl, int where, int ret) {
   }
 }
 
+#if !COAP_DISABLE_TCP
 /*
  * strm
  * return +ve data amount
@@ -849,7 +856,7 @@ coap_sock_read(WOLFSSL *ssl, char *out, int outl, void *ctx) {
     }
   }
   if (session && out != NULL) {
-    ret =(int)session->sock.lfunc[COAP_LAYER_TLS].l_read(session, (u_char *)out,
+    ret =(int)session->sock.lfunc[COAP_LAYER_TLS].l_read(session, (uint8_t *)out,
                                                          outl);
     if (ret == 0) {
       ret = WANT_READ;
@@ -904,6 +911,7 @@ coap_sock_write(WOLFSSL *ssl, char *in, int inl, void *ctx) {
   }
   return ret;
 }
+#endif /* !COAP_DISABLE_TCP */
 
 static void
 coap_set_user_prefs(WOLFSSL_CTX *ctx) {
@@ -954,13 +962,21 @@ setup_dtls_context(coap_wolfssl_context_t *w_context) {
 #ifdef WOLFSSL_DTLS_MTU
     wolfSSL_CTX_dtls_set_mtu(w_context->dtls.ctx, COAP_DEFAULT_MTU);
 #endif /* WOLFSSL_DTLS_MTU */
+#ifdef WOLFSSL_SYS_CA_CERTS
+    if (w_context->trust_store_defined) {
+      if (!wolfSSL_CTX_load_system_CA_certs(w_context->dtls.ctx)) {
+        coap_log_warn("Unable to load trusted root CAs\n");
+        goto error;
+      }
+    }
+#endif
     if (w_context->root_ca_file || w_context->root_ca_dir) {
       if (!wolfSSL_CTX_load_verify_locations_ex(w_context->dtls.ctx,
                                                 w_context->root_ca_file,
                                                 w_context->root_ca_dir,
                                                 w_context->setup_data.allow_expired_certs ?
                                                 WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
-        coap_log_warn("Unable to install root CAs (%s/%s)\n",
+        coap_log_warn("Unable to install root CAs (%s : %s)\n",
                       w_context->root_ca_file ? w_context->root_ca_file : "NULL",
                       w_context->root_ca_dir ? w_context->root_ca_dir : "NULL");
         goto error;
@@ -1011,13 +1027,21 @@ setup_tls_context(coap_wolfssl_context_t *w_context) {
                                                 w_context->root_ca_dir,
                                                 w_context->setup_data.allow_expired_certs ?
                                                 WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
-        coap_log_warn("Unable to install root CAs (%s/%s)\n",
+        coap_log_warn("Unable to install root CAs (%s : %s)\n",
                       w_context->root_ca_file ? w_context->root_ca_file : "NULL",
                       w_context->root_ca_dir ? w_context->root_ca_dir : "NULL");
         goto error;
       }
     }
     /* Verify Peer */
+#ifdef WOLFSSL_SYS_CA_CERTS
+    if (w_context->trust_store_defined) {
+      if (!wolfSSL_CTX_load_system_CA_certs(w_context->tls.ctx)) {
+        coap_log_warn("Unable to load trusted root CAs\n");
+        goto error;
+      }
+    }
+#endif
     if (w_context->setup_data.verify_peer_cert)
       wolfSSL_CTX_set_verify(w_context->tls.ctx,
                              WOLFSSL_VERIFY_PEER |
@@ -1366,7 +1390,7 @@ setup_pki_ssl(WOLFSSL *ssl,
   /*
    * Configure the CA
    */
-  if (ctx && setup_data->check_common_ca && key.key.define.ca.u_byte &&
+  if (ctx && key.key.define.ca.u_byte &&
       key.key.define.ca.u_byte[0]) {
     switch (key.key.define.ca_def) {
     case COAP_PKI_KEY_DEF_PEM:
@@ -1874,12 +1898,31 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *ctx,
 }
 
 int
+coap_dtls_context_load_pki_trust_store(coap_context_t *ctx) {
+  coap_wolfssl_context_t *w_context =
+      ((coap_wolfssl_context_t *)ctx->dtls_context);
+
+  if (!w_context) {
+    coap_log_warn("coap_context_set_pki_trust_store: (D)TLS environment "
+                  "not set up\n");
+    return 0;
+  }
+#ifdef WOLFSSL_SYS_CA_CERTS
+  w_context->trust_store_defined = 1;
+  return 1;
+#else /* LIBWOLFSSL_VERSION_HEX < 0x05005002 */
+  coap_log_warn("coap_context_set_pki_trust_store: (D)TLS environment "
+                "not supported for wolfSSL < v5.5.2 or –enable-sys-ca-certs not defined\n");
+  return 0;
+#endif /* WOLFSSL_SYS_CA_CERTS */
+}
+
+int
 coap_dtls_context_check_keys_enabled(coap_context_t *ctx) {
   coap_wolfssl_context_t *w_context =
       ((coap_wolfssl_context_t *)ctx->dtls_context);
   return w_context->psk_pki_enabled ? 1 : 0;
 }
-
 
 void
 coap_dtls_free_context(void *handle) {
@@ -1982,7 +2025,7 @@ coap_dtls_new_server_session(coap_session_t *session) {
 
   if (wolfSSL_dtls_cid_use(ssl) != WOLFSSL_SUCCESS)
     goto error;
-  u_char cid[COAP_DTLS_CID_LENGTH];
+  uint8_t cid[COAP_DTLS_CID_LENGTH];
   /*
    * Enable server DTLS CID support.
    */
@@ -2013,6 +2056,7 @@ error:
   if (ssl)
     wolfSSL_free(ssl);
   coap_dtls_free_wolfssl_env(w_env);
+  session->tls = NULL;
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
@@ -2239,6 +2283,7 @@ coap_dtls_free_session(coap_session_t *session) {
       coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CLOSED, session);
   }
   coap_dtls_free_wolfssl_env(w_env);
+  session->tls = NULL;
 }
 
 ssize_t
@@ -2248,7 +2293,10 @@ coap_dtls_send(coap_session_t *session,
   WOLFSSL *ssl = w_env ? w_env->ssl : NULL;
   int r;
 
-  assert(ssl != NULL);
+  if (ssl == NULL) {
+    errno = ENOTCONN;
+    return -1;
+  }
 
   session->dtls_event = -1;
   coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
@@ -2712,6 +2760,7 @@ error:
   if (ssl)
     wolfSSL_free(ssl);
   coap_dtls_free_wolfssl_env(w_env);
+  session->tls = NULL;
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
@@ -2733,6 +2782,7 @@ coap_tls_free_session(coap_session_t *session) {
       coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CLOSED, session);
   }
   coap_dtls_free_wolfssl_env(w_env);
+  session->tls = NULL;
 }
 
 /*
@@ -2804,7 +2854,7 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
       coap_log_debug("*  %s: tls:   sent %4d bytes\n",
                      coap_session_str(session), r);
     else
-      coap_log_debug("*  %s: tls:   sent %4d of %4zd bytes\n",
+      coap_log_debug("*  %s: tls:   sent %4d of %4" PRIdS " bytes\n",
                      coap_session_str(session), r, data_len);
   }
   return r;
@@ -3142,7 +3192,7 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
   if (ret != 0)
     goto error;
 
-  authTag = (byte *)malloc(ccm->tag_len * sizeof(byte));
+  authTag = (byte *)wolfssl_malloc(ccm->tag_len);
   if (!authTag) {
     goto error;
   }
@@ -3151,18 +3201,18 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
                          aad->s, aad->length);
 
   if (ret != 0) {
-    wolfssl_free(authTag);
     goto error;
   }
 
   memcpy(result + result_len, authTag, ccm->tag_len);
-  result_len += sizeof(authTag);
+  result_len += ccm->tag_len;
   *max_result_len = result_len;
   wolfssl_free(authTag);
 
   return 1;
 error:
   coap_crypto_output_errors("coap_crypto_aead_encrypt");
+  wolfssl_free(authTag);
   return 0;
 }
 
@@ -3177,6 +3227,7 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
   Aes aes;
   int ret;
   int len;
+  byte *authTag = NULL;
   const coap_crypto_aes_ccm_t *ccm;
 
   if (data == NULL)
@@ -3190,14 +3241,16 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
     return 0;
 
   ccm = &params->params.aes;
-  byte authTag[ccm->tag_len];
-
-  if (data->length < ccm->tag_len) {
+  if (data->length < ccm->tag_len)
     return 0;
-  } else {
-    memcpy(authTag, data->s + data->length - ccm->tag_len, sizeof(authTag));
-    data->length -= ccm->tag_len;
+
+  authTag = (byte *)wolfssl_malloc(ccm->tag_len);
+  if (!authTag) {
+    goto error;
   }
+
+  memcpy(authTag, data->s + data->length - ccm->tag_len, ccm->tag_len);
+  data->length -= ccm->tag_len;
 
   if (ccm->key.s == NULL || ccm->nonce == NULL)
     goto error;
@@ -3210,17 +3263,19 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
   len = data->length;
 
   ret = wc_AesCcmDecrypt(&aes, result, data->s, len, ccm->nonce,
-                         15 - ccm->l, authTag, sizeof(authTag),
+                         15 - ccm->l, authTag, ccm->tag_len,
                          aad->s, aad->length);
 
   if (ret != 0)
     goto error;
 
   *max_result_len = len;
+  wolfssl_free(authTag);
 
   return 1;
 error:
   coap_crypto_output_errors("coap_crypto_aead_decrypt");
+  wolfssl_free(authTag);
   return 0;
 }
 
@@ -3263,7 +3318,7 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !COAP_WITH_LIBWOLFSSL */
+#else /* ! COAP_WITH_LIBWOLFSSL */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -3275,4 +3330,4 @@ static inline void
 dummy(void) {
 }
 
-#endif /* COAP_WITH_LIBWOLFSSL */
+#endif /* ! COAP_WITH_LIBWOLFSSL */

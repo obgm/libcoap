@@ -136,6 +136,16 @@ int coap_dtls_context_set_pki_root_cas(coap_context_t *coap_context,
                                        const char *ca_dir);
 
 /**
+ * Load dtls context's default trusted CAs for a client or server.
+ *
+ * @param coap_context   The current coap_context_t object.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+
+int coap_dtls_context_load_pki_trust_store(coap_context_t *coap_context);
+
+/**
  * Check whether one of the coap_dtls_context_set_{psk|pki}() functions have
  * been called.
  *

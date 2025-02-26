@@ -3389,6 +3389,34 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *ctx,
 }
 
 int
+coap_dtls_context_load_pki_trust_store(coap_context_t *ctx) {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  coap_openssl_context_t *context =
+      ((coap_openssl_context_t *)ctx->dtls_context);
+  if (context->dtls.ctx) {
+    if (!SSL_CTX_set_default_verify_store(context->dtls.ctx)) {
+      coap_log_warn("Unable to load trusted root CAs\n");
+      return 0;
+    }
+  }
+#if !COAP_DISABLE_TCP
+  if (context->tls.ctx) {
+    if (!SSL_CTX_set_default_verify_store(context->tls.ctx)) {
+      coap_log_warn("Unable to load trusted root CAs\n");
+      return 0;
+    }
+  }
+#endif /* !COAP_DISABLE_TCP */
+  return 1;
+#else /* OPENSSL_VERSION_NUMBER < 0x30000000L */
+  (void)ctx;
+  coap_log_warn("coap_context_set_pki_trust_store: (D)TLS environment "
+                "not supported for OpenSSL < v3.0.0\n");
+  return 0;
+#endif /* OPENSSL_VERSION_NUMBER < 0x30000000L */
+}
+
+int
 coap_dtls_context_check_keys_enabled(coap_context_t *ctx) {
   coap_openssl_context_t *context =
       ((coap_openssl_context_t *)ctx->dtls_context);

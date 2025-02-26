@@ -213,6 +213,15 @@ COAP_API int coap_context_set_pki_root_cas(coap_context_t *context,
                                            const char *ca_dir);
 
 /**
+ * Load the hosts's default trusted CAs for a client or server.
+ *
+ * @param context        The current coap_context_t object.
+ *
+ * @return @c 1 if successful, else @c 0.
+ */
+COAP_API int coap_context_load_pki_trust_store(coap_context_t *context);
+
+/**
  * Set the context keepalive timer for sessions.
  * A keepalive message will be sent after if a session has been inactive,
  * i.e. no packet sent or received, for the given number of seconds.

@@ -30,7 +30,7 @@ SYNOPSIS
               [*-d* value]
               [[*-h* match_hint_file] [*-k* key] [*-u* user] [*-2*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
-              [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]] URI
+              [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile] [*-Y*]] URI
 
 For *coap-client* versions that use libcoap compiled for different
 (D)TLS libraries, *coap-client-notls*, *coap-client-gnutls*,
@@ -159,7 +159,8 @@ OPTIONS - General
 
 *-L* value::
    Sum of one or more COAP_BLOCK_* flag values for different block handling
-   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP).
+   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP). This vlue can be set as a
+   hex value - e.g. 0x13.
 
      COAP_BLOCK_USE_LIBCOAP         1
      COAP_BLOCK_SINGLE_BODY         2
@@ -242,7 +243,11 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
 *-c* certfile::
    PEM file or PKCS11 URI for the certificate. The private key can also be in
    the PEM file, or has the same PKCS11 URI. If not, the private key is defined
-   by *-j keyfile*.
+   by *-j keyfile*. If both the  *-c certfile* and *-k key* options are not
+   provided, but the protocol is using encryption (e.g. coaps), then the client
+   logic will use internally generated certificates (as do web browsers) but
+   check the server certificate based on the trust store (or the '-R
+   trust_casfile' option) unless the '-n' option is specified.
 
 *-j* keyfile::
    PEM file or PKCS11 URI for the private key for the certificate in *-c
@@ -254,8 +259,8 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
 *-C* cafile::
 PEM file or PKCS11 URI for the CA certificate and any intermediate CAs that was
   used to sign the server
-  certfile. Ideally the client certificate should be signed by the same CA so
-  that mutual authentication can take place. The contents of cafile are added
+  certfile. Ideally the client certificate should be signed by the same CA so that
+  mutual authentication can take place. The contents of cafile are added
   to the trusted store of root CAs. Using the *-C* or *-R* options will trigger
   the validation of the server certificate unless overridden by the *-n* option.
 
@@ -276,6 +281,9 @@ PEM file or PKCS11 URI for the CA certificate and any intermediate CAs that was
   be done by using *-C cafile*. Using the *-C* or *-R* options will
   trigger the validation of the server certificate unless overridden by the
   *-n* option.
+
+*-Y* ::
+  Do not load the default system Trusted Root CA Store.
 
 EXAMPLES
 --------
