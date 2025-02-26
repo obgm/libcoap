@@ -981,7 +981,7 @@ coap_handle_nack(coap_session_t *session,
                  const coap_nack_reason_t reason,
                  const coap_mid_t mid) {
   if (session->context->nack_handler) {
-    coap_bin_const_t token;
+    coap_bin_const_t token = {0, NULL};
 
     if (sent) {
       coap_check_update_token(session, sent);

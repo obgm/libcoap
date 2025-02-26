@@ -131,6 +131,7 @@ typedef struct coap_gnutls_context_t {
   gnutls_datum_t alpn_proto;    /* Will be "coap", but that is a const */
   char *root_ca_file;
   char *root_ca_path;
+  int trust_store_defined;
   gnutls_priority_t priority_cache;
 } coap_gnutls_context_t;
 
@@ -398,6 +399,30 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *c_context,
 #endif
   }
   return 1;
+}
+
+/*
+ * return 0 failed
+ *        1 passed
+ */
+int
+coap_dtls_context_load_pki_trust_store(coap_context_t *c_context) {
+  coap_gnutls_context_t *g_context =
+      ((coap_gnutls_context_t *)c_context->dtls_context);
+  if (!g_context) {
+    coap_log_warn("coap_context_set_pki_trust_store: (D)TLS environment "
+                  "not set up\n");
+    return 0;
+  }
+
+#if (GNUTLS_VERSION_NUMBER >= 0x030020)
+  g_context->trust_store_defined = 1;
+  return 1;
+#else
+  coap_log_warn("coap_context_set_pki_trust_store(): (D)TLS environment "
+                "not supported for GnuTLS < v3.0.20\n");
+  return 0;
+#endif
 }
 
 #if COAP_SERVER_SUPPORT
@@ -837,6 +862,8 @@ cert_verify_gnutls(gnutls_session_t g_session) {
   G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
           "gnutls_certificate_verify_peers");
 
+  coap_dtls_log(COAP_LOG_DEBUG, "error %x cert '%s'\n",
+                status, cert_info.san_or_cn);
   if (status) {
     status &= ~(GNUTLS_CERT_INVALID);
     if (status & (GNUTLS_CERT_NOT_ACTIVATED|GNUTLS_CERT_EXPIRED)) {
@@ -1130,7 +1157,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
       if ((ret = gnutls_certificate_set_x509_key_file(*pki_credentials,
                                                       key.key.define.public_cert.s_byte,
                                                       key.key.define.private_key.s_byte,
-                                                      GNUTLS_X509_FMT_PEM) < 0)) {
+                                                      GNUTLS_X509_FMT_PEM)) < 0) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
                                       &key, role, ret);
@@ -1332,7 +1359,7 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
   /*
    * Configure the CA
    */
-  if (setup_data->check_common_ca && key.key.define.ca.u_byte &&
+  if (key.key.define.ca.u_byte &&
       key.key.define.ca.u_byte[0]) {
     switch (key.key.define.ca_def) {
     case COAP_PKI_KEY_DEF_PEM:
@@ -1418,6 +1445,12 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
     }
   }
 
+#if (GNUTLS_VERSION_NUMBER >= 0x030020)
+  if (g_context->trust_store_defined) {
+    G_CHECK(gnutls_certificate_set_x509_system_trust(*pki_credentials),
+            "gnutls_certificate_set_x509_system_trust");
+  }
+#endif
   if (g_context->root_ca_file) {
     ret = gnutls_certificate_set_x509_trust_file(*pki_credentials,
                                                  g_context->root_ca_file,
@@ -1436,11 +1469,13 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
   }
   gnutls_certificate_send_x509_rdn_sequence(g_session,
                                             setup_data->check_common_ca ? 0 : 1);
-  if (!(g_context->psk_pki_enabled & IS_PKI)) {
+#if (GNUTLS_VERSION_NUMBER >= 0x030020)
+  if (!(g_context->psk_pki_enabled & IS_PKI) && !g_context->trust_store_defined) {
     /* No PKI defined at all - still need a trust set up for 3.6.0 or later */
     G_CHECK(gnutls_certificate_set_x509_system_trust(*pki_credentials),
             "gnutls_certificate_set_x509_system_trust");
   }
+#endif
 
   /* Verify Peer */
   gnutls_certificate_set_verify_function(*pki_credentials,
@@ -1786,6 +1821,21 @@ setup_client_ssl_session(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
      * This works providing COAP_PKI_KEY_PEM has a value of 0.
      */
     coap_dtls_pki_t *setup_data = &g_context->setup_data;
+
+    if (!(g_context->psk_pki_enabled & IS_PKI)) {
+      /* PKI not defined - set up some defaults */
+      setup_data->verify_peer_cert        = 1;
+      setup_data->check_common_ca         = 0;
+      setup_data->allow_self_signed       = 1;
+      setup_data->allow_expired_certs     = 1;
+      setup_data->cert_chain_validation   = 1;
+      setup_data->cert_chain_verify_depth = 2;
+      setup_data->check_cert_revocation   = 1;
+      setup_data->allow_no_crl            = 1;
+      setup_data->allow_expired_crl       = 1;
+      setup_data->is_rpk_not_cert         = 0;
+      setup_data->use_cid                 = 0;
+    }
     G_CHECK(setup_pki_credentials(&g_env->pki_credentials, g_env->g_session,
                                   g_context, setup_data,
                                   COAP_DTLS_ROLE_CLIENT),

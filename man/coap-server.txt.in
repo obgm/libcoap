@@ -31,7 +31,7 @@ SYNOPSIS
               [*-s* match_psk_sni_file] [*-u* user] [*-2*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile]
-              [*-S* match_pki_sni_file]]
+              [*-S* match_pki_sni_file] [*-Y*]]
 
 For *coap-server* versions that use libcoap compiled for different
 (D)TLS libraries, *coap-server-notls*, *coap-server-gnutls*,
@@ -275,6 +275,9 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
    A line that starts with # is treated as a comment. +
    Note: *-c certfile* and *-C cafile* still needs to be defined for the
    default case
+
+*-Y* ::
+  Do not load the default system Trusted Root CA Store.
 
 EXAMPLES
 --------

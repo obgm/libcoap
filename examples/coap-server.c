@@ -120,6 +120,7 @@ static size_t cert_mem_len = 0;
 static size_t key_mem_len = 0;
 static size_t ca_mem_len = 0;
 static int verify_peer_cert = 1; /* PKI granularity - by default set */
+static int no_trust_store = 0; /* Trust store not to be installed. */
 #define MAX_KEY   64 /* Maximum length of a pre-shared key in bytes. */
 static uint8_t *key = NULL;
 static ssize_t key_length = 0;
@@ -1417,6 +1418,11 @@ static coap_dtls_pki_t *
 setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *client_sni) {
   static coap_dtls_pki_t dtls_pki;
 
+  /* If trust store CAs are to be defined */
+  if (verify_peer_cert && !no_trust_store && !ca_file) {
+    coap_context_load_pki_trust_store(ctx);
+  }
+
   /* If general root CAs are defined */
   if (role == COAP_DTLS_ROLE_SERVER && root_ca_file) {
     struct stat stbuf;
@@ -1429,28 +1435,24 @@ setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *client_sni) {
 
   memset(&dtls_pki, 0, sizeof(dtls_pki));
   dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
-  if (ca_file || root_ca_file) {
-    /*
-     * Add in additional certificate checking.
-     * This list of enabled can be tuned for the specific
-     * requirements - see 'man coap_encryption'.
-     *
-     * Note: root_ca_file is setup separately using
-     * coap_context_set_pki_root_cas(), but this is used to define what
-     * checking actually takes place.
-     */
-    dtls_pki.verify_peer_cert        = verify_peer_cert;
-    dtls_pki.check_common_ca         = !root_ca_file;
-    dtls_pki.allow_self_signed       = 1;
-    dtls_pki.allow_expired_certs     = 1;
-    dtls_pki.cert_chain_validation   = 1;
-    dtls_pki.cert_chain_verify_depth = 2;
-    dtls_pki.check_cert_revocation   = 1;
-    dtls_pki.allow_no_crl            = 1;
-    dtls_pki.allow_expired_crl       = 1;
-  } else if (is_rpk_not_cert) {
-    dtls_pki.verify_peer_cert        = verify_peer_cert;
-  }
+  /*
+   * Add in additional certificate checking.
+   * This list of enabled can be tuned for the specific
+   * requirements - see 'man coap_encryption'.
+   *
+   * Note: root_ca_file is setup separately using
+   * coap_context_set_pki_root_cas(), but this is used to define what
+   * checking actually takes place.
+   */
+  dtls_pki.verify_peer_cert        = verify_peer_cert;
+  dtls_pki.check_common_ca         = !root_ca_file;
+  dtls_pki.allow_self_signed       = 1;
+  dtls_pki.allow_expired_certs     = 1;
+  dtls_pki.cert_chain_validation   = 1;
+  dtls_pki.cert_chain_verify_depth = 2;
+  dtls_pki.check_cert_revocation   = 1;
+  dtls_pki.allow_no_crl            = 1;
+  dtls_pki.allow_expired_crl       = 1;
   dtls_pki.is_rpk_not_cert        = is_rpk_not_cert;
   dtls_pki.validate_cn_call_back  = verify_cn_callback;
   dtls_pki.cn_call_back_arg       = (void *)role;
@@ -1585,7 +1587,7 @@ usage(const char *program, const char *version) {
           "\t\t[-s match_psk_sni_file] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
           "\t\t[-J pkcs11_pin] [-M rpk_file] [-R trust_casfile]\n"
-          "\t\t[-S match_pki_sni_file]]\n"
+          "\t\t[-S match_pki_sni_file] [-Y]]\n"
           "General Options\n"
           "\t-a priority\tSend logging output to syslog at priority (0-7) level\n"
           "\t-b max_block_size\n"
@@ -1756,6 +1758,8 @@ usage(const char *program, const char *version) {
           "\t       \t\t sni_to_match,new_cert_file,new_ca_file\n"
           "\t       \t\tNote: -c and -C still need to be defined for the default\n"
           "\t       \t\tcase\n"
+          "\t-Y\n"
+          "\t       \t\tDo not load the default system Trusted Root CA Store\n"
          );
 }
 
@@ -2366,7 +2370,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:ef:g:h:i:j:k:l:mnp:q:rs:tu:v:w:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:2")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnp:q:rs:tu:v:w:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y2")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2549,6 +2553,9 @@ main(int argc, char **argv) {
       break;
     case 'X':
       csm_max_message_size = strtol(optarg, NULL, 10);
+      break;
+    case 'Y':
+      no_trust_store = 1;
       break;
     case '2':
       ec_jpake = 1;

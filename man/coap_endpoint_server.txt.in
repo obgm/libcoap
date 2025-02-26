@@ -12,7 +12,6 @@ NAME
 ----
 coap_endpoint_server,
 coap_context_set_pki,
-coap_context_set_pki_root_cas,
 coap_context_set_psk2,
 coap_new_endpoint,
 coap_free_endpoint,
@@ -27,9 +26,6 @@ SYNOPSIS
 
 *int coap_context_set_pki(coap_context_t *_context_,
 const coap_dtls_pki_t *_setup_data_);*
-
-*int coap_context_set_pki_root_cas(coap_context_t *_context_,
-const char *_ca_file_, const char *_ca_dir_);*
 
 *int coap_context_set_psk2(coap_context_t *_context_,
 coap_dtls_spsk_t *setup_data);*
@@ -89,6 +85,7 @@ In principle the set-up sequence for CoAP Servers looks like
 ----
 coap_new_context()
 coap_context_set_pki_root_cas() - if the root CAs need to be updated and using PKI
+coap_context_load_pki_trust_store() - if the CA trust store is to be loaded and PKI
 coap_context_set_pki() and/or coap_context_set_psk2() - if encryption is required
 coap_new_endpoint()
 ----
@@ -108,20 +105,6 @@ The *coap_context_set_pki*() function, for a specific _context_, is used to
 configure the (D)TLS context using the _setup_data_ PKI variables as defined in
 the coap_dtls_pki_t structure  - see *coap_encryption*(3). This should not be
 used for setting up client sessions.
-
-*Function: coap_context_set_pki_root_cas()*
-
-The *coap_context_set_pki_root_cas*() function is used to define a set of
-root CAs to be used instead of the default set of root CAs provided as a part
-of the TLS library.  _ca_file_ points to a PEM encoded file containing the
-list of CAs.  _ca_file_ can be NULL.  _ca_dir_ points to a directory
-containing a set of PEM encoded files containing rootCAs.  _ca_dir_ can be
-NULL. One or both of _ca_file_ and _ca_dir_ must be set. +
-*NOTE:* Some TLS libraries send the full list of CAs added by this function
-during the (D)TLS session setup handshakes. To stop this, either provide a
-single CA using the _ca_file_ definition in _pki_key_ in _setup_data_ variable
-when calling *coap_context_set_pki*(), or set _check_common_ca_ to 0 in
-_setup_data_ variable. See *coap_encryption*(3).
 
 *Function: coap_context_set_psk2()*
 
@@ -203,7 +186,7 @@ definitions when setting up each resource. See *coap_resource*(3).
 
 RETURN VALUES
 -------------
-*coap_context_set_pki*(), *coap_context_set_pki_root_cas*() and
+*coap_context_set_pki*() and
 *coap_context_set_psk2*() return 1 on success, 0 on failure.
 
 *coap_new_endpoint*() returns a newly created endpoint or
