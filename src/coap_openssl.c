@@ -1669,12 +1669,22 @@ setup_pki_server(SSL_CTX *ctx,
       key.key.define.public_cert.u_byte[0]) {
     switch (key.key.define.public_cert_def) {
     case COAP_PKI_KEY_DEF_PEM: /* define public cert */
-      if (!(SSL_CTX_use_certificate_file(ctx,
-                                         key.key.define.public_cert.s_byte,
-                                         SSL_FILETYPE_PEM))) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, COAP_DTLS_ROLE_SERVER, 0);
+      if (key.key.define.public_cert.u_byte &&
+          key.key.define.public_cert.u_byte[0]) {
+        if (!(SSL_use_certificate_file(ssl,
+                                       key.key.define.public_cert.s_byte,
+                                       SSL_FILETYPE_PEM))) {
+          return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                        COAP_DEFINE_FAIL_BAD,
+                                        &key, role, 0);
+        }
+      } else {
+        if (!SSL_use_certificate_chain_file(ssl,
+                                            key.key.define.public_cert.s_byte)) {
+          return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                        COAP_DEFINE_FAIL_BAD,
+                                        &key, role, 0);
+        }
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define public cert */
@@ -1761,7 +1771,7 @@ setup_pki_server(SSL_CTX *ctx,
   /*
    * Configure the CA
    */
-  if (setup_data->check_common_ca && key.key.define.ca.u_byte &&
+  if (key.key.define.ca.u_byte &&
       key.key.define.ca.u_byte[0]) {
     switch (key.key.define.ca_def) {
     case COAP_PKI_KEY_DEF_PEM:
@@ -2107,12 +2117,23 @@ setup_pki_ssl(SSL *ssl,
       key.key.define.public_cert.u_byte[0]) {
     switch (key.key.define.public_cert_def) {
     case COAP_PKI_KEY_DEF_PEM: /* define public cert */
-      if (!(SSL_use_certificate_file(ssl,
-                                     key.key.define.public_cert.s_byte,
-                                     SSL_FILETYPE_PEM))) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+      if (key.key.define.ca.u_byte &&
+          key.key.define.ca.u_byte[0]) {
+        /* If CA is separately defined */
+        if (!(SSL_use_certificate_file(ssl,
+                                       key.key.define.public_cert.s_byte,
+                                       SSL_FILETYPE_PEM))) {
+          return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                        COAP_DEFINE_FAIL_BAD,
+                                        &key, role, 0);
+        }
+      } else {
+        if (!SSL_use_certificate_chain_file(ssl,
+                                            key.key.define.public_cert.s_byte)) {
+          return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                        COAP_DEFINE_FAIL_BAD,
+                                        &key, role, 0);
+        }
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define public cert */
@@ -2202,7 +2223,7 @@ setup_pki_ssl(SSL *ssl,
   /*
    * Configure the CA
    */
-  if (setup_data->check_common_ca && key.key.define.ca.u_byte &&
+  if (key.key.define.ca.u_byte &&
       key.key.define.ca.u_byte[0]) {
     switch (key.key.define.ca_def) {
     case COAP_PKI_KEY_DEF_PEM:
@@ -2376,6 +2397,8 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
   char *cn = get_san_or_cn_from_cert(x509);
   int keep_preverify_ok = preverify_ok;
 
+  coap_dtls_log(COAP_LOG_DEBUG, "depth %d error %x preverify %d cert '%s'\n",
+                depth, err, preverify_ok, cn);
   if (!preverify_ok) {
     switch (err) {
     case X509_V_ERR_CERT_NOT_YET_VALID:
@@ -3231,7 +3254,7 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *ctx,
       ((coap_openssl_context_t *)ctx->dtls_context);
   if (context->dtls.ctx) {
     if (!SSL_CTX_load_verify_locations(context->dtls.ctx, ca_file, ca_dir)) {
-      coap_log_warn("Unable to install root CAs (%s/%s)\n",
+      coap_log_warn("Unable to install root CAs (%s : %s)\n",
                     ca_file ? ca_file : "NULL", ca_dir ? ca_dir : "NULL");
       return 0;
     }
@@ -3239,13 +3262,41 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *ctx,
 #if !COAP_DISABLE_TCP
   if (context->tls.ctx) {
     if (!SSL_CTX_load_verify_locations(context->tls.ctx, ca_file, ca_dir)) {
-      coap_log_warn("Unable to install root CAs (%s/%s)\n",
+      coap_log_warn("Unable to install root CAs (%s : %s)\n",
                     ca_file ? ca_file : "NULL", ca_dir ? ca_dir : "NULL");
       return 0;
     }
   }
 #endif /* !COAP_DISABLE_TCP */
   return 1;
+}
+
+int
+coap_dtls_context_load_pki_trust_store(coap_context_t *ctx) {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  coap_openssl_context_t *context =
+      ((coap_openssl_context_t *)ctx->dtls_context);
+  if (context->dtls.ctx) {
+    if (!SSL_CTX_set_default_verify_store(context->dtls.ctx)) {
+      coap_log_warn("Unable to load trusted root CAs\n");
+      return 0;
+    }
+  }
+#if !COAP_DISABLE_TCP
+  if (context->tls.ctx) {
+    if (!SSL_CTX_set_default_verify_store(context->tls.ctx)) {
+      coap_log_warn("Unable to load trusted root CAs\n");
+      return 0;
+    }
+  }
+#endif /* !COAP_DISABLE_TCP */
+  return 1;
+#else /* OPENSSL_VERSION_NUMBER < 0x30000000L */
+  (void)ctx;
+  coap_log_warn("coap_context_set_pki_trust_store: (D)TLS environment "
+                "not supported for OpenSSL < v3.0.0\n");
+  return 0;
+#endif /* OPENSSL_VERSION_NUMBER < 0x30000000L */
 }
 
 int
@@ -3393,8 +3444,28 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
       coap_log_debug("CoAP Client restricted to (D)TLS1.2 with Identity Hint callback\n");
     }
   }
-  if (context->psk_pki_enabled & IS_PKI) {
+  if ((context->psk_pki_enabled & IS_PKI) ||
+      (context->psk_pki_enabled & (IS_PSK | IS_PKI)) == 0) {
+    /*
+     * If neither PSK or PKI have been set up, use PKI basics.
+     * This works providing COAP_PKI_KEY_PEM has a value of 0.
+     */
     coap_dtls_pki_t *setup_data = &context->setup_data;
+
+    if (!(context->psk_pki_enabled & IS_PKI)) {
+      /* PKI not defined - set up some defaults */
+      setup_data->verify_peer_cert        = 1;
+      setup_data->check_common_ca         = 0;
+      setup_data->allow_self_signed       = 1;
+      setup_data->allow_expired_certs     = 1;
+      setup_data->cert_chain_validation   = 1;
+      setup_data->cert_chain_verify_depth = 2;
+      setup_data->check_cert_revocation   = 1;
+      setup_data->allow_no_crl            = 1;
+      setup_data->allow_expired_crl       = 1;
+      setup_data->is_rpk_not_cert         = 0;
+      setup_data->use_cid                 = 0;
+    }
     if (!setup_pki_ssl(ssl, setup_data, COAP_DTLS_ROLE_CLIENT))
       return 0;
     /* libcoap is managing (D)TLS connection based on setup_data options */
@@ -3523,6 +3594,7 @@ coap_dtls_send(coap_session_t *session,
   assert(ssl != NULL);
 
   session->dtls_event = -1;
+  ERR_clear_error();
   r = SSL_write(ssl, data, (int)data_len);
 
   if (r <= 0) {
@@ -3530,11 +3602,19 @@ coap_dtls_send(coap_session_t *session,
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
       r = 0;
     } else {
-      coap_log_warn("coap_dtls_send: cannot send PDU\n");
       if (err == SSL_ERROR_ZERO_RETURN)
         session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-      else if (err == SSL_ERROR_SSL)
+      else if (err == SSL_ERROR_SSL) {
+        unsigned long e = ERR_get_error();
+
+        coap_log_info("***%s: coap_dtls_send: cannot send PDU: %d: %s\n",
+                      coap_session_str(session),
+                      ERR_GET_REASON(e), ERR_reason_error_string(e));
         session->dtls_event = COAP_EVENT_DTLS_ERROR;
+      } else {
+        coap_log_info("***%s: coap_dtls_send: cannot send PDU: %d\n",
+                      coap_session_str(session), err);
+      }
       r = -1;
     }
   }
@@ -3644,6 +3724,9 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
   coap_ssl_data *ssl_data;
   SSL *ssl = (SSL *)session->tls;
   int r;
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  int retry = 0;
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 
   assert(ssl != NULL);
 
@@ -3660,6 +3743,10 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
   ssl_data->pdu_len = (unsigned)data_len;
 
   session->dtls_event = -1;
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+retry:
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+  ERR_clear_error();
   r = SSL_read(ssl, pdu, (int)sizeof(pdu));
   if (r > 0) {
     coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
@@ -3679,8 +3766,25 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
     } else {
       if (err == SSL_ERROR_ZERO_RETURN)        /* Got a close notify alert from the remote side */
         session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-      else if (err == SSL_ERROR_SSL)
+      else if (err == SSL_ERROR_SSL) {
+        unsigned long e = ERR_get_error();
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/proverr.h>
+        if (ERR_GET_REASON(e) == PROV_R_SEARCH_ONLY_SUPPORTED_FOR_DIRECTORIES && !retry) {
+          /* Loading trust store - first access causes a directory read error */
+          retry = 1;
+          goto retry;
+        }
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+        coap_log_info("***%s: coap_dtls_receive: cannot recv PDU: %d: %s\n",
+                      coap_session_str(session),
+                      ERR_GET_REASON(e), ERR_reason_error_string(e));
         session->dtls_event = COAP_EVENT_DTLS_ERROR;
+      } else {
+        coap_log_info("***%s: coap_dtls_receive: cannot send PDU %d\n",
+                      coap_session_str(session), err);
+      }
       r = -1;
     }
     if (session->dtls_event >= 0) {
@@ -3958,12 +4062,19 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
       }
       r = 0;
     } else {
-      coap_log_info("***%s: coap_tls_write: cannot send PDU\n",
-                    coap_session_str(session));
       if (err == SSL_ERROR_ZERO_RETURN)
         session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-      else if (err == SSL_ERROR_SSL)
+      else if (err == SSL_ERROR_SSL) {
+        unsigned long e = ERR_get_error();
+
+        coap_log_info("***%s: coap_tls_write: cannot send PDU: %d: %s\n",
+                      coap_session_str(session),
+                      ERR_GET_REASON(e), ERR_reason_error_string(e));
         session->dtls_event = COAP_EVENT_DTLS_ERROR;
+      } else {
+        coap_log_info("***%s: coap_tls_send: cannot send PDU: %d\n",
+                      coap_session_str(session), err);
+      }
       r = -1;
     }
   } else if (in_init && SSL_is_init_finished(ssl)) {
@@ -4039,8 +4150,17 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
     } else {
       if (err == SSL_ERROR_ZERO_RETURN)        /* Got a close notify alert from the remote side */
         session->dtls_event = COAP_EVENT_DTLS_CLOSED;
-      else if (err == SSL_ERROR_SSL)
+      else if (err == SSL_ERROR_SSL) {
+        unsigned long e = ERR_get_error();
+
+        coap_log_info("***%s: coap_tls_read: cannot recv PDU: %d: %s\n",
+                      coap_session_str(session),
+                      ERR_GET_REASON(e), ERR_reason_error_string(e));
         session->dtls_event = COAP_EVENT_DTLS_ERROR;
+      } else {
+        coap_log_info("***%s: coap_tls_read: cannot read PDU %d\n",
+                      coap_session_str(session), err);
+      }
       r = -1;
     }
   } else if (in_init && SSL_is_init_finished(ssl)) {

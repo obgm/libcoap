@@ -1549,6 +1549,11 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *ctx COAP_UNUSED,
   return 0;
 }
 
+int
+coap_dtls_context_load_pki_trust_store(coap_context_t *ctx COAP_UNUSED) {
+  return 0;
+}
+
 #if COAP_CLIENT_SUPPORT
 int
 coap_dtls_context_set_cpsk(coap_context_t *coap_context,

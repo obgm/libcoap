@@ -454,6 +454,25 @@ coap_context_set_pki_root_cas_lkd(coap_context_t *ctx,
   return 0;
 }
 
+COAP_API int
+coap_context_load_pki_trust_store(coap_context_t *ctx) {
+  int ret;
+
+  coap_lock_lock(ctx, return 0);
+  ret = coap_context_load_pki_trust_store_lkd(ctx);
+  coap_lock_unlock(ctx);
+  return ret;
+}
+
+int
+coap_context_load_pki_trust_store_lkd(coap_context_t *ctx) {
+  if (coap_dtls_is_supported() || coap_tls_is_supported()) {
+    return coap_dtls_context_load_pki_trust_store(ctx);
+  }
+  return 0;
+}
+
+
 void
 coap_context_set_keepalive(coap_context_t *context, unsigned int seconds) {
   context->ping_timeout = seconds;

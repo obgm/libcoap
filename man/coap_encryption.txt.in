@@ -13,7 +13,9 @@ NAME
 coap_encryption,
 coap_dtls_cpsk_t,
 coap_dtls_spsk_t,
-coap_dtls_pki_t
+coap_dtls_pki_t,
+coap_context_set_pki_root_cas,
+coap_context_load_pki_trust_store
 - Work with CoAP TLS/DTLS
 
 SYNOPSIS
@@ -25,6 +27,11 @@ SYNOPSIS
 *struct coap_dtls_spsk_t;*
 
 *struct coap_dtls_pki_t;*
+
+*int coap_context_set_pki_root_cas(coap_context_t *_context_,
+const char *_ca_file_, const char *_ca_dir_);*
+
+*int coap_context_load_pki_trust_store(coap_context_t *_context_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -97,6 +104,7 @@ In principle the set-up sequence for CoAP Servers looks like
 ----
 coap_new_context()
 coap_context_set_pki_root_cas() - if the root CAs need to be updated and PKI
+coap_context_load_pki_trust_store() - if the CA trust store is to be loaded and PKI
 coap_context_set_pki() and/or coap_context_set_psk2() - if encryption is required
 coap_new_endpoint()
 ----
@@ -110,6 +118,7 @@ In principle the set-up sequence for CoAP Clients looks like
 ----
 coap_new_context()
 coap_context_set_pki_root_cas() - if the root CAs need to be updated and PKI
+coap_context_load_pki_trust_store() - if the CA trust store is to be loaded and PKI
 coap_new_client_session(), coap_new_client_session_pki() or coap_new_client_session_psk2()
 ----
 
@@ -121,6 +130,29 @@ Where possible, the CoAP layer handles all this automatically based on
 different configuration options passed in by the *coap_context_set_pki*(),
 *coap_new_client_session_pki*(), *coap_context_set_psk2*() and
 *coap_new_client_session_psk2*() functions.
+
+FUNCTIONS
+---------
+
+*Function: coap_context_set_pki_root_cas()*
+
+The *coap_context_set_pki_root_cas*() function is used to define a set of
+root CAs to be used instead of the default set of root CAs provided as a part
+of the TLS library.  _ca_file_ points to a PEM encoded file containing the
+list of CAs.  _ca_file_ can be NULL.  _ca_dir_ points to a directory
+containing a set of PEM encoded files containing rootCAs.  _ca_dir_ can be
+NULL. One or both of _ca_file_ and _ca_dir_ must be set. +
+*NOTE:* Some TLS libraries send the full list of CAs added by this function
+during the (D)TLS session setup handshakes. To stop this, either provide a
+single CA using the _ca_file_ definition in _pki_key_ in _setup_data_ variable
+when calling *coap_context_set_pki*(3), or set _check_common_ca_ to 0 in
+_setup_data_ variable.
+
+*Function: coap_context_load_pki_trust_store()*
+
+The *coap_context_load_pki_trust_store*() function will load in the hosts's
+default trust store for PKI verification use. Not all TLS libraries or
+platform types are supported.
 
 PSK CLIENT INFORMATION
 ----------------------
@@ -298,7 +330,7 @@ typedef struct coap_dtls_spsk_t {
   void *id_call_back_arg;  /* Passed in to the Identity callback function */
 
   /** SNI check callback function.
-   * If not @p NULL, called if the SNI is not previously seen and exexuted
+   * If not @p NULL, called if the SNI is not previously seen and executed
    * prior to sending an Identity Hint back to the client so that the
    * appropriate PSK information can be used based on the requesting SNI.
    */
@@ -462,7 +494,6 @@ typedef struct coap_dtls_pki_t {
   uint8_t verify_peer_cert;         /* 1 if peer cert is to be verified */
   uint8_t check_common_ca;          /* 1 if peer cert is to be signed by
                                      * the same CA as the local cert */
-  uint8_t allow_self_signed;        /* 1 if self-signed certs are allowed */
   uint8_t allow_self_signed;        /* 1 if self-signed certs are allowed.
                                      * Ignored if check_common_ca set */
   uint8_t allow_expired_certs;      /* 1 if expired certs are allowed */
@@ -985,6 +1016,12 @@ the user pin.
 performance reasons (to save a potential buffer copy) and the length include
 this NULL terminator. It is not a requirement to have the NULL terminator
 though and the length must then reflect the actual data size.
+
+RETURN VALUES
+-------------
+
+*coap_context_set_pki_root_cas*() and *coap_context_load_pki_trust_store*()
+return 1 on success, 0 on failure.
 
 EXAMPLES
 --------

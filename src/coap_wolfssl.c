@@ -120,6 +120,7 @@ typedef struct coap_wolfssl_context_t {
   int psk_pki_enabled;
   char *root_ca_file;
   char *root_ca_dir;
+  int trust_store_defined;
 } coap_wolfssl_context_t;
 
 typedef struct coap_ssl_data_t {
@@ -932,13 +933,21 @@ setup_dtls_context(coap_wolfssl_context_t *w_context) {
 #ifdef WOLFSSL_DTLS_MTU
     wolfSSL_CTX_dtls_set_mtu(w_context->dtls.ctx, COAP_DEFAULT_MTU);
 #endif /* WOLFSSL_DTLS_MTU */
+#ifdef WOLFSSL_SYS_CA_CERTS
+    if (w_context->trust_store_defined) {
+      if (!wolfSSL_CTX_load_system_CA_certs(w_context->dtls.ctx)) {
+        coap_log_warn("Unable to load trusted root CAs\n");
+        goto error;
+      }
+    }
+#endif
     if (w_context->root_ca_file || w_context->root_ca_dir) {
       if (!wolfSSL_CTX_load_verify_locations_ex(w_context->dtls.ctx,
                                                 w_context->root_ca_file,
                                                 w_context->root_ca_dir,
                                                 w_context->setup_data.allow_expired_certs ?
                                                 WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
-        coap_log_warn("Unable to install root CAs (%s/%s)\n",
+        coap_log_warn("Unable to install root CAs (%s : %s)\n",
                       w_context->root_ca_file ? w_context->root_ca_file : "NULL",
                       w_context->root_ca_dir ? w_context->root_ca_dir : "NULL");
         goto error;
@@ -989,13 +998,21 @@ setup_tls_context(coap_wolfssl_context_t *w_context) {
                                                 w_context->root_ca_dir,
                                                 w_context->setup_data.allow_expired_certs ?
                                                 WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY : 0)) {
-        coap_log_warn("Unable to install root CAs (%s/%s)\n",
+        coap_log_warn("Unable to install root CAs (%s : %s)\n",
                       w_context->root_ca_file ? w_context->root_ca_file : "NULL",
                       w_context->root_ca_dir ? w_context->root_ca_dir : "NULL");
         goto error;
       }
     }
     /* Verify Peer */
+#ifdef WOLFSSL_SYS_CA_CERTS
+    if (w_context->trust_store_defined) {
+      if (!wolfSSL_CTX_load_system_CA_certs(w_context->tls.ctx)) {
+        coap_log_warn("Unable to load trusted root CAs\n");
+        goto error;
+      }
+    }
+#endif
     if (w_context->setup_data.verify_peer_cert)
       wolfSSL_CTX_set_verify(w_context->tls.ctx,
                              WOLFSSL_VERIFY_PEER |
@@ -1344,7 +1361,7 @@ setup_pki_ssl(WOLFSSL *ssl,
   /*
    * Configure the CA
    */
-  if (setup_data->check_common_ca && key.key.define.ca.u_byte &&
+  if (key.key.define.ca.u_byte &&
       key.key.define.ca.u_byte[0]) {
     switch (key.key.define.ca_def) {
     case COAP_PKI_KEY_DEF_PEM:
@@ -1840,12 +1857,30 @@ coap_dtls_context_set_pki_root_cas(coap_context_t *ctx,
 }
 
 int
+coap_dtls_context_load_pki_trust_store(coap_context_t *ctx) {
+  coap_wolfssl_context_t *w_context =
+      ((coap_wolfssl_context_t *)ctx->dtls_context);
+
+  if (!w_context) {
+    coap_log_warn("coap_context_set_pki_trust_store: (D)TLS environment "
+                  "not set up\n");
+    return 0;
+  }
+#ifdef WOLFSSL_SYS_CA_CERTS
+  w_context->trust_store_defined = 1;
+  return 1;
+#else /* LIBWOLFSSL_VERSION_HEX < 0x05005002 */
+  coap_log_warn("coap_context_set_pki_trust_store: (D)TLS environment "
+                "not supported for wolfSSL < v5.5.2 or –enable-sys-ca-certs not defined\n");
+#endif /* WOLFSSL_SYS_CA_CERTS */
+}
+
+int
 coap_dtls_context_check_keys_enabled(coap_context_t *ctx) {
   coap_wolfssl_context_t *w_context =
       ((coap_wolfssl_context_t *)ctx->dtls_context);
   return w_context->psk_pki_enabled ? 1 : 0;
 }
-
 
 void
 coap_dtls_free_context(void *handle) {
