@@ -38,7 +38,9 @@ struct coap_async_t {
                              0 indicates never trigger */
   coap_session_t *session;         /**< transaction session */
   coap_pdu_t *pdu;                 /**< copy of request pdu */
-  void *appdata;                   /**< User definable data pointer */
+  void *app_data;                   /**< User definable data pointer */
+  coap_app_data_free_callback_t app_cb; /**< callcack to call when async is
+                                             being released (or NULL) */
 };
 
 /**
@@ -118,6 +120,28 @@ void coap_async_trigger_lkd(coap_async_t *async);
  *                 wait forever.
  */
 void coap_async_set_delay_lkd(coap_async_t *async, coap_tick_t delay);
+
+/**
+ * Stores @p data with the given async, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the cache_entry is deleted.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param async_entry The async state object.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on async
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the async.
+ */
+void *coap_async_set_app_data2_lkd(coap_async_t *async_entry,
+                                   void *data,
+                                   coap_app_data_free_callback_t callback);
 
 /**
  * Releases the memory that was allocated by coap_register_async() for the

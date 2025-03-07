@@ -15,7 +15,7 @@ coap_session_reference,
 coap_session_release,
 coap_session_disconnected,
 coap_session_set_type_client,
-coap_session_set_app_data,
+coap_session_set_app_data2,
 coap_session_get_app_data,
 coap_session_get_addr_local,
 coap_session_get_addr_mcast,
@@ -42,7 +42,8 @@ SYNOPSIS
 
 *int coap_session_set_type_client(coap_session_t *_session_);*
 
-*void coap_session_set_app_data(coap_session_t *_session_, void *_data_);*
+*void *coap_session_set_app_data2(coap_session_t *_session_, void *_app_data_,
+coap_app_data_free_callback_t _app_cb_);*
 
 *void *coap_session_get_app_data(const coap_session_t *_session_);*
 
@@ -134,15 +135,31 @@ the now type Client _session_ does not expire until a *coap_session_release*()
 is done. *NOTE:* This function will fail for a DTLS server type session if done
 before the ClientHello is seen.
 
-*Function: coap_session_set_app_data()*
+*Function: coap_session_set_app_data2()*
 
-The *coap_session_set_app_data*() function is used to define a _data_ pointer
-for the _session_ which can then be retrieved at a later date.
+The *coap_session_set_app_data2*() function is used to define a _app_data_ pointer
+for the _session_ which can then be retrieved at a later date. There is an
+additional callback _app_cb_ (if set) to be used if the data is to be released
+when the _session_ is deleted. If this is a subsequent call for the _session_,
+then the existing data is returned, and it is the responsibility of the caller to
+release this previous data.  On the first call, NULL is returned.
+
+The _app_cb_ handler function prototype is defined as:
+[source, c]
+----
+/**
+ * Callback to free off the app data when the cache-entry is
+ * being deleted / freed off.
+ *
+ * @param data  The app data to be freed off.
+ */
+typedef void (*coap_app_data_free_callback_t)(void *data);
+----
 
 *Function: coap_session_get_app_data()*
 
 The *coap_session_get_app_data*() function is used to retrieve the data
-pointer previously defined by *coap_session_set_app_data*().
+pointer previously defined by *coap_session_set_app_data2*() in _session_.
 
 *Function: coap_session_get_addr_local()*
 
@@ -233,6 +250,8 @@ RETURN VALUES
 *coap_session_reference*() returns a pointer to the session.
 
 *coap_session_set_type_client*() returns 1 on success, otherwise 0.
+
+*coap_session_set_app_data2*() returns a previously defined pointer or NULL.
 
 *coap_session_get_app_data*() returns a previously defined pointer.
 

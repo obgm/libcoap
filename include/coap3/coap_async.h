@@ -99,10 +99,12 @@ COAP_API coap_async_t *coap_find_async(coap_session_t *session, coap_bin_const_t
  * Set the application data pointer held in @p async. This overwrites any
  * existing data pointer.
  *
+ * @deprecated Use coap_async_set_app_data2() instead.
+ *
  * @param async The async state object.
  * @param app_data The pointer to the data.
  */
-void coap_async_set_app_data(coap_async_t *async, void *app_data);
+COAP_DEPRECATED void coap_async_set_app_data(coap_async_t *async, void *app_data);
 
 /**
  * Gets the application data pointer held in @p async.
@@ -112,6 +114,26 @@ void coap_async_set_app_data(coap_async_t *async, void *app_data);
  * @return The applicaton data pointer.
  */
 void *coap_async_get_app_data(const coap_async_t *async);
+
+/**
+ * Stores @p data with the given async, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the cache_entry is deleted.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param async_entry The async state object.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on async
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the async.
+ */
+COAP_API void *coap_async_set_app_data2(coap_async_t *async_entry,
+                                        void *data,
+                                        coap_app_data_free_callback_t callback);
 
 /** @} */
 

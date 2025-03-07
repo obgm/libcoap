@@ -417,7 +417,7 @@ COAP_API void coap_free_context(coap_context_t *context);
  * @param data The data to store with wih the context. Note that this data
  *             must be valid during the lifetime of @p context.
  */
-void coap_set_app_data(coap_context_t *context, void *data);
+COAP_DEPRECATED void coap_set_app_data(coap_context_t *context, void *data);
 
 /**
  * @deprecated Use coap_context_get_app_data() instead.
@@ -430,7 +430,7 @@ void coap_set_app_data(coap_context_t *context, void *data);
  *
  * @return The data previously stored or @c NULL if not data stored.
  */
-void *coap_get_app_data(const coap_context_t *context);
+COAP_DEPRECATED void *coap_get_app_data(const coap_context_t *context);
 
 /**
  * Creates a new ACK PDU with specified error @p code. The options specified by
@@ -634,10 +634,32 @@ void coap_mcast_per_resource(coap_context_t *context);
  * Stores @p data with the given context. This function overwrites any value
  * that has previously been stored with @p context.
  *
+ * @deprecated Use coap_context_set_app_data2() instead.
+ *
  * @param context The CoAP context.
  * @param data The pointer to the data to store.
  */
-void coap_context_set_app_data(coap_context_t *context, void *data);
+COAP_DEPRECATED void coap_context_set_app_data(coap_context_t *context,
+                                               void *data);
+
+/**
+ * Stores @p data with the given context, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the context is deleted.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param context The CoAP context.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on context
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the context.
+ */
+COAP_API void *coap_context_set_app_data2(coap_context_t *context, void *data,
+                                          coap_app_data_free_callback_t callback);
 
 /**
  * Returns any application-specific data that has been stored with @p

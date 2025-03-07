@@ -171,7 +171,8 @@ struct coap_context_t {
   size_t cache_ignore_count;       /**< The number of CoAP options to ignore
                                         when creating a cache-key */
 #endif /* COAP_SERVER_SUPPORT */
-  void *app;                       /**< application-specific data */
+  void *app_data;                  /**< application-specific data */
+  coap_app_data_free_callback_t app_cb; /**< call-back to release app_data */
   uint32_t max_token_size;         /**< Largest token size supported RFC8974 */
   coap_tick_t next_timeout;        /**< When the next timeout is to occur */
 #ifdef COAP_EPOLL_SUPPORT
@@ -476,6 +477,27 @@ int coap_client_delay_first(coap_session_t *session);
  * @param context The current coap_context_t object to free off.
  */
 void coap_free_context_lkd(coap_context_t *context);
+
+/**
+ * Stores @p data with the given context, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the context is deleted.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param context The CoAP context.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on context
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the context.
+ */
+void *coap_context_set_app_data2_lkd(coap_context_t *context, void *data,
+                                     coap_app_data_free_callback_t callback);
 
 /**
  * Invokes the event handler of @p context for the given @p event and

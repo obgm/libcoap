@@ -91,21 +91,52 @@ COAP_API void coap_session_disconnected(coap_session_t *session,
  * Stores @p data with the given session. This function overwrites any value
  * that has previously been stored with @p session.
  *
+ * @deprecated Use coap_session_set_app_data2() instead.
+ *
  * @param session The CoAP session.
  * @param data The pointer to the data to store.
  */
-void coap_session_set_app_data(coap_session_t *session, void *data);
+COAP_DEPRECATED void coap_session_set_app_data(coap_session_t *session,
+                                               void *data);
 
 /**
  * Returns any application-specific data that has been stored with @p
- * session using the function coap_session_set_app_data(). This function will
- * return @c NULL if no data has been stored.
+ * session using the function coap_session_set_app_data() or
+ * coap_session_set_app_data2(). This function will return @c NULL if no
+ * data has been stored.
  *
  * @param session The CoAP session.
  *
  * @return Pointer to the stored data or @c NULL.
  */
 void *coap_session_get_app_data(const coap_session_t *session);
+
+/**
+ * Callback to free off the app data when the entry is
+ * being deleted / freed off.
+ *
+ * @param data  The app data to be freed off.
+ */
+typedef void (*coap_app_data_free_callback_t)(void *data);
+
+/**
+ * Stores @p data with the given session, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the session is deleted.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param session The CoAP session.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on session
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the session.
+ */
+COAP_API void *coap_session_set_app_data2(coap_session_t *session, void *data,
+                                          coap_app_data_free_callback_t callback);
 
 /**
  * Get the remote IP address and port from the session.

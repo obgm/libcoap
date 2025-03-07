@@ -22,7 +22,7 @@ coap_context_get_session_timeout,
 coap_context_set_csm_timeout_ms,
 coap_context_get_csm_timeout_ms,
 coap_context_set_max_token_size,
-coap_context_set_app_data,
+coap_context_set_app_data2,
 coap_context_get_app_data,
 coap_context_set_cid_tuple_change
 - Work with CoAP contexts
@@ -61,7 +61,8 @@ unsigned int _csm_timeout_ms_);*
 *void coap_context_set_max_token_size(coap_context_t *_context_,
 size_t _max_token_size_);*
 
-*void coap_context_set_app_data(coap_context_t *_context_, void *_app_data_);*
+*void *coap_context_set_app_data2(coap_context_t *_context_, void *_app_data_,
+coap_app_data_free_callback_t _app_cb_);*
 
 *void *coap_context_get_app_data(const coap_context_t *_context_);*
 
@@ -176,15 +177,31 @@ bytes, else 8 to disable https://rfc-editor.org/rfc/rfc8974[RFC8974]
 supports the requested extended token size as per
 "https://rfc-editor.org/rfc/rfc8974.html#section-2.2.2[RFC8794 Section 2.2.2]"
 
-*Function: coap_context_set_app_data()*
+*Function: coap_context_set_app_data2()*
 
-The *coap_context_set_app_data*() function is used to define a _app_data_
-pointer for the _context_ which can then be retrieved at a later date.
+The *coap_context_set_app_data2*() function is used to define a _app_data_ pointer
+for the _context_ which can then be retrieved at a later date. There is an
+additional callback _app_cb_ (if set) to be used if the data is to be released
+when the _context_ is deleted. If this is a subsequent call for the _context_,
+then the existing data is returned, and it is the responsibility of the caller to
+release this previous data.  On the first call, NULL is returned.
+
+The _app_cb_ handler function prototype is defined as:
+[source, c]
+----
+/**
+ * Callback to free off the app data when the cache-entry is
+ * being deleted / freed off.
+ *
+ * @param data  The app data to be freed off.
+ */
+typedef void (*coap_app_data_free_callback_t)(void *data);
+----
 
 *Function: coap_context_get_app_data()*
 
 The *coap_context_get_app_data*() function is used to retrieve the app_data
-pointer previously defined by *coap_context_set_app_data*().
+pointer previously defined by *coap_context_set_app_data2*().
 
 *Function: coap_context_set_cid_tuple_change()*
 
@@ -211,6 +228,8 @@ out an idle server session.
 (TCP) CSM negotiation response from the peer.
 
 *coap_context_get_app_data*() returns a previously defined pointer.
+
+*coap_context_set_app_data2*() returns a previously defined pointer or NULL.
 
 *coap_context_set_cid_tuple_change*() returns 1 on success, else 0;
 

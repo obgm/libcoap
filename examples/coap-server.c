@@ -516,6 +516,7 @@ hnd_put_example_data(coap_resource_t *resource,
 
   if (coap_get_data_large(request, &size, &data, &offset, &total) &&
       size != total) {
+    coap_binary_t *old_data_in_cache;
     /*
      * A part of the data has been received (COAP_BLOCK_SINGLE_BODY not set).
      * However, total unfortunately is only an indication, so it is not safe to
@@ -543,8 +544,8 @@ hnd_put_example_data(coap_resource_t *resource,
                                            COAP_CACHE_NOT_RECORD_PDU,
                                            COAP_CACHE_IS_SESSION_BASED, 0);
       } else {
-        coap_delete_binary(coap_cache_get_app_data(cache_entry));
-        coap_cache_set_app_data(cache_entry, NULL, NULL);
+        old_data_in_cache = coap_cache_set_app_data2(cache_entry, NULL, NULL);
+        coap_delete_binary(old_data_in_cache);
       }
     }
     if (!cache_entry) {
@@ -563,12 +564,11 @@ hnd_put_example_data(coap_resource_t *resource,
       data_so_far = coap_block_build_body(data_so_far, size, data,
                                           offset, total);
       /* Yes, data_so_far can be NULL if error */
-      coap_cache_set_app_data(cache_entry, data_so_far, cache_free_app_data);
+      coap_cache_set_app_data2(cache_entry, data_so_far, cache_free_app_data);
     }
     if (offset + size == total) {
       /* All the data is now in */
-      data_so_far = coap_cache_get_app_data(cache_entry);
-      coap_cache_set_app_data(cache_entry, NULL, NULL);
+      data_so_far = coap_cache_set_app_data2(cache_entry, NULL, NULL);
     } else {
       /* Give us the next block response */
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
@@ -867,6 +867,7 @@ hnd_put_post(coap_resource_t *resource,
 
   if (coap_get_data_large(request, &size, &data, &offset, &total) &&
       size != total) {
+    coap_binary_t *old_data_in_cache;
     /*
      * A part of the data has been received (COAP_BLOCK_SINGLE_BODY not set).
      * However, total unfortunately is only an indication, so it is not safe to
@@ -889,8 +890,8 @@ hnd_put_post(coap_resource_t *resource,
                                            COAP_CACHE_NOT_RECORD_PDU,
                                            COAP_CACHE_IS_SESSION_BASED, 0);
       } else {
-        coap_delete_binary(coap_cache_get_app_data(cache_entry));
-        coap_cache_set_app_data(cache_entry, NULL, NULL);
+        old_data_in_cache = coap_cache_set_app_data2(cache_entry, NULL, NULL);
+        coap_delete_binary(old_data_in_cache);
       }
     }
     if (!cache_entry) {
@@ -924,12 +925,11 @@ hnd_put_post(coap_resource_t *resource,
         }
       }
       /* Yes, data_so_far can be NULL */
-      coap_cache_set_app_data(cache_entry, data_so_far, cache_free_app_data);
+      coap_cache_set_app_data2(cache_entry, data_so_far, cache_free_app_data);
     }
     if (offset + size == total) {
       /* All the data is now in */
-      data_so_far = coap_cache_get_app_data(cache_entry);
-      coap_cache_set_app_data(cache_entry, NULL, NULL);
+      data_so_far = coap_cache_set_app_data2(cache_entry, NULL, NULL);
     } else {
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
       return;

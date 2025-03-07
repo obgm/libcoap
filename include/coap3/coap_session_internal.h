@@ -143,7 +143,8 @@ struct coap_session_t {
                                       contained in context->spsk_setup_data
 
                                       Value maintained internally */
-  void *app;                        /**< application-specific data */
+  void *app_data;                     /**< application-specific data */
+  coap_app_data_free_callback_t app_cb; /**< call-back to release app_data */
   coap_fixed_point_t ack_timeout;   /**< timeout waiting for ack
                                          (default 2.0 secs) */
   coap_fixed_point_t ack_random_factor; /**< ack random factor backoff (default
@@ -613,6 +614,27 @@ coap_session_t *coap_session_new_dtls_session(coap_session_t *session,
  *
  */
 void coap_session_server_keepalive_failed(coap_session_t *session);
+
+/**
+ * Stores @p data with the given session, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the session is deleted.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param session The CoAP session.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on session
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the session.
+ */
+void *coap_session_set_app_data2_lkd(coap_session_t *session, void *data,
+                                     coap_app_data_free_callback_t callback);
 
 void coap_session_free(coap_session_t *session);
 void coap_session_mfree(coap_session_t *session);

@@ -189,6 +189,9 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
       coap_delete_pdu_lkd(s->pdu);
       s->pdu = NULL;
     }
+    if (s->app_cb && s->app_data) {
+      coap_lock_callback(context, s->app_cb(s->app_data));
+    }
     coap_free_type(COAP_STRING, s);
   }
 }
@@ -215,14 +218,37 @@ coap_delete_all_async(coap_context_t *context) {
   context->async_state = NULL;
 }
 
-void
-coap_async_set_app_data(coap_async_t *async, void *app_data) {
-  async->appdata = app_data;
+COAP_API void
+coap_async_set_app_data(coap_async_t *async_entry, void *app_data) {
+  coap_lock_lock(NULL, return);
+  coap_async_set_app_data2_lkd(async_entry, app_data, NULL);
+  coap_lock_unlock(NULL);
+}
+
+COAP_API void *
+coap_async_set_app_data2(coap_async_t *async_entry, void *app_data,
+                         coap_app_data_free_callback_t callback) {
+  void *old_data;
+
+  coap_lock_lock(NULL, return NULL);
+  old_data = coap_async_set_app_data2_lkd(async_entry, app_data, callback);
+  coap_lock_unlock(NULL);
+  return old_data;
+}
+
+void *
+coap_async_set_app_data2_lkd(coap_async_t *async_entry, void *app_data,
+                             coap_app_data_free_callback_t callback) {
+  void *old_data = async_entry->app_data;
+
+  async_entry->app_data = app_data;
+  async_entry->app_cb = app_data ? callback : NULL;
+  return old_data;
 }
 
 void *
 coap_async_get_app_data(const coap_async_t *async) {
-  return async->appdata;
+  return async->app_data;
 }
 
 #else /* ! COAP_ASYNC_SUPPORT */
@@ -262,10 +288,19 @@ coap_find_async(coap_session_t *session,
   return NULL;
 }
 
-void
+COAP_API void
 coap_async_set_app_data(coap_async_t *async, void *app_data) {
   (void)async;
   (void)app_data;
+}
+
+COAP_API void *
+coap_async_set_app_data2(coap_async_t *async, void *app_data,
+                         coap_app_data_free_callback_t callback) {
+  (void)async;
+  (void)app_data;
+  (void)callback;
+  return NULL;
 }
 
 void *

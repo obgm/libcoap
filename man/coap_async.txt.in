@@ -16,7 +16,7 @@ coap_async_trigger,
 coap_async_set_delay,
 coap_find_async,
 coap_free_async,
-coap_async_set_app_data,
+coap_async_set_app_data2,
 coap_async_get_app_data
 - Work with CoAP async support
 
@@ -36,7 +36,8 @@ const coap_pdu_t *_request_, coap_tick_t _delay_);*
 *coap_async_t *coap_find_async(coap_session_t *_session_,
 coap_bin_const_t _token_);*
 
-*void coap_async_set_app_data(coap_async_t *_async_, void *_app_data_);*
+*void *coap_async_set_app_data2(coap_async_t *_async_, void *_app_data_,
+coap_cache_app_data_free_callback_t _app_cb_);*
 
 *void *coap_async_get_app_data(const coap_async_t *_async_);*
 
@@ -107,12 +108,26 @@ The *coap_free_async*() function is used to delete an _async_ definition.
 The *coap_find_async*() function is used to determine if there is an async
 definition based on the _session_ and token _token_.
 
-*Function: coap_async_set_app_data()*
+*Function: coap_async_set_app_data2()*
 
-The *coap_async_set_app_data*() function is used to add in user defined
-_app_data_ to the _async_ definition.  It is the responsibility of the
-application to release this data if appropriate.  This would usually be done
-when the application request handler is called under 'async' control.
+The *coap_async_set_app_data2*() function is used to define a _app_data_ pointer
+for the _async_ which can then be retrieved at a later date. There is an
+additional callback _app_cb_ (if set) to be used if the data is to be released
+when the _async_ is deleted. If this is a subsequent call for the
+_async_, then the existing data is returned, and it is the responsibility
+of the caller to release this previous data.  On the first call, NULL is returned.
+
+The _app_cb_ handler function prototype is defined as:
+[source, c]
+----
+/**
+ * Callback to free off the app data when the cache-entry is
+ * being deleted / freed off.
+ *
+ * @param data  The app data to be freed off.
+ */
+typedef void (*coap_app_data_free_callback_t)(void *data);
+----
 
 *Function: coap_async_get_app_data()*
 
@@ -126,6 +141,8 @@ RETURN VALUES
 definition or NULL if there is an error.
 
 *coap_async_get_app_data*() returns a pointer to the user defined data.
+
+*coap_async_set_app_data2*() returns a previously defined pointer or NULL.
 
 EXAMPLES
 --------

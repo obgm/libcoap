@@ -117,12 +117,12 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_address.3" > coap_is_af_unix.3
 	@echo ".so man3/coap_cache.3" > coap_cache_get_pdu.3
 	@echo ".so man3/coap_cache.3" > coap_cache_get_app_data.3
-	@echo ".so man3/coap_cache.3" > coap_cache_set_app_data.3
+	@echo ".so man3/coap_cache.3" > coap_cache_set_app_data2.3
 	@echo ".so man3/coap_context.3" > coap_context_get_session_timeout.3
 	@echo ".so man3/coap_context.3" > coap_context_set_csm_timeout_ms.3
 	@echo ".so man3/coap_context.3" > coap_context_get_csm_timeout_ms.3
 	@echo ".so man3/coap_context.3" > coap_context_set_max_token_size.3
-	@echo ".so man3/coap_context.3" > coap_context_set_app_data.3
+	@echo ".so man3/coap_context.3" > coap_context_set_app_data2.3
 	@echo ".so man3/coap_context.3" > coap_context_get_app_data.3
 	@echo ".so man3/coap_context.3" > coap_context_set_cid_tuple_change.3
 	@echo ".so man3/coap_deprecated.3" > coap_set_app_data.3
@@ -134,6 +134,10 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_deprecated.3" > coap_run_once.3
 	@echo ".so man3/coap_deprecated.3" > coap_set_event_handler.3
 	@echo ".so man3/coap_deprecated.3" > coap_write.3
+	@echo ".so man3/coap_deprecated.3" > coap_async_set_app_data.3
+	@echo ".so man3/coap_deprecated.3" > coap_cache_set_app_data.3
+	@echo ".so man3/coap_deprecated.3" > coap_context_set_app_data.3
+	@echo ".so man3/coap_deprecated.3" > coap_session_set_app_data.3
 	@echo ".so man3/coap_io.3" > coap_io_pending.3
 	@echo ".so man3/coap_io.3" > coap_io_get_fds.3
 	@echo ".so man3/coap_io.3" > coap_can_exit.3
