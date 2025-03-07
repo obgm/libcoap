@@ -27,7 +27,11 @@ coap_run_once,
 coap_set_event_handler,
 coap_write,
 coap_get_app_data,
-coap_set_app_data
+coap_set_app_data,
+coap_async_set_app_data,
+coap_cache_set_app_data,
+coap_context_set_app_data,
+coap_session_set_app_data
 - Work with CoAP deprecated functions
 
 SYNOPSIS
@@ -76,6 +80,18 @@ unsigned int _max_sockets_, unsigned int *_num_sockets_, coap_tick_t _now_);*
 *void coap_set_app_data(coap_context_t *_context_, void *_app_data_);*
 
 *void *coap_get_app_data(const coap_context_t *_context_);*
+
+*void coap_async_set_app_data(coap_async_t *_async_entry_,
+void *_data_);*
+
+*void coap_cache_set_app_data(coap_cache_entry_t *_cache_entry_,
+void *_data_, coap_app_data_free_callback_t _callback_);*
+
+*void coap_context_set_app_data(coap_context_t *_context_,
+void *_data_);*
+
+*void coap_session_set_app_data(coap_session_t *_session_,
+void *_data_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -180,6 +196,18 @@ The *coap_set_app_data*() function is replaced by
 The *coap_get_app_data*() function is replaced by
 *coap_context_get_app_data*(3).
 
+The *coap_async_set_app_data*() function is replaced by
+*coap_async_set_app_data2*(3), using NULL for _app_cb_.
+
+The *coap_cache_set_app_data*() function is replaced by
+*coap_cache_set_app_data2*(3), returning the existing _data_ value.
+
+The *coap_context_set_app_data*() function is replaced by
+*coap_context_set_app_data2*(3), using NULL for _app_cb_.
+
+The *coap_session_set_app_data*() function is replaced by
+*coap_session_set_app_data2*(3), using NULL for _app_cb_.
+
 RETURN VALUES
 -------------
 *coap_context_get_csm_timeout*() returns the seconds to wait for a (TCP) CSM
@@ -211,9 +239,9 @@ before the function should next be called.
 
 SEE ALSO
 --------
-*coap_context*(3), *coap_endpoint_client*(3), *coap_endpoint_server*(3),
-*coap_handler*(3), *coap_io*(3), *coap_observe*(3), *coap_pdu_access*(3) and
-*coap_pdu_setup*(3).
+*coap_async*(3), *coap_cache*(3), *coap_context*(3), *coap_endpoint_client*(3),
+*coap_endpoint_server*(3), *coap_handler*(3), *coap_io*(3), *coap_observe*(3),
+*coap_pdu_access*(3), *coap_pdu_setup*(3) and *coap_session*(3).
 
 FURTHER INFORMATION
 -------------------

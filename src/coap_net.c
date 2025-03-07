@@ -626,16 +626,39 @@ coap_af_unix_is_supported(void) {
 #endif /* ! COAP_AF_UNIX_SUPPORT */
 }
 
-void
+COAP_API void
 coap_context_set_app_data(coap_context_t *context, void *app_data) {
   assert(context);
-  context->app = app_data;
+  coap_lock_lock(context, return);
+  coap_context_set_app_data2_lkd(context, app_data, NULL);
+  coap_lock_unlock(context);
 }
 
 void *
 coap_context_get_app_data(const coap_context_t *context) {
   assert(context);
-  return context->app;
+  return context->app_data;
+}
+
+COAP_API void *
+coap_context_set_app_data2(coap_context_t *context, void *app_data,
+                           coap_app_data_free_callback_t callback) {
+  void *old_data;
+
+  coap_lock_lock(context, return NULL);
+  old_data = coap_context_set_app_data2_lkd(context, app_data, callback);
+  coap_lock_unlock(context);
+  return old_data;
+}
+
+void *
+coap_context_set_app_data2_lkd(coap_context_t *context, void *app_data,
+                               coap_app_data_free_callback_t callback) {
+  void *old_data = context->app_data;
+
+  context->app_data = app_data;
+  context->app_cb = app_data ? callback : NULL;
+  return old_data;
 }
 
 coap_context_t *
@@ -730,16 +753,18 @@ onerror:
 #endif /* COAP_EPOLL_SUPPORT || COAP_SERVER_SUPPORT */
 }
 
-void
-coap_set_app_data(coap_context_t *ctx, void *app_data) {
-  assert(ctx);
-  ctx->app = app_data;
+COAP_API void
+coap_set_app_data(coap_context_t *context, void *app_data) {
+  assert(context);
+  coap_lock_lock(context, return);
+  coap_context_set_app_data2_lkd(context, app_data, NULL);
+  coap_lock_unlock(context);
 }
 
 void *
 coap_get_app_data(const coap_context_t *ctx) {
   assert(ctx);
-  return ctx->app;
+  return ctx->app_data;
 }
 
 COAP_API void
@@ -838,6 +863,9 @@ coap_free_context_lkd(coap_context_t *context) {
   coap_proxy_cleanup(context);
 #endif /* COAP_PROXY_SUPPORT */
 
+  if (context->app_cb) {
+    context->app_cb(context->app_data);
+  }
   coap_free_type(COAP_CONTEXT, context);
   coap_dump_memory_type_counts(COAP_LOG_DEBUG);
 }

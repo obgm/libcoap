@@ -209,14 +209,37 @@ const coap_pdu_t *coap_cache_get_pdu(const coap_cache_entry_t *cache_entry);
  * overwrites any value that has previously been stored with @p
  * cache_entry.
  *
+ * @deprecated Use coap_cache_set_app_data2() instead.
+ *
  * @param cache_entry The CoAP cache entry.
  * @param data The data pointer to store with wih the cache entry. Note that
  *             this data must be valid during the lifetime of @p cache_entry.
  * @param callback The callback to call to free off this data when the
  *                 cache-entry is deleted, or @c NULL if not required.
  */
-void coap_cache_set_app_data(coap_cache_entry_t *cache_entry, void *data,
-                             coap_cache_app_data_free_callback_t callback);
+COAP_DEPRECATED void coap_cache_set_app_data(coap_cache_entry_t *cache_entry,
+                                             void *data,
+                                             coap_app_data_free_callback_t callback);
+
+/**
+ * Stores @p data with the given cache_entry, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the cache_entry is deleted.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param cache_entry The CoAP cache entry.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on cache_entry
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the cache_entry.
+ */
+COAP_API void *coap_cache_set_app_data2(coap_cache_entry_t *cache_entry,
+                                        void *data,
+                                        coap_app_data_free_callback_t callback);
 
 /**
  * Returns any application-specific data that has been stored with @p

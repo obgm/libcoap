@@ -291,8 +291,8 @@ coap_delete_cache_entry(coap_context_t *ctx, coap_cache_entry_t *cache_entry) {
     coap_delete_pdu_lkd(cache_entry->pdu);
   }
   coap_delete_cache_key(cache_entry->cache_key);
-  if (cache_entry->callback && cache_entry->app_data) {
-    coap_lock_callback(ctx, cache_entry->callback(cache_entry->app_data));
+  if (cache_entry->app_cb && cache_entry->app_data) {
+    coap_lock_callback(ctx, cache_entry->app_cb(cache_entry->app_data));
   }
   coap_free_type(COAP_CACHE_ENTRY, cache_entry);
 }
@@ -302,12 +302,34 @@ coap_cache_get_pdu(const coap_cache_entry_t *cache_entry) {
   return cache_entry->pdu;
 }
 
-void
+COAP_API void
 coap_cache_set_app_data(coap_cache_entry_t *cache_entry,
                         void *data,
-                        coap_cache_app_data_free_callback_t callback) {
-  cache_entry->app_data = data;
-  cache_entry->callback = callback;
+                        coap_app_data_free_callback_t callback) {
+  coap_lock_lock(NULL, return);
+  coap_cache_set_app_data2_lkd(cache_entry, data, callback);
+  coap_lock_unlock(NULL);
+}
+
+COAP_API void *
+coap_cache_set_app_data2(coap_cache_entry_t *cache_entry, void *app_data,
+                         coap_app_data_free_callback_t callback) {
+  void *old_data;
+
+  coap_lock_lock(NULL, return NULL);
+  old_data = coap_cache_set_app_data2_lkd(cache_entry, app_data, callback);
+  coap_lock_unlock(NULL);
+  return old_data;
+}
+
+void *
+coap_cache_set_app_data2_lkd(coap_cache_entry_t *cache_entry, void *app_data,
+                             coap_app_data_free_callback_t callback) {
+  void *old_data = cache_entry->app_data;
+
+  cache_entry->app_data = app_data;
+  cache_entry->app_cb = app_data ? callback : NULL;
+  return old_data;
 }
 
 void *

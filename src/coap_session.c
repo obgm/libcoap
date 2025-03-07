@@ -395,16 +395,39 @@ coap_session_release_lkd(coap_session_t *session) {
   }
 }
 
-void
+COAP_API void
 coap_session_set_app_data(coap_session_t *session, void *app_data) {
   assert(session);
-  session->app = app_data;
+  coap_lock_lock(session->context, return);
+  coap_session_set_app_data2_lkd(session, app_data, NULL);
+  coap_lock_unlock(session->context);
 }
 
 void *
 coap_session_get_app_data(const coap_session_t *session) {
   assert(session);
-  return session->app;
+  return session->app_data;
+}
+
+COAP_API void *
+coap_session_set_app_data2(coap_session_t *session, void *app_data,
+                           coap_app_data_free_callback_t callback) {
+  void *old_data;
+
+  coap_lock_lock(session->context, return NULL);
+  old_data = coap_session_set_app_data2_lkd(session, app_data, callback);
+  coap_lock_unlock(session->context);
+  return old_data;
+}
+
+void *
+coap_session_set_app_data2_lkd(coap_session_t *session, void *app_data,
+                               coap_app_data_free_callback_t callback) {
+  void *old_data = session->app_data;
+
+  session->app_data = app_data;
+  session->app_cb = app_data ? callback : NULL;
+  return old_data;
 }
 
 static coap_session_t *
@@ -597,6 +620,9 @@ coap_session_free(coap_session_t *session) {
   coap_log_debug("***%s: session %p: closed\n", coap_session_str(session),
                  (void *)session);
 
+  if (session->app_cb) {
+    session->app_cb(session->app_data);
+  }
   assert(session->ref == 1);
   coap_free_type(COAP_SESSION, session);
 }

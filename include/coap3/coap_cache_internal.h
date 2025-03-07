@@ -46,7 +46,7 @@ struct coap_cache_entry_t {
   void *app_data;
   coap_tick_t expire_ticks;
   unsigned int idle_timeout;
-  coap_cache_app_data_free_callback_t callback;
+  coap_app_data_free_callback_t app_cb;
 };
 
 /**
@@ -138,6 +138,28 @@ coap_cache_entry_t *coap_new_cache_entry_lkd(coap_session_t *session,
                                              coap_cache_record_pdu_t record_pdu,
                                              coap_cache_session_based_t session_based,
                                              unsigned int idle_time);
+
+/**
+ * Stores @p data with the given cache_entry, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the cache_entry is deleted.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param cache_entry The CoAP cache entry.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on cache_entry
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the cache_entry.
+ */
+void *coap_cache_set_app_data2_lkd(coap_cache_entry_t *cache_entry,
+                                   void *data,
+                                   coap_app_data_free_callback_t callback);
 
 typedef void coap_digest_ctx_t;
 

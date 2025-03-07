@@ -20,7 +20,7 @@ coap_delete_cache_entry,
 coap_cache_get_by_key,
 coap_cache_get_by_pdu,
 coap_cache_get_pdu,
-coap_cache_set_app_data,
+coap_cache_set_app_data2,
 coap_cache_get_app_data
 - Work with CoAP cache functions
 
@@ -56,8 +56,8 @@ const coap_pdu_t *_pdu_, coap_cache_session_based_t _session_based_);*
 
 *const coap_pdu_t *coap_cache_get_pdu(const coap_cache_entry_t *_cache_entry_);*
 
-*void coap_cache_set_app_data(coap_cache_entry_t *_cache_entry_, void *_data_,
-coap_cache_app_data_free_callback_t _callback_);*
+*void *coap_cache_set_app_data2(coap_cache_entry_t *_cache_entry_,
+void *_app_data_, coap_cache_app_data_free_callback_t _app_cb_);*
 
 *void *coap_cache_get_app_data(const coap_cache_entry_t *_cache_entry_);*
 
@@ -155,7 +155,7 @@ The *coap_new_cache_entry*() function will create a new Cache Entry based on
 the Cache Key derived from the _pdu_, _session_based_ and _session_. If
 _record_pdu_ is COAP_CACHE_RECORD_PDU, then a copy of the _pdu_ is stored in
 the Cache Entry for subsequent retrieval. The Cache Entry can also store
-application specific data (*coap_cache_set_app_data*() and
+application specific data (*coap_cache_set_app_data2*() and
 *coap_cache_get_app_data*()).  _idle_timeout_ in seconds defines the length of
 time not being used before it gets deleted.  If _idle_timeout_ is set to
 0, then the Cache Entry will not get idle expired. The created Cache
@@ -194,15 +194,16 @@ returned. +
 *NOTE:* A copy of the returned PDU must be taken for use in sending a CoAP
 packet using *coap_pdu_duplicate*().
 
-*Function: coap_cache_set_app_data()*
+*Function: coap_cache_set_app_data2()*
 
-The *coap_cache_set_app_data*() function is used to associate _data_ with the
-_cache_entry_.  If _callback_ is not NULL, it points to a function to free off
-_data_ when the _cache_entry_ is deleted.  If any data has been previously
-stored in the _cache_entry_, the pointer to the old data will get overwritten,
-but the old data will not get freed off.
+The *coap_cache_set_app_data2*() function is used to define a _app_data_ pointer
+for the _cache_entry_ which can then be retrieved at a later date. There is an
+additional callback _app_cb_ (if set) to be used if the data is to be released
+when the _cache_entry_ is deleted. If this is a subsequent call for the
+_cache_entry_, then the existing data is returned, and it is the responsibility
+of the caller to release this previous data.  On the first call, NULL is returned.
 
-The _callback_ handler function prototype is defined as:
+The _app_cb_ handler function prototype is defined as:
 [source, c]
 ----
 /**
@@ -211,7 +212,7 @@ The _callback_ handler function prototype is defined as:
  *
  * @param data  The app data to be freed off.
  */
-typedef void (*coap_cache_app_data_free_callback_t)(void *data);
+typedef void (*coap_app_data_free_callback_t)(void *data);
 ----
 
 *Function: coap_cache_get_app_data()*
@@ -232,6 +233,8 @@ is a failure.
 
 *coap_cache_get_pdu*() returns the PDU that is held within the Cache Entry or
 NULL if there is no PDU available.
+
+*coap_cache_set_app_data2*() returns a previously defined pointer or NULL.
 
 *coap_cache_get_app_data*() returns the application data value
 previously set by the *coap_cache_set_app_data*() function or NULL.
@@ -312,7 +315,7 @@ hnd_put_example_data(coap_context_t *ctx,
           coap_delete_binary(data_so_far);
           data_so_far = NULL;
         }
-        coap_cache_set_app_data(cache_entry, NULL, NULL);
+        coap_cache_set_app_data2(cache_entry, NULL, NULL);
       }
     }
     if (!cache_entry) {
@@ -332,12 +335,11 @@ hnd_put_example_data(coap_context_t *ctx,
       data_so_far = coap_block_build_body(data_so_far, size, data,
                                           offset, total);
       /* Yes, data_so_far can be NULL if error */
-      coap_cache_set_app_data(cache_entry, data_so_far, cache_free_app_data);
+      coap_cache_set_app_data2(cache_entry, data_so_far, cache_free_app_data);
     }
     if (offset + size == total) {
       /* All the data is now in */
-      data_so_far = coap_cache_get_app_data(cache_entry);
-      coap_cache_set_app_data(cache_entry, NULL, NULL);
+      data_so_far = coap_cache_set_app_data2(cache_entry, NULL, NULL);
     } else {
       /* Give us the next block response */
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
