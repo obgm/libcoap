@@ -2060,7 +2060,8 @@ coap_socket_format_errno(int error) {
 #ifdef _WIN32
 const char *
 coap_socket_strerror(void) {
-  return coap_socket_format_errno(WSAGetLastError());
+  coap_win_error_to_errno();
+  return coap_socket_format_errno(errno);
 }
 #else /* _WIN32 */
 const char *
