@@ -1848,13 +1848,18 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
     tv.tv_sec = (long)(timeout / 1000);
   }
 
-  /* Unlock so that other threads can lock/update ctx */
-  coap_lock_unlock(ctx);
+  /* on Windows select will return an error if called without FDs */
+  if (nfds > 0) {
+    /* Unlock so that other threads can lock/update ctx */
+    coap_lock_unlock(ctx);
 
-  result = select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds,
-                  timeout > 0 ? &tv : NULL);
+    result = select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds,
+                    timeout > 0 ? &tv : NULL);
 
-  coap_lock_lock(ctx, return -1);
+    coap_lock_lock(ctx, return -1);
+  } else {
+    result = 0;
+  }
 
   if (result < 0) {   /* error */
 #ifdef _WIN32
