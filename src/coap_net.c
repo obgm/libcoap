@@ -2746,7 +2746,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t
     return 1;
   }
 
-  /* search message id queue to remove (only first occurence will be removed) */
+  /* search message id in queue to remove (only first occurence will be removed) */
   q = *queue;
   do {
     p = q;
@@ -2762,6 +2762,53 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t
     *node = q;
     coap_log_debug("** %s: mid=0x%04x: removed (2)\n",
                    coap_session_str(session), id);
+    return 1;
+  }
+
+  return 0;
+
+}
+
+static int
+coap_remove_from_queue_token(coap_queue_t **queue, coap_session_t *session,
+                             coap_bin_const_t *token, coap_queue_t **node) {
+  coap_queue_t *p, *q;
+
+  if (!queue || !*queue)
+    return 0;
+
+  /* replace queue head if PDU's time is less than head's time */
+
+  if (session == (*queue)->session &&
+      (!token || coap_binary_equal(&(*queue)->pdu->actual_token, token))) { /* found token */
+    *node = *queue;
+    *queue = (*queue)->next;
+    if (*queue) {          /* adjust relative time of new queue head */
+      (*queue)->t += (*node)->t;
+    }
+    (*node)->next = NULL;
+    coap_log_debug("** %s: mid=0x%04x: removed (7)\n",
+                   coap_session_str(session), (*node)->id);
+    return 1;
+  }
+
+  /* search token in queue to remove (only first occurence will be removed) */
+  q = *queue;
+  do {
+    p = q;
+    q = q->next;
+  } while (q && (session != q->session ||
+                 !(!token || coap_binary_equal(&q->pdu->actual_token, token))));
+
+  if (q) {                        /* found token */
+    p->next = q->next;
+    if (p->next) {                /* must update relative time of p->next */
+      p->next->t += q->t;
+    }
+    q->next = NULL;
+    *node = q;
+    coap_log_debug("** %s: mid=0x%04x: removed (8)\n",
+                   coap_session_str(session), (*node)->id);
     return 1;
   }
 
@@ -3637,7 +3684,9 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
   }
 
-  if (resource == context->proxy_uri_resource &&
+  if ((resource == context->proxy_uri_resource ||
+       (resource == context->unknown_resource &&
+        context->unknown_resource->is_reverse_proxy)) &&
       COAP_PROTO_NOT_RELIABLE(session->proto) &&
       pdu->type == COAP_MESSAGE_CON &&
       !(session->block_mode & COAP_BLOCK_CACHE_RESPONSE)) {
@@ -3851,13 +3900,6 @@ handle_response(coap_context_t *context, coap_session_t *session,
 
   /* Set in case there is a later call to coap_update_token() */
   rcvd->session = session;
-
-  /* In a lossy context, the ACK of a separate response may have
-   * been lost, so we need to stop retransmitting requests with the
-   * same token. Matching on token potentially containing ext length bytes.
-   */
-  if (rcvd->type != COAP_MESSAGE_ACK)
-    coap_cancel_all_messages(context, session, &rcvd->actual_token);
 
   /* Check for message duplication */
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
@@ -4418,6 +4460,13 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     break;
 
   case COAP_MESSAGE_CON:        /* check for unknown critical options */
+    /* In a lossy context, the ACK of a separate response may have
+     * been lost, so we need to stop retransmitting requests with the
+     * same token. Matching on token potentially containing ext length bytes.
+     */
+    /* find message token in sendqueue to stop retransmission */
+    coap_remove_from_queue_token(&context->sendqueue, session, &pdu->actual_token, &sent);
+
     if (!COAP_PDU_IS_SIGNALING(pdu) &&
         coap_option_check_critical(session, pdu, &opt_filter) == 0) {
       packet_is_bad = 1;
