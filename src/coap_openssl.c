@@ -3932,6 +3932,7 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
 
   in_init = !SSL_is_init_finished(ssl);
   session->dtls_event = -1;
+  ERR_clear_error();
   r = SSL_write(ssl, data, (int)data_len);
 
   if (r <= 0) {
@@ -4011,6 +4012,7 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
 
   in_init = !SSL_is_init_finished(ssl);
   session->dtls_event = -1;
+  ERR_clear_error();
   r = SSL_read(ssl, data, (int)data_len);
   if (r <= 0) {
     int err = SSL_get_error(ssl, r);
