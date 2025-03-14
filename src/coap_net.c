@@ -2789,6 +2789,12 @@ coap_remove_from_queue_token(coap_queue_t **queue, coap_session_t *session,
     (*node)->next = NULL;
     coap_log_debug("** %s: mid=0x%04x: removed (7)\n",
                    coap_session_str(session), (*node)->id);
+    if ((*node)->pdu->type == COAP_MESSAGE_CON && session->con_active) {
+      session->con_active--;
+      if (session->state == COAP_SESSION_STATE_ESTABLISHED)
+        /* Flush out any entries on session->delayqueue */
+        coap_session_connected(session);
+    }
     return 1;
   }
 
@@ -2809,6 +2815,12 @@ coap_remove_from_queue_token(coap_queue_t **queue, coap_session_t *session,
     *node = q;
     coap_log_debug("** %s: mid=0x%04x: removed (8)\n",
                    coap_session_str(session), (*node)->id);
+    if (q->pdu->type == COAP_MESSAGE_CON && session->con_active) {
+      session->con_active--;
+      if (session->state == COAP_SESSION_STATE_ESTABLISHED)
+        /* Flush out any entries on session->delayqueue */
+        coap_session_connected(session);
+    }
     return 1;
   }
 
