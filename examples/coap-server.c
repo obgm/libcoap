@@ -60,6 +60,13 @@ strndup(const char *s1, size_t n) {
 #include <coap3/coap.h>
 #include <coap3/coap_defines.h>
 
+#if COAP_THREAD_SAFE
+/* Define the number of coap_io_process() threads required */
+#ifndef NUM_SERVER_THREADS
+#define NUM_SERVER_THREADS 3
+#endif /* NUM_SERVER_THREADS */
+#endif /* COAP_THREAD_SAFE */
+
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -71,7 +78,7 @@ static char *tls_engine_conf = NULL;
 static int ec_jpake = 0;
 
 /* set to 1 to request clean server shutdown */
-static int quit = 0;
+static volatile int quit = 0;
 
 /* set to 1 if persist information is to be kept on server shutdown */
 static int keep_persist = 0;
@@ -182,6 +189,9 @@ static void
 handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
   coap_send_recv_terminate();
+#if NUM_SERVER_THREADS
+  coap_io_process_terminate_loop();
+#endif /* NUM_SERVER_THREADS */
 }
 
 #ifndef _WIN32
@@ -194,6 +204,9 @@ static void
 handle_sigusr2(int signum COAP_UNUSED) {
   quit = 1;
   keep_persist = 1;
+#if NUM_SERVER_THREADS
+  coap_io_process_terminate_loop();
+#endif /* NUM_SERVER_THREADS */
 }
 #endif /* ! _WIN32 */
 
@@ -2299,12 +2312,30 @@ syslog_handler(coap_log_t level, const char *message) {
 }
 #endif /* ! _WIN32 */
 
+/*
+ * This function only initiates an Observe unsolicited response when the time
+ * (in seconds) changes.
+ */
+static void
+do_time_observe_code(void *arg) {
+  static coap_time_t t_last = 0;
+  coap_time_t t_now;
+  coap_tick_t now;
+
+  (void)arg;
+  coap_ticks(&now);
+  t_now = coap_ticks_to_rt(now);
+  if (t_now != t_last) {
+    t_last = t_now;
+    coap_resource_notify_observers(time_resource, NULL);
+  }
+}
+
 int
 main(int argc, char **argv) {
   coap_context_t *ctx = NULL;
   char *group = NULL;
   char *group_if = NULL;
-  coap_tick_t now;
   char addr_str[NI_MAXHOST] = "::";
   char *port_str = NULL;
   int opt;
@@ -2312,10 +2343,6 @@ main(int argc, char **argv) {
   coap_log_t log_level = COAP_LOG_WARN;
   coap_log_t dtls_log_level = COAP_LOG_ERR;
   unsigned wait_ms;
-  coap_time_t t_last = 0;
-  int coap_fd;
-  fd_set m_readfds;
-  int nfds = 0;
   size_t i;
   int exit_code = 0;
   uint32_t max_block_size = 0;
@@ -2610,6 +2637,18 @@ main(int argc, char **argv) {
     }
   }
 
+  wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
+
+#if NUM_SERVER_THREADS
+  if (!coap_io_process_loop(ctx, time_resource ? do_time_observe_code : NULL,
+                            NULL, wait_ms, NUM_SERVER_THREADS)) {
+    coap_log_err("coap_io_process_loop: Failed\n");
+  }
+#else
+  int nfds = 0;
+  int coap_fd;
+  fd_set m_readfds;
+
   coap_fd = coap_context_get_coap_fd(ctx);
   if (coap_fd != -1) {
     /* if coap_fd is -1, then epoll is not supported within libcoap */
@@ -2618,10 +2657,9 @@ main(int argc, char **argv) {
     nfds = coap_fd + 1;
   }
 
-  wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
-
   while (!quit) {
     int result;
+    coap_tick_t now;
 
     if (coap_fd != -1) {
       /*
@@ -2679,23 +2717,19 @@ main(int argc, char **argv) {
       wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
     }
     if (time_resource) {
-      coap_time_t t_now;
       unsigned int next_sec_ms;
 
-      coap_ticks(&now);
-      t_now = coap_ticks_to_rt(now);
-      if (t_last != t_now) {
-        /* Happens once per second */
-        t_last = t_now;
-        coap_resource_notify_observers(time_resource, NULL);
-      }
+      do_time_observe_code(NULL);
+
       /* need to wait until next second starts if wait_ms is too large */
+      coap_ticks(&now);
       next_sec_ms = 1000 - (now % COAP_TICKS_PER_SECOND) *
                     1000 / COAP_TICKS_PER_SECOND;
       if (next_sec_ms && next_sec_ms < wait_ms)
         wait_ms = next_sec_ms;
     }
   }
+#endif /* NUM_SERVER_THREADS */
   exit_code = 0;
 
 finish:

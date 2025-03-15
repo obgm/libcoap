@@ -1343,7 +1343,7 @@ coap_resource_notify_observers_lkd(coap_resource_t *r,
   }
 
   r->context->observe_pending = 1;
-  coap_update_io_timer(r->context, 0);
+  coap_check_notify_lkd(r->context);
   return 1;
 }
 

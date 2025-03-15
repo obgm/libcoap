@@ -75,7 +75,7 @@ appropriate GET/FETCH handler within the server application is called to fill
 in the response packet with the appropriate information. This "fake GET/FETCH
 request" is triggered by a call to *coap_resource_notify_observers*().
 
-The call to *coap_io_process*() in the main server application i/o loop will do
+Any call to *coap_io_process*() in the server application i/o loop will do
 all the necessary processing of sending any outstanding "fake GET/FETCH
 requests".
 

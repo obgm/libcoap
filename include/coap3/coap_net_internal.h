@@ -769,6 +769,36 @@ unsigned int coap_io_prepare_io_lkd(coap_context_t *ctx,
  */
 int coap_io_process_lkd(coap_context_t *ctx, uint32_t timeout_ms);
 
+/**
+ * Do the coap_io_process() across @p thread_count threads.
+ * The main thread will invoke @p main_loop_code (if defined) at least
+ * every @p timeout_ms.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * Note: If multi-threading protection is not in place, then @p thread_count
+ * is ignored and only a single thread runs (but still executes
+ * @p main_loop_code)
+ *
+ * Note: To stop the threads and continual looping,
+ * coap_io_process_terminate_loop() should be called.
+ *
+ * @param context The current CoAP context.
+ * @param main_loop_code The name of the function to execute in the main
+ *                       thread or NULL if not required. This function should
+ *                       not do any blocking.
+ * @param main_loop_code_arg The argument to pass to @p main_loop_code.
+ * @param timeout_ms The maximum amount of time the main thread should delay up
+ *                   to (i.e. timeout parameter for coap_io_process()) before
+ *                   the loop starts again.
+ * @param thread_count The number of threads to run.
+ *
+ */
+int coap_io_process_loop_lkd(coap_context_t *context,
+                             coap_io_process_thread_t main_loop_code,
+                             void *main_loop_code_arg, uint32_t timeout_ms,
+                             uint32_t thread_count);
+
 #if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
 /**
  * The main message processing loop with additional fds for internal select.

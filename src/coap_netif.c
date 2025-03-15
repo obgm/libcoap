@@ -105,10 +105,12 @@ coap_netif_dgrm_read_ep(coap_endpoint_t *endpoint, coap_packet_t *packet) {
   bytes_read = coap_socket_recv(&endpoint->sock, packet);
   keep_errno = errno;
   if (bytes_read == -1) {
-    coap_log_debug("*  %s: netif: failed to read %zd bytes (%s)\n",
-                   coap_endpoint_str(endpoint), packet->length,
-                   coap_socket_strerror());
-    errno = keep_errno;
+    if (errno != EAGAIN) {
+      coap_log_debug("*  %s: netif: failed to read %zd bytes (%s)\n",
+                     coap_endpoint_str(endpoint), packet->length,
+                     coap_socket_strerror());
+      errno = keep_errno;
+    }
   } else if (bytes_read > 0) {
     /* Let the caller do the logging as session available by then */
   }

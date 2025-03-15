@@ -155,6 +155,11 @@
 #define COAP_THREAD_RECURSIVE_CHECK 0
 #endif
 
+#ifndef COAP_THREAD_NUM_LOGGING
+/* Define to 1 if libcoap has thread number logging support. */
+#define COAP_THREAD_NUM_LOGGING 0
+#endif
+
 #ifndef PACKAGE_BUGREPORT
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "libcoap-developers@lists.sourceforge.net"

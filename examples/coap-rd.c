@@ -44,6 +44,14 @@
 #endif
 
 #include <coap3/coap.h>
+#include <coap3/coap_defines.h>
+
+#if COAP_THREAD_SAFE
+/* Define the number of coap_io_process() threads required */
+#ifndef NUM_SERVER_THREADS
+#define NUM_SERVER_THREADS 3
+#endif /* NUM_SERVER_THREADS */
+#endif /* COAP_THREAD_SAFE */
 
 #define COAP_RESOURCE_CHECK_TIME 2
 
@@ -126,13 +134,16 @@ resource_rd_delete(void *ptr) {
   rd_delete(ptr);
 }
 
-static int quit = 0;
+static volatile int quit = 0;
 
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
 handle_sigint(int signum COAP_UNUSED) {
   quit = 1;
   coap_send_recv_terminate();
+#if NUM_SERVER_THREADS
+  coap_io_process_terminate_loop();
+#endif /* NUM_SERVER_THREADS */
 }
 
 static void
@@ -754,7 +765,6 @@ cmdline_read_extended_token_size(char *arg) {
 int
 main(int argc, char **argv) {
   coap_context_t  *ctx;
-  int result;
   char addr_str[NI_MAXHOST] = "::";
   char port_str[NI_MAXSERV] = "5683";
   char *group = NULL;
@@ -864,12 +874,21 @@ main(int argc, char **argv) {
   sigaction(SIGPIPE, &sa, NULL);
 #endif
 
+#if NUM_SERVER_THREADS
+  if (!coap_io_process_loop(ctx, NULL, NULL, COAP_RESOURCE_CHECK_TIME * 1000,
+                            NUM_SERVER_THREADS)) {
+    coap_log_err("coap_io_process_loop: Failed\n");
+  }
+#else
   while (!quit) {
+    int result;
+
     result = coap_io_process(ctx, COAP_RESOURCE_CHECK_TIME * 1000);
     if (result >= 0) {
       /* coap_check_resource_list( ctx ); */
     }
   }
+#endif
 
   coap_free_context(ctx);
   coap_cleanup();

@@ -31,6 +31,7 @@ TXT3 = coap_address.txt \
 	coap_handler.txt \
 	coap_init.txt \
 	coap_io.txt \
+	coap_io_loop.txt \
 	coap_keepalive.txt \
 	coap_locking.txt \
 	coap_logging.txt \

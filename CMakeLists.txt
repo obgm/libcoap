@@ -157,6 +157,10 @@ option(
   "enable building with thread recursive lock detection"
   OFF)
 option(
+  ENABLE_THREAD_NUM_LOGGING
+  "enable building with thread number logging support"
+  ON)
+option(
   ENABLE_SMALL_STACK
   "enable if the system has small stack size"
   OFF)
@@ -274,6 +278,7 @@ check_include_file(sys/epoll.h HAVE_EPOLL_H)
 check_include_file(sys/timerfd.h HAVE_TIMERFD_H)
 check_include_file(arpa/inet.h HAVE_ARPA_INET_H)
 check_include_file(stdbool.h HAVE_STDBOOL_H)
+check_include_file(signal.h HAVE_SIGNAL_H)
 check_include_file(netdb.h HAVE_NETDB_H)
 check_include_file(pthread.h HAVE_PTHREAD_H)
 check_include_file(stdlib.h HAVE_STDINT_H)
@@ -426,6 +431,11 @@ endif()
 if(${ENABLE_THREAD_RECURSIVE_LOCK_CHECK})
   set(COAP_THREAD_RECURSIVE_CHECK "${ENABLE_THREAD_RECURSIVE_LOCK_CHECK}")
   message(STATUS "compiling with thread recursive lock detection support")
+endif()
+
+if(${ENABLE_THREAD_NUM_LOGGING})
+  set(COAP_THREAD_SAFE "${ENABLE_THREAD_NUM_LOGGING}")
+  message(STATUS "compiling with thread number logging support")
 endif()
 
 if(${ENABLE_SMALL_STACK})
@@ -694,6 +704,7 @@ message(STATUS "ENABLE_OSCORE:...................${ENABLE_OSCORE}")
 message(STATUS "ENABLE_ASYNC:....................${ENABLE_ASYNC}")
 message(STATUS "ENABLE_THREAD_SAFE:..............${ENABLE_THREAD_SAFE}")
 message(STATUS "ENABLE_THREAD_RECURSIVE_CHECK....${ENABLE_THREAD_RECURSIVE_LOCK_CHECK}")
+message(STATUS "ENABLE_THREAD_NUM_LOGGING........${ENABLE_THREAD_NUM_LOGGING}")
 message(STATUS "ENABLE_DOCS:.....................${ENABLE_DOCS}")
 message(STATUS "ENABLE_EXAMPLES:.................${ENABLE_EXAMPLES}")
 message(STATUS "DTLS_BACKEND:....................${DTLS_BACKEND}")

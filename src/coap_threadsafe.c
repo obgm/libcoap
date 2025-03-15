@@ -99,6 +99,112 @@ coap_lock_lock_func(void) {
 }
 #endif /* ! COAP_THREAD_RECURSIVE_CHECK */
 
+#if !WITH_LWIP
+extern volatile int coap_thread_quit;
+static pthread_t *thread_id = NULL;
+static uint32_t thread_id_count = 0;
+
+/* Visible to only this thread */
+COAP_THREAD_LOCAL_VAR uint32_t thread_no = 0;
+/* Visible across all threads */
+uint32_t max_thread_no = 0;
+
+typedef struct {
+  coap_context_t *context;
+  uint32_t thread_no;
+} coap_thread_param_t;
+
+static void *
+coap_io_process_worker_thread(void *arg) {
+  coap_thread_param_t *thread_param = (coap_thread_param_t *)arg;
+  coap_context_t *context = thread_param->context;
+
+  thread_no = thread_param->thread_no;
+  coap_free_type(COAP_STRING, thread_param);
+
+  coap_log_debug("Thread %lx start\n", pthread_self());
+
+  while (!coap_thread_quit) {
+    int result;
+
+    coap_lock_lock(context, return 0);
+    result = coap_io_process_lkd(context, COAP_IO_WAIT);
+    coap_lock_unlock(context);
+    if (result < 0)
+      break;
+  }
+  coap_log_debug("Thread %lx exit\n", pthread_self());
+  return 0;
+}
+
+int
+coap_io_process_configure_threads(coap_context_t *context, uint32_t thread_count) {
+  uint32_t i;
+
+  coap_mutex_lock(&m_io_threads);
+
+  thread_no = 1;
+  max_thread_no = 1 + thread_count;
+  coap_free_type(COAP_STRING, thread_id);
+  thread_id = coap_malloc_type(COAP_STRING, thread_count * sizeof(pthread_t));
+  if (!thread_id) {
+    coap_log_err("thread start up memory allocate failure\n");
+    coap_mutex_unlock(&m_io_threads);
+    return 0;
+  }
+  for (i = 0; i < thread_count ; i++) {
+    coap_thread_param_t *thread_param = coap_malloc_type(COAP_STRING, sizeof(coap_thread_param_t));
+    int s;
+
+    thread_param->context = context;
+    thread_param->thread_no = i + 2;
+    s = pthread_create(&thread_id[i], NULL,
+                       &coap_io_process_worker_thread, thread_param);
+    if (s != 0) {
+      coap_log_err("thread start up failure (%s)\n", coap_socket_strerror());
+      coap_mutex_unlock(&m_io_threads);
+      return 0;
+    }
+    thread_id_count++;
+  }
+  coap_mutex_unlock(&m_io_threads);
+  return 1;
+}
+
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#endif /* HAVE_SIGNAL_H */
+void
+coap_io_process_remove_threads(coap_context_t *context) {
+  uint32_t i;
+
+  (void)context;
+
+  coap_lock_unlock(context);
+  coap_mutex_lock(&m_io_threads);
+
+  for (i = 0; i < thread_id_count ; i++) {
+    int s = pthread_kill(thread_id[i], SIGINT);
+    if (s != 0) {
+      coap_log_err("thread kill failure\n");
+    }
+  }
+  for (i = 0; i < thread_id_count ; i++) {
+    void *retval;
+    int s = pthread_join(thread_id[i], &retval);
+    if (s != 0) {
+      coap_log_err("thread join failure\n");
+    }
+  }
+  coap_free_type(COAP_STRING, thread_id);
+  thread_id = NULL;
+  thread_id_count = 0;
+
+  coap_mutex_unlock(&m_io_threads);
+  coap_lock_lock(context, return);
+}
+#endif /* !WITH_LWIP */
+
 #else /* ! COAP_THREAD_SAFE */
 
 #ifdef __clang__
