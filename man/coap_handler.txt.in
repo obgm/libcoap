@@ -54,6 +54,10 @@ DESCRIPTION
 This documents the different callback handlers that can optionally be invoked
 on receipt of a packet or when a timeout occurs.
 
+*NOTE:* If multi-thread activity is supported, these callback handlers need to
+be thread-safe at the application level as multiple threads could be executing
+the same handler code.
+
 FUNCTIONS
 ---------
 

@@ -62,6 +62,9 @@
 /* Define to 1 if the library has thread safe support. */
 #cmakedefine COAP_THREAD_SAFE @COAP_THREAD_SAFE@
 
+/* Define to 1 if the library has thread number logging support. */
+#cmakedefine COAP_THREAD_NUM_LOGGING @COAP_THREAD_NUM_LOGGING@
+
 /* Define to 1 if the system has libgnutls28 */
 #cmakedefine COAP_WITH_LIBGNUTLS @COAP_WITH_LIBGNUTLS@
 

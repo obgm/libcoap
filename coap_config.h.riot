@@ -144,6 +144,13 @@
 #endif /* COAP_THREAD_SAFE */
 #endif /* CONFIG_LIBCOAP_THREAD_SAFE */
 
+#ifdef CONFIG_LIBCOAP_THREAD_NUM_LOGGING
+#ifndef COAP_THREAD_NUM_LOGGING
+/* Define to 1 if libcoap has thread number logging support. */
+#define COAP_THREAD_NUM_LOGGING 1
+#endif /* COAP_THREAD_SAFE */
+#endif /* CONFIG_LIBCOAP_THREAD_NUM_LOGGING */
+
 #ifdef CONFIG_LIBCOAP_THREAD_RECURSIVE_CHECK
 #ifndef COAP_THREAD_RECURSIVE_CHECK
 /* Define to 1 to build with thread recursive lock detection support. */

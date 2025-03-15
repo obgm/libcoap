@@ -150,4 +150,12 @@ typedef int coap_mutex_t;
 
 #endif /* !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
 
+#if COAP_THREAD_SAFE
+
+extern coap_mutex_t m_show_pdu;
+extern coap_mutex_t m_log_impl;
+extern coap_mutex_t m_io_threads;
+
+#endif /* COAP_THREAD_SAFE */
+
 #endif /* COAP_MUTEX_INTERNAL_H_ */

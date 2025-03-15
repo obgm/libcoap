@@ -1102,7 +1102,7 @@ fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
-                  pthread.h errno.h winsock2.h ws2tcpip.h \
+                  pthread.h errno.h winsock2.h ws2tcpip.h signal.h \
                   stdlib.h string.h strings.h sys/socket.h sys/time.h \
                   time.h unistd.h sys/unistd.h sys/ioctl.h net/if.h ifaddrs.h])
 
@@ -1146,6 +1146,16 @@ AC_ARG_ENABLE([thread-recursive-lock-detection],
 
 if test "x$enable_recursive_detection" = "xyes"; then
     AC_DEFINE(COAP_THREAD_RECURSIVE_CHECK, 1, [Define to 1 detect recursive locking detection support])
+fi
+
+AC_ARG_ENABLE([thread-num-logging],
+        [AS_HELP_STRING([--enable-thread-num-logging],
+                        [Enable building with logging the thread number [default=yes]])],
+        [enable_thread_num_logging="$enableval"],
+        [enable_thread_num_logging="yes"])
+
+if test "x$enable_thread_num_logging" = "xyes"; then
+    AC_DEFINE(COAP_THREAD_NUM_LOGGING, 1, [Define to 1 if libcoap has thread number logging support])
 fi
 
 AC_ARG_ENABLE([small-stack],
@@ -1320,8 +1330,8 @@ AC_SUBST(PREDEFINED_CFLAGS)
 # And finally combining the CFLAGS together ...
 CFLAGS="$CFLAGS $ADDITIONAL_CFLAGS"
 
-# Override the various template files, currently just makefiles and the
-# pkgconfig *.pc file.
+# Override the various template files, currently just makefiles, man pages
+# and the pkgconfig *.pc file.
 # Later if the API version is changing don't forget to change the
 # libcoap-$LIBCOAP_API_VERSION.pc.in file too!! You will have to change
 # the 'Cflags' variable to something like
@@ -1345,6 +1355,7 @@ man/coap_endpoint_server.txt
 man/coap_handler.txt
 man/coap_init.txt
 man/coap_io.txt
+man/coap_io_loop.txt
 man/coap_keepalive.txt
 man/coap_locking.txt
 man/coap_logging.txt
@@ -1505,6 +1516,7 @@ else
 fi
 AC_MSG_RESULT([      enable thread safe code        : "$enable_thread_safe"])
 AC_MSG_RESULT([      enable recursive lock check    : "$enable_recursive_detection"])
+AC_MSG_RESULT([      enable thread number logging   : "$enable_thread_num_logging"])
 if test "x$build_doxygen" = "xyes"; then
     AC_MSG_RESULT([      build doxygen pages            : "yes"])
     AC_MSG_RESULT([          --> Doxygen around         : "yes" ($DOXYGEN $doxygen_version)])

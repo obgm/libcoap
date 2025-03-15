@@ -56,6 +56,9 @@
 /* Define to 1 if libcoap has thread safe support. */
 /* #undef COAP_THREAD_SAFE 1 */
 
+/* Define to 1 if libcoap has thread number logging support. */
+/* #undef COAP_THREAD_NUM_LOGGING 1 */
+
 /* Define to 1 if you have the <assert.h> header file. */
 #define HAVE_ASSERT_H 1
 

@@ -71,6 +71,16 @@ typedef USHORT in_port_t;
 #  endif /* __GNUC__ */
 #endif /* COAP_UNUSED */
 
+#ifndef COAP_THREAD_LOCAL_VAR
+#  ifdef __GNUC__
+#    define COAP_THREAD_LOCAL_VAR __thread
+#  elif defined(_MSC_VER)
+#    define COAP_THREAD_LOCAL_VAR __declspec(thread)
+#  else /* ! __GNUC__ && ! _MSC_VER */
+#    define COAP_THREAD_LOCAL_VAR
+#  endif
+#endif
+
 #ifndef COAP_API
 #define COAP_API
 #endif

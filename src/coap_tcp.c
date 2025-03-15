@@ -300,15 +300,17 @@ coap_socket_accept_tcp(coap_socket_t *server,
 #endif
   (void)extra;
 
-  server->flags &= ~COAP_SOCKET_CAN_ACCEPT;
-
   new_client->fd = accept(server->fd, &remote_addr->addr.sa,
                           &remote_addr->size);
   if (new_client->fd == COAP_INVALID_SOCKET) {
-    coap_log_warn("coap_socket_accept_tcp: accept: %s\n",
-                  coap_socket_strerror());
+    if (errno != EAGAIN) {
+      coap_log_warn("coap_socket_accept_tcp: accept: %s\n",
+                    coap_socket_strerror());
+    }
     return 0;
   }
+
+  server->flags &= ~COAP_SOCKET_CAN_ACCEPT;
 
   if (getsockname(new_client->fd, &local_addr->addr.sa, &local_addr->size) < 0)
     coap_log_warn("coap_socket_accept_tcp: getsockname: %s\n",

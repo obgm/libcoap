@@ -834,6 +834,73 @@ COAP_API void coap_io_do_epoll(coap_context_t *ctx, struct epoll_event *events,
                                size_t nevents);
 
 /**
+ * Main thread coap_io_process_loop activity.
+ *
+ * This function should not do any blocking.
+ *
+ * @param arg The value of main_loop_code_arg passed into coap_io_process_loop().
+ *
+ */
+typedef void (*coap_io_process_thread_t)(void *arg);
+
+/**
+ * Do the coap_io_process() across @p thread_count threads.
+ * The main thread will invoke @p main_loop_code (if defined) at least
+ * every @p timeout_ms.
+ *
+ * Note: If multi-threading protection is not in place, then @p thread_count
+ * is ignored and only a single thread runs (but still executes
+ * @p main_loop_code)
+ *
+ * Note: To stop the threads and continual looping,
+ * coap_io_process_terminate_loop() should be called.
+ *
+ * @param context The current CoAP context.
+ * @param main_loop_code The name of the function to execute in the main
+ *                       thread or NULL if not required. This function should
+ *                       not do any blocking.
+ * @param main_loop_code_arg The argument to pass to @p main_loop_code.
+ * @param timeout_ms The maximum amount of time the main thread should delay up
+ *                   to (i.e. timeout parameter for coap_io_process()) before
+ *                   the loop starts again.
+ * @param thread_count The number of threads to run.
+ *
+ */
+COAP_API int coap_io_process_loop(coap_context_t *context,
+                                  coap_io_process_thread_t main_loop_code,
+                                  void *main_loop_code_arg, uint32_t timeout_ms,
+                                  uint32_t thread_count);
+
+/**
+ * Terminate all the additional threads created by coap_io_process_loop()
+ * and break out of the main thread loop to return from coap_io_process_loop().
+ *
+ * Typically this would be called from within a SIGQUIT handler.
+ *
+ */
+void coap_io_process_terminate_loop(void);
+
+/**
+ * Configure a defined number of threads to do the alternate coap_io_process()
+ * work with traffic load balanced across the threads based on inactive
+ * threads.
+ *
+ * @param context Context.
+ * @param thread_count The number of threads to configure.
+ *
+ * @return 1 success or 0 on failure.
+ */
+int coap_io_process_configure_threads(coap_context_t *context,
+                                      uint32_t thread_count);
+
+/**
+ * Release the coap_io_process() worker threads.
+ *
+ * @param context Context.
+ */
+void coap_io_process_remove_threads(coap_context_t *context);
+
+/**
  * Get the libcoap internal file descriptor for a socket. This can be used to
  * integrate libcoap in an external event loop instead of using one of its
  * builtin event loops.

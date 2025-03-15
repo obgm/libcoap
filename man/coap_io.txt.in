@@ -137,6 +137,9 @@ _timeout_ms_ set to COAP_IO_NO_WAIT. +
 will then be using *epoll* internally to process all the file descriptors of
 the different sessions.
 
+:NOTE:* With multi-threading protection enabled, it is possible to
+call *coap_io_process*() from multiple threads to do some load balancing.
+
 See EXAMPLES below.
 
 *Function: coap_io_prepare_epoll()*

@@ -2472,11 +2472,13 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
   } else if (bytes_read > 0) {
     coap_session_t *session = coap_endpoint_get_session(endpoint, packet, now);
     if (session) {
+      coap_session_reference_lkd(session);
       coap_log_debug("*  %s: netif: recv %4zd bytes\n",
                      coap_session_str(session), bytes_read);
       result = coap_handle_dgram_for_proto(ctx, session, packet);
       if (endpoint->proto == COAP_PROTO_DTLS && session->type == COAP_SESSION_TYPE_HELLO && result == 1)
         coap_session_new_dtls_session(session, now);
+      coap_session_release_lkd(session);
     }
   }
   return result;
@@ -4765,6 +4767,12 @@ int coap_started = 0;
  * Global lock for multi-thread support
  */
 coap_lock_t global_lock;
+/*
+ * low level protection mutex
+ */
+coap_mutex_t m_show_pdu;
+coap_mutex_t m_log_impl;
+coap_mutex_t m_io_threads;
 #endif /* COAP_THREAD_SAFE */
 
 void
@@ -4780,6 +4788,9 @@ coap_startup(void) {
 
 #if COAP_THREAD_SAFE
   coap_lock_init();
+  coap_mutex_init(&m_show_pdu);
+  coap_mutex_init(&m_log_impl);
+  coap_mutex_init(&m_io_threads);
 #endif /* COAP_THREAD_SAFE */
 
 #if defined(HAVE_WINSOCK2_H)
@@ -4827,6 +4838,12 @@ coap_cleanup(void) {
   coap_io_lwip_cleanup();
 #endif /* WITH_LWIP */
   coap_dtls_shutdown();
+
+#if COAP_THREAD_SAFE
+  coap_mutex_destroy(&m_show_pdu);
+  coap_mutex_destroy(&m_log_impl);
+  coap_mutex_destroy(&m_io_threads);
+#endif /* COAP_THREAD_SAFE */
 
   coap_debug_reset();
 }

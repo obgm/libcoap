@@ -1407,8 +1407,8 @@ coap_session_create_client(coap_context_t *ctx,
 #endif /* !COAP_DISABLE_TCP */
   }
 
-#ifdef COAP_EPOLL_SUPPORT
   session->sock.session = session;
+#ifdef COAP_EPOLL_SUPPORT
   coap_epoll_ctl_add(&session->sock,
                      EPOLLIN |
                      ((session->sock.flags & COAP_SOCKET_WANT_CONNECT) ?

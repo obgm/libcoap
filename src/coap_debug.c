@@ -784,7 +784,7 @@ void
 coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 #if COAP_CONSTRAINED_STACK
   /* Proxy-Uri: can be 1034 bytes long */
-  /* buf and outbuf can be protected by global_lock if needed */
+  /* buf and outbuf can be protected by m_show_pdu if needed */
   static unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1035)];
   static char outbuf[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
@@ -809,6 +809,9 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   if (level > coap_get_log_level())
     return;
 
+#if COAP_THREAD_SAFE
+  coap_mutex_lock(&m_show_pdu);
+#endif /* COAP_THREAD_SAFE */
   if (!pdu->session || COAP_PROTO_NOT_RELIABLE(pdu->session->proto)) {
     snprintf(outbuf, sizeof(outbuf), "v:%d t:%s c:%s i:%04x {",
              COAP_DEFAULT_VERSION, msg_type_string(pdu->type),
@@ -1055,6 +1058,9 @@ no_more:
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
                "data length %zu (data suppressed)\n", data_len);
       COAP_DO_SHOW_OUTPUT_LINE;
+#if COAP_THREAD_SAFE
+      coap_mutex_unlock(&m_show_pdu);
+#endif /* COAP_THREAD_SAFE */
       return;
     }
 
@@ -1130,6 +1136,10 @@ no_more:
     outbuflen--;
   snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
   COAP_DO_SHOW_OUTPUT_LINE;
+
+#if COAP_THREAD_SAFE
+  coap_mutex_unlock(&m_show_pdu);
+#endif /* COAP_THREAD_SAFE */
 }
 
 void
@@ -1278,12 +1288,21 @@ coap_set_log_handler(coap_log_handler_t handler) {
   log_handler = handler;
 }
 
+/* Visible to only this thread */
+extern COAP_THREAD_LOCAL_VAR uint32_t thread_no;
+/* Visible across all threads */
+extern uint32_t max_thread_no;
+
 void
 coap_log_impl(coap_log_t level, const char *format, ...) {
 
+#if COAP_THREAD_SAFE
+  coap_mutex_lock(&m_log_impl);
+#endif /* COAP_THREAD_SAFE */
+
   if (log_handler) {
 #if COAP_CONSTRAINED_STACK
-    /* message can be protected by global_lock if needed */
+    /* message can be protected by m_log_impl if needed */
     static char message[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
     char message[COAP_DEBUG_BUF_SIZE];
@@ -1312,6 +1331,13 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     if (len)
       fprintf(log_fd, "%.*s ", (int)len, timebuf);
 
+#if COAP_THREAD_NUM_LOGGING
+    if (thread_no == 0) {
+      thread_no = ++max_thread_no;
+    }
+    fprintf(log_fd, "%2d ", thread_no);
+#endif /* COAP_THREAD_NUM_LOGGING */
+
     fprintf(log_fd, "%s ", coap_log_level_desc(level));
 
     va_start(ap, format);
@@ -1323,6 +1349,10 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     va_end(ap);
     fflush(log_fd);
   }
+
+#if COAP_THREAD_SAFE
+  coap_mutex_unlock(&m_log_impl);
+#endif /* COAP_THREAD_SAFE */
 }
 
 static struct packet_num_interval {
