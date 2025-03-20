@@ -263,8 +263,10 @@ coap_socket_connect_udp(coap_socket_t *sock,
     /* Configure the socket as dual-stacked */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, OPTVAL_T(&off),
                    sizeof(off)) == COAP_SOCKET_ERROR)
-      coap_log_warn("coap_socket_connect_udp: setsockopt IPV6_V6ONLY: %s\n",
-                    coap_socket_strerror());
+      if (errno != ENOSYS) {
+        coap_log_warn("coap_socket_connect_udp: setsockopt IPV6_V6ONLY: %s\n",
+                      coap_socket_strerror());
+      }
 #endif /* COAP_IPV6_SUPPORT */
     break;
 #if COAP_AF_UNIX_SUPPORT
