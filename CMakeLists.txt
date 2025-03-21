@@ -85,7 +85,9 @@ if(NOT ZEPHYR_BASE)
 #  set_property(TARGET ${COAP_LIBRARY_NAME} PROPERTY C_STANDARD 99)
 endif() # ! ZEPHYR_BASE
 if(${CMAKE_VERSION} VERSION_GREATER "3.20.0")
-  cmake_policy(SET CMP0115 OLD) # Supresses libcoap configuration warning
+  if(${CMAKE_VERSION} VERSION_LESS "3.28.0")
+    cmake_policy(SET CMP0115 OLD) # Supresses libcoap configuration warning
+  endif()
 endif()
 
 set_target_properties(${COAP_LIBRARY_NAME} PROPERTIES SOVERSION ${LIBCOAP_API_VERSION})
