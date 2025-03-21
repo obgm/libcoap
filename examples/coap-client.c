@@ -56,15 +56,15 @@ strndup(const char *s1, size_t n) {
 int flags = 0;
 
 static unsigned char _token_data[24]; /* With support for RFC8974 */
-coap_binary_t the_token = { 0, _token_data };
+static coap_binary_t the_token = { 0, _token_data };
 
 typedef struct {
   coap_binary_t *token;
   int observe;
 } track_token;
 
-track_token *tracked_tokens = NULL;
-size_t tracked_tokens_count = 0;
+static track_token *tracked_tokens = NULL;
+static size_t tracked_tokens_count = 0;
 
 #define FLAGS_BLOCK 0x01
 
@@ -100,7 +100,7 @@ static int add_nl = 0;
 static int is_mcast = 0;
 static uint32_t csm_max_message_size = 0;
 
-unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
+static unsigned char msgtype = COAP_MESSAGE_CON; /* usually, requests are sent confirmable */
 
 static char *cert_file = NULL; /* certificate and optional private key in PEM,
                                   or PKCS11 URI*/
@@ -133,20 +133,19 @@ typedef struct valid_ihs_t {
 static valid_ihs_t valid_ihs = {0, NULL};
 
 typedef unsigned char method_t;
-method_t method = 1;                    /* the method we are using in our requests */
+static method_t method = 1;                    /* the method we are using in our requests */
 
-coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
-uint16_t last_block1_mid = 0;
+static coap_block_t block = { .num = 0, .m = 0, .szx = 6 };
 
 #define DEFAULT_WAIT_TIME 90
 
-unsigned int wait_seconds = DEFAULT_WAIT_TIME; /* default timeout in seconds */
-unsigned int wait_ms = 0;
-int obs_started = 0;
-unsigned int obs_seconds = 30;          /* default observe time */
-unsigned int obs_ms = 0;                /* timeout for current subscription */
-int obs_ms_reset = 0;
-int doing_observe = 0;
+static unsigned int wait_seconds = DEFAULT_WAIT_TIME; /* default timeout in seconds */
+static unsigned int wait_ms = 0;
+static int obs_started = 0;
+static unsigned int obs_seconds = 30;          /* default observe time */
+static unsigned int obs_ms = 0;                /* timeout for current subscription */
+static int obs_ms_reset = 0;
+static int doing_observe = 0;
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -1694,6 +1693,13 @@ main(int argc, char **argv) {
 #ifndef _WIN32
   struct sigaction sa;
 #endif
+
+  /* Caution:
+   * If this code is going to be included into an embedded system that
+   * repeatably calls 'main()', then all the defined static variables need to
+   * be reset to their initial values - especially those that are freed off
+   * at the end of this function.
+   */
 
   /* Initialize libcoap library */
   coap_startup();

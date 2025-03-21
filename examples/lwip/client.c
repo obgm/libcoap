@@ -147,5 +147,6 @@ main(int argc, char **argv) {
 
   client_coap_finished();
   printf("Client Application finished.\n");
+  quit = 0;
   return 0;
 }

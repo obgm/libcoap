@@ -260,6 +260,8 @@ client_coap_init(int argc, char **argv)
 fail:
     /* Clean up library usage so client can be run again */
     quit = 0;
+    is_mcast = 0;
+    wait_seconds = DEFAULT_WAIT_TIME; /* default timeout in seconds */
     coap_delete_optlist(optlist);
     optlist = NULL;
     coap_session_release(session);
