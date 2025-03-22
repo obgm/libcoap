@@ -135,6 +135,7 @@ static coap_proto_t use_unix_proto = COAP_PROTO_NONE;
 static int enable_ws = 0;
 static int ws_port = 80;
 static int wss_port = 443;
+static uint32_t reconnect_secs = 0;
 
 static coap_dtls_pki_t *setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
 
@@ -1578,9 +1579,10 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
           "Usage: %s [-a priority] [-b max_block_size] [-d max] [-e]\n"
-          "\t\t[-f scheme://address[:port] [-g group] -l loss] [-p port]\n"
+          "\t\t[-f scheme://address[:port] [-g group] -l loss] [-o] [-p port]\n"
           "\t\t[-q tls_engine_conf_file] [-r] [-v num] [-w [port][,secure_port]]\n"
-          "\t\t[-x] [-A address] [-E oscore_conf_file[,seq_file]] [-G group_if]\n"
+          "\t\t[-x] [-y rec_secs] [-A address] [-E oscore_conf_file[,seq_file]]\n"
+          "\t\t[-G group_if]\n"
           "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
@@ -1613,6 +1615,7 @@ usage(const char *program, const char *version) {
           "\t-l loss%%\tRandomly fail to send datagrams with the specified\n"
           "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
           "\t       \t\t(for debugging only)\n"
+          "\t-o     \t\tDisable sending observe failures on shutdown\n"
           "\t-p port\t\tListen on specified port for UDP and TCP. If (D)TLS is\n"
           "\t       \t\tenabled, then the coap-server will also listen on\n"
           "\t       \t\t'port'+1 for DTLS and TLS.  The default port is 5683\n"
@@ -1632,6 +1635,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tEnable WebSockets support on port (WS) and/or secure_port\n"
           "\t       \t\t(WSS), comma separated\n"
           "\t-x     \t\tDisable output of PDU data when displaying PDUs\n"
+          "\t-y rec_secs\tAttempt to reconnect a failed proxy session every\n"
+          "\t       \t\trec_secs\n"
           "\t-A address\tInterface address to bind to\n"
           "\t-E oscore_conf_file[,seq_file]\n"
           "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
@@ -2351,6 +2356,7 @@ main(int argc, char **argv) {
   size_t i;
   int exit_code = 0;
   uint32_t max_block_size = 0;
+  int shutdown_no_observe = 0;
 #ifndef _WIN32
   int use_syslog = 0;
 #endif /* ! _WIN32 */
@@ -2371,7 +2377,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:ef:g:h:i:j:k:l:mnp:q:rs:tu:v:w:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y2")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:y:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y2")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2477,6 +2483,9 @@ main(int argc, char **argv) {
     case 'N':
       resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_NON;
       break;
+    case 'o':
+      shutdown_no_observe = 1;
+      break;
     case 'p' :
       port_str = optarg;
       break;
@@ -2555,6 +2564,9 @@ main(int argc, char **argv) {
     case 'X':
       csm_max_message_size = strtol(optarg, NULL, 10);
       break;
+    case 'y':
+      reconnect_secs = atoi(optarg);
+      break;
     case 'Y':
       no_trust_store = 1;
       break;
@@ -2600,8 +2612,11 @@ main(int argc, char **argv) {
   init_resources(ctx);
   if (mcast_per_resource)
     coap_mcast_per_resource(ctx);
+  if (shutdown_no_observe)
+    coap_context_set_shutdown_no_observe(ctx);
   coap_context_set_block_mode(ctx, block_mode);
   coap_context_set_max_block_size(ctx, max_block_size);
+  coap_context_set_session_reconnect_time(ctx, reconnect_secs);
   coap_context_set_keepalive(ctx, 30);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);

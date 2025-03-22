@@ -69,6 +69,7 @@ coap_context_set_pki
 coap_context_set_pki_root_cas
 coap_context_set_psk
 coap_context_set_psk2
+coap_context_set_session_reconnect_time
 coap_context_set_session_timeout
 coap_context_set_shutdown_no_observe
 coap_debug_set_packet_loss

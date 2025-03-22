@@ -302,6 +302,24 @@ void coap_context_set_session_timeout(coap_context_t *context,
                                       unsigned int session_timeout);
 
 /**
+ * Set the session reconnect delay time after a working client session has
+ * failed.  0 (the default) means use no restart.
+ *
+ * If a session is reconnected, then any active observe subscriptions are
+ * automatically restarted.
+ *
+ * However, if the session failure was caused by a server restart, a restart
+ * observe subscription attempt for a previously dynamically created resource
+ * will not cause the resource to be recreated.  This can be done by using
+ * coap_persist(3) in the server.
+ *
+ * @param context        The coap_context_t object.
+ * @param reconnect_time The time before a failed client session is reconnected
+                         in seconds. 0 if reconnection is to be disabled.
+ */
+void coap_context_set_session_reconnect_time(coap_context_t *context,
+                                             unsigned int reconnect_time);
+/**
  * Get the session timeout value
  *
  * @param context The coap_context_t object.

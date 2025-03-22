@@ -97,7 +97,7 @@ int coap_verify_proxy_scheme_supported(coap_uri_scheme_t scheme);
  * @return @c 1 if success, or @c 0 if failure (@p response code set to
  *         appropriate value).
  */
-int COAP_API coap_proxy_forward_request(coap_session_t *req_session,
+COAP_API int coap_proxy_forward_request(coap_session_t *req_session,
                                         const coap_pdu_t *request,
                                         coap_pdu_t *response,
                                         coap_resource_t *resource,

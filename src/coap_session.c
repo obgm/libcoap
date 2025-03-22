@@ -450,10 +450,17 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
     memcpy(&session->addr_hash, addr_hash, sizeof(session->addr_hash));
   else
     memset(&session->addr_hash, 0, sizeof(session->addr_hash));
-  if (local_addr)
+  if (local_addr) {
     coap_address_copy(&session->addr_info.local, local_addr);
-  else
+#if COAP_CLIENT_SUPPORT
+    coap_address_copy(&session->local_reconnect, local_addr);
+#endif /* COAP_CLIENT_SUPPORT */
+  } else {
     coap_address_init(&session->addr_info.local);
+#if COAP_CLIENT_SUPPORT
+    coap_address_init(&session->local_reconnect);
+#endif /* COAP_CLIENT_SUPPORT */
+  }
   if (remote_addr)
     coap_address_copy(&session->addr_info.remote, remote_addr);
   else
@@ -893,6 +900,9 @@ coap_session_connected(coap_session_t *session) {
                    coap_session_str(session));
     if (session->state == COAP_SESSION_STATE_CSM) {
       coap_handle_event_lkd(session->context, COAP_EVENT_SESSION_CONNECTED, session);
+#if COAP_CLIENT_SUPPORT
+      coap_session_reestablished(session);
+#endif /* COAP_CLIENT_SUPPORT */
       if (session->doing_first)
         session->doing_first = 0;
     }
@@ -1023,8 +1033,11 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
   coap_queue_t *q;
 
   coap_lock_check_locked(session->context);
-  q = session->context->sendqueue;
+#if COAP_CLIENT_SUPPORT
+  coap_session_failed(session);
+#endif /* COAP_CLIENT_SUPPORT */
 
+  q = session->context->sendqueue;
   while (q) {
     if (q->session == session) {
       /* Take the first one */
@@ -1102,10 +1115,12 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
   }
 
 #if COAP_CLIENT_SUPPORT
-  /* Need to do this before (D)TLS and socket is closed down */
-  LL_FOREACH_SAFE(session->lg_crcv, cq, etmp) {
-    LL_DELETE(session->lg_crcv, cq);
-    coap_block_delete_lg_crcv(session, cq);
+  if (!session->session_failed) {
+    /* Need to do this before (D)TLS and socket is closed down */
+    LL_FOREACH_SAFE(session->lg_crcv, cq, etmp) {
+      LL_DELETE(session->lg_crcv, cq);
+      coap_block_delete_lg_crcv(session, cq);
+    }
   }
 #endif /* COAP_CLIENT_SUPPORT */
   LL_FOREACH_SAFE(session->lg_xmit, lq, ltmp) {
@@ -1127,17 +1142,32 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
                             state == COAP_SESSION_STATE_CONNECTING ?
                             COAP_EVENT_TCP_FAILED : COAP_EVENT_TCP_CLOSED, session);
     }
-    if (state != COAP_SESSION_STATE_NONE) {
+#if COAP_CLIENT_SUPPORT
+    if (state != COAP_SESSION_STATE_NONE && !session->session_failed) {
       coap_handle_event_lkd(session->context,
                             state == COAP_SESSION_STATE_ESTABLISHED ?
                             COAP_EVENT_SESSION_CLOSED : COAP_EVENT_SESSION_FAILED, session);
     }
+#endif /* COAP_CLIENT_SUPPORT */
     if (session->doing_first)
       session->doing_first = 0;
   }
 #endif /* !COAP_DISABLE_TCP */
-  session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
+  if (session->sock.lfunc[COAP_LAYER_SESSION].l_close)
+    session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
 }
+
+#if COAP_CLIENT_SUPPORT
+void
+coap_session_failed(coap_session_t *session) {
+  if (session->context->reconnect_time &&
+      session->state == COAP_SESSION_STATE_ESTABLISHED &&
+      session->type == COAP_SESSION_TYPE_CLIENT) {
+    session->session_failed = 1;
+    coap_ticks(&session->last_rx_tx);
+  }
+}
+#endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
 static void
@@ -1472,9 +1502,7 @@ coap_session_check_connect(coap_session_t *session) {
   if (COAP_PROTO_RELIABLE(session->proto)) {
     if (session->sock.flags & COAP_SOCKET_WANT_CONNECT) {
       session->state = COAP_SESSION_STATE_CONNECTING;
-      if (session->state != COAP_SESSION_STATE_ESTABLISHED &&
-          session->state != COAP_SESSION_STATE_NONE &&
-          session->type == COAP_SESSION_TYPE_CLIENT) {
+      if (session->type == COAP_SESSION_TYPE_CLIENT) {
         session->doing_first = 1;
       }
     } else {
@@ -1498,6 +1526,91 @@ coap_session_establish(coap_session_t *session) {
 }
 
 #if COAP_CLIENT_SUPPORT
+int
+coap_session_reconnect(coap_session_t *session) {
+  int default_port = COAP_DEFAULT_PORT;
+
+  if (session->sock.lfunc[COAP_LAYER_SESSION].l_close && !session->session_failed)
+    session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
+
+  switch (session->proto) {
+  case COAP_PROTO_UDP:
+    default_port = COAP_DEFAULT_PORT;
+    break;
+  case COAP_PROTO_DTLS:
+    default_port = COAPS_DEFAULT_PORT;
+    break;
+  case COAP_PROTO_TCP:
+    default_port = COAP_DEFAULT_PORT;
+    break;
+  case COAP_PROTO_TLS:
+    default_port = COAPS_DEFAULT_PORT;
+    break;
+  case COAP_PROTO_WS:
+    default_port = 80;
+    break;
+  case COAP_PROTO_WSS:
+    default_port = 443;
+    break;
+  case COAP_PROTO_NONE:
+  case COAP_PROTO_LAST:
+  default:
+    assert(0);
+    return 0;
+  }
+  session->sock.session = session;
+  coap_log_debug("***%s: trying to reconnect\n", coap_session_str(session));
+  if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+    session->state = COAP_SESSION_STATE_NONE;
+    if (!coap_netif_dgrm_connect(session, &session->local_reconnect, &session->addr_info.remote,
+                                 default_port)) {
+      goto error;
+    }
+    coap_session_reestablished(session);
+#ifdef WITH_CONTIKI
+    session->sock.context = session->context;
+#endif /* WITH_CONTIKI */
+#if !COAP_DISABLE_TCP
+  } else if (COAP_PROTO_RELIABLE(session->proto)) {
+    if (!coap_netif_strm_connect1(session, &session->local_reconnect, &session->addr_info.remote,
+                                  default_port)) {
+      goto error;
+    }
+#endif /* !COAP_DISABLE_TCP */
+  } else {
+    goto error;
+  }
+#ifdef COAP_EPOLL_SUPPORT
+  coap_epoll_ctl_add(&session->sock,
+                     EPOLLIN |
+                     ((session->sock.flags & COAP_SOCKET_WANT_CONNECT) ?
+                      EPOLLOUT : 0),
+                     __func__);
+#endif /* COAP_EPOLL_SUPPORT */
+
+  session->sock.flags |= COAP_SOCKET_NOT_EMPTY | COAP_SOCKET_WANT_READ;
+  session->sock.flags |= COAP_SOCKET_BOUND;
+  coap_session_check_connect(session);
+  return 1;
+error:
+  return 0;
+}
+
+void
+coap_session_reestablished(coap_session_t *session) {
+  coap_lg_crcv_t *lg_crcv, *etmp;
+
+  if (!session->session_failed)
+    return;
+  coap_log_debug("***%s: session re-established\n",
+                 coap_session_str(session));
+  session->session_failed = 0;
+  LL_FOREACH_SAFE(session->lg_crcv, lg_crcv, etmp) {
+    coap_pdu_reference_lkd(&lg_crcv->pdu);
+    coap_send_internal(session, &lg_crcv->pdu, NULL);
+  }
+}
+
 COAP_API coap_session_t *
 coap_new_client_session(coap_context_t *ctx,
                         const coap_address_t *local_if,

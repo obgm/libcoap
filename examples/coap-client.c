@@ -55,6 +55,7 @@ strndup(const char *s1, size_t n) {
 
 int flags = 0;
 
+static coap_session_t *global_session;
 static unsigned char _token_data[24]; /* With support for RFC8974 */
 static coap_binary_t the_token = { 0, _token_data };
 
@@ -77,6 +78,7 @@ static int proxy_scheme_option = 0;
 static int uri_host_option = 0;
 static unsigned int ping_seconds = 0;
 static int setup_cid = 0;
+static uint32_t reconnect_secs = 0;
 
 #define REPEAT_DELAY_MS 1000
 static size_t repeat_count = 1;
@@ -312,8 +314,11 @@ event_handler(coap_session_t *session COAP_UNUSED,
               const coap_event_t event) {
 
   switch (event) {
-  case COAP_EVENT_DTLS_CLOSED:
   case COAP_EVENT_TCP_CLOSED:
+  case COAP_EVENT_DTLS_CLOSED:
+    if (!reconnect_secs)
+      quit = 1;
+    break;
   case COAP_EVENT_SESSION_CLOSED:
   case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
   case COAP_EVENT_OSCORE_NOT_ENABLED:
@@ -360,9 +365,13 @@ nack_handler(coap_session_t *session COAP_UNUSED,
   }
 
   switch (reason) {
-  case COAP_NACK_TOO_MANY_RETRIES:
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_TLS_FAILED:
+    coap_log_err("cannot send CoAP pdu\n");
+    if (!reconnect_secs)
+      quit = 1;
+    break;
+  case COAP_NACK_TOO_MANY_RETRIES:
   case COAP_NACK_WS_FAILED:
   case COAP_NACK_TLS_LAYER_FAILED:
   case COAP_NACK_WS_LAYER_FAILED:
@@ -508,10 +517,11 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "\n"
           "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
           "\t\t[-m method] [-o file] [-p port] [-q tls_engine_conf_file] [-r]\n"
-          "\t\t[-s duration] [-t type] [-v num] [-w] [-x] [-A type] [-B seconds]\n"
+          "\t\t[-s duration] [-t type] [-v num] [-w] [-x]  [-y rec_secs]\n"
+          "\t\t[-A type] [-B seconds]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
-          "\t\t[-T token] [-U]  [-V num] [-X size]\n"
+          "\t\t[-T token] [-U] [-V num] [-X size]\n"
           "\t\t[[-d count]]\n"
           "\t\t[[h match_hint_file] [-k key] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
@@ -545,6 +555,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tCoAP logging\n"
           "\t-w     \t\tAppend a newline to received data\n"
           "\t-x     \t\tDisable output of PDU data when displaying PDUs\n"
+          "\t-y rec_secs\tAttempt to reconnect a failed session every rec_secs\n"
           "\t-A type\t\tAccepted media type\n"
           "\t-B seconds\tBreak operation after waiting given seconds\n"
           "\t       \t\t(default is %d)\n"
@@ -1705,7 +1716,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:A:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:Y2")) != -1) {
+                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:A:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:Y2")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1770,6 +1781,9 @@ main(int argc, char **argv) {
       break;
     case 'x':
       coap_enable_pdu_data_output(0);
+      break;
+    case 'y':
+      reconnect_secs = atoi(optarg);
       break;
     case 'N':
       msgtype = COAP_MESSAGE_NON;
@@ -1948,6 +1962,7 @@ main(int argc, char **argv) {
       goto failed;
   }
 
+  coap_context_set_session_reconnect_time(ctx, reconnect_secs);
   coap_context_set_keepalive(ctx, ping_seconds);
   coap_context_set_block_mode(ctx, block_mode);
   if (csm_max_message_size)
@@ -1980,6 +1995,7 @@ main(int argc, char **argv) {
     coap_log_err("cannot create client session\n");
     goto failed;
   }
+  global_session = session;
   /*
    * Prime the base token value, which coap_session_new_token() will increment
    * every time it is called to get an unique token.
@@ -2155,7 +2171,10 @@ main(int argc, char **argv) {
           ready = 0;
           if (coap_send(session, pdu) == COAP_INVALID_MID) {
             coap_log_err("cannot send CoAP pdu\n");
-            quit = 1;
+            if (reconnect_secs)
+              ready = 1;
+            else
+              quit = 1;
           }
           repeat_count--;
         }

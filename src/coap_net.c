@@ -567,6 +567,17 @@ coap_context_set_session_timeout(coap_context_t *context,
   context->session_timeout = session_timeout;
 }
 
+void
+coap_context_set_session_reconnect_time(coap_context_t *context,
+                                        unsigned int reconnect_time) {
+#if COAP_CLIENT_SUPPORT
+  context->reconnect_time = reconnect_time;
+#else /* ! COAP_CLIENT_SUPPORT */
+  (void)context;
+  (void)reconnect_time;
+#endif /* ! COAP_CLIENT_SUPPORT */
+}
+
 unsigned int
 coap_context_get_session_timeout(const coap_context_t *context) {
   return context->session_timeout;
@@ -576,9 +587,9 @@ void
 coap_context_set_shutdown_no_observe(coap_context_t *context) {
 #if COAP_SERVER_SUPPORT
   context->shutdown_no_send_observe = 1;
-#else /* COAP_SERVER_SUPPORT */
+#else /* ! COAP_SERVER_SUPPORT */
   (void)context;
-#endif /* COAP_SERVER_SUPPORT */
+#endif /* ! COAP_SERVER_SUPPORT */
 }
 
 int
@@ -1438,7 +1449,7 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
   pdu->session = session;
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT &&
-      !coap_netif_available(session)) {
+      !coap_netif_available(session) && !session->session_failed) {
     coap_log_debug("coap_send: Socket closed\n");
     goto error;
   }
@@ -1775,6 +1786,13 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
   (void)request_pdu;
 #endif /* COAP_SERVER_SUPPORT */
   pdu->session = session;
+#if COAP_CLIENT_SUPPORT
+  if (session->session_failed) {
+    coap_session_reconnect(session);
+    if (session->session_failed)
+      goto error;
+  }
+#endif /* COAP_CLIENT_SUPPORT */
   if (pdu->code == COAP_RESPONSE_CODE(508)) {
     /*
      * Need to prepend our IP identifier to the data as per
@@ -1973,6 +1991,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
     return pdu->mid;
   }
   if (bytes_written < 0) {
+    coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
     goto error;
   }
 

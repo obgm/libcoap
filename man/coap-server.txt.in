@@ -20,9 +20,10 @@ coap-server-notls
 SYNOPSIS
 --------
 *coap-server* [*-a* priority] [*-b* max_block_size] [*-d* max] [*-e*]
-              [*-f* scheme://addr[:port]
-              [*-g* group] [*-l* loss] [*-p* port] [*-q* tls_engine_conf_file]
+              [*-f* scheme://addr[:port] [*-g* group]
+              [*-l* loss] [*-o*] [*-p* port] [*-q* tls_engine_conf_file]
               [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]] [*-x*]
+              [*-y* rec_secs]
               [*-A* address] [*-E* oscore_conf_file[,seq_file]]
               [*-G* group_if] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port],[name1[,name2..]]]
@@ -80,6 +81,9 @@ OPTIONS - General
    Randomly failed to send datagrams with the specified probability - 100%
    all datagrams, 0% no datagrams (debugging only).
 
+*-o* ::
+   Disable sending observe failures on shutdown.
+
 *-p* port::
    The 'port' on the given address will be listening for incoming connections.
    If (D)TLS is supported, then 'port' + 1 will also be listened on for
@@ -109,8 +113,11 @@ OPTIONS - General
    Enable WebSockets support support on port (WS) and/or secure_port (WSS),
    comma separated.
 
-*-x*::
+*-x* ::
   Disable output of PDU data when displaying PDUs.
+
+*-y* rec_secs::
+   Attempt to reconnect a failed proxy session every rec_secs.
 
 *-A* address::
    The local address of the interface which the server has to listen on.

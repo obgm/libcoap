@@ -21,13 +21,13 @@ SYNOPSIS
 --------
 *coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-q* tls_engine_conf_file]
-              [*-r*] [*-s duration*]
-              [*-t* type] [*-v* num] [*-w*] [*-x*] [*-A* type] [*-B* seconds]
+              [*-r*] [*-s duration*] [*-t* type] [*-v* num] [*-w*] [*-x*]
+              [*-y* rec_secs] [*-A* type] [*-B* seconds]
               [*-E* oscore_conf_file[,seq_file]] [*-G* count] [*-H* hoplimit]
               [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-T* token] [*-U*] [*-V* num]
               [*-X* size]
-              [*-d* value]
+              [[*-d* value]]
               [[*-h* match_hint_file] [*-k* key] [*-u* user] [*-2*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile] [*-Y*]] URI
@@ -132,6 +132,9 @@ OPTIONS - General
 
 *-x*::
   Disable output of PDU data when displaying PDUs.
+
+*-y* rec_secs::
+   Attempt to reconnect a failed session every rec_secs.
 
 *-A* type::
    Accepted media type. 'type' must be either a numeric value reflecting a
