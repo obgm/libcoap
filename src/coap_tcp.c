@@ -16,6 +16,15 @@
 
 #include "coap3/coap_libcoap_build.h"
 
+#if COAP_AF_UNIX_SUPPORT
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif /* HAVE_UNISTD_H */
+#ifdef _WIN32
+#include <stdio.h>
+#endif /* _WIN32 */
+#endif /* COAP_AF_UNIX_SUPPORT */
+
 int
 coap_tcp_is_supported(void) {
   return !COAP_DISABLE_TCP;
@@ -153,6 +162,15 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
   return 1;
 
 error:
+#if COAP_AF_UNIX_SUPPORT
+  if (local_if && local_if->addr.sa.sa_family == AF_UNIX) {
+#ifdef _WIN32
+    _unlink(local_if->addr.cun.sun_path);
+#else /* ! _WIN32 */
+    unlink(local_if->addr.cun.sun_path);
+#endif /* ! _WIN32 */
+  }
+#endif /* COAP_AF_UNIX_SUPPORT */
   coap_socket_close(sock);
   return 0;
 }

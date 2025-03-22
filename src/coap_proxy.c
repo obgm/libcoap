@@ -595,6 +595,11 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
                      (void *)proxy_entry,
                      session->context->proxy_list_count);
     }
+  } else if (proxy_entry->ongoing->session_failed) {
+    if (!coap_session_reconnect(proxy_entry->ongoing)) {
+      /* Server is not yet back up */
+      return NULL;
+    }
   }
 
   return proxy_entry;
@@ -650,7 +655,6 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   coap_uri_t uri;
 
   /* Set up ongoing session (if not already done) */
-
   proxy_entry = coap_proxy_get_ongoing_session(session, request, response,
                                                server_list);
   if (!proxy_entry) {

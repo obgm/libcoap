@@ -876,7 +876,8 @@ coap_add_observer(coap_resource_t *resource,
                  (void *)s, s->cache_key->key[0], s->cache_key->key[1],
                  s->cache_key->key[2], s->cache_key->key[3]);
 
-  if (session->context->observe_added && session->proto == COAP_PROTO_UDP) {
+  if (session->context->observe_added && session->proto == COAP_PROTO_UDP &&
+      !coap_is_af_unix(&session->addr_info.local)) {
     coap_bin_const_t raw_packet;
     coap_bin_const_t *oscore_info = NULL;
 #if COAP_OSCORE_SUPPORT

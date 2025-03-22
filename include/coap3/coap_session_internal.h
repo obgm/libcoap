@@ -77,6 +77,9 @@ struct coap_session_t {
   coap_addr_hash_t addr_hash;  /**< Address hash for server incoming packets */
   UT_hash_handle hh;
   coap_addr_tuple_t addr_info;      /**< remote/local address info */
+#if COAP_CLIENT_SUPPORT
+  coap_address_t local_reconnect;   /**< local address to initiate reconnect from */
+#endif /* COAP_CLIENT_SUPPORT */
   int ifindex;                      /**< interface index */
   unsigned ref_subscriptions;       /**< reference count of current subscriptions */
   coap_socket_t sock;               /**< socket object for the session, if
@@ -208,6 +211,7 @@ struct coap_session_t {
 #if COAP_CLIENT_SUPPORT
   uint8_t negotiated_cid;         /**< Set for a client if CID negotiated */
   uint8_t doing_send_recv;        /**< Set if coap_send_recv() active */
+  uint8_t session_failed;         /**< Set if session failed and can try re-connect */
 #endif /* COAP_CLIENT_SUPPORT */
   uint8_t is_dtls13;              /**< Set if session is DTLS1.3 */
   coap_mid_t remote_test_mid;     /**< mid used for checking remote
@@ -593,6 +597,13 @@ coap_session_t *coap_new_client_session_psk2_lkd(coap_context_t *ctx,
                                                  coap_dtls_cpsk_t *setup_data
                                                 );
 
+/**
+ * Close the current session (if not already closed) and reconnect to
+ * server (client session only).
+ *
+ * @param session The session to reconnect.
+ */
+int coap_session_reconnect(coap_session_t *session);
 
 /**
  * Create a new DTLS session for the @p session.
@@ -650,6 +661,20 @@ void coap_handle_nack(coap_session_t *session,
                       coap_pdu_t *sent,
                       const coap_nack_reason_t reason,
                       const coap_mid_t mid);
+
+/**
+ * Session has failed due to a socket error.
+ *
+ * @param session The session that has failed.
+ */
+void coap_session_failed(coap_session_t *session);
+
+/**
+ * Session has been re-connected to server.
+ *
+ * @param session The session that has been re-established.
+ */
+void coap_session_reestablished(coap_session_t *session);
 
 #define COAP_SESSION_REF(s) ((s)->ref
 

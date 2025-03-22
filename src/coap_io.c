@@ -46,6 +46,9 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
+#ifdef _WIN32
+#include <stdio.h>
+#endif /* _WIN32 */
 #ifdef COAP_EPOLL_SUPPORT
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
@@ -395,12 +398,17 @@ coap_socket_close(coap_socket_t *sock) {
                      coap_socket_strerror(), errno);
       }
     }
+#endif /* COAP_EPOLL_SUPPORT */
 #if COAP_SERVER_SUPPORT
 #if COAP_AF_UNIX_SUPPORT
     if (sock->endpoint &&
         sock->endpoint->bind_addr.addr.sa.sa_family == AF_UNIX) {
       /* Clean up Unix endpoint */
+#ifdef _WIN32
+      _unlink(sock->endpoint->bind_addr.addr.cun.sun_path);
+#else /* ! _WIN32 */
       unlink(sock->endpoint->bind_addr.addr.cun.sun_path);
+#endif /* ! _WIN32 */
     }
 #endif /* COAP_AF_UNIX_SUPPORT */
     sock->endpoint = NULL;
@@ -410,12 +418,15 @@ coap_socket_close(coap_socket_t *sock) {
     if (sock->session && sock->session->type == COAP_SESSION_TYPE_CLIENT &&
         sock->session->addr_info.local.addr.sa.sa_family == AF_UNIX) {
       /* Clean up Unix endpoint */
+#ifdef _WIN32
+      _unlink(sock->session->addr_info.local.addr.cun.sun_path);
+#else /* ! _WIN32 */
       unlink(sock->session->addr_info.local.addr.cun.sun_path);
+#endif /* ! _WIN32 */
     }
 #endif /* COAP_AF_UNIX_SUPPORT */
 #endif /* COAP_CLIENT_SUPPORT */
     sock->session = NULL;
-#endif /* COAP_EPOLL_SUPPORT */
     coap_closesocket(sock->fd);
     sock->fd = COAP_INVALID_SOCKET;
   }
@@ -1518,6 +1529,7 @@ release_1:
         if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
           /* Some issue - not safe to continue processing */
           s->last_rx_tx = now;
+          coap_session_failed(s);
           continue;
         }
         if (s->last_ping > 0 && s->last_pong < s->last_ping) {
@@ -1529,6 +1541,22 @@ release_1:
       s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
       if (timeout == 0 || s_timeout < timeout)
         timeout = s_timeout;
+    }
+    if (s->type == COAP_SESSION_TYPE_CLIENT &&
+        s->session_failed && ctx->reconnect_time) {
+      if (s->last_rx_tx + ctx->reconnect_time * COAP_TICKS_PER_SECOND <= now) {
+        if (!coap_session_reconnect(s)) {
+          /* server is not back up yet - delay retry a while */
+          s->last_rx_tx = now;
+          s_timeout = ctx->reconnect_time * COAP_TICKS_PER_SECOND;
+          if (timeout == 0 || s_timeout < timeout)
+            timeout = s_timeout;
+        }
+      } else {
+        s_timeout = (s->last_rx_tx + ctx->reconnect_time * COAP_TICKS_PER_SECOND) - now;
+        if (timeout == 0 || s_timeout < timeout)
+          timeout = s_timeout;
+      }
     }
 
 #if !COAP_DISABLE_TCP

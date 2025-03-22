@@ -132,8 +132,8 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
   coap_socket_t *sock = &session->sock;
 #if COAP_SERVER_SUPPORT
   if (sock->flags == COAP_SOCKET_EMPTY) {
-    assert(session->endpoint != NULL);
-    sock = &session->endpoint->sock;
+    if (session->endpoint != NULL)
+      sock = &session->endpoint->sock;
   }
 #endif /* COAP_SERVER_SUPPORT */
 

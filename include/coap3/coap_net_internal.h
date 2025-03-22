@@ -164,6 +164,10 @@ struct coap_context_t {
                                            the remote side. */
   uint32_t csm_max_message_size;   /**< Value for CSM Max-Message-Size */
 
+#if COAP_CLIENT_SUPPORT
+  unsigned int reconnect_time;     /**< Time to wait before reconnecting a failed
+                                        client session. 0 means disabled */
+#endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT
   coap_cache_entry_t *cache;       /**< CoAP cache-entry cache */
   uint16_t *cache_ignore_options;  /**< CoAP options to ignore when creating a

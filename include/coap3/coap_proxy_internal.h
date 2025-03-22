@@ -45,8 +45,6 @@ struct coap_proxy_list_t {
                                        is ignored if there are any active
                                        upstream Observe requests */
   coap_tick_t last_used;     /**< Last time entry was used */
-  uint64_t res_tx_token;     /**< Copy of ongoing session tx_token for restart */
-  coap_lg_crcv_t *res_lg_crcv; /**< Copy of ongoing session lg_crcv for restart */
 };
 
 /**

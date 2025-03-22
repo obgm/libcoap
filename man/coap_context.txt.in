@@ -25,7 +25,8 @@ coap_context_set_max_token_size,
 coap_context_set_app_data2,
 coap_context_get_app_data,
 coap_context_set_cid_tuple_change,
-coap_context_set_shutdown_no_observe
+coap_context_set_shutdown_no_observe,
+coap_context_set_session_reconnect_time
 - Work with CoAP contexts
 
 SYNOPSIS
@@ -70,6 +71,9 @@ coap_app_data_free_callback_t _app_cb_);*
 *int coap_context_set_cid_tuple_change(coap_context_t *_context_context, uint8_t _every_);*
 
 *void coap_context_set_shutdown_no_observe(coap_context_t *_context_);
+
+*void coap_context_set_session_reconnect_time(coap_context_t *_context_,
+unsigned int _reconnect_time_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -220,6 +224,20 @@ so that no unsolicited observe responses are sent out by the server when
 *coap_free_context*() is called. If *coap_context_set_shutdown_no_observe*()
 is not called, then 5.03 responses are sent out indicating that the observed
 resource is temporarily unavailable.
+
+*Function: coap_context_set_session_reconnect_time()*
+
+The *coap_context_set_session_reconnect_time*() function is used to set the
+_reconnect_time_ time (in seconds) for a failed client session to retry a
+reconnection. A value of 0 (the default) disables a reconnection attempt.
+
+If a session is reconnected, then any active observe subscriptions are
+automatically restarted.
+
+However, if the session failure was caused by a server restart, a restart
+observe subscription attempt for a previously dynamically created resource
+will not cause the resource to be recreated.  This can be done by using
+*coap_persist*(3) in the server.
 
 RETURN VALUES
 -------------

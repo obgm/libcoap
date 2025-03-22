@@ -60,7 +60,8 @@ and maintaining OSCORE protection.
 There are callbacks provided to support doing this as an alternative persist
 storage in the coap-server application.
 
-*NOTE:* The observe persist support is only available for UDP sessions.
+*NOTE:* The observe persist support is only available for UDP sessions that
+use TCP/IP (i.e. not AF_UNIX).
 
 When using the libcoap compiled in support, only two functions need to be
 called by the application. *coap_persist_startup*() defines the file names to
@@ -76,10 +77,13 @@ FUNCTIONS
 The *coap_persist_startup*() function is used to enable persist tracking for
 _context_ so when a coap-server is restarted, the persist tracked information
 can be added back in for the server logic.
+
 _dyn_resource_save_file_ is used to save the current list of resources created
 from a request to the unknown resource.
+
 _observe_save_file_ is used to save the current list of active observe
 subscriptions.
+
 _obs_cnt_save_file_ is used to save the current observe counter used when
 sending an observe unsolicited response.  _obs_cnt_save_file_ only gets
 updated every _save_freq_ updates.
@@ -101,7 +105,7 @@ tracking as set up by *coap_persist_startup*() for _context_ and preserve the
 tracking for when the coap-server application restarts.
 
 If using *coap_persist_track_funcs*(), then calling *coap_persist_stop*()
-will stop any 4.04 unsolicited response messages being sent when a
+will stop any 5.03 unsolicited response messages being sent when a
 resource that has an active observe subscription is deleted (as happens
 when *coap_free_context*() is subsequentially called).
 
@@ -213,6 +217,8 @@ typedef int (*coap_dyn_resource_added_t)(coap_session_t *session,
                                          coap_bin_const_t *raw_packet,
                                          void *user_data);
 ----
+
+*NOTE:* Any subsequent changes to the resource are not tracked.
 
 The _resource_deleted_ callback function prototype, called whenever a
 resource is deleted, is defined as:
