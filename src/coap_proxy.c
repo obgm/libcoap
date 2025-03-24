@@ -51,6 +51,21 @@ coap_proxy_cleanup(coap_context_t *context) {
   coap_free_type(COAP_STRING, context->proxy_list);
 }
 
+static int
+coap_proxy_check_observe(coap_proxy_list_t *proxy_entry) {
+  if (proxy_entry && proxy_entry->ongoing) {
+    /* Need to see if there are any Observes active */
+    coap_lg_crcv_t *lg_crcv;
+
+    LL_FOREACH(proxy_entry->ongoing->lg_crcv, lg_crcv) {
+      if (lg_crcv->observe_set) {
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
 /*
  * return 1 if there is a future expire time, else 0.
  * update tim_rem with remaining value if return is 1.
@@ -63,16 +78,19 @@ coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
 
   *tim_rem = -1;
   for (i = 0; i < context->proxy_list_count; i++) {
-    coap_proxy_list_t *proxy_list = &context->proxy_list[i];
+    coap_proxy_list_t *proxy_entry = &context->proxy_list[i];
 
-    if (proxy_list->ongoing && proxy_list->idle_timeout_ticks) {
-      if (proxy_list->last_used + proxy_list->idle_timeout_ticks <= now) {
+    if (coap_proxy_check_observe(proxy_entry))
+      continue;
+
+    if (proxy_entry->ongoing && proxy_entry->idle_timeout_ticks) {
+      if (proxy_entry->last_used + proxy_entry->idle_timeout_ticks <= now) {
         /* Drop session to upstream server */
-        coap_session_release_lkd(proxy_list->ongoing);
-        proxy_list->ongoing = NULL;
+        coap_session_release_lkd(proxy_entry->ongoing);
+        proxy_entry->ongoing = NULL;
       } else {
-        if (*tim_rem > proxy_list->last_used + proxy_list->idle_timeout_ticks - now) {
-          *tim_rem = proxy_list->last_used + proxy_list->idle_timeout_ticks - now;
+        if (*tim_rem > proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now) {
+          *tim_rem = proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now;
         }
         ret = 1;
       }
