@@ -1488,9 +1488,11 @@ release_1:
         /* Only do this if this session is observing */
         if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
           /* Time to send a ping */
-          if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID)
+          if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
             /* Some issue - not safe to continue processing */
+            s->last_rx_tx = now;
             continue;
+          }
           if (s->last_ping > 0 && s->last_pong < s->last_ping) {
             coap_session_server_keepalive_failed(s);
             /* check the next session */
@@ -1513,9 +1515,11 @@ release_1:
         ctx->ping_timeout > 0) {
       if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
         /* Time to send a ping */
-        if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID)
+        if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
           /* Some issue - not safe to continue processing */
+          s->last_rx_tx = now;
           continue;
+        }
         if (s->last_ping > 0 && s->last_pong < s->last_ping) {
           coap_handle_event_lkd(s->context, COAP_EVENT_KEEPALIVE_FAILURE, s);
         }
