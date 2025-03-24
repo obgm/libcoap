@@ -1371,12 +1371,15 @@ static int
 coap_check_send_need_lg_crcv(coap_session_t *session, coap_pdu_t *pdu) {
   coap_opt_iterator_t opt_iter;
 
+  if (!COAP_PDU_IS_REQUEST(pdu))
+    return 0;
+
   if (
 #if COAP_OSCORE_SUPPORT
       session->oscore_encryption ||
 #endif /* COAP_OSCORE_SUPPORT */
-      ((pdu->type == COAP_MESSAGE_NON || COAP_PROTO_RELIABLE(session->proto)) &&
-       COAP_PDU_IS_REQUEST(pdu) && pdu->code != COAP_REQUEST_CODE_DELETE) ||
+      pdu->type == COAP_MESSAGE_NON ||
+      COAP_PROTO_RELIABLE(session->proto) ||
       coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter) ||
 #if COAP_Q_BLOCK_SUPPORT
       coap_check_option(pdu, COAP_OPTION_Q_BLOCK1, &opt_iter) ||
@@ -4380,13 +4383,13 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
        * detected and so the lg_crcv needs to be set up before the sent PDU
        * information is lost.
        *
-       * lg_crcv was not set up if not a CoAP request or if DELETE.
+       * lg_crcv was not set up if not a CoAP request.
        *
        * lg_crcv was always set up in coap_send() if Observe, Oscore and (Q)-Block1
        * options.
        */
       if (sent &&
-          !coap_check_send_need_lg_crcv(session, pdu) &&
+          !coap_check_send_need_lg_crcv(session, sent->pdu) &&
           COAP_PDU_IS_REQUEST(sent->pdu)) {
         /*
          * lg_crcv was not set up in coap_send(). It could have been set up
