@@ -2329,6 +2329,14 @@ coap_block_new_lg_crcv(coap_session_t *session, coap_pdu_t *pdu,
   }
   lg_crcv->pdu.token += lg_crcv->pdu.max_hdr_size;
   memcpy(lg_crcv->pdu.token, pdu->token, token_options);
+  if (lg_crcv->pdu.actual_token.length < COAP_TOKEN_EXT_1B_BIAS) {
+    lg_crcv->pdu.actual_token.s = &lg_crcv->pdu.token[0];
+  } else if (lg_crcv->pdu.actual_token.length < COAP_TOKEN_EXT_2B_BIAS) {
+    lg_crcv->pdu.actual_token.s = &lg_crcv->pdu.token[1];
+  } else if (lg_crcv->pdu.actual_token.length <= COAP_TOKEN_EXT_MAX) {
+    lg_crcv->pdu.actual_token.s = &lg_crcv->pdu.token[2];
+  }
+
   if (lg_crcv->pdu.data) {
     lg_crcv->pdu.data = lg_crcv->pdu.token + token_options;
     assert(pdu->data);
