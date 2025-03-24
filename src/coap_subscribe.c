@@ -116,8 +116,20 @@ coap_persist_observe_add_lkd(coap_context_t *context,
       break;
     ep = ep->next;
   }
-  if (!ep)
+  if (!ep) {
+    if (COAP_LOG_WARN <= coap_get_log_level()) {
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 40
+#endif
+      unsigned char addr_str[INET6_ADDRSTRLEN + 8];
+
+      if (coap_print_addr(e_listen_addr, addr_str, INET6_ADDRSTRLEN + 8)) {
+        coap_log_warn("coap_persist_observe_add: Endpoint %s not defined\n",
+                      addr_str);
+      }
+    }
     return NULL;
+  }
 
   /* Build up packet */
   memcpy(&packet->addr_info, s_addr_info, sizeof(packet->addr_info));
@@ -467,11 +479,11 @@ coap_op_observe_load_disk(coap_context_t *ctx) {
       if (!coap_op_observe_write(fp_new, observe_key, e_proto, e_listen_addr,
                                  s_addr_info, raw_packet, oscore_info))
         goto fail;
-      coap_delete_bin_const(raw_packet);
-      raw_packet = NULL;
-      coap_delete_bin_const(oscore_info);
-      oscore_info = NULL;
     }
+    coap_delete_bin_const(raw_packet);
+    raw_packet = NULL;
+    coap_delete_bin_const(oscore_info);
+    oscore_info = NULL;
   }
   coap_delete_bin_const(raw_packet);
   raw_packet = NULL;
@@ -483,7 +495,11 @@ coap_op_observe_load_disk(coap_context_t *ctx) {
   fclose(fp_new);
   fclose(fp_orig);
   /* Either old or new is in place */
-  (void)rename(new, (const char *)ctx->observe_save_file->s);
+  if (rename(new, (const char *)ctx->observe_save_file->s) == -1) {
+    coap_log_warn("rename %s -> %s: failed: %s (%d)\n",
+                  new, (const char *)ctx->observe_save_file->s,
+                  coap_socket_strerror(), errno);
+  }
   coap_free_type(COAP_STRING, new);
   return;
 
@@ -986,7 +1002,7 @@ fail:
 }
 
 /*
- * Server has set up a new dynamic resource agains a request for an unknown
+ * Server has set up a new dynamic resource against a request for an unknown
  * resource.
  */
 static int
