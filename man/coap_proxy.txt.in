@@ -137,7 +137,9 @@ typedef struct coap_proxy_server_list_t {
                                  server, else 0 for all clients to share the
                                  same ongoing session */
   unsigned int idle_timeout_secs; /* Proxy upstream session idle timeout
-                                     (0 is no timeout) */
+                                     (0 is no timeout). Timeout is ignored
+                                     if there are any active upstream Observe
+                                     requests */
 } coap_proxy_server_list_t;
 ----
 

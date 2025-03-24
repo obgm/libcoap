@@ -41,8 +41,12 @@ struct coap_proxy_list_t {
   size_t req_count;          /**< Count of incoming request info */
   coap_uri_t uri;            /**< URI info for connection */
   uint8_t *uri_host_keep;     /**< memory for uri.host */
-  coap_tick_t idle_timeout_ticks; /**< Idle timeout (0 == no timeout) */
+  coap_tick_t idle_timeout_ticks; /**< Idle timeout (0 == no timeout). Timeout
+                                       is ignored if there are any active
+                                       upstream Observe requests */
   coap_tick_t last_used;     /**< Last time entry was used */
+  uint64_t res_tx_token;     /**< Copy of ongoing session tx_token for restart */
+  coap_lg_crcv_t *res_lg_crcv; /**< Copy of ongoing session lg_crcv for restart */
 };
 
 /**
