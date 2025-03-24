@@ -99,6 +99,11 @@ coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
            memcmp(&a->addr.sin6.sin6_addr, &b->addr.sin6.sin6_addr,
                   sizeof(struct in6_addr)) == 0;
 #endif /* COAP_IPV6_SUPPORT */
+#if COAP_AF_UNIX_SUPPORT
+  case AF_UNIX:
+    return memcmp(&a->addr.cun.sun_path, &b->addr.cun.sun_path,
+                  sizeof(a->addr.cun.sun_path)) == 0;
+#endif /* COAP_AF_UNIX_SUPPORT */
   default: /* fall through and signal error */
     ;
   }
