@@ -1130,20 +1130,14 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
            (obs->non_cnt >= COAP_OBS_MAX_NON))) {
         /* Waiting for the previous unsolicited response to finish */
-        r->partiallydirty = 1;
-        obs->dirty = 1;
-        context->observe_pending = 1;
-        continue;
+        goto next_one;
       }
       coap_ticks(&now);
       if (obs->session->lg_xmit && obs->session->lg_xmit->last_all_sent == 0 &&
           obs->session->lg_xmit->last_obs &&
           (obs->session->lg_xmit->last_obs + 2*COAP_TICKS_PER_SECOND) > now) {
         /* Waiting for the previous blocked unsolicited response to finish */
-        r->partiallydirty = 1;
-        obs->dirty = 1;
-        context->observe_pending = 1;
-        continue;
+        goto next_one;
       }
 
       coap_mid_t mid = COAP_INVALID_MID;
@@ -1152,23 +1146,17 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0,
                                coap_session_max_pdu_size_lkd(obs->session));
       if (!response) {
-        obs->dirty = 1;
-        r->partiallydirty = 1;
-        context->observe_pending = 1;
         coap_log_debug("coap_check_notify: pdu init failed, resource stays "
                        "partially dirty\n");
-        continue;
+        goto next_one_no_pending;
       }
 
       if (!coap_add_token(response, obs->pdu->actual_token.length,
                           obs->pdu->actual_token.s)) {
-        obs->dirty = 1;
-        r->partiallydirty = 1;
-        context->observe_pending = 1;
         coap_log_debug("coap_check_notify: cannot add token, resource stays "
                        "partially dirty\n");
         coap_delete_pdu_lkd(response);
-        continue;
+        goto next_one_no_pending;
       }
 
       obs->pdu->mid = response->mid = coap_new_message_id_lkd(obs->session);
@@ -1281,8 +1269,8 @@ finish:
 #endif /* COAP_Q_BLOCK_SUPPORT */
       if (COAP_INVALID_MID == mid && obs) {
         coap_subscription_t *s;
-        coap_log_debug("coap_check_notify: sending failed, resource stays "
-                       "partially dirty\n");
+        coap_log_debug("*  %s: coap_check_notify: sending failed, resource stays "
+                       "partially dirty\n", coap_session_str(obs->session));
         LL_FOREACH(r->subscribers, s) {
           if (s == obs) {
             /* obs not deleted during coap_send_internal() */
@@ -1291,7 +1279,13 @@ finish:
           }
         }
         r->partiallydirty = 1;
+      } else {
+next_one:
         context->observe_pending = 1;
+next_one_no_pending:
+        r->partiallydirty = 1;
+        if (obs)
+          obs->dirty = 1;
       }
     }
   }
