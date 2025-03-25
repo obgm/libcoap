@@ -66,7 +66,7 @@ OPTIONS - General
    Scheme is one of coap, coaps, coap+tcp, coaps+tcp,
    coap+ws, and coaps+ws. http(s) is not currently supported.
    This option can be repeated to provide multiple internal
-   servers that are round-robin load balanced.
+   servers (each has to be different) that are round-robin load balanced.
 
 *-g* group::
    Join specified multicast 'group' on start up.

@@ -77,8 +77,10 @@ stop the upstream server from trying to do any further Proxy operations.
 but *forward-static* not.
 
 It is possible to define multiple upstream servers for *reverse* and
-*forward-static* proxy types.  These will then be allocated to each new client
-session in a round-robin fashion.
+*forward-static* proxy types.  Each of these multiple servers needs a different
+address.  These will then be allocated to each new client request in a
+round-robin fashion. An existing client session will always get directed to the
+same upsteam server unless that upstream session has idle timed out.
 
 For the *forward-dynamic* proxy type, a dummy server needs to be defined if any
 specific PKI/PSK or OSCORE is required for the ongoing session to the dynamically

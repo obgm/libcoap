@@ -35,18 +35,53 @@ coap_proxy_is_supported(void) {
   return 1;
 }
 
+static void
+coap_proxy_cleanup_entry(coap_proxy_list_t *proxy_entry, int send_failure) {
+  size_t i;
+
+  for (i = 0; i < proxy_entry->req_count; i++) {
+    if (send_failure) {
+      coap_pdu_t *response;
+      coap_bin_const_t l_token;
+
+      /* Need to send back a gateway failure */
+      response = coap_pdu_init(proxy_entry->req_list[i].pdu->type,
+                               COAP_RESPONSE_CODE(502),
+                               coap_new_message_id_lkd(proxy_entry->incoming),
+                               coap_session_max_pdu_size_lkd(proxy_entry->incoming));
+      if (!response) {
+        coap_log_info("PDU creation issue\n");
+        goto cleanup;
+      }
+
+      l_token = coap_pdu_get_token(proxy_entry->req_list[i].pdu);
+      if (!coap_add_token(response, l_token.length,
+                          l_token.s)) {
+        coap_log_debug("Cannot add token to incoming proxy response PDU\n");
+      }
+
+      if (coap_send_lkd(proxy_entry->incoming, response) == COAP_INVALID_MID) {
+        coap_log_info("Failed to send PDU with 5.02 gateway issue\n");
+      }
+    }
+cleanup:
+    coap_delete_pdu_lkd(proxy_entry->req_list[i].pdu);
+    coap_delete_bin_const(proxy_entry->req_list[i].token_used);
+    coap_delete_cache_key(proxy_entry->req_list[i].cache_key);
+  }
+  coap_free_type(COAP_STRING, proxy_entry->req_list);
+  coap_free_type(COAP_STRING, proxy_entry->uri_host_keep);
+}
+
 void
 coap_proxy_cleanup(coap_context_t *context) {
   size_t i;
-  size_t j;
 
   for (i = 0; i < context->proxy_list_count; i++) {
-    for (j = 0; j < context->proxy_list[i].req_count; j++) {
-      coap_delete_pdu_lkd(context->proxy_list[i].req_list[j].pdu);
-      coap_delete_cache_key(context->proxy_list[i].req_list[j].cache_key);
-    }
-    coap_free_type(COAP_STRING, context->proxy_list[i].req_list);
-    coap_free_type(COAP_STRING, context->proxy_list[i].uri_host_keep);
+    /* All sessions have now been closed down */
+    coap_log_debug("proxy_entry %p cleaned up\n",
+                   (void *)&context->proxy_list[i]);
+    coap_proxy_cleanup_entry(&context->proxy_list[i], 0);
   }
   coap_free_type(COAP_STRING, context->proxy_list);
 }
@@ -85,9 +120,9 @@ coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
 
     if (proxy_entry->ongoing && proxy_entry->idle_timeout_ticks) {
       if (proxy_entry->last_used + proxy_entry->idle_timeout_ticks <= now) {
-        /* Drop session to upstream server */
-        coap_session_release_lkd(proxy_entry->ongoing);
-        proxy_entry->ongoing = NULL;
+        /* Drop session to upstream server (which may remove proxy entry) */
+        if (coap_proxy_remove_association(proxy_entry->ongoing, 0))
+          i--;
       } else {
         if (*tim_rem > proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now) {
           *tim_rem = proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now;
@@ -209,15 +244,31 @@ static coap_proxy_list_t *
 coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
                        coap_pdu_t *response,
                        coap_proxy_server_list_t *server_list,
-                       coap_proxy_server_t *server_use) {
+                       coap_proxy_server_t *server_use, int *proxy_entry_created) {
   size_t i;
   coap_proxy_list_t *new_proxy_list;
   coap_proxy_list_t *proxy_list = session->context->proxy_list;
   size_t proxy_list_count = session->context->proxy_list_count;
-
   coap_opt_iterator_t opt_iter;
   coap_opt_t *proxy_scheme;
   coap_opt_t *proxy_uri;
+
+  *proxy_entry_created = 0;
+
+  /*
+   * Maintain server stickability. server_use not needed as there is
+   * ongoing session in place.
+   */
+  if (session->proxy_entry) {
+    for (i = 0; i < proxy_list_count; i++) {
+      if (&proxy_list[i] == session->proxy_entry) {
+        if (session->proxy_entry->ongoing) {
+          memset(server_use, 0, sizeof(*server_use));
+          return session->proxy_entry;
+        }
+      }
+    }
+  }
 
   /* Round robin the defined next server list (which usually is just one */
   server_list->next_entry++;
@@ -336,13 +387,15 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
   if (server_list->track_client_session) {
     proxy_list[i].incoming = session;
   }
+  *proxy_entry_created = 1;
   session->context->proxy_list_count++;
   proxy_list[i].idle_timeout_ticks = server_list->idle_timeout_secs * COAP_TICKS_PER_SECOND;
   coap_ticks(&proxy_list[i].last_used);
+  session->proxy_entry = &proxy_list[i];
   return &proxy_list[i];
 }
 
-void
+int
 coap_proxy_remove_association(coap_session_t *session, int send_failure) {
 
   size_t i;
@@ -367,46 +420,23 @@ coap_proxy_remove_association(coap_session_t *session, int send_failure) {
     }
     if (proxy_list[i].incoming == session) {
       /* Only if there is a one-to-one tracking */
-      coap_session_release_lkd(proxy_list[i].ongoing);
-      break;
+      coap_session_t *ongoing = proxy_list[i].ongoing;
+
+      proxy_list[i].ongoing = NULL;
+      coap_session_release_lkd(ongoing);
+      return 0;
     }
 
     /* Check for outgoing match */
     if (proxy_list[i].ongoing == session) {
       coap_session_t *ongoing;
 
-      for (j = 0; j < proxy_list[i].req_count; j++) {
-        if (send_failure) {
-          coap_pdu_t *response;
-          coap_bin_const_t l_token;
-
-          /* Need to send back a gateway failure */
-          response = coap_pdu_init(proxy_list[i].req_list[j].pdu->type,
-                                   COAP_RESPONSE_CODE(502),
-                                   coap_new_message_id_lkd(proxy_list[i].incoming),
-                                   coap_session_max_pdu_size_lkd(proxy_list[i].incoming));
-          if (!response) {
-            coap_log_info("PDU creation issue\n");
-            goto cleanup;
-          }
-
-          l_token = coap_pdu_get_token(proxy_list[i].req_list[j].pdu);
-          if (!coap_add_token(response, l_token.length,
-                              l_token.s)) {
-            coap_log_debug("Cannot add token to incoming proxy response PDU\n");
-          }
-
-          if (coap_send_lkd(proxy_list[i].incoming, response) == COAP_INVALID_MID) {
-            coap_log_info("Failed to send PDU with 5.02 gateway issue\n");
-          }
-cleanup:
-          coap_delete_pdu_lkd(proxy_list[i].req_list[j].pdu);
-          coap_delete_bin_const(proxy_list[i].req_list[j].token_used);
-          coap_delete_cache_key(proxy_list[i].req_list[j].cache_key);
-        }
-      }
+      coap_proxy_cleanup_entry(&proxy_list[i], send_failure);
       ongoing = proxy_list[i].ongoing;
-      coap_free_type(COAP_STRING, proxy_list[i].req_list);
+      coap_log_debug("*  %s: proxy_entry %p released (rem count = %zd)\n",
+                     coap_session_str(ongoing),
+                     (void *)&proxy_list[i],
+                     session->context->proxy_list_count - 1);
       if (proxy_list_count-i > 1) {
         memmove(&proxy_list[i],
                 &proxy_list[i+1],
@@ -414,9 +444,10 @@ cleanup:
       }
       session->context->proxy_list_count--;
       coap_session_release_lkd(ongoing);
-      break;
+      return 1;
     }
   }
+  return 0;
 }
 
 static coap_proxy_list_t *
@@ -432,9 +463,10 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
   coap_context_t *context = session->context;
   static char client_sni[256];
   coap_proxy_server_t server_use;
+  int proxy_entry_created;
 
   proxy_entry = coap_proxy_get_session(session, request, response, server_list,
-                                       &server_use);
+                                       &server_use, &proxy_entry_created);
   if (!proxy_entry) {
     /* Error response code already set */
     return NULL;
@@ -556,6 +588,12 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
       response->code = COAP_RESPONSE_CODE(505);
       coap_proxy_remove_association(session, 0);
       return NULL;
+    }
+    if (proxy_entry_created) {
+      coap_log_debug("*  %s: proxy_entry %p created (tot count = %zd)\n",
+                     coap_session_str(proxy_entry->ongoing),
+                     (void *)proxy_entry,
+                     session->context->proxy_list_count);
     }
   }
 
