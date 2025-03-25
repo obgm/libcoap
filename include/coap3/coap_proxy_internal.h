@@ -69,7 +69,15 @@ void coap_proxy_cleanup(coap_context_t *context);
 int coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
                               coap_tick_t *tim_rem);
 
-void coap_proxy_remove_association(coap_session_t *session, int send_failure);
+/**
+ * Remove the upstream proxy connection from list for session.
+ *
+ * @param session Either incoming or ongoiing session.
+ * @param send_failure Indicate to incoming session proxy issues.
+ *
+ * @return Return 1 if proxy_entry deleted.
+ */
+int coap_proxy_remove_association(coap_session_t *session, int send_failure);
 
 /**
  * Forward incoming request upstream to the next proxy/server.

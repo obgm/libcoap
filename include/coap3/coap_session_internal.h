@@ -231,6 +231,9 @@ struct coap_session_t {
   coap_pdu_t *resp_pdu;           /**< PDU returned in coap_send_recv() call */
   coap_bin_const_t *req_token;    /**< Token in request pdu of coap_send_recv() */
 #endif /* COAP_CLIENT_SUPPORT */
+#if COAP_PROXY_SUPPORT
+  coap_proxy_list_t *proxy_entry; /**< Pointer to upstream server */
+#endif /* COAP_PROXY_SUPPORT */
 };
 
 #if COAP_SERVER_SUPPORT
