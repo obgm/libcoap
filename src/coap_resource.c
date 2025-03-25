@@ -1130,14 +1130,14 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
            (obs->non_cnt >= COAP_OBS_MAX_NON))) {
         /* Waiting for the previous unsolicited response to finish */
-        goto next_one;
+        goto next_one_fail;
       }
       coap_ticks(&now);
       if (obs->session->lg_xmit && obs->session->lg_xmit->last_all_sent == 0 &&
           obs->session->lg_xmit->last_obs &&
           (obs->session->lg_xmit->last_obs + 2*COAP_TICKS_PER_SECOND) > now) {
         /* Waiting for the previous blocked unsolicited response to finish */
-        goto next_one;
+        goto next_one_fail;
       }
 
       coap_mid_t mid = COAP_INVALID_MID;
@@ -1148,7 +1148,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       if (!response) {
         coap_log_debug("coap_check_notify: pdu init failed, resource stays "
                        "partially dirty\n");
-        goto next_one_no_pending;
+        goto next_one_fail_no_pending;
       }
 
       if (!coap_add_token(response, obs->pdu->actual_token.length,
@@ -1156,7 +1156,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         coap_log_debug("coap_check_notify: cannot add token, resource stays "
                        "partially dirty\n");
         coap_delete_pdu_lkd(response);
-        goto next_one_no_pending;
+        goto next_one_fail_no_pending;
       }
 
       obs->pdu->mid = response->mid = coap_new_message_id_lkd(obs->session);
@@ -1280,9 +1280,11 @@ finish:
         }
         r->partiallydirty = 1;
       } else {
-next_one:
+        /* Do not reset flags */
+        continue;
+next_one_fail:
         context->observe_pending = 1;
-next_one_no_pending:
+next_one_fail_no_pending:
         r->partiallydirty = 1;
         if (obs)
           obs->dirty = 1;
