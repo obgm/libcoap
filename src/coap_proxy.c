@@ -467,10 +467,12 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
     coap_address_t bind_addr;
     if (coap_is_af_unix(&dst)) {
       char buf[COAP_UNIX_PATH_MAX];
+      coap_tick_t now;
 
       /* Need a unique 'client' address */
+      coap_ticks(&now);
       snprintf(buf, COAP_UNIX_PATH_MAX,
-               "/tmp/coap-proxy-client");
+               "/tmp/coap-pr-cl-%" PRIu64, (uint64_t)now);
       if (!coap_address_set_unix_domain(&bind_addr, (const uint8_t *)buf,
                                         strlen(buf))) {
         fprintf(stderr, "coap_address_set_unix_domain: %s: failed\n",
