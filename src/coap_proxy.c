@@ -810,14 +810,17 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
 
   for (i = 0; i < proxy_list_count; i++) {
     proxy_entry = &proxy_list[i];
-    for (j = 0; j < proxy_entry->req_count; j++) {
-      if (coap_binary_equal(&rcv_token, proxy_entry->req_list[j].token_used)) {
-        proxy_req = &proxy_entry->req_list[j];
+    if (proxy_entry->ongoing == session) {
+      for (j = 0; j < proxy_entry->req_count; j++) {
+        if (coap_binary_equal(&rcv_token, proxy_entry->req_list[j].token_used)) {
+          proxy_req = &proxy_entry->req_list[j];
+          coap_ticks(&proxy_entry->last_used);
+          break;
+        }
+      }
+      if (j != proxy_entry->req_count) {
         break;
       }
-    }
-    if (j != proxy_entry->req_count) {
-      break;
     }
   }
   if (i == proxy_list_count) {
