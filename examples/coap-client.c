@@ -2018,6 +2018,9 @@ main(int argc, char **argv) {
     /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
     wait_seconds = coap_session_get_default_leisure(session).integer_part + 1;
 
+  if (obs_seconds > wait_seconds && wait_seconds == DEFAULT_WAIT_TIME)
+    wait_seconds = obs_seconds;
+
   wait_ms = wait_seconds * 1000;
   coap_log_debug("timeout is set to %u seconds\n", wait_seconds);
 
