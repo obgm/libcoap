@@ -476,14 +476,15 @@ coap_delete_attr(coap_attr_t *attr) {
 
 typedef enum coap_deleting_resource_t {
   COAP_DELETING_RESOURCE,
-  COAP_NOT_DELETING_RESOURCE
+  COAP_NOT_DELETING_RESOURCE,
+  COAP_DELETING_RESOURCE_ON_EXIT
 } coap_deleting_resource_t;
 
 static void coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                                   coap_deleting_resource_t deleting);
 
 static void
-coap_free_resource(coap_resource_t *resource) {
+coap_free_resource(coap_resource_t *resource, coap_deleting_resource_t deleting) {
   coap_attr_t *attr, *tmp;
   coap_subscription_t *obs, *otmp;
 
@@ -491,7 +492,7 @@ coap_free_resource(coap_resource_t *resource) {
 
   if (!resource->context->observe_no_clear) {
     coap_resource_notify_observers_lkd(resource, NULL);
-    coap_notify_observers(resource->context, resource, COAP_DELETING_RESOURCE);
+    coap_notify_observers(resource->context, resource, deleting);
   }
 
   if (resource->context->resource_deleted)
@@ -536,11 +537,11 @@ coap_add_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
   coap_lock_check_locked(context);
   if (resource->is_unknown) {
     if (context->unknown_resource)
-      coap_free_resource(context->unknown_resource);
+      coap_free_resource(context->unknown_resource, COAP_DELETING_RESOURCE);
     context->unknown_resource = resource;
   } else if (resource->is_proxy_uri) {
     if (context->proxy_uri_resource)
-      coap_free_resource(context->proxy_uri_resource);
+      coap_free_resource(context->proxy_uri_resource, COAP_DELETING_RESOURCE);
     context->proxy_uri_resource = resource;
   } else {
     coap_resource_t *r = coap_get_resource_from_uri_path_lkd(context,
@@ -616,7 +617,7 @@ coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
   }
 
   /* and free its allocated memory */
-  coap_free_resource(resource);
+  coap_free_resource(resource, COAP_DELETING_RESOURCE);
 
   return 1;
 }
@@ -631,17 +632,17 @@ coap_delete_all_resources(coap_context_t *context) {
 
   HASH_ITER(hh, context->resources, res, rtmp) {
     HASH_DELETE(hh, context->resources, res);
-    coap_free_resource(res);
+    coap_free_resource(res, COAP_DELETING_RESOURCE_ON_EXIT);
   }
 
   context->resources = NULL;
 
   if (context->unknown_resource) {
-    coap_free_resource(context->unknown_resource);
+    coap_free_resource(context->unknown_resource, COAP_DELETING_RESOURCE_ON_EXIT);
     context->unknown_resource = NULL;
   }
   if (context->proxy_uri_resource) {
-    coap_free_resource(context->proxy_uri_resource);
+    coap_free_resource(context->proxy_uri_resource, COAP_DELETING_RESOURCE_ON_EXIT);
     context->proxy_uri_resource = NULL;
   }
 }
@@ -1232,6 +1233,15 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
           coap_delete_observer(r, obs->session, &obs->pdu->actual_token);
           obs = NULL;
         }
+        break;
+      case COAP_DELETING_RESOURCE_ON_EXIT:
+        /* Don't worry if it does not get there */
+        response->type = COAP_MESSAGE_NON;
+        response->code = COAP_RESPONSE_CODE(503);
+        coap_add_option_internal(response, COAP_OPTION_MAXAGE,
+                                 coap_encode_var_safe(buf, sizeof(buf),
+                                                      30),
+                                 buf);
         break;
       case COAP_DELETING_RESOURCE:
       default:

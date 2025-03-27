@@ -193,6 +193,9 @@ struct coap_context_t {
                                         resource */
   uint8_t mcast_per_resource;      /**< Mcast controlled on a per resource
                                         basis */
+  uint8_t shutdown_no_send_observe; /**< Do not send out unsolicited observe when
+                                         coap_free_context() is called. Otherwise
+                                         5.03 will get sent */
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_PROXY_SUPPORT
   coap_proxy_list_t *proxy_list;   /**< Set of active proxy sessions */

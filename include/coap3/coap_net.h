@@ -310,6 +310,16 @@ void coap_context_set_session_timeout(coap_context_t *context,
  */
 unsigned int coap_context_get_session_timeout(const coap_context_t *context);
 
+/*
+ * Stop sending out observe subscriptons when calling coap_free_context().
+ *
+ * If this is not called, then 5.03 messages are sent out for every observe
+ * subscription when the context is freed off.
+ *
+ * @param context The coap_context_t object.
+ */
+void coap_context_set_shutdown_no_observe(coap_context_t *context);
+
 /**
  * Set the CSM timeout value. The number of seconds to wait for a (TCP) CSM
  * negotiation response from the peer.

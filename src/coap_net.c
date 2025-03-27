@@ -572,6 +572,15 @@ coap_context_get_session_timeout(const coap_context_t *context) {
   return context->session_timeout;
 }
 
+void
+coap_context_set_shutdown_no_observe(coap_context_t *context) {
+#if COAP_SERVER_SUPPORT
+  context->shutdown_no_send_observe = 1;
+#else /* COAP_SERVER_SUPPORT */
+  (void)context;
+#endif /* COAP_SERVER_SUPPORT */
+}
+
 int
 coap_context_get_coap_fd(const coap_context_t *context) {
 #ifdef COAP_EPOLL_SUPPORT
@@ -803,6 +812,8 @@ coap_free_context_lkd(coap_context_t *context) {
   coap_lock_check_locked(context);
 #if COAP_SERVER_SUPPORT
   /* Removing a resource may cause a NON unsolicited observe to be sent */
+  if (context->shutdown_no_send_observe)
+    context->observe_no_clear = 1;
   coap_delete_all_resources(context);
 #endif /* COAP_SERVER_SUPPORT */
 
