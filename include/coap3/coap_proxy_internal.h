@@ -127,6 +127,54 @@ coap_response_t coap_proxy_forward_response_lkd(coap_session_t *session,
                                                 const coap_pdu_t *received,
                                                 coap_cache_key_t **cache_key);
 
+/**
+ * Creates a new client session to use the proxy logic going to the defined upstream
+ * server.
+ *
+ * Note: This function must be called in the locked state,
+ *
+ * Note: If server_list contains more than one server, the first server is not always
+ * chosen.
+ *
+ * Note: @p server_list must exist for the duration of the returned session as it is
+ * used for every *coap_send*() or *coap_send_recv*().
+ *
+ * Note: Unless coap_send_recv() is used, the response is sent to the handler defined
+ * by coap_register_response_handler(), not to the handler defined by
+ * coap_register_proxy_response_handler().
+ *
+ * @param context The CoAP context.
+ * @param server_list The upstream server list to connect to.
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release() to free.
+ */
+coap_session_t *coap_new_client_session_proxy_lkd(coap_context_t *context,
+                                                  coap_proxy_server_list_t *server_list);
+
+/*
+ * coap_proxy_local_write() is used to send the PDU for a session created by
+ * coap_new_client_session_proxy() into the proxy logic for onward transmittion.
+ *
+ * @param session The coap_new_client_session_proxy() generated session.
+ * @param pdu The PDU presented to libcoap by coap_send().
+ *
+ * @return The MID used for the transmission, else COAP_INVALID_MID on failure.
+ */
+coap_mid_t coap_proxy_local_write(coap_session_t *session, coap_pdu_t *pdu);
+
+/*
+ * coap_proxy_map_outgoing_request() takes the upstream proxy client session and
+ * maps it back to the incoming request.
+ *
+ * @param ongoing The upstream proxy client session.
+ * @param received The received PDU from hte upstream server.
+ * @param proxy_entry Updated with the proxy server entry definition if not NULL.
+ *
+ * @return The proxy request information, or NULL on mapping failure.
+ */
+struct coap_proxy_req_t *coap_proxy_map_outgoing_request(coap_session_t *ongoing,
+                                                         const coap_pdu_t *received,
+                                                         coap_proxy_list_t **proxy_entry);
 /** @} */
 
 #endif /* COAP_PROXY_INTERNAL_H_ */

@@ -51,7 +51,7 @@ valid and ignored.
 The possible keywords are:
 
 *engine* ::
-    _parameter_1_ containes the ENGINE name (ID). _parameter_2_ is ignored.
+    _parameter_1_ contains the ENGINE name (ID). _parameter_2_ is ignored.
 
 *pre-cmd* ::
     _parameter_1_ is the command that are to be issued to the ENGINE logic before

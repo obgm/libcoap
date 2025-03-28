@@ -807,6 +807,33 @@ failed:
   return 0;
 }
 
+struct coap_proxy_req_t *
+coap_proxy_map_outgoing_request(coap_session_t *ongoing,
+                                const coap_pdu_t *received,
+                                coap_proxy_list_t **proxy_entry) {
+  coap_proxy_list_t *proxy_list = ongoing->context->proxy_list;
+  size_t proxy_list_count = ongoing->context->proxy_list_count;
+  size_t i;
+  size_t j;
+  coap_bin_const_t rcv_token = coap_pdu_get_token(received);
+  coap_proxy_list_t *l_proxy_entry = NULL;
+
+  for (i = 0; i < proxy_list_count; i++) {
+    l_proxy_entry = &proxy_list[i];
+    if (l_proxy_entry->ongoing == ongoing) {
+      for (j = 0; j < l_proxy_entry->req_count; j++) {
+        if (coap_binary_equal(&rcv_token, l_proxy_entry->req_list[j].token_used)) {
+          coap_ticks(&l_proxy_entry->last_used);
+          if (proxy_entry)
+            *proxy_entry = l_proxy_entry;
+          return &l_proxy_entry->req_list[j];
+        }
+      }
+    }
+  }
+  return NULL;
+}
+
 coap_response_t COAP_API
 coap_proxy_forward_response(coap_session_t *session,
                             const coap_pdu_t *received,
@@ -827,8 +854,6 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
                                 coap_cache_key_t **cache_key) {
   coap_pdu_t *pdu = NULL;
   coap_session_t *incoming = NULL;
-  size_t i;
-  size_t j = 0;
   size_t size;
   const uint8_t *data;
   coap_optlist_t *optlist = NULL;
@@ -841,32 +866,15 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
   int maxage = -1;
   uint64_t etag = 0;
   coap_pdu_code_t rcv_code = coap_pdu_get_code(received);
-  coap_bin_const_t rcv_token = coap_pdu_get_token(received);
   coap_bin_const_t req_token;
   coap_binary_t *body_data = NULL;
   coap_pdu_t *req_pdu;
-  coap_proxy_list_t *proxy_list = session->context->proxy_list;
-  size_t proxy_list_count = session->context->proxy_list_count;
   coap_resource_t *resource;
   struct coap_proxy_req_t *proxy_req = NULL;
 
-  for (i = 0; i < proxy_list_count; i++) {
-    proxy_entry = &proxy_list[i];
-    if (proxy_entry->ongoing == session) {
-      for (j = 0; j < proxy_entry->req_count; j++) {
-        if (coap_binary_equal(&rcv_token, proxy_entry->req_list[j].token_used)) {
-          proxy_req = &proxy_entry->req_list[j];
-          coap_ticks(&proxy_entry->last_used);
-          break;
-        }
-      }
-      if (j != proxy_entry->req_count) {
-        break;
-      }
-    }
-  }
-  if (i == proxy_list_count) {
-    coap_log_warn("Unknown proxy ongoing session response received\n");
+  proxy_req = coap_proxy_map_outgoing_request(session, received, &proxy_entry);
+  if (!proxy_req || proxy_req->incoming->server_list) {
+    coap_log_warn("Unknown proxy ongoing session response received - ignored\n");
     return COAP_RESPONSE_OK;
   }
 
@@ -961,6 +969,7 @@ remove_match:
   option = coap_check_option(received, COAP_OPTION_OBSERVE, &opt_iter);
   /* Need to remove matching token entry (apart from an Observe response) */
   if (option == NULL && proxy_entry->req_count) {
+    size_t j = proxy_req - proxy_entry->req_list;
     coap_delete_pdu_lkd(proxy_entry->req_list[j].pdu);
     coap_delete_bin_const(proxy_entry->req_list[j].token_used);
     /* Do not delete cache key here - caller's responsibility */
@@ -972,6 +981,101 @@ remove_match:
   }
   coap_delete_binary(body_data);
   return COAP_RESPONSE_OK;
+}
+
+/*
+ */
+coap_mid_t
+coap_proxy_local_write(coap_session_t *session, coap_pdu_t *pdu) {
+  coap_pdu_t *response = NULL;
+  coap_resource_t *resource;
+  coap_mid_t mid = COAP_INVALID_MID;
+
+  resource = session->context->unknown_resource ?
+             session->context->unknown_resource :
+             session->context->proxy_uri_resource;
+  if (!resource) {
+    coap_log_err("coap_proxy_local_write: Unknown or Proxy resource not defined\n");
+    goto fail;
+  }
+
+  response = coap_pdu_init(pdu->type == COAP_MESSAGE_CON ?
+                           COAP_MESSAGE_ACK : COAP_MESSAGE_NON,
+                           0, pdu->mid, coap_session_max_pdu_size_lkd(session));
+  if (!response) {
+    coap_log_err("coap_proxy_local_write: Could not create response PDU\n");
+    goto fail;
+  }
+  response->session = session;
+
+  if (!coap_add_token(response, pdu->actual_token.length,
+                      pdu->actual_token.s)) {
+    goto fail;
+  }
+
+  coap_log_debug("*  %s: internal: sent %4zd bytes\n",
+                 coap_session_str(session),
+                 pdu->used_size + coap_pdu_encode_header(pdu, session->proto));
+  coap_show_pdu(COAP_LOG_DEBUG, pdu);
+
+  mid = pdu->mid;
+  if (!coap_proxy_forward_request_lkd(session, pdu, response, resource,
+                                      NULL, session->server_list)) {
+    coap_log_debug("coap_proxy_local_write: Failed to forward PDU\n");
+    mid = COAP_INVALID_MID;
+  }
+fail:
+  coap_delete_pdu_lkd(response);
+  coap_delete_pdu_lkd(pdu);
+  return mid;
+}
+
+COAP_API coap_session_t *
+coap_new_client_session_proxy(coap_context_t *ctx,
+                              coap_proxy_server_list_t *server_list) {
+  coap_session_t *session;
+
+  coap_lock_lock(ctx, return NULL);
+  session = coap_new_client_session_proxy_lkd(ctx, server_list);
+  coap_lock_unlock(ctx);
+  return session;
+}
+
+coap_session_t *
+coap_new_client_session_proxy_lkd(coap_context_t *ctx,
+                                  coap_proxy_server_list_t *server_list) {
+  coap_session_t *session;
+  coap_addr_info_t *info_list = NULL;
+  coap_str_const_t remote;
+
+  coap_lock_check_locked(ctx);
+
+#if COAP_IPV6_SUPPORT
+  remote.s = (const uint8_t *)"::1";
+#elif COAP_IPV4_SUPPORT
+  remote.s = (const uint8_t *)"127.0.0.1";
+#else /* !COAP_IPV6_SUPPORT && ! COAP_IPV4_SUPPORT */
+  coap_log_warn("coap_new_client_session_proxy: No IPv4 or IPv6 support\n");
+  return NULL;
+#endif /* !COAP_IPV6_SUPPORT && ! COAP_IPV4_SUPPORT */
+  remote.length = strlen((const char *)remote.s);
+  /* resolve internal remote address where proxy session is 'connecting' to */
+  info_list = coap_resolve_address_info(&remote, 0, 0, 0, 0,
+                                        0,
+                                        1 << COAP_URI_SCHEME_COAP,
+                                        COAP_RESOLVE_TYPE_REMOTE);
+  if (!info_list) {
+    coap_log_warn("coap_new_client_session_proxy: Unable to resolve IP address\n");
+    return NULL;
+  }
+
+  session = coap_new_client_session_lkd(ctx, NULL, &info_list->addr, COAP_PROTO_UDP);
+
+  if (session) {
+    session->server_list = server_list;
+  }
+  coap_free_address_info(info_list);
+  return session;
 }
 
 #else /* ! COAP_PROXY_SUPPORT */

@@ -1141,7 +1141,7 @@ init_resources(coap_context_t *ctx) {
     r = coap_resource_reverse_proxy_init(hnd_reverse_proxy_uri, 0);
     coap_add_resource(ctx, r);
     coap_register_event_handler(ctx, proxy_event_handler);
-    coap_register_response_handler(ctx, reverse_response_handler);
+    coap_register_proxy_response_handler(ctx, reverse_response_handler);
     coap_register_nack_handler(ctx, proxy_nack_handler);
   } else {
 #endif /* COAP_PROXY_SUPPORT */
@@ -1206,7 +1206,7 @@ init_resources(coap_context_t *ctx) {
                                       proxy_host_name_list, 0);
     coap_add_resource(ctx, r);
     coap_register_event_handler(ctx, proxy_event_handler);
-    coap_register_response_handler(ctx, reverse_response_handler);
+    coap_register_proxy_response_handler(ctx, reverse_response_handler);
     coap_register_nack_handler(ctx, proxy_nack_handler);
   }
 #endif /* COAP_PROXY_SUPPORT */

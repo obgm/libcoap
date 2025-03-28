@@ -4010,6 +4010,8 @@ reinit:
         block.num--;
         /* Only process if not duplicate block */
         if (updated_block) {
+          void *body_free;
+
           if ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) {
             if (size2 < saved_offset + length) {
               size2 = saved_offset + length;
@@ -4136,54 +4138,23 @@ give_to_app:
             rcvd->body_total = size2;
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
           }
-          if (context->response_handler || session->doing_send_recv) {
-            coap_response_t ret;
-
-            /* need to put back original token into rcvd */
-            if (!coap_binary_equal(&rcvd->actual_token, lg_crcv->app_token)) {
-              coap_update_token(rcvd, lg_crcv->app_token->length, lg_crcv->app_token->s);
-              coap_log_debug("Client app version of updated PDU\n");
-              coap_show_pdu(COAP_LOG_DEBUG, rcvd);
-            }
-            if (sent) {
-              /* need to put back original token into sent */
-              if (lg_crcv->app_token)
-                coap_update_token(sent, lg_crcv->app_token->length,
-                                  lg_crcv->app_token->s);
-              coap_remove_option(sent, lg_crcv->block_option);
-            }
-            if (!session->doing_send_recv || !session->req_token ||
-                !coap_binary_equal(session->req_token, &rcvd->actual_token)) {
-              if (context->response_handler) {
-                coap_lock_callback_ret_release(ret, session->context,
-                                               context->response_handler(session, sent, rcvd,
-                                                                         rcvd->mid),
-                                               /* context is being freed off */
-                                               assert(0));
-              } else {
-                ret = COAP_RESPONSE_OK;
-              }
-              if (ret == COAP_RESPONSE_FAIL && rcvd->type != COAP_MESSAGE_ACK) {
-                coap_send_rst_lkd(session, rcvd);
-                session->last_con_handler_res = COAP_RESPONSE_FAIL;
-              } else {
-                coap_send_ack_lkd(session, rcvd);
-                session->last_con_handler_res = COAP_RESPONSE_OK;
-              }
-            } else {
-              /* processing coap_send_recv() call */
-              session->resp_pdu = rcvd;
-              coap_pdu_reference_lkd(session->resp_pdu);
-              /* Will get freed off when PDU is freed off */
-              rcvd->data_free = lg_crcv->body_data;
-              lg_crcv->body_data = NULL;
-              coap_send_ack_lkd(session, rcvd);
-              session->last_con_handler_res = COAP_RESPONSE_OK;
-            }
-          } else {
-            coap_send_ack_lkd(session, rcvd);
-            session->last_con_handler_res = COAP_RESPONSE_OK;
+          /* need to put back original token into rcvd */
+          if (!coap_binary_equal(&rcvd->actual_token, lg_crcv->app_token)) {
+            coap_update_token(rcvd, lg_crcv->app_token->length, lg_crcv->app_token->s);
+            coap_log_debug("Client app version of updated PDU\n");
+            coap_show_pdu(COAP_LOG_DEBUG, rcvd);
           }
+          if (sent) {
+            /* need to put back original token into sent */
+            if (lg_crcv->app_token)
+              coap_update_token(sent, lg_crcv->app_token->length,
+                                lg_crcv->app_token->s);
+            coap_remove_option(sent, lg_crcv->block_option);
+          }
+          body_free = lg_crcv->body_data;
+          lg_crcv->body_data = NULL;
+          coap_call_response_handler(session, sent, rcvd, body_free);
+
           ack_rst_sent = 1;
           if (lg_crcv->observe_set == 0) {
             /* Expire this entry */
@@ -4193,10 +4164,6 @@ give_to_app:
           }
           /* Set up for the next data body as observing */
           lg_crcv->initial = 1;
-          if (lg_crcv->body_data) {
-            coap_free_type(COAP_STRING, lg_crcv->body_data);
-            lg_crcv->body_data = NULL;
-          }
         }
         coap_ticks(&lg_crcv->last_used);
         goto skip_app_handler;
