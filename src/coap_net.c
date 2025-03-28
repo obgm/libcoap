@@ -1793,6 +1793,12 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
       goto error;
   }
 #endif /* COAP_CLIENT_SUPPORT */
+#if COAP_PROXY_SUPPORT
+  if (session->server_list) {
+    /* Local session wanting to use proxy logic */
+    return coap_proxy_local_write(session, pdu);
+  }
+#endif /* COAP_PROXY_SUPPORT */
   if (pdu->code == COAP_RESPONSE_CODE(508)) {
     /*
      * Need to prepend our IP identifier to the data as per
@@ -3988,6 +3994,60 @@ fail_response:
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
+
+/* Call application-specific response handler when available. */
+void
+coap_call_response_handler(coap_session_t *session,
+                           coap_pdu_t *sent, coap_pdu_t *rcvd,
+                           void *body_data) {
+  coap_context_t *context = session->context;
+  coap_response_t ret;
+
+  if (session->doing_send_recv && session->req_token &&
+      coap_binary_equal(session->req_token, &rcvd->actual_token)) {
+    /* processing coap_send_recv() call */
+    session->resp_pdu = rcvd;
+    coap_pdu_reference_lkd(rcvd);
+    /* Will get freed off when PDU is freed off */
+    rcvd->data_free = body_data;
+    coap_send_ack_lkd(session, rcvd);
+    session->last_con_handler_res = COAP_RESPONSE_OK;
+    return;
+#if COAP_PROXY_SUPPORT
+  }
+  coap_proxy_req_t *proxy_req = coap_proxy_map_outgoing_request(session, rcvd, NULL);
+
+  if (context->proxy_response_handler && proxy_req &&
+      proxy_req->incoming && !proxy_req->incoming->server_list) {
+    coap_lock_callback_ret_release(ret, context,
+                                   context->proxy_response_handler(session,
+                                       sent,
+                                       rcvd,
+                                       rcvd->mid),
+                                   /* context is being freed off */
+                                   return);
+#endif /* COAP_PROXY_SUPPORT */
+  } else if (context->response_handler) {
+    coap_lock_callback_ret_release(ret, context,
+                                   context->response_handler(session,
+                                                             sent,
+                                                             rcvd,
+                                                             rcvd->mid),
+                                   /* context is being freed off */
+                                   return);
+  } else {
+    ret = COAP_RESPONSE_OK;
+  }
+  if (ret == COAP_RESPONSE_FAIL && rcvd->type != COAP_MESSAGE_ACK) {
+    coap_send_rst_lkd(session, rcvd);
+    session->last_con_handler_res = COAP_RESPONSE_FAIL;
+  } else {
+    coap_send_ack_lkd(session, rcvd);
+    session->last_con_handler_res = COAP_RESPONSE_OK;
+  }
+  coap_free_type(COAP_STRING, body_data);
+}
+
 static void
 handle_response(coap_context_t *context, coap_session_t *session,
                 coap_pdu_t *sent, coap_pdu_t *rcvd) {
@@ -4073,32 +4133,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
     session->doing_first = 0;
 
   /* Call application-specific response handler when available. */
-  if (session->doing_send_recv && session->req_token &&
-      coap_binary_equal(session->req_token, &rcvd->actual_token)) {
-    /* processing coap_send_recv() call */
-    session->resp_pdu = rcvd;
-    coap_pdu_reference_lkd(rcvd);
-    coap_send_ack_lkd(session, rcvd);
-    session->last_con_handler_res = COAP_RESPONSE_OK;
-  } else if (context->response_handler) {
-    coap_response_t ret;
-
-    coap_lock_callback_ret_release(ret, context,
-                                   context->response_handler(session, sent, rcvd,
-                                                             rcvd->mid),
-                                   /* context is being freed off */
-                                   return);
-    if (ret == COAP_RESPONSE_FAIL && rcvd->type != COAP_MESSAGE_ACK) {
-      coap_send_rst_lkd(session, rcvd);
-      session->last_con_handler_res = COAP_RESPONSE_FAIL;
-    } else {
-      coap_send_ack_lkd(session, rcvd);
-      session->last_con_handler_res = COAP_RESPONSE_OK;
-    }
-  } else {
-    coap_send_ack_lkd(session, rcvd);
-    session->last_con_handler_res = COAP_RESPONSE_OK;
-  }
+  coap_call_response_handler(session, sent, rcvd, NULL);
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
@@ -4936,7 +4971,18 @@ coap_register_response_handler(coap_context_t *context,
 #else /* ! COAP_CLIENT_SUPPORT */
   (void)context;
   (void)handler;
-#endif /* COAP_CLIENT_SUPPORT */
+#endif /* ! COAP_CLIENT_SUPPORT */
+}
+
+void
+coap_register_proxy_response_handler(coap_context_t *context,
+                                     coap_response_handler_t handler) {
+#if COAP_PROXY_SUPPORT
+  context->proxy_response_handler = handler;
+#else /* ! COAP_PROXY_SUPPORT */
+  (void)context;
+  (void)handler;
+#endif /* ! COAP_PROXY_SUPPORT */
 }
 
 void

@@ -273,6 +273,7 @@ COAP_API size_t coap_session_max_pdu_size(const coap_session_t *session);
 
 /**
  * Creates a new client session to the designated server.
+ *
  * @param ctx The CoAP context.
  * @param local_if Address of local interface. It is recommended to use NULL to let
  *                 the operating system choose a suitable local interface. If an

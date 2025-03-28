@@ -13,7 +13,9 @@ NAME
 coap_proxy,
 coap_proxy_forward_request,
 coap_proxy_forward_response,
-coap_verify_proxy_scheme_supported
+coap_verify_proxy_scheme_supported,
+coap_new_client_session_proxy,
+coap_register_proxy_response_handler
 - Work with CoAP proxies
 
 SYNOPSIS
@@ -30,6 +32,12 @@ coap_proxy_server_list_t *_server_list_);*
                             coap_cache_key_t **_cache_key_);*
 
 *int coap_verify_proxy_scheme_supported(coap_uri_scheme_t _scheme_);*
+
+*coap_session_t *coap_new_client_session_proxy(coap_context_t *_context_,
+coap_proxy_server_list_t *_server_list_);*
+
+*void coap_register_proxy_response_handler(coap_context_t *_context_,
+coap_response_handler_t _handler_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -195,6 +203,43 @@ If _cache_key_ is not defined, but a _cache_key_ was passed into
 The *coap_verify_proxy_scheme_supported*() function verifies that the
 requested URI scheme type _scheme_ is supported for an ongoing connection.
 
+*Function: coap_new_client_session_proxy()*
+
+The *coap_new_client_session_proxy*() function creates a client endpoint for a
+specific _context_ and initiates a new client session to the specified proxy
+_server_list_ using the libcoap proxy logic to forward the requests.
+
+If _server_list_ contains more than one server, the first server is not always
+chosen.
+
+*NOTE:* Unless *coap_send_recv*() is used, the response is sent to the handler
+defined by *coap_register_response_handler*(), not to the handler defined by
+*coap_register_proxy_response_handler*().
+
+*NOTE:* _server_list must exist for the duration of the created session as it
+is used for every *coap_send*() or *coap_send_recv*().
+
+To stop using a client session, the reference count must be decremented to 0
+by calling *coap_session_release*(3). See *coap_session*(3). This will remove
+the client endpoint's _session_ and all its associated information.
+
+*Function: coap_register_proxy_response_handler()*
+
+The *coap_register_proxy_response_handler*() is a proxy client side function
+that registers a upstream request's response callback _handler_ for traffic
+associated with the _context_.  The application can use this for handling any
+proxy response packets, including sending a RST packet if this response was
+unexpected.  If _handler_ is NULL, then the handler is de-registered.
+
+It is expected that in _handler_, this will call coap_proxy_forward_response()
+to forward the response back to the downstream requesting client.
+
+_handler_ function is defined in the same way as hte nandler for
+*coap_register_response_handler*(3).
+
+If *coap_register_proxy_response_handler*() is not called, or _handler_ is
+defined as NULL, then *coap_register_response_handler*(3) will get called instead.
+
 RETURN VALUES
 -------------
 *coap_proxy_forward_request*() and *coap_verify_proxy_scheme_supported*()
@@ -202,6 +247,9 @@ return 1 on success and 0 on failure.
 
 *coap_proxy_forward_response*() returns one of COAP_RESPONSE_OK or
 COAP_RESPONSE_FAIL.
+
+*coap_new_client_session_proxy*() return a newly created client
+session or NULL if there is a creation failure.
 
 EXAMPLES
 --------
@@ -271,7 +319,7 @@ init_resources(coap_context_t *ctx) {
   /* See coap_resource_reverse_proxy_init(3) */
   r = coap_resource_reverse_proxy_init(hnd_reverse_proxy_uri, 0);
   coap_add_resource(ctx, r);
-  coap_register_response_handler(ctx, proxy_response_handler);
+  coap_register_proxy_response_handler(ctx, proxy_response_handler);
   /* Add in event or nack handlers if required */
 }
 ----
@@ -329,7 +377,7 @@ init_resources(coap_context_t *ctx) {
                                     sizeof(proxy_host_name_list)/sizeof(proxy_host_name_list[0]),
                                     proxy_host_name_list, 0);
   coap_add_resource(ctx, r);
-  coap_register_response_handler(ctx, proxy_response_handler);
+  coap_register_proxy_response_handler(ctx, proxy_response_handler);
   /* Add in event or nack handlers if required */
 }
 ----
@@ -403,7 +451,7 @@ init_resources(coap_context_t *ctx) {
                                     sizeof(proxy_host_name_list)/sizeof(proxy_host_name_list[0]),
                                     proxy_host_name_list, 0);
   coap_add_resource(ctx, r);
-  coap_register_response_handler(ctx, proxy_response_handler);
+  coap_register_proxy_response_handler(ctx, proxy_response_handler);
   /* Add in event or nack handlers if required */
 }
 ----

@@ -120,6 +120,28 @@ coap_response_t COAP_API coap_proxy_forward_response(coap_session_t *rsp_session
                                                      const coap_pdu_t *received,
                                                      coap_cache_key_t **cache_key);
 
+/**
+ * Creates a new client session to use the proxy logic going to the defined upstream
+ * server.
+ *
+ * Note: If server_list contains more than one server, the first server is not always
+ * chosen.
+ *
+ * Note: @p server_list must exist for the duration of the returned session as it is
+ * used for every *coap_send*() or *coap_send_recv*().
+ *
+ * Note: Unless coap_send_recv() is used, the response is sent to the handler defined
+ * by coap_register_response_handler(), not to the handler defined by
+ * coap_register_proxy_response_handler().
+ *
+ * @param context The CoAP context.
+ * @param server_list The upstream server list to connect to.
+ *
+ * @return A new CoAP session or NULL if failed. Call coap_session_release() to free.
+ */
+COAP_API coap_session_t *coap_new_client_session_proxy(coap_context_t *context,
+                                                       coap_proxy_server_list_t *server_list);
+
 /** @} */
 
 #endif /* COAP_PROXY_H_ */
