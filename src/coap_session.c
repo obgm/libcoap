@@ -2256,35 +2256,51 @@ coap_new_endpoint_lkd(coap_context_t *context, const coap_address_t *listen_addr
                       coap_proto_t proto) {
   coap_endpoint_t *ep = NULL;
 
-  assert(context);
-  assert(listen_addr);
-  assert(proto != COAP_PROTO_NONE);
+  if (!context || !listen_addr) {
+    coap_log_debug("coap_new_endpoint: Both context and listen_addr need to be defined\n");
+    return NULL;
+  }
 
   coap_lock_check_locked(context);
 
-  if (proto == COAP_PROTO_DTLS && !coap_dtls_is_supported()) {
-    coap_log_crit("coap_new_endpoint: DTLS not supported\n");
-    goto error;
-  }
-
-  if (proto == COAP_PROTO_TLS && !coap_tls_is_supported()) {
-    coap_log_crit("coap_new_endpoint: TLS not supported\n");
-    goto error;
-  }
-
-  if (proto == COAP_PROTO_TCP && !coap_tcp_is_supported()) {
-    coap_log_crit("coap_new_endpoint: TCP not supported\n");
-    goto error;
-  }
-
-  if (proto == COAP_PROTO_WS && !coap_ws_is_supported()) {
-    coap_log_crit("coap_new_endpoint: WS not supported\n");
-    goto error;
-  }
-
-  if (proto == COAP_PROTO_WSS && !coap_wss_is_supported()) {
-    coap_log_crit("coap_new_endpoint: WSS not supported\n");
-    goto error;
+  switch (proto) {
+  case COAP_PROTO_UDP:
+    break;
+  case COAP_PROTO_DTLS:
+    if (!coap_dtls_is_supported()) {
+      coap_log_warn("coap_new_endpoint: DTLS not supported\n");
+      return NULL;
+    }
+    break;
+  case COAP_PROTO_TLS:
+    if (!coap_tls_is_supported()) {
+      coap_log_warn("coap_new_endpoint: TLS not supported\n");
+      return NULL;
+    }
+    break;
+  case COAP_PROTO_TCP:
+    if (!coap_tcp_is_supported()) {
+      coap_log_warn("coap_new_endpoint: TCP not supported\n");
+      return NULL;
+    }
+    break;
+  case COAP_PROTO_WS:
+    if (!coap_ws_is_supported()) {
+      coap_log_warn("coap_new_endpoint: WS not supported\n");
+      return NULL;
+    }
+    break;
+  case COAP_PROTO_WSS:
+    if (!coap_wss_is_supported()) {
+      coap_log_warn("coap_new_endpoint: WSS not supported\n");
+      return NULL;
+    }
+    break;
+  case COAP_PROTO_NONE:
+  case COAP_PROTO_LAST:
+  default:
+    coap_log_crit("coap_new_endpoint: Unsupported protocol %d\n", proto);
+    return NULL;
   }
 
   if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS ||
@@ -2292,21 +2308,19 @@ coap_new_endpoint_lkd(coap_context_t *context, const coap_address_t *listen_addr
     if (!coap_dtls_context_check_keys_enabled(context)) {
       coap_log_info("coap_new_endpoint: one of coap_context_set_psk() or "
                     "coap_context_set_pki() not called\n");
-      goto error;
+      return NULL;
     }
   }
-
   ep = coap_malloc_endpoint();
   if (!ep) {
     coap_log_warn("coap_new_endpoint: malloc");
-    goto error;
+    return NULL;
   }
 
   memset(ep, 0, sizeof(coap_endpoint_t));
   ep->context = context;
   ep->proto = proto;
   ep->sock.endpoint = ep;
-  assert(proto < COAP_PROTO_LAST);
   memcpy(&ep->sock.lfunc, coap_layers_coap[proto], sizeof(ep->sock.lfunc));
 
   if (COAP_PROTO_NOT_RELIABLE(proto)) {
@@ -2321,7 +2335,7 @@ coap_new_endpoint_lkd(coap_context_t *context, const coap_address_t *listen_addr
       goto error;
 #endif /* !COAP_DISABLE_TCP */
   } else {
-    coap_log_crit("coap_new_endpoint: protocol not supported\n");
+    coap_log_crit("coap_new_endpoint: Protocol type not supported %d\n", proto);
     goto error;
   }
 
