@@ -1626,3 +1626,16 @@ coap_pdu_reference_lkd(coap_pdu_t *pdu) {
   }
   return pdu;
 }
+
+coap_pdu_t *
+coap_const_pdu_reference_lkd(const coap_pdu_t *pdu) {
+  coap_pdu_t *pdu_rw = NULL;
+
+  if (pdu != NULL) {
+
+    /* Need to do this to not get a compiler warning about const parameters */
+    memcpy(&pdu_rw, &pdu, sizeof(pdu_rw));
+    ++pdu_rw->ref;
+  }
+  return pdu_rw;
+}
