@@ -60,8 +60,8 @@ and maintaining OSCORE protection.
 There are callbacks provided to support doing this as an alternative persist
 storage in the coap-server application.
 
-*NOTE:* The observe persist support is only available for UDP sessions that
-use TCP/IP (i.e. not AF_UNIX).
+*NOTE:* The observe persist support is only available for UDP (datagram)
+sessions that use IPv4 or IPv6 (i.e. not AF_UNIX).
 
 When using the libcoap compiled in support, only two functions need to be
 called by the application. *coap_persist_startup*() defines the file names to

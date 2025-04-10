@@ -3594,7 +3594,10 @@ coap_dtls_send(coap_session_t *session,
   int r;
   SSL *ssl = (SSL *)session->tls;
 
-  assert(ssl != NULL);
+  if (ssl == NULL) {
+    session->dtls_event = COAP_EVENT_DTLS_CLOSED;
+    return -1;
+  }
 
   session->dtls_event = -1;
   ERR_clear_error();

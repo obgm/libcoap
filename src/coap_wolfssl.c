@@ -2019,6 +2019,7 @@ error:
   if (ssl)
     wolfSSL_free(ssl);
   coap_dtls_free_wolfssl_env(w_env);
+  session->tls = NULL;
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
@@ -2699,6 +2700,7 @@ error:
   if (ssl)
     wolfSSL_free(ssl);
   coap_dtls_free_wolfssl_env(w_env);
+  session->tls = NULL;
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
@@ -2720,6 +2722,7 @@ coap_tls_free_session(coap_session_t *session) {
       coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CLOSED, session);
   }
   coap_dtls_free_wolfssl_env(w_env);
+  session->tls = NULL;
 }
 
 /*

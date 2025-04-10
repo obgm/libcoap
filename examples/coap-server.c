@@ -1099,12 +1099,12 @@ proxy_event_handler(coap_session_t *session COAP_UNUSED,
   return 0;
 }
 
-static coap_response_t
-reverse_response_handler(coap_session_t *rsp_session,
-                         const coap_pdu_t *sent COAP_UNUSED,
-                         const coap_pdu_t *received,
-                         const coap_mid_t id COAP_UNUSED) {
-  return coap_proxy_forward_response(rsp_session, received, NULL);
+static coap_pdu_t *
+proxy_response_handler(coap_session_t *rsp_session COAP_UNUSED,
+                       const coap_pdu_t *sent COAP_UNUSED,
+                       coap_pdu_t *received,
+                       coap_cache_key_t *cache_key COAP_UNUSED) {
+  return received;
 }
 
 static void
@@ -1141,7 +1141,7 @@ init_resources(coap_context_t *ctx) {
     r = coap_resource_reverse_proxy_init(hnd_reverse_proxy_uri, 0);
     coap_add_resource(ctx, r);
     coap_register_event_handler(ctx, proxy_event_handler);
-    coap_register_proxy_response_handler(ctx, reverse_response_handler);
+    coap_register_proxy_response_handler(ctx, proxy_response_handler);
     coap_register_nack_handler(ctx, proxy_nack_handler);
   } else {
 #endif /* COAP_PROXY_SUPPORT */
@@ -1206,7 +1206,7 @@ init_resources(coap_context_t *ctx) {
                                       proxy_host_name_list, 0);
     coap_add_resource(ctx, r);
     coap_register_event_handler(ctx, proxy_event_handler);
-    coap_register_proxy_response_handler(ctx, reverse_response_handler);
+    coap_register_proxy_response_handler(ctx, proxy_response_handler);
     coap_register_nack_handler(ctx, proxy_nack_handler);
   }
 #endif /* COAP_PROXY_SUPPORT */

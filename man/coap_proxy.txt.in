@@ -37,7 +37,7 @@ coap_proxy_server_list_t *_server_list_);*
 coap_proxy_server_list_t *_server_list_);*
 
 *void coap_register_proxy_response_handler(coap_context_t *_context_,
-coap_response_handler_t _handler_);*
+coap_proxy_response_handler_t _handler_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -49,8 +49,12 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 DESCRIPTION
 -----------
 
+Client <--> Proxy-Server | Proxy-Client <--> U-Server
+
 To simplify CoAP proxy requirements, proxy forwarding functionality is
-provided by libcoap for matching forwarded requests with returning responses.
+provided by libcoap for matching forwarded requests with returning responses
+by passing the appropriate information between Proxy-Server and Proxy-Client,
+doing any necessary protocol translations.
 
 Two principal types of Proxy are supported.
 
@@ -91,9 +95,9 @@ round-robin fashion. An existing client session will always get directed to the
 same upsteam server unless that upstream session has idle timed out.
 
 For the *forward-dynamic* proxy type, a dummy server needs to be defined if any
-specific PKI/PSK or OSCORE is required for the ongoing session to the dynamically
-determined upstream server. If client anonymous PKI only is required for
-ongoing encrypted sessions, then this dummy server does not need to be defined.
+specific PKI/PSK or OSCORE is required for creating the ongoing session to the
+dynamically determined upstream server. If client anonymous PKI only is required
+for ongoing encrypted sessions, then this dummy server does not need to be defined.
 
 For each upstream server, client sessions can all be multiplexed over a single
 upstream server session, or there can be the same number of upstream server
@@ -108,6 +112,12 @@ The resourse handler to handle *forward* proxy requests is defined using
 
 The resource handler to handle *reverse* proxy requests is defined using
 *coap_resource_reverse_proxy_init*(3).
+
+There is caching support limited to Observe subscriptions where multiple client
+sessions are multiplexed across a single upstream server session. Here, if there
+are multiple client Observe subscriptions to the same upstream server's resource,
+then there is only one upstream Observe subscription and any unsolicited
+responses are sent back to all the subscribing clients.
 
 FUNCTIONS
 ---------
@@ -144,8 +154,8 @@ typedef struct coap_proxy_server_list_t {
   size_t next_entry;          /* Next server to use (% entry_count) */
   coap_proxy_t type;          /* The proxy type */
   int track_client_session;   /* If 1, track individual connections to upstream
-                                 server, else 0 for all clients to share the
-                                 same ongoing session */
+                                 server, else 0 for all clients to be multiplexed
+                                 over the same upstream session */
   unsigned int idle_timeout_secs; /* Proxy upstream session idle timeout
                                      (0 is no timeout). Timeout is ignored
                                      if there are any active upstream Observe
@@ -157,10 +167,11 @@ The *coap_proxy_forward_request*() function is called from a request handler
 when the request needs to be forwarded to an upstream server with a possible
 change in protocol. _req_session_, _request_, _response_ and _resource_ are as
 provided to the application's request handler. _cache_key_ can be a cache_key
-generated from the _request_ PDU or NULL.  This _cache_key_ will get passed into
-*coap_proxy_forward_response*() when handling the response. _server_list_ defines
-the characteristics of zero or more of the upstream servers to connect to. The
-definitions can cover the following
+generated from the _request_ PDU or (usually) NULL.  This _cache_key_ will get
+passed into *coap_proxy_forward_response*() or the response handler set up
+using *coap_register_proxy_response_handler*() when handling the response.
+_server_list_ defines the characteristics of zero or more of the upstream
+servers to connect to. The definitions can cover the following
 
 [source, c]
 ----
@@ -184,6 +195,13 @@ caller does not need to update this on error detection after calling
 *coap_proxy_forward_request*() will establish a new ongoing session to the upstream
 server as and when required.
 
+*NOTE:* If *coap_register_proxy_response_handler*() has not been called to define
+a handler, then _track_client_session_ is treated as having a value of 1.
+
+*NOTE:* If _request_ is replaced by a new PDU for onward forwarding, then this new
+PDU must be deleted using *coap_delete_pdu*(3) after the call to
+*coap_proxy_forward_request*(). _request_ should not be deleted.
+
 *Function: coap_proxy_forward_response()*
 
 The *coap_proxy_forward_response*() function is used to forward on any response
@@ -197,6 +215,10 @@ caller should delete this cache key (unless the client request set up an Observe
 and there will be unsolicited responses).
 If _cache_key_ is not defined, but a _cache_key_ was passed into
 *coap_proxy_forward_request*() then it will get deleted.
+
+*NOTE: *coap_proxy_forward_response*() should only be used if
+*coap_register_proxy_response_handler*() has not been called, and the regular
+response handler is being used (defined by *coap_register_response_handler*(3)).
 
 *Function: coap_verify_proxy_scheme_supported()*
 
@@ -216,7 +238,7 @@ chosen.
 defined by *coap_register_response_handler*(), not to the handler defined by
 *coap_register_proxy_response_handler*().
 
-*NOTE:* _server_list must exist for the duration of the created session as it
+*NOTE:* _server_list_ must exist for the duration of the created session as it
 is used for every *coap_send*() or *coap_send_recv*().
 
 To stop using a client session, the reference count must be decremented to 0
@@ -225,20 +247,60 @@ the client endpoint's _session_ and all its associated information.
 
 *Function: coap_register_proxy_response_handler()*
 
+[source, c]
+----
+/**
+ * Proxy response handler that is used as callback held in coap_context_t.
+ *
+ * @param session CoAP session.
+ * @param sent The PDU that was transmitted.
+ * @param received The respose PDU that was received, or returned from cache.
+ * @param cache_key Updated with the cache key pointer provided to
+ *                  coap_proxy_forward_request().  The caller should
+ *                  delete this cache key (unless the client request set up an
+ *                  Observe and there will be unsolicited responses).
+ *
+ * @return The PDU to be sent back to the client (usually @c received) or NULL
+ *         if error.  If NULL, this will cause sending a RST packet to the
+ *         upstream server if the received PDU is a CON or NON.
+ *         If the returned PDU is not @c received or @c NULL, then @c received
+ *         must be freed off in the handler.
+ */
+typedef coap_pdu_t *(*coap_proxy_response_handler_t)(coap_session_t *session,
+                                                     const coap_pdu_t *sent,
+                                                     coap_pdu_t *received,
+                                                     coap_cache_key_t *cache_key);
+----
+
 The *coap_register_proxy_response_handler*() is a proxy client side function
-that registers a upstream request's response callback _handler_ for traffic
-associated with the _context_.  The application can use this for handling any
-proxy response packets, including sending a RST packet if this response was
-unexpected.  If _handler_ is NULL, then the handler is de-registered.
+that registers an upstream request's response callback _handler_ for traffic
+associated with the _context_. If _handler_ is NULL, then the handler is
+de-registered.
 
-It is expected that in _handler_, this will call coap_proxy_forward_response()
-to forward the response back to the downstream requesting client.
+The application can use this _handler_ for local processing any upstream
+response packets, already updated ready for sending on back to the originating
+client.
 
-_handler_ function is defined in the same way as hte nandler for
-*coap_register_response_handler*(3).
+It is expected that the return from _handler_ would normally be
+_received_ which causes the response packet to be sent to the client.
+*coap_send*(3) or *coap_proxy_forward_response*() should not be used in
+_handler_.
+
+If the return from _handler_ is NULL, then _received_ will not forwarded back
+to the Client. This will also cause a RST packet to the upstream server if
+the received PDU is a CON or NON.
+
+*NOTE:* If _received_ is to be updated by creating a new PDU, this new PDU can
+be returned instead of _received_. However, _received_ must be not be
+freed off using *coap_delete_pdu*(3) in _handler_ as the calling logic detects
+a new PDU is being returned and does the *coap_delete_pdu*(3) itself.
 
 If *coap_register_proxy_response_handler*() is not called, or _handler_ is
-defined as NULL, then *coap_register_response_handler*(3) will get called instead.
+defined as NULL, then the _handler_ registered by
+*coap_register_response_handler*(3) will get called instead.
+
+If *coap_register_proxy_response_handler*() is not called, or _handler_ is
+defined as NULL, then caching support is disabled.
 
 RETURN VALUES
 -------------
@@ -283,7 +345,7 @@ static coap_proxy_server_list_t reverse_proxy = {
   .entry_count = sizeof(redirect_server)/sizeof(redirect_server[0]),
   .next_entry = 0,
   .type = COAP_PROXY_REVERSE_STRIP,
-  .track_client_session = 0,
+  .track_client_session = 0, /* Client sessions multiplexed over upstream session */
   .idle_timeout_secs = 300
 };
 
@@ -303,12 +365,12 @@ hnd_reverse_proxy_uri(coap_resource_t *resource,
   /* Leave response code as is */
 }
 
-static coap_response_t
-proxy_response_handler(coap_session_t *rsp_session,
+static coap_pdu_t *
+proxy_response_handler(coap_session_t *rsp_session COAP_UNUSED,
                        const coap_pdu_t *sent COAP_UNUSED,
-                       const coap_pdu_t *received,
-                       const coap_mid_t id COAP_UNUSED) {
-  return coap_proxy_forward_response(rsp_session, received, NULL);
+                       coap_pdu_t *received,
+                       coap_cache_key_t *cache_key COAP_UNUSED) {
+  return received;
 }
 
 static void
@@ -330,6 +392,7 @@ init_resources(coap_context_t *ctx) {
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+/* List of names / IP addresses that proxy server is known by */
 static const char *proxy_host_name_list[2] = {
   "myservername",
   "1.2.3.5"          /* my server IP */
@@ -359,12 +422,12 @@ hnd_forward_proxy_uri(coap_resource_t *resource,
   /* Leave response code as is */
 }
 
-static coap_response_t
-proxy_response_handler(coap_session_t *rsp_session,
+static coap_pdu_t *
+proxy_response_handler(coap_session_t *rsp_session COAP_UNUSED,
                        const coap_pdu_t *sent COAP_UNUSED,
-                       const coap_pdu_t *received,
-                       const coap_mid_t id COAP_UNUSED) {
-  return coap_proxy_forward_response(rsp_session, received, NULL);
+                       coap_pdu_t *received,
+                       coap_cache_key_t *cache_key COAP_UNUSED) {
+  return received;
 }
 
 static void
@@ -388,6 +451,7 @@ init_resources(coap_context_t *ctx) {
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+/* List of names / IP addresses that proxy server is known by */
 static const char *proxy_host_name_list[2] = {
   "myservername",
   "1.2.3.5"          /* my server IP */
@@ -433,12 +497,12 @@ hnd_onward_proxy_uri(coap_resource_t *resource,
   /* Leave response code as is */
 }
 
-static coap_response_t
-proxy_response_handler(coap_session_t *rsp_session,
+static coap_pdu_t *
+proxy_response_handler(coap_session_t *rsp_session COAP_UNUSED,
                        const coap_pdu_t *sent COAP_UNUSED,
-                       const coap_pdu_t *received,
-                       const coap_mid_t id COAP_UNUSED) {
-  return coap_proxy_forward_response(rsp_session, received, NULL);
+                       coap_pdu_t *received,
+                       coap_cache_key_t *cache_key COAP_UNUSED) {
+  return received;
 }
 
 static void

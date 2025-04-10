@@ -105,8 +105,8 @@ struct coap_context_t {
                                                  received */
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_PROXY_SUPPORT
-  coap_response_handler_t proxy_response_handler; /**< Called when a reponse
-                                                       to proxy logic received */
+  coap_proxy_response_handler_t proxy_response_handler; /**< Called when a reponse
+                                                             to proxy logic received */
 #endif /* COAP_PROXY_SUPPORT */
   coap_nack_handler_t nack_handler; /**< Called when a response issue has
                                          occurred */
@@ -993,8 +993,8 @@ coap_mid_t coap_send_ack_lkd(coap_session_t *session, const coap_pdu_t *request)
  */
 coap_mid_t coap_send_rst_lkd(coap_session_t *session, const coap_pdu_t *request);
 
-void coap_call_response_handler(coap_session_t *session, coap_pdu_t *sent, coap_pdu_t *rcvd,
-                                void *body_free);
+void coap_call_response_handler(coap_session_t *session, coap_pdu_t *sent,
+                                coap_pdu_t *rcvd, void *body_free);
 
 /**@}*/
 

@@ -1365,13 +1365,13 @@ coap_add_data_large_response_lkd(coap_resource_t *resource,
 #endif /* COAP_Q_BLOCK_SUPPORT */
   }
 
-  coap_insert_option(response, COAP_OPTION_CONTENT_FORMAT,
+  coap_update_option(response, COAP_OPTION_CONTENT_FORMAT,
                      coap_encode_var_safe(buf, sizeof(buf),
                                           media_type),
                      buf);
 
   if (maxage >= 0) {
-    coap_insert_option(response,
+    coap_update_option(response,
                        COAP_OPTION_MAXAGE,
                        coap_encode_var_safe(buf, sizeof(buf), maxage), buf);
   }

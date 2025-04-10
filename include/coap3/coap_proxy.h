@@ -57,13 +57,48 @@ typedef struct coap_proxy_server_list_t {
   size_t next_entry;          /**< Next server to use (% entry_count) */
   coap_proxy_t type;          /**< The proxy type */
   int track_client_session;   /**< If 1, track individual connections to upstream
-                                   server, else 0 for all clients to share the same
-                                   ongoing session */
+                                   server, else 0 for all clients to be multiplexed
+                                   over the same upstream session */
   unsigned int idle_timeout_secs; /**< Proxy upstream session idle timeout
                                        (0 is no timeout). Timeout is ignored
                                        if there are any active upstream Observe
                                        requests */
 } coap_proxy_server_list_t;
+
+/**
+ * Proxy response handler that is used as callback held in coap_context_t.
+ *
+ * @param session CoAP session.
+ * @param sent The PDU that was transmitted.
+ * @param received The respose PDU that was received, or returned from cache.
+ * @param cache_key Updated with the cache key pointer provided to
+ *                  coap_proxy_forward_request().  The caller should
+ *                  delete this cache key (unless the client request set up an
+ *                  Observe and there will be unsolicited responses).
+ *
+ * @return The PDU to be sent back to the client (usually @c received) or NULL
+ *         if error.  If NULL, this will cause sending a RST packet to the
+ *         upstream server if the received PDU is a CON or NON.
+ *         If the returned PDU is not @c received or @c NULL, then @c received
+ *         must be freed off in the handler.
+ */
+typedef coap_pdu_t *(*coap_proxy_response_handler_t)(coap_session_t *session,
+                                                     const coap_pdu_t *sent,
+                                                     coap_pdu_t *received,
+                                                     coap_cache_key_t *cache_key);
+
+/**
+ * Registers a new message handler that is called whenever a response is
+ * received by the proxy logic.
+ *
+ * Note: If this is not defined, then the handler registered by
+ * coap_register_response_handler() will be used.
+ *
+ * @param context The context to register the handler for.
+ * @param handler The response handler to register.
+ */
+void coap_register_proxy_response_handler(coap_context_t *context,
+                                          coap_proxy_response_handler_t handler);
 
 /**
  * Verify that the CoAP Scheme is supported for an ongoing proxy connection.
