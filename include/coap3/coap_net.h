@@ -112,20 +112,6 @@ void coap_register_response_handler(coap_context_t *context,
                                     coap_response_handler_t handler);
 
 /**
- * Registers a new message handler that is called whenever a response is
- * received by the proxy logic.
- *
- * Note: If this is not defined, then the handler registered by
- * coap_register_response_handler() will be used.
- *
- * @param context The context to register the handler for.
- * @param handler The response handler to register.
- */
-void coap_register_proxy_response_handler(coap_context_t *context,
-                                          coap_response_handler_t handler);
-
-
-/**
  * Registers a new message handler that is called whenever a confirmable
  * message (request or response) is dropped after all retries have been
  * exhausted, or a rst message was received, or a network or TLS level

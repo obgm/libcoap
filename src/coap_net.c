@@ -2288,13 +2288,13 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     }
   }
 
-  /* And finally delete the node */
   if (node->pdu->type == COAP_MESSAGE_CON) {
     coap_handle_nack(node->session, node->pdu, COAP_NACK_TOO_MANY_RETRIES, node->id);
   }
 #if COAP_CLIENT_SUPPORT
   node->session->doing_send_recv = 0;
 #endif /* COAP_CLIENT_SUPPORT */
+  /* And finally delete the node */
   coap_delete_node_lkd(node);
   return COAP_INVALID_MID;
 }
@@ -2403,6 +2403,10 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       }
     } else if (bytes_read > 0) {
       session->last_rx_tx = now;
+#if COAP_CLIENT_SUPPORT
+      if (session->session_failed)
+        session->session_failed = 0;
+#endif /* COAP_CLIENT_SUPPORT */
       /* coap_netif_dgrm_read() updates session->addr_info from packet->addr_info */
       coap_handle_dgram_for_proto(ctx, session, packet);
     } else {
@@ -4013,7 +4017,6 @@ fail_response:
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
-
 /* Call application-specific response handler when available. */
 void
 coap_call_response_handler(coap_session_t *session,
@@ -4022,6 +4025,20 @@ coap_call_response_handler(coap_session_t *session,
   coap_context_t *context = session->context;
   coap_response_t ret;
 
+#if COAP_PROXY_SUPPORT
+  if (context->proxy_response_handler) {
+    coap_proxy_list_t *proxy_entry;
+    coap_proxy_req_t *proxy_req = coap_proxy_map_outgoing_request(session,
+                                  rcvd,
+                                  &proxy_entry);
+
+    if (proxy_req && proxy_req->incoming && !proxy_req->incoming->server_list) {
+      coap_proxy_process_incoming(session, rcvd, body_data, proxy_req,
+                                  proxy_entry);
+      return;
+    }
+  }
+#endif /* COAP_PROXY_SUPPORT */
   if (session->doing_send_recv && session->req_token &&
       coap_binary_equal(session->req_token, &rcvd->actual_token)) {
     /* processing coap_send_recv() call */
@@ -4032,20 +4049,6 @@ coap_call_response_handler(coap_session_t *session,
     coap_send_ack_lkd(session, rcvd);
     session->last_con_handler_res = COAP_RESPONSE_OK;
     return;
-#if COAP_PROXY_SUPPORT
-  }
-  coap_proxy_req_t *proxy_req = coap_proxy_map_outgoing_request(session, rcvd, NULL);
-
-  if (context->proxy_response_handler && proxy_req &&
-      proxy_req->incoming && !proxy_req->incoming->server_list) {
-    coap_lock_callback_ret_release(ret, context,
-                                   context->proxy_response_handler(session,
-                                       sent,
-                                       rcvd,
-                                       rcvd->mid),
-                                   /* context is being freed off */
-                                   return);
-#endif /* COAP_PROXY_SUPPORT */
   } else if (context->response_handler) {
     coap_lock_callback_ret_release(ret, context,
                                    context->response_handler(session,
@@ -5004,7 +5007,7 @@ coap_register_response_handler(coap_context_t *context,
 
 void
 coap_register_proxy_response_handler(coap_context_t *context,
-                                     coap_response_handler_t handler) {
+                                     coap_proxy_response_handler_t handler) {
 #if COAP_PROXY_SUPPORT
   context->proxy_response_handler = handler;
 #else /* ! COAP_PROXY_SUPPORT */

@@ -19,6 +19,7 @@
 
 #include "coap_internal.h"
 
+#if COAP_PROXY_SUPPORT
 /**
  * @ingroup internal_api
  * @defgroup Proxy Support
@@ -26,25 +27,39 @@
  * @{
  */
 
+/*  Client <--> Proxy-Server | Proxy-Client <--> Server */
+
+typedef struct coap_proxy_cache_t {
+  UT_hash_handle hh;            /**< Hash list for request Cache-Keys */
+  coap_cache_key_t cache_req;   /**< Cache-Key of the request */
+  coap_pdu_t *req_pdu;          /**< P-Client's request PDU */
+  coap_pdu_t *rsp_pdu;          /**< Latest response PDU seen by P-Client */
+  coap_tick_t expire;           /**< When this cache entry is to expire */
+  uint64_t etag;                /**< ETag value of response PDU */
+  unsigned ref;                 /**< No of coap_proxy_req_t reference this object */
+} coap_proxy_cache_t;
+
 typedef struct coap_proxy_req_t {
-  coap_pdu_t *pdu;
-  coap_resource_t *resource;
-  coap_session_t *incoming;
-  coap_bin_const_t *token_used;
-  coap_cache_key_t *cache_key;
+  coap_pdu_t *pdu;              /**< Requesting PDU */
+  coap_resource_t *resource;    /**< P-Server resource */
+  coap_session_t *incoming;     /**< Incoming session from client */
+  coap_bin_const_t *token_used; /**< Token used in forwarded request */
+  coap_cache_key_t *cache_key;  /**< Cache-Key passed into coap_proxy_forward_request() */
+  coap_proxy_cache_t *proxy_cache; /**< Cache that this proxy request is using */
 } coap_proxy_req_t;
 
 struct coap_proxy_list_t {
-  coap_session_t *ongoing;   /**< Ongoing session */
-  coap_session_t *incoming;  /**< Incoming session (used if client tracking( */
+  coap_session_t *ongoing;    /**< Ongoing session */
+  coap_session_t *incoming;   /**< Incoming session (used if client tracking( */
   coap_proxy_req_t *req_list; /**< Incoming list of request info */
-  size_t req_count;          /**< Count of incoming request info */
-  coap_uri_t uri;            /**< URI info for connection */
+  size_t req_count;           /**< Count of incoming request info */
+  coap_proxy_cache_t *rsp_cache; /* Response cache list */
+  coap_uri_t uri;             /**< URI info for connection */
   uint8_t *uri_host_keep;     /**< memory for uri.host */
   coap_tick_t idle_timeout_ticks; /**< Idle timeout (0 == no timeout). Timeout
                                        is ignored if there are any active
                                        upstream Observe requests */
-  coap_tick_t last_used;     /**< Last time entry was used */
+  coap_tick_t last_used;      /**< Last time entry was used */
 };
 
 /**
@@ -167,7 +182,7 @@ coap_mid_t coap_proxy_local_write(coap_session_t *session, coap_pdu_t *pdu);
  * maps it back to the incoming request.
  *
  * @param ongoing The upstream proxy client session.
- * @param received The received PDU from hte upstream server.
+ * @param received The received PDU from the upstream server.
  * @param proxy_entry Updated with the proxy server entry definition if not NULL.
  *
  * @return The proxy request information, or NULL on mapping failure.
@@ -175,6 +190,39 @@ coap_mid_t coap_proxy_local_write(coap_session_t *session, coap_pdu_t *pdu);
 struct coap_proxy_req_t *coap_proxy_map_outgoing_request(coap_session_t *ongoing,
                                                          const coap_pdu_t *received,
                                                          coap_proxy_list_t **proxy_entry);
+
+/*
+ * coap_proxy_process_incoming() handles the Server response back to P-Client.
+ *
+ * @param session The upstream proxy client session.
+ * @param rcvd The received PDU from the upstream server.
+ * @param body_data The data to be freed off once all responses sent for rcvd,
+ * @param proxy_req The current proxy request object
+ * @param proxy_entry The current proxy entry object
+ *
+ * @return The proxy request information, or NULL on mapping failure.
+ */
+void coap_proxy_process_incoming(coap_session_t *session,
+                                 coap_pdu_t *rcvd, void *body_free,
+                                 coap_proxy_req_t *proxy_req,
+                                 coap_proxy_list_t *proxy_entry);
 /** @} */
 
+#define PROXY_CACHE_ADD(e, obj) \
+  HASH_ADD(hh, (e), cache_req, sizeof((obj)->cache_req), (obj))
+
+#define PROXY_CACHE_DELETE(e, obj) \
+  HASH_DELETE(hh, (e), (obj))
+
+#define PROXY_CACHE_ITER(e, el, rtmp)  \
+  HASH_ITER(hh, (e), el, rtmp)
+
+#define PROXY_CACHE_ITER_SAFE(e, el, rtmp) \
+  for ((el) = (e); (el) && ((rtmp) = (el)->hh.next, 1); (el) = (rtmp))
+
+#define PROXY_CACHE_FIND(e, k, res) {                     \
+    HASH_FIND(hh, (e), (k), sizeof(*k), (res)); \
+  }
+
+#endif /* COAP_PROXY_SUPPORT */
 #endif /* COAP_PROXY_INTERNAL_H_ */

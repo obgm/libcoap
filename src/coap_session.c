@@ -789,7 +789,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
       /* Check same mid is not getting re-used in violation of RFC7252 */
       LL_FOREACH(session->delayqueue, q) {
         if (q->id == pdu->mid) {
-          coap_log_err("**  %s: mid=0x%04x: already in-use - dropped\n",
+          coap_log_err("** %s: mid=0x%04x: already in-use - dropped\n",
                        coap_session_str(session), pdu->mid);
           return COAP_INVALID_MID;
         }
@@ -1170,6 +1170,8 @@ coap_session_failed(coap_session_t *session) {
   if (session->context->reconnect_time &&
       session->state == COAP_SESSION_STATE_ESTABLISHED &&
       session->type == COAP_SESSION_TYPE_CLIENT) {
+    if (session->sock.lfunc[COAP_LAYER_SESSION].l_close)
+      session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
     session->session_failed = 1;
     coap_ticks(&session->last_rx_tx);
   }

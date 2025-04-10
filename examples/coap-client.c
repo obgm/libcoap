@@ -360,18 +360,19 @@ nack_handler(coap_session_t *session COAP_UNUSED,
     coap_bin_const_t token = coap_pdu_get_token(sent);
 
     if (coap_pdu_get_code(sent) != COAP_EMPTY_CODE && !track_check_token(&token)) {
-      coap_log_err("nack_handler: Unexpected token\n");
+      coap_show_pdu(0, sent);
+      coap_log_err("nack_handler: %d: Unexpected token\n", reason);
     }
   }
 
   switch (reason) {
   case COAP_NACK_NOT_DELIVERABLE:
   case COAP_NACK_TLS_FAILED:
+  case COAP_NACK_TOO_MANY_RETRIES:
     coap_log_err("cannot send CoAP pdu\n");
     if (!reconnect_secs)
       quit = 1;
     break;
-  case COAP_NACK_TOO_MANY_RETRIES:
   case COAP_NACK_WS_FAILED:
   case COAP_NACK_TLS_LAYER_FAILED:
   case COAP_NACK_WS_LAYER_FAILED:
