@@ -426,6 +426,24 @@ coap_pdu_t *coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
  * @return same as PDU
  */
 coap_pdu_t *coap_pdu_reference_lkd(coap_pdu_t *pdu);
+
+/**
+ * Increment reference counter on a const pdu to stop it prematurely getting freed
+ * off when coap_delete_pdu() is called.
+ *
+ * In other words, if coap_const_pdu_reference_lkd() is called once, then the first
+ * call to coap_delete_pdu() will decrement the reference counter, but not delete
+ * the PDU and the second call to coap_delete_pdu() then actually deletes the PDU.
+ *
+ * Needed when const coap_pdu_t* is passed from application handlers.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param pdu The CoAP PDU.
+ * @return non const version of PDU.
+ */
+coap_pdu_t *coap_const_pdu_reference_lkd(const coap_pdu_t *pdu);
+
 /** @} */
 
 #endif /* COAP_COAP_PDU_INTERNAL_H_ */
