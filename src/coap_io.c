@@ -1524,7 +1524,7 @@ release_1:
     if (s->type == COAP_SESSION_TYPE_CLIENT &&
         s->state == COAP_SESSION_STATE_ESTABLISHED &&
         ctx->ping_timeout > 0) {
-      if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
+      if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now && !s->con_active) {
         /* Time to send a ping */
         if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
           /* Some issue - not safe to continue processing */
