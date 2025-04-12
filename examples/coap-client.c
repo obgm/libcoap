@@ -359,7 +359,7 @@ nack_handler(coap_session_t *session COAP_UNUSED,
   if (sent) {
     coap_bin_const_t token = coap_pdu_get_token(sent);
 
-    if (!track_check_token(&token)) {
+    if (coap_pdu_get_code(sent) != COAP_EMPTY_CODE && !track_check_token(&token)) {
       coap_log_err("nack_handler: Unexpected token\n");
     }
   }
