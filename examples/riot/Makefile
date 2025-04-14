@@ -44,20 +44,24 @@ pkg:
 	if [ "$${HAVE_KCONFIG}" = 0 ] ; then \
 		sed -i '/rsource "flashdb\/Kconfig"/irsource "libcoap\/Kconfig"' RIOT/pkg/Kconfig ; \
 	fi
+	@HAVE_EXAMPLES=`grep libcoap_client RIOT/examples/README.md | wc -l` ; \
+	if [ "$${HAVE_EXAMPLES}" = 0 ] ; then \
+		sed -i '/nanocoap_server/a| [libcoap_client](./networking/libcoap/libcoap_client/README.md) | This example demonstrates the usage of the `libcoap` module for providing a CoAP client. |\n| [libcoap_server](./networking/libcoap/libcoap_server/README.md) | This example demonstrates the usage of the `libcoap` module for providing a CoAP server. |\n' RIOT/examples/README.md ; \
+	fi
 
 examples:
-	rm -rf RIOT/examples/libcoap-client && mkdir RIOT/examples/libcoap-client
-	cd examples_libcoap_client && cp -r * ../RIOT/examples/libcoap-client
-	rm -rf RIOT/examples/libcoap-server && mkdir RIOT/examples/libcoap-server
-	cd examples_libcoap_server && cp -r * ../RIOT/examples/libcoap-server
+	rm -rf RIOT/examples/networking/libcoap/libcoap_client && mkdir -p RIOT/examples/networking/libcoap/libcoap_client
+	cd examples_libcoap_client && cp -r * ../RIOT/examples/networking/libcoap/libcoap_client
+	rm -rf RIOT/examples/networking/libcoap/libcoap_server && mkdir -p RIOT/examples/networking/libcoap/libcoap_server
+	cd examples_libcoap_server && cp -r * ../RIOT/examples/networking/libcoap/libcoap_server
 	rm -rf RIOT/tests/pkg/libcoap && mkdir -p RIOT/tests/pkg/libcoap
 	cd tests_pkg_libcoap && cp -r * ../RIOT/tests/pkg/libcoap
 
 client:	RIOT pkg examples
-	$(MAKE) -C RIOT/examples/libcoap-client/ RIOT_CI_BUILD=1
+	$(MAKE) -C RIOT/examples/networking/libcoap/libcoap_client/ RIOT_CI_BUILD=1
 
 server:	RIOT pkg examples
-	$(MAKE) -C RIOT/examples/libcoap-server/ RIOT_CI_BUILD=1
+	$(MAKE) -C RIOT/examples/networking/libcoap/libcoap_server/ RIOT_CI_BUILD=1
 
 tests:	RIOT pkg examples
 	$(MAKE) -C RIOT/tests/pkg/libcoap/ RIOT_CI_BUILD=1

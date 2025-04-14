@@ -2,7 +2,7 @@
 # General Public License v2.1. See the file LICENSE in the top level
 # directory for more details.
 #
-menu "libcoap-server"
+menu "libcoap_server"
     depends on USEPKG_LIBCOAP
 
 config LIBCOAP_USE_PSK
@@ -19,4 +19,4 @@ config LIBCOAP_USE_PSK_ID
     depends on USEMODULE_TINYDTLS
 endif # LIBCOAP_CLIENT_SUPPORT
 
-endmenu # libcoap-server
+endmenu # libcoap_server
