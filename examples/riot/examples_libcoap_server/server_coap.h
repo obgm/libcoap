@@ -1,5 +1,5 @@
 /*
- * server-coap.h -- RIOT client example
+ * server_coap.h -- RIOT client example
  *
  * Copyright (C) 2023-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
  *

@@ -2,7 +2,7 @@
 # General Public License v2.1. See the file LICENSE in the top level
 # directory for more details.
 #
-menu "libcoap-client"
+menu "libcoap_client"
     depends on USEPKG_LIBCOAP
 
 config LIBCOAP_CLIENT_URI
@@ -17,4 +17,4 @@ config LIBCOAP_USE_PSK_ID
     default "user_abc"
     depends on USEMODULE_TINYDTLS
 
-endmenu # libcoap-client
+endmenu # libcoap_client

@@ -63,8 +63,8 @@ EXTRA_DIST = \
   examples/lwip/config/coap_config.h \
   examples/lwip/config/lwipopts.h \
   examples/lwip/config/lwippools.h \
-  examples/riot/examples_libcoap_client/client-coap.c \
-  examples/riot/examples_libcoap_client/client-coap.h \
+  examples/riot/examples_libcoap_client/client_coap.c \
+  examples/riot/examples_libcoap_client/client_coap.h \
   examples/riot/examples_libcoap_client/Kconfig \
   examples/riot/examples_libcoap_client/main.c \
   examples/riot/examples_libcoap_client/Makefile \
@@ -74,8 +74,8 @@ EXTRA_DIST = \
   examples/riot/examples_libcoap_server/Makefile \
   examples/riot/examples_libcoap_server/Makefile.ci \
   examples/riot/examples_libcoap_server/README.md \
-  examples/riot/examples_libcoap_server/server-coap.c \
-  examples/riot/examples_libcoap_server/server-coap.h \
+  examples/riot/examples_libcoap_server/server_coap.c \
+  examples/riot/examples_libcoap_server/server_coap.h \
   examples/riot/examples_libcoap_server/Kconfig \
   examples/riot/Makefile \
   examples/riot/pkg_libcoap/Kconfig \
