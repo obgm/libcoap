@@ -12,7 +12,7 @@ This will
   and examples/libcoap-server taken from pkg_libcoap/, examples_client/
   and examples_server respectively/.
   (updates RIOT's libcoap code to the latest commited version in your
-   environment).
+   environment, along with any modified files).
 * build the client application
 * build the server application
 
@@ -22,6 +22,7 @@ To run (and/or rebuild) the server application
 * make RIOT_CI_BUILD=1
 * make term
 * (at the shell prompt) coaps start
+* (or at the shell prompt) coaps stop
 
 The server creates a resource for 'time' with a query 'ticks'.  This is
 reported for `.well-known/core`. The work flow for adding more resources does
@@ -32,10 +33,11 @@ To run (and/or rebuild) the client application
 * cd RIOT/examples-libcoap-client
 * make RIOT_CI_BUILD=1
 * make term
-* (at the shell prompt) coapc
+* (at the shell prompt) coapc coap://[ip-6-address]/some/path
 
 The client will try to connect to the URI defined in app.config named
-CONFIG_LIBCOAP_CLIENT_URI (unless overridden by running 'make menuconfig').
+CONFIG_LIBCOAP_CLIENT_URI (unless overridden by running 'make menuconfig'),
+or as specified in the parameter after the coapc.
 
 Note to developers
 ==================

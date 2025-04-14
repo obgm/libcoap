@@ -219,7 +219,7 @@ client_coap_init(int argc, char **argv)
     }
 
     res = coap_uri_into_optlist(&uri, &dst, &optlist, 1);
-    if (res) {
+    if (res != 1) {
         coap_log_warn("Failed to create options\n");
         goto fail;
     }
