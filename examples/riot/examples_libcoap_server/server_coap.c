@@ -1,5 +1,5 @@
 /*
- * server-coap.c -- RIOT example
+ * server_coap.c -- RIOT example
  *
  * Copyright (C) 2023-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
@@ -11,7 +11,7 @@
 
 #include "coap_config.h"
 #include <coap3/coap.h>
-#include "server-coap.h"
+#include "server_coap.h"
 #include <stdio.h>
 #include "macros/utils.h"
 

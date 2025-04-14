@@ -1,5 +1,5 @@
 /*
- * client-coap.c -- RIOT client example
+ * client_coap.c -- RIOT client example
  *
  * Copyright (C) 2023-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
@@ -12,7 +12,7 @@
 #include <thread.h>
 #include <debug.h>
 #include <coap3/coap.h>
-#include "client-coap.h"
+#include "client_coap.h"
 #include <stdio.h>
 #include "macros/utils.h"
 
