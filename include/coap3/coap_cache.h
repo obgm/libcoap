@@ -121,7 +121,7 @@ void coap_delete_cache_key(coap_cache_key_t *cache_key);
  * @param count     The number of options to ignore.  Use 0 to reset the
  *                  options matching.
  *
- * @return          @return @c 1 if successful, else @c 0.
+ * @return          @c 1 if successful, else @c 0.
  */
 COAP_API int coap_cache_ignore_options(coap_context_t *context,
                                        const uint16_t *options, size_t count);
