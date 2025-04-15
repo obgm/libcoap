@@ -251,6 +251,8 @@ coap_dgram_write(void *ctx, const unsigned char *send_buffer,
                     result, send_buffer_length);
       errno = keep_errno;
       if (result < 0) {
+        if (errno == ENOTCONN || errno == ECONNREFUSED)
+          c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
         return -1;
       } else {
         result = 0;

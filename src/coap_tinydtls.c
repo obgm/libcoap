@@ -365,6 +365,7 @@ dtls_send_to_peer(struct dtls_context_t *dtls_context,
   coap_context_t *coap_context = t_context ? t_context->coap_context : NULL;
   coap_session_t *coap_session;
   coap_address_t remote_addr;
+  int ret;
 
   assert(coap_context);
   get_session_addr(dtls_session, &remote_addr);
@@ -373,8 +374,10 @@ dtls_send_to_peer(struct dtls_context_t *dtls_context,
     coap_log_warn("dtls_send_to_peer: cannot find local interface\n");
     return -3;
   }
-  return (int)coap_session->sock.lfunc[COAP_LAYER_TLS].l_write(coap_session,
-         data, len);
+  ret = (int)coap_session->sock.lfunc[COAP_LAYER_TLS].l_write(coap_session, data, len);
+  if (ret == -1 && (errno == ENOTCONN || errno == ECONNREFUSED))
+    coap_session->dtls_event = COAP_EVENT_DTLS_ERROR;
+  return ret;
 }
 
 static int
