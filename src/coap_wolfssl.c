@@ -559,6 +559,9 @@ coap_dgram_write(WOLFSSL *ssl, char *in, int inl, void *ctx) {
     if (ret > 0) {
       coap_ticks(&now);
       w_env->last_timeout = now;
+    } else if (ret < 0) {
+      if (errno == ENOTCONN || errno == ECONNREFUSED)
+        data->session->dtls_event = COAP_EVENT_DTLS_ERROR;
     }
   } else {
     ret = -1;
@@ -2218,6 +2221,7 @@ coap_dtls_free_session(coap_session_t *session) {
       coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CLOSED, session);
   }
   coap_dtls_free_wolfssl_env(w_env);
+  session->tls = NULL;
 }
 
 ssize_t

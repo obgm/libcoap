@@ -636,8 +636,11 @@ coap_dgram_write(BIO *a, const char *in, int inl) {
           (const uint8_t *)in,
           inl);
     BIO_clear_retry_flags(a);
-    if (ret <= 0)
+    if (ret <= 0) {
+      if (ret < 0 && (errno == ENOTCONN || errno == ECONNREFUSED))
+        data->session->dtls_event = COAP_EVENT_DTLS_ERROR;
       BIO_set_retry_write(a);
+    }
   } else {
     BIO_clear_retry_flags(a);
     ret = -1;
