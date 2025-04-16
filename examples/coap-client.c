@@ -492,8 +492,9 @@ response_handler(coap_session_t *session COAP_UNUSED,
     track_flush_token(&token, 0);
 
   /* our job is done, we can exit at any time */
-  ready = doing_observe ? coap_check_option(received,
-                                            COAP_OPTION_OBSERVE, &opt_iter) == NULL : 1;
+  ready = is_mcast ? 0 : doing_observe ?
+          coap_check_option(received,
+                            COAP_OPTION_OBSERVE, &opt_iter) == NULL : 1;
   return COAP_RESPONSE_OK;
 }
 
@@ -2100,7 +2101,7 @@ main(int argc, char **argv) {
   coap_delete_pdu(pdu);
   coap_delete_pdu(resp_pdu);
 
-  if (!doing_observe && repeat_count == 1) {
+  if (!is_mcast && !doing_observe && repeat_count == 1) {
     quit = 1;
   }
   repeat_count--;

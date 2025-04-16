@@ -806,6 +806,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
       /* add timeout in range [ACK_TIMEOUT...ACK_TIMEOUT * ACK_RANDOM_FACTOR] */
       node->timeout = coap_calc_timeout(session, r);
     }
+    coap_address_copy(&node->remote, &session->addr_info.remote);
   }
   LL_APPEND(session->delayqueue, node);
   coap_log_debug("** %s: mid=0x%04x: delayed\n",
@@ -922,6 +923,8 @@ coap_session_connected(coap_session_t *session) {
   while (session->delayqueue && session->state == COAP_SESSION_STATE_ESTABLISHED) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
+    coap_address_t remote;
+
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (session->con_active >= COAP_NSTART(session))
         break;
@@ -931,13 +934,16 @@ coap_session_connected(coap_session_t *session) {
     session->delayqueue = q->next;
     q->next = NULL;
 
-    coap_log_debug("** %s: mid=0x%04x: transmitted after delay\n",
+    coap_address_copy(&remote, &session->addr_info.remote);
+    coap_address_copy(&session->addr_info.remote, &q->remote);
+    coap_log_debug("** %s: mid=0x%04x: transmitted after delay (2)\n",
                    coap_session_str(session), (int)q->pdu->mid);
     bytes_written = coap_session_send_pdu(session, q->pdu);
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)
         q = NULL;
     }
+    coap_address_copy(&session->addr_info.remote, &remote);
     if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (q)
         coap_delete_node_lkd(q);
@@ -1069,7 +1075,8 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
 #if COAP_CLIENT_SUPPORT
   if (!sent_nack && session->lg_crcv) {
     /* Take the first one */
-    coap_handle_nack(session, &session->lg_crcv->pdu, reason, session->lg_crcv->pdu.mid);
+    coap_handle_nack(session, session->lg_crcv->sent_pdu, reason,
+                     session->lg_crcv->sent_pdu->mid);
     sent_nack = 1;
   }
 #endif /* COAP_CLIENT_SUPPORT */
@@ -1606,8 +1613,8 @@ coap_session_reestablished(coap_session_t *session) {
                  coap_session_str(session));
   session->session_failed = 0;
   LL_FOREACH_SAFE(session->lg_crcv, lg_crcv, etmp) {
-    coap_pdu_reference_lkd(&lg_crcv->pdu);
-    coap_send_internal(session, &lg_crcv->pdu, NULL);
+    coap_pdu_reference_lkd(lg_crcv->sent_pdu);
+    coap_send_internal(session, lg_crcv->sent_pdu, NULL);
   }
 }
 
