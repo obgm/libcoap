@@ -183,7 +183,9 @@ static coap_wolfssl_env_t *
 coap_dtls_new_wolfssl_env(coap_session_t *c_session, coap_dtls_role_t role) {
   coap_wolfssl_env_t *w_env = (coap_wolfssl_env_t *)c_session->tls;
 
-  assert(w_env == NULL);
+  if (w_env)
+    return w_env;
+
   w_env = (coap_wolfssl_env_t *)wolfssl_malloc(sizeof(coap_wolfssl_env_t));
   if (!w_env) {
     return NULL;

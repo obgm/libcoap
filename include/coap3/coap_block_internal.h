@@ -26,7 +26,7 @@
 /**
  * @ingroup internal_api
  * @defgroup block_internal Block Transfer
- * Internal API for Block Transfer (RC7959)
+ * Internal API for Block Transfer (RFC7959)
  * @{
  */
 
@@ -126,6 +126,7 @@ typedef struct coap_l_block1_t {
   uint64_t state_token;  /**< state token */
   size_t bert_size;      /**< size of last BERT block */
   uint32_t count;        /**< the number of packets sent for payload */
+  coap_address_t upstream; /* Unicast IP of server if mcast client session */
 } coap_l_block1_t;
 
 /**
@@ -143,6 +144,14 @@ typedef struct coap_l_block2_t {
   coap_time_t maxage_expire; /**< When this entry expires */
 } coap_l_block2_t;
 
+typedef struct coap_lg_xmit_data_t {
+  const uint8_t *data;   /**< large data ptr */
+  size_t length;         /**< large data length */
+  coap_release_large_data_t release_func; /**< large data de-alloc function */
+  void *app_ptr;         /**< applicaton provided ptr for de-alloc function */
+  uint32_t ref;          /**< Reference count */
+} coap_lg_xmit_data_t;
+
 /**
  * Structure to hold large body (many blocks) transmission information
  */
@@ -152,15 +161,13 @@ struct coap_lg_xmit_t {
   uint16_t option;       /**< large block transmisson CoAP option */
   int last_block;        /**< last acknowledged block number Block1
                               last transmitted Q-Block2 */
-  const uint8_t *data;   /**< large data ptr */
-  size_t length;         /**< large data length */
+  coap_lg_xmit_data_t *data_info; /**< Pointer to large data information */
   size_t offset;         /**< large data next offset to transmit */
   union {
     coap_l_block1_t b1;
     coap_l_block2_t b2;
   } b;
-  coap_lg_crcv_t *lg_crcv; /**< The lg_crcv associated with this blocked xmit */
-  coap_pdu_t pdu;        /**< skeletal PDU */
+  coap_pdu_t *sent_pdu;  /**< The sent pdu with all the data */
   coap_tick_t last_payload; /**< Last time MAX_PAYLOAD was sent or 0 */
   coap_tick_t last_sent; /**< Last time any data sent */
   coap_tick_t last_all_sent; /**< Last time all data sent or 0 */
@@ -168,8 +175,6 @@ struct coap_lg_xmit_t {
 #if COAP_Q_BLOCK_SUPPORT
   coap_tick_t non_timeout_random_ticks; /** Used for Q-Block */
 #endif /* COAP_Q_BLOCK_SUPPORT */
-  coap_release_large_data_t release_func; /**< large data de-alloc function */
-  void *app_ptr;         /**< applicaton provided ptr for de-alloc function */
 };
 
 #if COAP_CLIENT_SUPPORT
@@ -199,9 +204,11 @@ struct coap_lg_crcv_t {
   uint16_t o_block_option; /**< Block CoAP option used when initiating Observe */
   uint8_t o_blk_size;      /**< Block size used when initiating Observe */
   uint64_t state_token; /**< state token */
-  coap_pdu_t pdu;        /**< skeletal PDU */
-  coap_rblock_t rec_blocks; /** < list of received blocks */
+  coap_pdu_t *sent_pdu;  /**< The sent pdu with all the data */
+  coap_rblock_t rec_blocks; /**< list of received blocks */
   coap_tick_t last_used; /**< Last time all data sent or 0 */
+  coap_address_t upstream; /**< Unicast IP of server if mcast client session */
+  coap_lg_xmit_data_t *obs_data; /**< lg_xmit data info  if large observe request */
 };
 #endif /* COAP_CLIENT_SUPPORT */
 
@@ -410,10 +417,34 @@ int coap_handle_response_get_block(coap_context_t *context,
                                    coap_pdu_t *sent,
                                    coap_pdu_t *rcvd,
                                    coap_recurse_t recursive);
+
 coap_mid_t coap_retransmit_oscore_pdu(coap_session_t *session,
                                       coap_pdu_t *pdu,
                                       coap_opt_t *echo);
+
+/**
+ * Find the current lg_crcv for the session that matches the pdu.
+ * If base lg_xmit is a mcast send, then create a secondorary lg_crcv.
+ *
+ * @param session The current session.
+ * @param pdu     The pdu that contains the appropriate token.
+ *
+ * @return The found lg_crcv or NULL.
+ */
+coap_lg_crcv_t *coap_find_lg_crcv(coap_session_t *session, coap_pdu_t *pdu);
+
 #endif /* COAP_CLIENT_SUPPORT */
+
+/**
+ * Find the current lg_xmit for the session that matches the pdu.
+ * If client and base lg_xmit is a mcast send, then create a secondorary lg_xmit.
+ *
+ * @param session The current session.
+ * @param pdu     The pdu that contains the appropriate token.
+ *
+ * @return The found lg_xmit or NULL.
+ */
+coap_lg_xmit_t *coap_find_lg_xmit(coap_session_t *session, coap_pdu_t *pdu);
 
 void coap_block_delete_lg_xmit(coap_session_t *session,
                                coap_lg_xmit_t *lg_xmit);

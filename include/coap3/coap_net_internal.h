@@ -40,6 +40,7 @@ struct coap_queue_t {
   uint8_t is_mcast;             /**< Set if this is a queued mcast response */
   unsigned int timeout;         /**< the randomized timeout value */
   coap_session_t *session;      /**< the CoAP session */
+  coap_address_t remote;        /**< For re-transmission - where the node is going */
   coap_mid_t id;                /**< CoAP message id */
   coap_pdu_t *pdu;              /**< the CoAP PDU to send */
 };

@@ -1094,7 +1094,7 @@ coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
 
   if (pdu->type == COAP_MESSAGE_CON &&
       (session->sock.flags & COAP_SOCKET_NOT_EMPTY) &&
-      (session->sock.flags & COAP_SOCKET_MULTICAST)) {
+      coap_is_mcast(&session->addr_info.remote)) {
     /* Violates RFC72522 8.1 */
     coap_log_err("Multicast requests cannot be Confirmable (RFC7252 8.1)\n");
     return -1;
@@ -1238,6 +1238,7 @@ coap_wait_ack(coap_context_t *context, coap_session_t *session,
     node->t = (now - context->sendqueue_basetime) +
               (node->timeout << node->retransmit_cnt);
   }
+  coap_address_copy(&node->remote, &session->addr_info.remote);
 
   coap_insert_node(&context->sendqueue, node);
 
@@ -1618,12 +1619,12 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
       coap_lg_xmit_t *lg_xmit;
 
       LL_FOREACH(session->lg_xmit, lg_xmit) {
-        if (COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
+        if (COAP_PDU_IS_REQUEST(lg_xmit->sent_pdu) &&
             lg_xmit->b.b1.app_token &&
             coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
           /* Update the skeletal PDU with the block1 option */
-          coap_remove_option(&lg_xmit->pdu, COAP_OPTION_Q_BLOCK2);
-          coap_update_option(&lg_xmit->pdu, COAP_OPTION_BLOCK2,
+          coap_remove_option(lg_xmit->sent_pdu, COAP_OPTION_Q_BLOCK2);
+          coap_update_option(lg_xmit->sent_pdu, COAP_OPTION_BLOCK2,
                              coap_encode_var_safe(buf, sizeof(buf),
                                                   (block.num << 4) | (0 << 3) | block.szx),
                              buf);
@@ -1642,12 +1643,12 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
       coap_lg_xmit_t *lg_xmit;
 
       LL_FOREACH(session->lg_xmit, lg_xmit) {
-        if (COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
+        if (COAP_PDU_IS_REQUEST(lg_xmit->sent_pdu) &&
             lg_xmit->b.b1.app_token &&
             coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
           /* Update the skeletal PDU with the block1 option */
-          coap_remove_option(&lg_xmit->pdu, COAP_OPTION_Q_BLOCK1);
-          coap_update_option(&lg_xmit->pdu, COAP_OPTION_BLOCK1,
+          coap_remove_option(lg_xmit->sent_pdu, COAP_OPTION_Q_BLOCK1);
+          coap_update_option(lg_xmit->sent_pdu, COAP_OPTION_BLOCK1,
                              coap_encode_var_safe(buf, sizeof(buf),
                                                   (block.num << 4) |
                                                   (block.m << 3) |
@@ -1701,7 +1702,7 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
 
     if (have_block1 && session->lg_xmit) {
       LL_FOREACH(session->lg_xmit, lg_xmit) {
-        if (COAP_PDU_IS_REQUEST(&lg_xmit->pdu) &&
+        if (COAP_PDU_IS_REQUEST(lg_xmit->sent_pdu) &&
             lg_xmit->b.b1.app_token &&
             coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
           break;
@@ -2098,6 +2099,9 @@ coap_send_recv_lkd(coap_session_t *session, coap_pdu_t *request_pdu,
   }
 
   session->block_mode |= COAP_BLOCK_SINGLE_BODY;
+  if (coap_is_mcast(&session->addr_info.remote))
+    block_mode = session->block_mode;
+
   session->doing_send_recv = 1;
   /* So the user needs to delete the PDU */
   coap_pdu_reference_lkd(request_pdu);
@@ -2183,7 +2187,7 @@ fail:
 
 coap_mid_t
 coap_retransmit(coap_context_t *context, coap_queue_t *node) {
-  if (!context || !node)
+  if (!context || !node || !node->session)
     return COAP_INVALID_MID;
 
   /* re-initialize timeout when maximum number of retransmissions are not reached yet */
@@ -2191,6 +2195,7 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     ssize_t bytes_written;
     coap_tick_t now;
     coap_tick_t next_delay;
+    coap_address_t remote;
 
     node->retransmit_cnt++;
     coap_handle_event_lkd(context, COAP_EVENT_MSG_RETRANSMITTED, node->session);
@@ -2214,6 +2219,8 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       node->t = (now - context->sendqueue_basetime) + next_delay;
     }
     coap_insert_node(&context->sendqueue, node);
+    coap_address_copy(&remote, &node->session->addr_info.remote);
+    coap_address_copy(&node->session->addr_info.remote, &node->remote);
 
     if (node->is_mcast) {
       coap_log_debug("** %s: mid=0x%04x: mcast delayed transmission\n",
@@ -2229,15 +2236,17 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
       node->session->con_active--;
     bytes_written = coap_send_pdu(node->session, node->pdu, node);
 
-    if (node->is_mcast) {
-      coap_session_connected(node->session);
-      coap_delete_node_lkd(node);
-      return COAP_INVALID_MID;
-    }
     if (bytes_written == COAP_PDU_DELAYED) {
       /* PDU was not retransmitted immediately because a new handshake is
          in progress. node was moved to the send queue of the session. */
       return node->id;
+    }
+
+    coap_address_copy(&node->session->addr_info.remote, &remote);
+    if (node->is_mcast) {
+      coap_session_connected(node->session);
+      coap_delete_node_lkd(node);
+      return COAP_INVALID_MID;
     }
 
     if (bytes_written < 0)
@@ -2339,7 +2348,9 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
   while (session->delayqueue) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
-    coap_log_debug("** %s: mid=0x%04x: transmitted after delay\n",
+
+    coap_address_copy(&session->addr_info.remote, &q->remote);
+    coap_log_debug("** %s: mid=0x%04x: transmitted after delay (1)\n",
                    coap_session_str(session), (int)q->pdu->mid);
     assert(session->partial_write < q->pdu->used_size + q->pdu->hdr_size);
     bytes_written = session->sock.lfunc[COAP_LAYER_SESSION].l_write(session,
@@ -2378,17 +2389,24 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
 
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
     ssize_t bytes_read;
+    coap_address_t remote;
+
+    coap_address_copy(&remote, &session->addr_info.remote);
     memcpy(&packet->addr_info, &session->addr_info, sizeof(packet->addr_info));
     bytes_read = coap_netif_dgrm_read(session, packet);
 
     if (bytes_read < 0) {
-      if (bytes_read == -2)
+      if (bytes_read == -2) {
+        coap_address_copy(&session->addr_info.remote, &remote);
         /* Reset the session back to startup defaults */
         coap_session_disconnected_lkd(session, COAP_NACK_ICMP_ISSUE);
+      }
     } else if (bytes_read > 0) {
       session->last_rx_tx = now;
       /* coap_netif_dgrm_read() updates session->addr_info from packet->addr_info */
       coap_handle_dgram_for_proto(ctx, session, packet);
+    } else {
+      coap_address_copy(&session->addr_info.remote, &remote);
     }
 #if !COAP_DISABLE_TCP
   } else if (session->proto == COAP_PROTO_WS ||
