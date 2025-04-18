@@ -258,8 +258,17 @@ coap_mid_t coap_send_q_block1(coap_session_t *session,
                               coap_pdu_t *request,
                               coap_send_pdu_t send_request);
 
-coap_tick_t coap_block_check_q_block1_xmit(coap_session_t *session,
-                                           coap_tick_t now);
+/**
+ * Check if the next Q-Block1 needs to be sent, else get the next timeout value.
+ *
+ * @param session The Session to check.
+ * @param now     The current time in ticks.
+ * @param tim_rem Updated with the remaining timeout time if return is @c 1.
+ *
+ * @return @c 1 if @p tim_rem is set, else @c 0 if there is no timeout.
+ */
+int coap_block_check_q_block1_xmit(coap_session_t *session,
+                                   coap_tick_t now, coap_tick_t *tim_rem);
 
 coap_mid_t coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual);
 #endif /* COAP_Q_BLOCK_SUPPORT */
@@ -283,8 +292,17 @@ int coap_block_check_lg_srcv_timeouts(coap_session_t *session,
                                       coap_tick_t *tim_rem);
 
 #if COAP_Q_BLOCK_SUPPORT
-coap_tick_t coap_block_check_q_block2_xmit(coap_session_t *session,
-                                           coap_tick_t now);
+/**
+ * Check if the next Q-Block2 needs to be sent, else get the next timeout value.
+ *
+ * @param session The Session to check.
+ * @param now     The current time in ticks.
+ * @param tim_rem Updated with the remaining timeout time if return is @c 1.
+ *
+ * @return @c 1 if @p tim_rem is set, else @c 0 if there is no timeout.
+ */
+int coap_block_check_q_block2_xmit(coap_session_t *session,
+                                   coap_tick_t now, coap_tick_t *tim_rem);
 
 coap_mid_t coap_send_q_block2(coap_session_t *session,
                               coap_resource_t *resource,

@@ -217,6 +217,9 @@ coap_time_le(coap_tick_t a, coap_tick_t b) {
   return a == b || coap_time_lt(a,b);
 }
 
+/* Can delay up to 24 hrs before next wakeup (coap_tick_t can be 4 bytes or int64 */
+#define COAP_MAX_DELAY_TICKS (24 * 60 * 60 * COAP_TICKS_PER_SECOND)
+
 /** @} */
 
 #endif /* COAP_TIME_H_ */

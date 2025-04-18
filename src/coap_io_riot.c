@@ -92,7 +92,7 @@ coap_io_process_lkd(coap_context_t *ctx, uint32_t timeout_ms) {
 #if COAP_ASYNC_SUPPORT
   /* Check to see if we need to send off any Async requests as delay might
      have been updated */
-  coap_check_async(ctx, now);
+  coap_check_async(ctx, now, NULL);
   coap_ticks(&now);
 #endif /* COAP_ASYNC_SUPPORT */
 

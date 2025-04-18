@@ -74,11 +74,12 @@ coap_async_t *coap_register_async_lkd(coap_session_t *session,
  *
  * @param context The current context.
  * @param now     The current time in ticks.
+ * @param tim_rem Updated with the remaining timeout time if return is @c 1,
+ *                unless set to NULL.
  *
- * @return The tick time before the next Async needs to go, else 0 if
- *         nothing to do.
+ * @return @c 1 if @p tim_rem is set, else @c 0 if there is no timeout.
  */
-coap_tick_t coap_check_async(coap_context_t *context, coap_tick_t now);
+int coap_check_async(coap_context_t *context, coap_tick_t now, coap_tick_t *tim_rem);
 
 /**
  * Retrieves the object identified by @p token from the list of asynchronous

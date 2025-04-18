@@ -102,8 +102,8 @@ coap_proxy_check_observe(coap_proxy_list_t *proxy_entry) {
 }
 
 /*
- * return 1 if there is a future expire time, else 0.
- * update tim_rem with remaining value if return is 1.
+ * Return 1 if there is a future expire time, else 0.
+ * Update tim_rem with remaining value if return is 1.
  */
 int
 coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
@@ -111,7 +111,7 @@ coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
   size_t i;
   int ret = 0;
 
-  *tim_rem = -1;
+  *tim_rem = COAP_MAX_DELAY_TICKS;
   for (i = 0; i < context->proxy_list_count; i++) {
     coap_proxy_list_t *proxy_entry = &context->proxy_list[i];
 
@@ -126,8 +126,8 @@ coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
       } else {
         if (*tim_rem > proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now) {
           *tim_rem = proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now;
+          ret = 1;
         }
-        ret = 1;
       }
     }
   }

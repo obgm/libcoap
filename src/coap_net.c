@@ -4851,26 +4851,35 @@ coap_can_exit_lkd(coap_context_t *context) {
 }
 #if COAP_SERVER_SUPPORT
 #if COAP_ASYNC_SUPPORT
-coap_tick_t
-coap_check_async(coap_context_t *context, coap_tick_t now) {
-  coap_tick_t next_due = 0;
+/*
+ * Return 1 if there is a future expire time, else 0.
+ * Update tim_rem with remaining value if return is 1.
+ */
+int
+coap_check_async(coap_context_t *context, coap_tick_t now, coap_tick_t *tim_rem) {
+  coap_tick_t next_due = COAP_MAX_DELAY_TICKS;
   coap_async_t *async, *tmp;
+  int ret = 0;
 
   LL_FOREACH_SAFE(context->async_state, async, tmp) {
-    if (async->delay != 0 && async->delay <= now) {
-      /* Send off the request to the application */
-      coap_log_debug("Async PDU presented to app.\n");
-      coap_show_pdu(COAP_LOG_DEBUG, async->pdu);
-      handle_request(context, async->session, async->pdu, NULL);
+    if (async->delay != 0) {
+      if (async->delay <= now) {
+        /* Send off the request to the application */
+        coap_log_debug("Async PDU presented to app.\n");
+        coap_show_pdu(COAP_LOG_DEBUG, async->pdu);
+        handle_request(context, async->session, async->pdu, NULL);
 
-      /* Remove this async entry as it has now fired */
-      coap_free_async_lkd(async->session, async);
-    } else {
-      if (next_due == 0 || next_due > async->delay - now)
+        /* Remove this async entry as it has now fired */
+        coap_free_async_lkd(async->session, async);
+      } else {
         next_due = async->delay - now;
+        ret = 1;
+      }
     }
   }
-  return next_due;
+  if (tim_rem)
+    *tim_rem = next_due;
+  return ret;
 }
 #endif /* COAP_ASYNC_SUPPORT */
 #endif /* COAP_SERVER_SUPPORT */

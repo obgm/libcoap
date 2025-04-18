@@ -1346,7 +1346,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
                        coap_tick_t now) {
   coap_queue_t *nextpdu;
   coap_session_t *s, *stmp;
-  coap_tick_t timeout = 0;
+  coap_tick_t timeout = COAP_MAX_DELAY_TICKS;
   coap_tick_t s_timeout;
 #if COAP_SERVER_SUPPORT
   int check_dtls_timeouts = 0;
@@ -1365,7 +1365,10 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
 
 #if COAP_ASYNC_SUPPORT
   /* Check to see if we need to send off any Async requests */
-  timeout = coap_check_async(ctx, now);
+  if (coap_check_async(ctx, now, &s_timeout)) {
+    if (s_timeout < timeout)
+      timeout = s_timeout;
+  }
 #endif /* COAP_ASYNC_SUPPORT */
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -1376,8 +1379,8 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
     coap_retransmit(ctx, coap_pop_next(ctx));
     nextpdu = coap_peek_next(ctx);
   }
-  if (nextpdu && (timeout == 0 ||
-                  nextpdu->t - (now - ctx->sendqueue_basetime) < timeout))
+  if (nextpdu && now >= ctx->sendqueue_basetime &&
+      (nextpdu->t - (now - ctx->sendqueue_basetime) < timeout))
     timeout = nextpdu->t - (now - ctx->sendqueue_basetime);
 
   /* Check for DTLS timeouts */
@@ -1389,7 +1392,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
           tls_timeout = now + COAP_TICKS_PER_SECOND / 10;
         coap_log_debug("** DTLS global timeout set to %dms\n",
                        (int)((tls_timeout - now) * 1000 / COAP_TICKS_PER_SECOND));
-        if (timeout == 0 || tls_timeout - now < timeout)
+        if (tls_timeout - now < timeout)
           timeout = tls_timeout - now;
       }
 #if COAP_SERVER_SUPPORT
@@ -1400,7 +1403,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
   }
 #if COAP_PROXY_SUPPORT
   if (coap_proxy_check_timeouts(ctx, now, &s_timeout)) {
-    if (timeout == 0 || s_timeout < timeout)
+    if (s_timeout < timeout)
       timeout = s_timeout;
   }
 #endif /* COAP_PROXY_SUPPORT */
@@ -1432,8 +1435,9 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
       } else {
         if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
             s->delayqueue == NULL) {
+          /* Has to be positive based on if() above */
           s_timeout = (s->last_rx_tx + session_timeout) - now;
-          if (timeout == 0 || s_timeout < timeout)
+          if (s_timeout < timeout)
             timeout = s_timeout;
         }
         /* Make sure the session object is not deleted in any callbacks */
@@ -1455,20 +1459,20 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
               timeout = 1;
             }
           }
-          if (tls_timeout > 0 && (timeout == 0 || tls_timeout - now < timeout))
+          if (tls_timeout > 0 && tls_timeout - now < timeout)
             timeout = tls_timeout - now;
         }
         /* Check if any server large receives are missing blocks */
         if (s->lg_srcv) {
           if (coap_block_check_lg_srcv_timeouts(s, now, &s_timeout)) {
-            if (timeout == 0 || s_timeout < timeout)
+            if (s_timeout < timeout)
               timeout = s_timeout;
           }
         }
         /* Check if any server large sending have timed out */
         if (s->lg_xmit) {
           if (coap_block_check_lg_xmit_timeouts(s, now, &s_timeout)) {
-            if (timeout == 0 || s_timeout < timeout)
+            if (s_timeout < timeout)
               timeout = s_timeout;
           }
         }
@@ -1484,9 +1488,10 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
          * restarting
          */
         if (s->lg_xmit) {
-          s_timeout = coap_block_check_q_block2_xmit(s, now);
-          if (timeout == 0 || s_timeout < timeout)
-            timeout = s_timeout;
+          if (coap_block_check_q_block2_xmit(s, now, &s_timeout)) {
+            if (s_timeout < timeout)
+              timeout = s_timeout;
+          }
         }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 release_1:
@@ -1494,16 +1499,19 @@ release_1:
       }
       if (s->type == COAP_SESSION_TYPE_SERVER &&
           s->state == COAP_SESSION_STATE_ESTABLISHED &&
-          s->ref_subscriptions &&
+          s->ref_subscriptions && !s->con_active &&
           ctx->ping_timeout > 0) {
         /* Only do this if this session is observing */
         if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
           /* Time to send a ping */
-          if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
+          coap_mid_t mid;
+
+          if ((mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
             /* Some issue - not safe to continue processing */
             s->last_rx_tx = now;
             continue;
           }
+          s->last_ping_mid = mid;
           if (s->last_ping > 0 && s->last_pong < s->last_ping) {
             coap_session_server_keepalive_failed(s);
             /* check the next session */
@@ -1511,10 +1519,12 @@ release_1:
           }
           s->last_rx_tx = now;
           s->last_ping = now;
+        } else {
+          /* Always positive due to if() above */
+          s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
+          if (s_timeout < timeout)
+            timeout = s_timeout;
         }
-        s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
-        if (timeout == 0 || s_timeout < timeout)
-          timeout = s_timeout;
       }
     }
   }
@@ -1522,25 +1532,30 @@ release_1:
 #if COAP_CLIENT_SUPPORT
   SESSIONS_ITER_SAFE(ctx->sessions, s, stmp) {
     if (s->type == COAP_SESSION_TYPE_CLIENT &&
-        s->state == COAP_SESSION_STATE_ESTABLISHED &&
+        s->state == COAP_SESSION_STATE_ESTABLISHED && !s->con_active &&
         ctx->ping_timeout > 0) {
-      if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now && !s->con_active) {
+      if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
         /* Time to send a ping */
-        if ((s->last_ping_mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
+        coap_mid_t mid;
+
+        if ((mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
           /* Some issue - not safe to continue processing */
           s->last_rx_tx = now;
           coap_session_failed(s);
           continue;
         }
+        s->last_ping_mid = mid;
         if (s->last_ping > 0 && s->last_pong < s->last_ping) {
           coap_handle_event_lkd(s->context, COAP_EVENT_KEEPALIVE_FAILURE, s);
         }
         s->last_rx_tx = now;
         s->last_ping = now;
+      } else {
+        /* Always positive due to if() above */
+        s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
+        if (s_timeout < timeout)
+          timeout = s_timeout;
       }
-      s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
-      if (timeout == 0 || s_timeout < timeout)
-        timeout = s_timeout;
     }
     if (s->type == COAP_SESSION_TYPE_CLIENT &&
         s->session_failed && ctx->reconnect_time) {
@@ -1553,8 +1568,9 @@ release_1:
             timeout = s_timeout;
         }
       } else {
+        /* Always positive due to if() above */
         s_timeout = (s->last_rx_tx + ctx->reconnect_time * COAP_TICKS_PER_SECOND) - now;
-        if (timeout == 0 || s_timeout < timeout)
+        if (s_timeout < timeout)
           timeout = s_timeout;
       }
     }
@@ -1566,12 +1582,12 @@ release_1:
         s->csm_tx = now;
         s_timeout = (ctx->csm_timeout_ms * COAP_TICKS_PER_SECOND) / 1000;
       } else if (s->csm_tx + (ctx->csm_timeout_ms * COAP_TICKS_PER_SECOND) / 1000 <= now) {
-        /* timed out */
-        s_timeout = 0;
+        /* timed out - cannot handle 0, so has to be just +ve */
+        s_timeout = 1;
       } else {
         s_timeout = (s->csm_tx + (ctx->csm_timeout_ms * COAP_TICKS_PER_SECOND) / 1000) - now;
       }
-      if ((timeout == 0 || s_timeout < timeout) && s_timeout != 0)
+      if (s_timeout < timeout)
         timeout = s_timeout;
     }
 #endif /* !COAP_DISABLE_TCP */
@@ -1594,21 +1610,21 @@ release_1:
           timeout = 1;
         }
       }
-      if (tls_timeout > 0 && (timeout == 0 || tls_timeout - now < timeout))
+      if (tls_timeout > 0 && tls_timeout - now < timeout)
         timeout = tls_timeout - now;
     }
 
     /* Check if any client large receives are missing blocks */
     if (s->lg_crcv) {
       if (coap_block_check_lg_crcv_timeouts(s, now, &s_timeout)) {
-        if (timeout == 0 || s_timeout < timeout)
+        if (s_timeout < timeout)
           timeout = s_timeout;
       }
     }
     /* Check if any client large sending have timed out */
     if (s->lg_xmit) {
       if (coap_block_check_lg_xmit_timeouts(s, now, &s_timeout)) {
-        if (timeout == 0 || s_timeout < timeout)
+        if (s_timeout < timeout)
           timeout = s_timeout;
       }
     }
@@ -1618,9 +1634,10 @@ release_1:
      * restarting
      */
     if (s->lg_xmit) {
-      s_timeout = coap_block_check_q_block1_xmit(s, now);
-      if (timeout == 0 || s_timeout < timeout)
-        timeout = s_timeout;
+      if (coap_block_check_q_block1_xmit(s, now, &s_timeout)) {
+        if (s_timeout < timeout)
+          timeout = s_timeout;
+      }
     }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
@@ -2126,7 +2143,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   /* Check to see if we need to send off any Async requests as delay might
      have been updated */
   coap_ticks(&now);
-  coap_check_async(ctx, now);
+  coap_check_async(ctx, now, NULL);
 #endif /* COAP_ASYNC_SUPPORT */
 
 #ifndef COAP_EPOLL_SUPPORT
