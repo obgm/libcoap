@@ -3828,7 +3828,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     coap_lock_callback_release(context,
                                h(resource, session, pdu, query, response),
                                /* context is being freed off */
-                               goto finish);
+                               coap_delete_string(query); goto finish);
   }
 
   /* Check validity of response code */
@@ -3917,8 +3917,11 @@ skip_handler:
         goto finish;
       }
 #endif /* COAP_Q_BLOCK_SUPPORT */
-      if (coap_send_internal(session, response,  orig_pdu ? orig_pdu : pdu) == COAP_INVALID_MID) {
+      if (coap_send_internal(session, response, orig_pdu ? orig_pdu : pdu) == COAP_INVALID_MID) {
         coap_log_debug("cannot send response for mid=0x%04x\n", mid);
+        if (query)
+          coap_delete_string(query);
+        goto finish;
       }
     } else {
       /* Need to delay mcast response */
@@ -3976,9 +3979,7 @@ drop_it_no_debug:
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
-#if COAP_Q_BLOCK_SUPPORT || COAP_THREAD_SAFE
 finish:
-#endif /* COAP_Q_BLOCK_SUPPORT || COAP_THREAD_SAFE */
   coap_delete_string(uri_path);
   return;
 
