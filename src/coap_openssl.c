@@ -1669,8 +1669,8 @@ setup_pki_server(SSL_CTX *ctx,
       key.key.define.public_cert.u_byte[0]) {
     switch (key.key.define.public_cert_def) {
     case COAP_PKI_KEY_DEF_PEM: /* define public cert */
-      if (key.key.define.public_cert.u_byte &&
-          key.key.define.public_cert.u_byte[0]) {
+      if (key.key.define.ca.u_byte &&
+          key.key.define.ca.u_byte[0]) {
         if (!(SSL_use_certificate_file(ssl,
                                        key.key.define.public_cert.s_byte,
                                        SSL_FILETYPE_PEM))) {
