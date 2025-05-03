@@ -2030,12 +2030,23 @@ main(int argc, char **argv) {
     goto failed;
   }
 
-  if (is_mcast && wait_seconds == DEFAULT_WAIT_TIME)
-    /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
-    wait_seconds = coap_session_get_default_leisure(session).integer_part + 1;
+  if (wait_seconds == DEFAULT_WAIT_TIME) {
+    /* Adjust wait time if needed */
+    if (is_mcast) {
+      /* Allow for other servers to respond within DEFAULT_LEISURE RFC7252 8.2 */
+      int mcast_respond = coap_session_get_default_leisure(session).integer_part + 1;
 
-  if (obs_seconds > wait_seconds && wait_seconds == DEFAULT_WAIT_TIME)
-    wait_seconds = obs_seconds;
+      if (!doing_observe) {
+        wait_seconds = mcast_respond;
+      } else {
+        /* Allow for observe set up and tear down time and mcast potential delay*/
+        wait_seconds = obs_seconds + 5 + mcast_respond;
+      }
+    } else if (doing_observe) {
+      /* Allow for observe set up and tear down time */
+      wait_seconds = obs_seconds + 5;
+    }
+  }
 
   wait_ms = wait_seconds * 1000;
   coap_log_debug("timeout is set to %u seconds\n", wait_seconds);
