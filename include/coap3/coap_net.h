@@ -144,12 +144,18 @@ void coap_register_pong_handler(coap_context_t *context,
                                 coap_pong_handler_t handler);
 
 /**
- * Registers the option type @p type with the given context object @p ctx.
+ * Registers the option number @p number with the given context object @p context.
  *
- * @param ctx  The context to use.
- * @param type The option type to register.
+ * A registered option should only be for options that libcoap library does not
+ * know about (not defined in the CoAP RFCs). On receipt or sending of a PDU,
+ * this registered option will get ignored when checking for unknown critical
+ * options, duplicate options or the options defined as Reserved in RFC 7252 Table 7.
+ *
+ * @param context The context to use.
+ * @param number  The option number to register.
  */
-COAP_API void coap_register_option(coap_context_t *ctx, uint16_t type);
+COAP_API void coap_register_option(coap_context_t *context,
+                                   coap_option_num_t number);
 
 /**
  * Creates a new coap_context_t object that will hold the CoAP stack status.

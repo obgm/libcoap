@@ -26,7 +26,8 @@ coap_context_set_app_data2,
 coap_context_get_app_data,
 coap_context_set_cid_tuple_change,
 coap_context_set_shutdown_no_observe,
-coap_context_set_session_reconnect_time
+coap_context_set_session_reconnect_time,
+coap_register_option
 - Work with CoAP contexts
 
 SYNOPSIS
@@ -74,6 +75,8 @@ coap_app_data_free_callback_t _app_cb_);*
 
 *void coap_context_set_session_reconnect_time(coap_context_t *_context_,
 unsigned int _reconnect_time_);*
+
+*void coap_register_option(coap_context_t *_context_, coap_option_num_t _number_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -238,6 +241,15 @@ However, if the session failure was caused by a server restart, a restart
 observe subscription attempt for a previously dynamically created resource
 will not cause the resource to be recreated.  This can be done by using
 *coap_persist*(3) in the server.
+
+*Function: coap_register_option()*
+
+The *coap_register_option*() function is used to register option _number_ in
+the _context_. A registered option should only be for options that libcoap
+library does not know about (not defined in the CoAP RFCs). On receipt or
+sending of a PDU, this registered option will get ignored when checking
+for unknown critical options, duplicate options or the options defined as
+Reserved in RFC 7252 Table 7.
 
 RETURN VALUES
 -------------
