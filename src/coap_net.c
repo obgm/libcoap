@@ -923,6 +923,29 @@ coap_option_check_critical(coap_session_t *session,
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
   while (coap_option_next(&opt_iter)) {
+    /* Check for explicitely reserved option RFC 5272 12.2 Table 7 */
+    /* Need to check reserved options */
+    switch (opt_iter.number) {
+    case 0:
+    case 128:
+    case 132:
+    case 136:
+    case 140:
+      if (coap_option_filter_get(&ctx->known_options, opt_iter.number) <= 0) {
+        coap_log_debug("unknown reserved option %d\n", opt_iter.number);
+        ok = 0;
+
+        /* When opt_iter.number cannot be set in unknown, all of the appropriate
+         * slots have been used up and no more options can be tracked.
+         * Safe to break out of this loop as ok is already set. */
+        if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
+          goto overflow;
+        }
+      }
+      break;
+    default:
+      break;
+    }
     if (opt_iter.number & 0x01) {
       /* first check the known built-in critical options */
       switch (opt_iter.number) {
@@ -933,7 +956,12 @@ coap_option_check_critical(coap_session_t *session,
           coap_log_debug("disabled support for critical option %u\n",
                          opt_iter.number);
           ok = 0;
-          coap_option_filter_set(unknown, opt_iter.number);
+          /* When opt_iter.number cannot be set in unknown, all of the appropriate
+           * slots have been used up and no more options can be tracked.
+           * Safe to break out of this loop as ok is already set. */
+          if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
+            goto overflow;
+          }
         }
         break;
 #endif /* COAP_Q_BLOCK_SUPPORT */
@@ -980,7 +1008,7 @@ coap_option_check_critical(coap_session_t *session,
            * slots have been used up and no more options can be tracked.
            * Safe to break out of this loop as ok is already set. */
           if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
-            break;
+            goto overflow;
           }
         }
       }
@@ -988,9 +1016,11 @@ coap_option_check_critical(coap_session_t *session,
     if (last_number == opt_iter.number) {
       /* Check for duplicated option RFC 5272 5.4.5 */
       if (!coap_option_check_repeatable(opt_iter.number)) {
-        ok = 0;
-        if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
-          break;
+        if (coap_option_filter_get(&ctx->known_options, opt_iter.number) <= 0) {
+          ok = 0;
+          if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
+            goto overflow;
+          }
         }
       }
     } else if (opt_iter.number == COAP_OPTION_BLOCK2 &&
@@ -1022,7 +1052,7 @@ coap_option_check_critical(coap_session_t *session,
     }
     last_number = opt_iter.number;
   }
-
+overflow:
   return ok;
 }
 
@@ -3015,27 +3045,14 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
                         coap_opt_filter_t *opts) {
   coap_opt_iterator_t opt_iter;
   coap_pdu_t *response;
-  size_t size = request->e_token_length;
   unsigned char type;
-  coap_opt_t *option;
-  coap_option_num_t opt_num = 0;        /* used for calculating delta-storage */
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
   const char *phrase;
   if (code != COAP_RESPONSE_CODE(508)) {
     phrase = coap_response_phrase(code);
-
-    /* Need some more space for the error phrase and payload start marker */
-    if (phrase)
-      size += strlen(phrase) + 1;
   } else {
-    /*
-     * Need space for IP for 5.08 response which is filled in in
-     * coap_send_internal()
-     * https://rfc-editor.org/rfc/rfc8768.html#section-4
-     */
     phrase = NULL;
-    size += INET6_ADDRSTRLEN;
   }
 #endif
 
@@ -3045,53 +3062,10 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
   type = request->type == COAP_MESSAGE_CON ?
          COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
 
-  /* Estimate how much space we need for options to copy from
-   * request. We always need the Token, for 4.02 the unknown critical
-   * options must be included as well. */
-
-  /* we do not want these */
-  coap_option_filter_unset(opts, COAP_OPTION_CONTENT_FORMAT);
-  coap_option_filter_unset(opts, COAP_OPTION_HOP_LIMIT);
-  /* Unsafe to send this back */
-  coap_option_filter_unset(opts, COAP_OPTION_OSCORE);
-
-  coap_option_iterator_init(request, &opt_iter, opts);
-
-  /* Add size of each unknown critical option. As known critical
-     options as well as elective options are not copied, the delta
-     value might grow.
-   */
-  while ((option = coap_option_next(&opt_iter))) {
-    uint16_t delta = opt_iter.number - opt_num;
-    /* calculate space required to encode (opt_iter.number - opt_num) */
-    if (delta < 13) {
-      size++;
-    } else if (delta < 269) {
-      size += 2;
-    } else {
-      size += 3;
-    }
-
-    /* add coap_opt_length(option) and the number of additional bytes
-     * required to encode the option length */
-
-    size += coap_opt_length(option);
-    switch (*option & 0x0f) {
-    case 0x0e:
-      size++;
-    /* fall through */
-    case 0x0d:
-      size++;
-      break;
-    default:
-      ;
-    }
-
-    opt_num = opt_iter.number;
-  }
-
   /* Now create the response and fill with options and payload data. */
-  response = coap_pdu_init(type, code, request->mid, size);
+  response = coap_pdu_init(type, code, request->mid,
+                           request->session ?
+                           coap_session_max_pdu_size_lkd(request->session) : 512);
   if (response) {
     /* copy token */
     if (!coap_add_token(response, request->actual_token.length,
@@ -3100,20 +3074,31 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
       coap_delete_pdu_lkd(response);
       return NULL;
     }
-
-    /* copy all options */
-    coap_option_iterator_init(request, &opt_iter, opts);
-    while ((option = coap_option_next(&opt_iter))) {
-      coap_add_option_internal(response, opt_iter.number,
-                               coap_opt_length(option),
-                               coap_opt_value(option));
-    }
+    if (response->code == COAP_RESPONSE_CODE(402)) {
+      char buf[128];
+      int first = 1;
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
-    /* note that diagnostic messages do not need a Content-Format option. */
-    if (phrase)
-      coap_add_data(response, (size_t)strlen(phrase), (const uint8_t *)phrase);
+      snprintf(buf, sizeof(buf), "%s", phrase ? phrase : "");
+#else
+      buf[0] = '\000';
 #endif
+      /* copy all options into diagnostic message */
+      coap_option_iterator_init(request, &opt_iter, opts);
+      while (coap_option_next(&opt_iter)) {
+        size_t len = strlen(buf);
+
+        snprintf(&buf[len], sizeof(buf) - len, "%s%d", first ? " " : ",", opt_iter.number);
+        first = 0;
+      }
+      coap_add_data(response, (size_t)strlen(buf), (const uint8_t *)buf);
+#if COAP_ERROR_PHRASE_LENGTH > 0
+    } else {
+      /* note that diagnostic messages do not need a Content-Format option. */
+      if (phrase)
+        coap_add_data(response, (size_t)strlen(phrase), (const uint8_t *)phrase);
+#endif
+    }
   }
 
   return response;

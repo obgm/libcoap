@@ -374,33 +374,19 @@ void coap_dispatch(coap_context_t *context, coap_session_t *session,
                    coap_pdu_t *pdu);
 
 /**
- * Verifies that @p pdu contains no unknown critical options. Options must be
- * registered at @p ctx, using the function coap_register_option(). A basic set
- * of options is registered automatically by coap_new_context(). This function
- * returns @c 1 if @p pdu is ok, @c 0 otherwise. The given filter object @p
- * unknown will be updated with the unknown options. As only @c COAP_MAX_OPT
- * options can be signalled this way, remaining options must be examined
- * manually.
+ * Verifies that @p pdu contains no unknown critical options, duplicate options
+ * or the options defined as Reserved in RFC 7252 Table 7.
  *
- * @code
-  coap_opt_filter_t f = COAP_OPT_NONE;
-  coap_opt_iterator_t opt_iter;
-
-  if (coap_option_check_critical(session, pdu, f) == 0) {
-    coap_option_iterator_init(pdu, &opt_iter, f);
-
-    while (coap_option_next(&opt_iter)) {
-      if (opt_iter.type & 0x01) {
-        ... handle unknown critical option in opt_iter ...
-      }
-    }
-  }
-   @endcode
+ * Options registered using coap_register_option() are not tested.
+ *
+ * The given filter object @p unknown will be updated with the unknown options.
+ * The maximum number of unknown options is limited by what can be put into a
+ * coap_opt_filter_t.
  *
  * @param session  The current session.
  * @param pdu      The PDU to check.
  * @param unknown  The output filter that will be updated to indicate the
- *                 unknown critical options found in @p pdu.
+ *                 unknown critical/duplicated/reserved options found in @p pdu.
  *
  * @return         @c 1 if everything was ok, @c 0 otherwise.
  */
@@ -558,14 +544,19 @@ int coap_join_mcast_group_intf_lkd(coap_context_t *ctx, const char *groupname,
                                    const char *ifname);
 
 /**
- * Registers the option type @p type with the given context object @p ctx.
+ * Registers the option number @p number with the given context object @p context.
  *
  * Note: This function must be called in the locked state.
  *
- * @param ctx  The context to use.
- * @param type The option type to register.
+ * A registered option should only be for options that libcoap library does not
+ * know about (not defined in the CoAP RFCs). On receipt or sending of a PDU,
+ * this registered option will get ignored when checking for unknown critical
+ * options, duplicate options or the options defined as Reserved in RFC 7252 Table 7.
+ *
+ * @param context The context to use.
+ * @param number  The option number to register.
  */
-void coap_register_option_lkd(coap_context_t *ctx, uint16_t type);
+void coap_register_option_lkd(coap_context_t *context, coap_option_num_t number);
 
 /**
  * Set the context's default PKI information for a server.
