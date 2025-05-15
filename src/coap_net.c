@@ -2499,9 +2499,22 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
           p += n;
           bytes_read -= n;
           if (n == len) {
+            coap_opt_filter_t error_opts;
+
+            coap_option_filter_clear(&error_opts);
             if (coap_pdu_parse_header(session->partial_pdu, session->proto)
-                && coap_pdu_parse_opt(session->partial_pdu)) {
+                && coap_pdu_parse_opt(session->partial_pdu, &error_opts)) {
               coap_dispatch(ctx, session, session->partial_pdu);
+            } else if (error_opts.mask) {
+              coap_pdu_t *response =
+                  coap_new_error_response(session->partial_pdu,
+                                          COAP_RESPONSE_CODE(402), &error_opts);
+              if (!response) {
+                coap_log_warn("coap_read_session: cannot create error response\n");
+              } else {
+                if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
+                  coap_log_warn("coap_read_session: error sending response\n");
+              }
             }
             coap_delete_pdu_lkd(session->partial_pdu);
             session->partial_pdu = NULL;
@@ -2824,6 +2837,7 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
                   uint8_t *msg, size_t msg_len) {
 
   coap_pdu_t *pdu = NULL;
+  coap_opt_filter_t error_opts;
 
   assert(COAP_PROTO_NOT_RELIABLE(session->proto));
   if (msg_len < 4) {
@@ -2844,10 +2858,25 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
   if (!pdu)
     goto error;
 
-  if (!coap_pdu_parse(session->proto, msg, msg_len, pdu)) {
+  coap_option_filter_clear(&error_opts);
+  if (!coap_pdu_parse2(session->proto, msg, msg_len, pdu, &error_opts)) {
     coap_handle_event_lkd(session->context, COAP_EVENT_BAD_PACKET, session);
     coap_log_warn("discard malformed PDU\n");
-    goto error;
+    if (error_opts.mask && COAP_PDU_IS_REQUEST(pdu)) {
+      coap_pdu_t *response =
+          coap_new_error_response(pdu,
+                                  COAP_RESPONSE_CODE(402), &error_opts);
+      if (!response) {
+        coap_log_warn("coap_handle_dgram: cannot create error response\n");
+      } else {
+        if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
+          coap_log_warn("coap_handle_dgram: error sending response\n");
+      }
+      coap_delete_pdu_lkd(pdu);
+      return -1;
+    } else {
+      goto error;
+    }
   }
 
   coap_dispatch(ctx, session, pdu);

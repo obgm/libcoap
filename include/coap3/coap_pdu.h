@@ -134,6 +134,7 @@ typedef enum coap_request_t {
 #define COAP_OPTION_ACCEPT         17 /* C___E__, uint,      0-2 B, RFC7252 */
 #define COAP_OPTION_Q_BLOCK1       19 /* CU__E_U, uint,      0-3 B, RFC9177 */
 #define COAP_OPTION_LOCATION_QUERY 20 /* ___RE__, String,  0-255 B, RFC7252 */
+#define COAP_OPTION_EDHOC          21 /* C_____U, empty,       0 B, RFC9668 */
 #define COAP_OPTION_BLOCK2         23 /* CU-_E_U, uint,      0-3 B, RFC7959 */
 #define COAP_OPTION_BLOCK1         27 /* CU-_E_U, uint,      0-3 B, RFC7959 */
 #define COAP_OPTION_SIZE2          28 /* __N_E_U, uint,      0-4 B, RFC7959 */
