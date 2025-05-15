@@ -1674,19 +1674,19 @@ setup_pki_server(SSL_CTX *ctx,
     case COAP_PKI_KEY_DEF_PEM: /* define public cert */
       if (key.key.define.ca.u_byte &&
           key.key.define.ca.u_byte[0]) {
-        if (!(SSL_use_certificate_file(ssl,
-                                       key.key.define.public_cert.s_byte,
-                                       SSL_FILETYPE_PEM))) {
+        if (!(SSL_CTX_use_certificate_file(ctx,
+                                           key.key.define.public_cert.s_byte,
+                                           SSL_FILETYPE_PEM))) {
           return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                         COAP_DEFINE_FAIL_BAD,
-                                        &key, role, 0);
+                                        &key, COAP_DTLS_ROLE_SERVER, 0);
         }
       } else {
-        if (!SSL_use_certificate_chain_file(ssl,
-                                            key.key.define.public_cert.s_byte)) {
+        if (!SSL_CTX_use_certificate_chain_file(ctx,
+                                                key.key.define.public_cert.s_byte)) {
           return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                         COAP_DEFINE_FAIL_BAD,
-                                        &key, role, 0);
+                                        &key, COAP_DTLS_ROLE_SERVER, 0);
         }
       }
       break;
