@@ -59,11 +59,11 @@ unsigned int *rem_timeout_ms)*;
 
 *int coap_can_exit(coap_context_t *_context_)*;
 
-*coap_fd_t coap_socket_get_fd(coap_socket_t *socket);*
+*coap_fd_t coap_socket_get_fd(coap_socket_t *coap_socket);*
 
-*coap_socket_flags_t coap_socket_get_flags(coap_socket_t *socket);*
+*coap_socket_flags_t coap_socket_get_flags(coap_socket_t *coap_socket);*
 
-*void coap_socket_set_flags(coap_socket_t *socket, coap_socket_flags_t flags);*
+*void coap_socket_set_flags(coap_socket_t *coap_socket, coap_socket_flags_t flags);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -241,18 +241,18 @@ have been responded to.
 *Function: coap_socket_get_fd()*
 
 The *coap_socket_get_fd*() function obtains the file descriptor from the given
-socket. The file descriptor can be used to integrate libcoap in an external
+_coap_socket_. The file descriptor can be used to integrate libcoap in an external
 event loop instead of using one of its builtin event loops.
 
 *Function: coap_socket_get_flags()*
 
 The *coap_socket_get_flags*() function obtains the event flags from the
-given socket.
+given _coap_socket_.
 
 *Function: coap_socket_set_flags()*
 
 The *coap_socket_set_flags*() function sets the event flags for the
-given socket.
+given _coap_socket_.
 
 RETURN VALUES
 -------------
