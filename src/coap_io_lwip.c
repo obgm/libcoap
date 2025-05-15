@@ -195,12 +195,34 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     }
     pbuf_free(p);
   } else {
+    coap_opt_filter_t error_opts;
+
     pdu = coap_pdu_from_pbuf(p);
     if (!pdu)
       goto error;
 
-    if (!coap_pdu_parse(session->proto, p->payload, p->len, pdu)) {
-      goto error;
+    coap_option_filter_clear(&error_opts);
+    if (!coap_pdu_parse2(session->proto, p->payload, p->len, pdu, &error_opts)) {
+      coap_handle_event_lkd(session->context, COAP_EVENT_BAD_PACKET, session);
+      coap_log_warn("discard malformed PDU\n");
+      if (error_opts.mask && COAP_PDU_IS_REQUEST(pdu)) {
+        coap_pdu_t *response =
+            coap_new_error_response(pdu,
+                                    COAP_RESPONSE_CODE(402), &error_opts);
+        if (!response) {
+          coap_log_warn("coap_handle_dgram: cannot create error response\n");
+        } else {
+          if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
+            coap_log_warn("coap_handle_dgram: error sending response\n");
+        }
+        coap_delete_pdu_lkd(pdu);
+#if NO_SYS == 0
+        sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
+        return;
+      } else {
+        goto error;
+      }
     }
     coap_lock_lock(session->context, return);
     coap_dispatch(session->context, session, pdu);
@@ -220,6 +242,9 @@ error:
   if (session)
     coap_send_rst_lkd(session, pdu);
   coap_delete_pdu_lkd(pdu);
+#if NO_SYS == 0
+  sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
   return;
 }
 #endif /* ! COAP_CLIENT_SUPPORT */
@@ -289,12 +314,30 @@ coap_udp_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
       coap_session_new_dtls_session(session, now);
     pbuf_free(p);
   } else {
+    coap_opt_filter_t error_opts;
+
     pdu = coap_pdu_from_pbuf(p);
     if (!pdu)
       goto error;
 
-    if (!coap_pdu_parse(ep->proto, p->payload, p->len, pdu)) {
-      goto error;
+    coap_option_filter_clear(&error_opts);
+    if (!coap_pdu_parse2(ep->proto, p->payload, p->len, pdu, &error_opts)) {
+      coap_handle_event_lkd(ep->context, COAP_EVENT_BAD_PACKET, session);
+      coap_log_warn("discard malformed PDU\n");
+      if (error_opts.mask && COAP_PDU_IS_REQUEST(pdu)) {
+        coap_pdu_t *response =
+            coap_new_error_response(pdu,
+                                    COAP_RESPONSE_CODE(402), &error_opts);
+        if (!response) {
+          coap_log_warn("coap_handle_dgram: cannot create error response\n");
+        } else {
+          if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
+            coap_log_warn("coap_handle_dgram: error sending response\n");
+        }
+        goto cleanup;
+      } else {
+        goto error;
+      }
     }
     coap_dispatch(ep->context, session, pdu);
   }
@@ -317,9 +360,13 @@ error:
    */
   if (session && pdu)
     coap_send_rst_lkd(session, pdu);
+cleanup:
   coap_delete_pdu_lkd(pdu);
   coap_free_packet(packet);
   coap_lock_unlock(ep->context);
+#if NO_SYS == 0
+  sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
   return;
 }
 

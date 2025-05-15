@@ -590,6 +590,7 @@ coap_option_check_repeatable(coap_option_num_t number) {
   case COAP_OPTION_URI_PATH:
   case COAP_OPTION_URI_QUERY:
   case COAP_OPTION_LOCATION_QUERY:
+  case COAP_OPTION_Q_BLOCK2:
   case COAP_OPTION_RTAG:
     break;
   /* Protest at the known non-repeatable options and ignore them */
@@ -602,6 +603,8 @@ coap_option_check_repeatable(coap_option_num_t number) {
   case COAP_OPTION_MAXAGE:
   case COAP_OPTION_HOP_LIMIT:
   case COAP_OPTION_ACCEPT:
+  case COAP_OPTION_Q_BLOCK1:
+  case COAP_OPTION_EDHOC:
   case COAP_OPTION_BLOCK2:
   case COAP_OPTION_BLOCK1:
   case COAP_OPTION_SIZE2:
@@ -969,18 +972,16 @@ next_option_safe(coap_opt_t **optp, size_t *length, uint16_t *max_opt) {
   assert(length);
 
   optsize = coap_opt_parse(*optp, *length, &option);
-  if (optsize) {
-    assert(optsize <= *length);
+  assert(optsize <= *length);
 
-    /* signal an error if this option would exceed the
-     * allowed number space */
-    if (*max_opt + option.delta > COAP_MAX_OPT) {
-      return 0;
-    }
-    *max_opt += option.delta;
-    *optp += optsize;
-    *length -= optsize;
+  /* signal an error if this option would exceed the
+   * allowed number space */
+  if ((uint32_t)(*max_opt) + option.delta > COAP_MAX_OPT) {
+    return 0;
   }
+  *max_opt += option.delta;
+  *optp += optsize;
+  *length -= optsize;
 
   return optsize;
 }
@@ -1252,8 +1253,16 @@ coap_pdu_parse_opt_base(coap_pdu_t *pdu, uint16_t len) {
     if (len > 2)
       res = 0;
     break;
+  case COAP_OPTION_Q_BLOCK1:
+    if (len > 3)
+      res = 0;
+    break;
   case COAP_OPTION_LOCATION_QUERY:
     if (len > 255)
+      res = 0;
+    break;
+  case COAP_OPTION_EDHOC:
+    if (len != 0)
       res = 0;
     break;
   case COAP_OPTION_BLOCK2:
@@ -1266,6 +1275,10 @@ coap_pdu_parse_opt_base(coap_pdu_t *pdu, uint16_t len) {
     break;
   case COAP_OPTION_SIZE2:
     if (len > 4)
+      res = 0;
+    break;
+  case COAP_OPTION_Q_BLOCK2:
+    if (len > 3)
       res = 0;
     break;
   case COAP_OPTION_PROXY_URI:
@@ -1332,8 +1345,10 @@ write_char(char **obp, size_t *len, int c, int printable) {
 }
 
 int
-coap_pdu_parse_opt(coap_pdu_t *pdu) {
+coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
   int good = 1;
+
+  coap_option_filter_clear(error_opts);
 
   /* sanity checks */
   if (pdu->code == 0) {
@@ -1369,6 +1384,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
         coap_log_debug("coap_pdu_parse: %d.%02d: offset %u malformed option\n",
                        pdu->code >> 5, pdu->code & 0x1F,
                        (int)(opt_last - pdu->token - pdu->e_token_length));
+        coap_option_filter_set(error_opts, pdu->max_opt);
         good = 0;
         break;
       }
@@ -1379,6 +1395,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu) {
                       pdu->code >> 5, pdu->code & 0x1F,
                       (int)(opt_last - pdu->token - pdu->e_token_length), pdu->max_opt,
                       len);
+        coap_option_filter_set(error_opts, pdu->max_opt);
         good = 0;
       }
     }
@@ -1463,6 +1480,17 @@ coap_pdu_parse(coap_proto_t proto,
                const uint8_t *data,
                size_t length,
                coap_pdu_t *pdu) {
+  coap_opt_filter_t error_opts;
+
+  return coap_pdu_parse2(proto, data, length, pdu, &error_opts);
+}
+
+int
+coap_pdu_parse2(coap_proto_t proto,
+                const uint8_t *data,
+                size_t length,
+                coap_pdu_t *pdu,
+                coap_opt_filter_t *error_opts) {
   size_t hdr_size;
 
   if (length == 0)
@@ -1478,7 +1506,7 @@ coap_pdu_parse(coap_proto_t proto,
     memcpy(pdu->token - hdr_size, data, length);
   pdu->hdr_size = (uint8_t)hdr_size;
   pdu->used_size = length - hdr_size;
-  return coap_pdu_parse_header(pdu, proto) && coap_pdu_parse_opt(pdu);
+  return coap_pdu_parse_header(pdu, proto) && coap_pdu_parse_opt(pdu, error_opts);
 }
 
 size_t
