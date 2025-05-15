@@ -1288,10 +1288,12 @@ coap_set_log_handler(coap_log_handler_t handler) {
   log_handler = handler;
 }
 
+#if COAP_THREAD_SAFE && COAP_THREAD_NUM_LOGGING
 /* Visible to only this thread */
 extern COAP_THREAD_LOCAL_VAR uint32_t thread_no;
 /* Visible across all threads */
 extern uint32_t max_thread_no;
+#endif /* COAP_THREAD_SAFE && COAP_THREAD_NUM_LOGGING */
 
 void
 coap_log_impl(coap_log_t level, const char *format, ...) {
@@ -1331,12 +1333,12 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     if (len)
       fprintf(log_fd, "%.*s ", (int)len, timebuf);
 
-#if COAP_THREAD_NUM_LOGGING
+#if COAP_THREAD_SAFE && COAP_THREAD_NUM_LOGGING
     if (thread_no == 0) {
       thread_no = ++max_thread_no;
     }
     fprintf(log_fd, "%2d ", thread_no);
-#endif /* COAP_THREAD_NUM_LOGGING */
+#endif /* COAP_THREAD_SAFE && COAP_THREAD_NUM_LOGGING */
 
     fprintf(log_fd, "%s ", coap_log_level_desc(level));
 
