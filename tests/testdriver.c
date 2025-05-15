@@ -31,6 +31,7 @@ int
 main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
   CU_ErrorCode result;
   CU_BasicRunMode run_mode = CU_BRM_VERBOSE;
+  unsigned int failed;
 
   if (CU_initialize_registry() != CUE_SUCCESS) {
     fprintf(stderr, "E: test framework initialization failed\n");
@@ -57,9 +58,11 @@ main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
 
   CU_basic_set_mode(run_mode);
   result = CU_basic_run_tests();
-
+  failed = CU_get_number_of_failures();
   CU_cleanup_registry();
   coap_cleanup();
 
+  if (failed)
+    exit(1);
   return result;
 }
