@@ -167,8 +167,10 @@ typedef struct coap_openssl_context_t {
   int psk_pki_enabled;
   size_t sni_count;
   sni_entry *sni_entry_list;
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
   size_t psk_sni_count;
   psk_sni_entry *psk_sni_entry_list;
+#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
 } coap_openssl_context_t;
 
 #if COAP_SERVER_SUPPORT
@@ -3038,7 +3040,6 @@ psk_tls_client_hello_call_back(SSL *ssl,
      */
     const char *sni = "";
     char *sni_tmp = NULL;
-    size_t i;
     char lhint[COAP_DTLS_HINT_LENGTH];
 
     if (SSL_client_hello_get0_ext(ssl, TLSEXT_TYPE_server_name, &out, &outlen) &&
@@ -3057,6 +3058,8 @@ psk_tls_client_hello_call_back(SSL *ssl,
       }
     }
 
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+    size_t i;
     /* Is this a cached entry? */
     for (i = 0; i < o_context->psk_sni_count; i++) {
       if (strcasecmp(sni, o_context->psk_sni_entry_list[i].sni) == 0) {
@@ -3064,10 +3067,10 @@ psk_tls_client_hello_call_back(SSL *ssl,
       }
     }
     if (i == o_context->psk_sni_count) {
+#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
       /*
        * New SNI request
        */
-      psk_sni_entry *tmp_entry;
       const coap_dtls_spsk_info_t *new_entry;
 
       coap_lock_callback_ret(new_entry, c_session->context,
@@ -3080,6 +3083,8 @@ psk_tls_client_hello_call_back(SSL *ssl,
         return SSL_CLIENT_HELLO_ERROR;
       }
 
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+      psk_sni_entry *tmp_entry;
       tmp_entry =
           OPENSSL_realloc(o_context->psk_sni_entry_list,
                           (o_context->psk_sni_count+1)*sizeof(sni_entry));
@@ -3094,24 +3099,28 @@ psk_tls_client_hello_call_back(SSL *ssl,
           o_context->psk_sni_count++;
         }
       }
+    } else {
+      new_entry = &o_context->psk_sni_entry_list[i].psk_info;
     }
+#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
+
     if (sni_tmp) {
       OPENSSL_free(sni_tmp);
     }
     if (coap_session_refresh_psk_hint(c_session,
-                                      &o_context->psk_sni_entry_list[i].psk_info.hint)
+                                      &new_entry->hint)
         == 0) {
       goto int_err;
     }
     if (coap_session_refresh_psk_key(c_session,
-                                     &o_context->psk_sni_entry_list[i].psk_info.key)
+                                     &new_entry->key)
         == 0) {
       goto int_err;
     }
-    if (o_context->psk_sni_entry_list[i].psk_info.hint.s) {
+    if (new_entry->hint.s) {
       snprintf(lhint, sizeof(lhint), "%.*s",
-               (int)o_context->psk_sni_entry_list[i].psk_info.hint.length,
-               o_context->psk_sni_entry_list[i].psk_info.hint.s);
+               (int)new_entry->hint.length,
+               new_entry->hint.s);
       SSL_use_psk_identity_hint(ssl, lhint);
     }
   }
@@ -3339,14 +3348,14 @@ coap_dtls_free_context(void *handle) {
   }
   if (context->sni_count)
     OPENSSL_free(context->sni_entry_list);
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
   for (i = 0; i < context->psk_sni_count; i++) {
     OPENSSL_free((char *)context->psk_sni_entry_list[i].sni);
-#if OPENSSL_VERSION_NUMBER < 0x10101000L
     SSL_CTX_free(context->psk_sni_entry_list[i].ctx);
-#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
   }
   if (context->psk_sni_count)
     OPENSSL_free(context->psk_sni_entry_list);
+#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
   coap_free_type(COAP_STRING, context);
 }
 
