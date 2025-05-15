@@ -3092,7 +3092,19 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
         first = 0;
       }
       coap_add_data(response, (size_t)strlen(buf), (const uint8_t *)buf);
+    } else if (opts && opts->mask) {
+      coap_opt_t *option;
+
+      /* copy all options */
+      coap_option_iterator_init(request, &opt_iter, opts);
+      while ((option = coap_option_next(&opt_iter))) {
+        coap_add_option_internal(response, opt_iter.number,
+                                 coap_opt_length(option),
+                                 coap_opt_value(option));
+      }
 #if COAP_ERROR_PHRASE_LENGTH > 0
+      if (phrase)
+        coap_add_data(response, (size_t)strlen(phrase), (const uint8_t *)phrase);
     } else {
       /* note that diagnostic messages do not need a Content-Format option. */
       if (phrase)
