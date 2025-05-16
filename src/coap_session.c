@@ -2053,6 +2053,8 @@ coap_new_client_session_pki_lkd(coap_context_t *ctx,
 coap_session_t *
 coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep, void *extra) {
   coap_session_t *session;
+  coap_tick_t now;
+
   session = coap_make_session(ep->proto, COAP_SESSION_TYPE_SERVER,
                               NULL, NULL, NULL, 0, ctx, ep);
   if (!session)
@@ -2072,6 +2074,8 @@ coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep, void *extra) {
 #endif /* COAP_EPOLL_SUPPORT */
   SESSIONS_ADD(ep->sessions, session);
   if (session) {
+    coap_ticks(&now);
+    session->last_rx_tx = now;
     coap_log_debug("***%s: session %p: new incoming session\n",
                    coap_session_str(session), (void *)session);
     coap_handle_event_lkd(session->context, COAP_EVENT_TCP_CONNECTED, session);
