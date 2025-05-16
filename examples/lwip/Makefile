@@ -40,7 +40,22 @@ all: lwip \
      client-dtls
 
 lwip:
-	git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $(WITH_LWIP_BRANCH)
+	@CHECK=`git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $(WITH_LWIP_BRANCH) ; echo $$?` ; \
+	if [ "$$CHECK" != 0 ] ; then \
+		echo Try 1 $$CHECK ; \
+		sleep 1 ;\
+		CHECK=`git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $(WITH_LWIP_BRANCH) ; echo $$?` ; \
+		echo Try 2 $$CHECK ; \
+	fi ; \
+	if [ "$$CHECK" != 0 ] ; then \
+		sleep 1 ;\
+		CHECK=`git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $(WITH_LWIP_BRANCH) ; echo $$?` ; \
+		echo Try 3 $$CHECK ; \
+	fi ; \
+	if [ "$$CHECK" != 0 ] ; then \
+		sleep 1 ;\
+		git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $(WITH_LWIP_BRANCH) ; \
+	fi
 	(cd lwip ; git checkout $(WITH_LWIP_BRANCH))
 	$(MAKE)
 

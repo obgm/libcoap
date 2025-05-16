@@ -178,6 +178,7 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     /* Minimum size of CoAP header - ignore runt */
     return;
   }
+  coap_lock_lock(return);
   memcpy(&session->addr_info.remote.addr, addr, sizeof(session->addr_info.remote.addr));
   coap_address_set_port(&session->addr_info.remote, port);
 
@@ -212,6 +213,7 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
             coap_log_warn("coap_handle_dgram: error sending response\n");
         }
         coap_delete_pdu_lkd(pdu);
+        coap_lock_unlock();
 #if NO_SYS == 0
         sys_sem_signal(&coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
@@ -220,14 +222,13 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
         goto error;
       }
     }
-    coap_lock_lock(return);
     coap_dispatch(session->context, session, pdu);
-    coap_lock_unlock();
   }
 #if NO_SYS == 0
   sys_sem_signal(&coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
   coap_delete_pdu_lkd(pdu);
+  coap_lock_unlock();
   return;
 
 error:
@@ -238,6 +239,7 @@ error:
   if (session)
     coap_send_rst_lkd(session, pdu);
   coap_delete_pdu_lkd(pdu);
+  coap_lock_unlock();
 #if NO_SYS == 0
   sys_sem_signal(&coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
@@ -549,6 +551,7 @@ do_tcp_err(void *arg, err_t err) {
 
   (void)err;
 
+  coap_lock_lock(return);
   coap_handle_event_lkd(session->context, COAP_EVENT_TCP_FAILED, session);
   /*
    * as per tcp_err() documentation, the corresponding pcb is already freed
@@ -557,6 +560,7 @@ do_tcp_err(void *arg, err_t err) {
    */
   session->sock.tcp_pcb = NULL;
   coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
+  coap_lock_unlock();
 }
 
 /** Callback from lwIP when a TCP packet is received.
@@ -577,7 +581,9 @@ coap_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     tcp_recv(sock->tcp_pcb, NULL);
     tcp_close(sock->tcp_pcb);
     sock->tcp_pcb = NULL;
+    coap_lock_lock(return ERR_ARG);
     coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
+    coap_lock_unlock();
     return ERR_OK;
   } else if (err != ERR_OK) {
     /* cleanup, for unknown reason */
@@ -588,8 +594,10 @@ coap_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
   }
 
   sock->p = p;
+  coap_lock_lock(return ERR_ARG);
   coap_ticks(&now);
   coap_read_session(session->context, session, now);
+  coap_lock_unlock();
   return ERR_OK;
 }
 
@@ -602,12 +610,14 @@ do_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
 
   if (err)
     return err;
+  coap_lock_lock(return ERR_ARG);
   session->sock.flags |= COAP_SOCKET_CONNECTED;
   session->addr_info.local.addr = tpcb->local_ip;
   session->addr_info.local.port = tpcb->local_port;
   tcp_recv(tpcb, coap_tcp_recv);
   coap_ticks(&now);
   coap_connect_session(session, now);
+  coap_lock_unlock();
   return ERR_OK;
 }
 
@@ -686,6 +696,7 @@ do_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
   }
   coap_ticks(&now);
 
+  coap_lock_lock(return ERR_MEM);
   session = coap_new_server_session(endpoint->context, endpoint, newpcb);
 
   if (session) {
@@ -698,6 +709,7 @@ do_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
   } else {
     ret_err = ERR_MEM;
   }
+  coap_lock_unlock();
   return ret_err;
 }
 
