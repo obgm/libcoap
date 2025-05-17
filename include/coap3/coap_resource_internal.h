@@ -59,6 +59,7 @@ struct coap_resource_t {
   unsigned int is_unknown:1;     /**< resource created for unknown handler */
   unsigned int is_proxy_uri:1;   /**< resource created for proxy URI handler */
   unsigned int is_reverse_proxy:1; /**< resource created for reverse proxy URI handler */
+  unsigned int list_being_traversed:1; /**< resource subscriber list being traversed */
 
   /**
    * Used to store handlers for the seven coap methods @c GET, @c POST, @c PUT,

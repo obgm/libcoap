@@ -1111,15 +1111,21 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
   coap_string_t *query;
   coap_block_b_t block;
   coap_tick_t now;
-  coap_session_t *obs_session;
 
   coap_lock_check_locked(context);
 
   if (r->observable && (r->dirty || r->partiallydirty)) {
+    if (r->list_being_traversed)
+      return;
+    r->list_being_traversed = 1;
+
     r->partiallydirty = 0;
 
     LL_FOREACH_SAFE(r->subscribers, obs, otmp) {
-      obs_session = obs->session;
+      coap_session_t *obs_session;
+      coap_pdu_t *obs_pdu;
+      coap_mid_t mid = COAP_INVALID_MID;
+
       if (r->dirty == 0 && obs->dirty == 0) {
         /*
          * running this resource due to partiallydirty, but this observation's
@@ -1128,6 +1134,16 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         context->observe_pending = 1;
         continue;
       }
+
+      /*
+       * obs may get deleted in the callback, or by another running
+       * thread when executing the callback or when sending a response.
+       */
+      obs_session = obs->session;
+      obs_pdu = obs->pdu;
+      coap_session_reference_lkd(obs_session);
+      coap_pdu_reference_lkd(obs_pdu);
+
       if (obs->session->con_active >= COAP_NSTART(obs->session) &&
           ((r->flags & COAP_RESOURCE_FLAGS_NOTIFY_CON) ||
            (obs->non_cnt >= COAP_OBS_MAX_NON))) {
@@ -1142,7 +1158,6 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         goto next_one_fail;
       }
 
-      coap_mid_t mid = COAP_INVALID_MID;
       obs->dirty = 0;
       /* initialize response */
       response = coap_pdu_init(COAP_MESSAGE_CON, 0, 0,
@@ -1210,28 +1225,39 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         coap_log_debug("call custom handler for resource '%*.*s' (4)\n",
                        (int)r->uri_path->length, (int)r->uri_path->length,
                        r->uri_path->s);
+
+        /* obs may get deleted during callback (potentially by another thread) */
         coap_lock_callback_release(obs->session->context,
                                    h(r, obs->session, obs->pdu, query, response),
                                    /* context is being freed off */
+                                   coap_delete_string(query);
+                                   coap_delete_pdu_lkd(response);
+                                   coap_session_release_lkd(obs_session);
+                                   coap_pdu_release_lkd(obs_pdu);
+                                   r->list_being_traversed = 0;
                                    return);
 
         /* Check validity of response code */
-        if (!coap_check_code_class(obs->session, response)) {
+        if (!coap_check_code_class(obs_session, response)) {
           coap_log_warn("handle_request: Invalid PDU response code (%d.%02d)\n",
                         COAP_RESPONSE_CLASS(response->code),
                         response->code & 0x1f);
+          coap_delete_string(query);
           coap_delete_pdu_lkd(response);
+          coap_session_release_lkd(obs_session);
+          coap_pdu_release_lkd(obs_pdu);
+          r->list_being_traversed = 0;
           return;
         }
 
         /* Check if lg_xmit generated and update PDU code if so */
-        coap_check_code_lg_xmit(obs->session, obs->pdu, response, r, query);
+        coap_check_code_lg_xmit(obs_session, obs_pdu, response, r, query);
         coap_delete_string(query);
         if (COAP_RESPONSE_CLASS(response->code) != 2) {
           coap_remove_option(response, COAP_OPTION_OBSERVE);
         }
         if (COAP_RESPONSE_CLASS(response->code) > 2) {
-          coap_delete_observer(r, obs->session, &obs->pdu->actual_token);
+          coap_delete_observer(r, obs_session, &obs_pdu->actual_token);
           obs = NULL;
         }
         break;
@@ -1253,6 +1279,20 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       }
 
       if (obs) {
+        coap_subscription_t *s;
+        /*
+         * obs may have been deleted in the callback, or by another running
+         * thread when executing the callback.
+         */
+        LL_FOREACH(r->subscribers, s) {
+          if (s == obs) {
+            break;
+          }
+        }
+        if (s == NULL)
+          obs = NULL;
+      }
+      if (obs) {
         if (response->type == COAP_MESSAGE_CON ||
             (r->flags & COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS)) {
           obs->non_cnt = 0;
@@ -1262,11 +1302,11 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
 
 #if COAP_Q_BLOCK_SUPPORT
         if (response->code == COAP_RESPONSE_CODE(205) &&
-            coap_get_block_b(obs->session, response, COAP_OPTION_Q_BLOCK2,
+            coap_get_block_b(obs_session, response, COAP_OPTION_Q_BLOCK2,
                              &block) &&
             block.m) {
-          query = coap_get_query(obs->pdu);
-          mid = coap_send_q_block2(obs->session, r, query, obs->pdu->code,
+          query = coap_get_query(obs_pdu);
+          mid = coap_send_q_block2(obs_session, r, query, obs_pdu->code,
                                    block, response, 1);
           coap_delete_string(query);
           goto finish;
@@ -1279,28 +1319,24 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
 finish:
 #endif /* COAP_Q_BLOCK_SUPPORT */
       if (COAP_INVALID_MID == mid && obs) {
-        coap_subscription_t *s;
         coap_log_debug("*  %s: coap_check_notify: sending failed, resource stays "
-                       "partially dirty\n", coap_session_str(obs->session));
-        LL_FOREACH(r->subscribers, s) {
-          if (s == obs) {
-            /* obs not deleted during coap_send_internal() */
-            obs->dirty = 1;
-            break;
-          }
-        }
+                       "partially dirty\n", coap_session_str(obs_session));
+        obs->dirty = 1;
         r->partiallydirty = 1;
-      } else {
-        /* Do not reset flags */
-        continue;
-next_one_fail:
-        context->observe_pending = 1;
-next_one_fail_no_pending:
-        r->partiallydirty = 1;
-        if (obs)
-          obs->dirty = 1;
       }
+      goto cleanup;
+
+next_one_fail:
+      context->observe_pending = 1;
+next_one_fail_no_pending:
+      r->partiallydirty = 1;
+      if (obs)
+        obs->dirty = 1;
+cleanup:
+      coap_session_release_lkd(obs_session);
+      coap_pdu_release_lkd(obs_pdu);
     }
+    r->list_being_traversed = 0;
   }
   r->dirty = 0;
 }
