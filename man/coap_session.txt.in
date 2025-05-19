@@ -21,13 +21,16 @@ coap_session_get_addr_local,
 coap_session_get_addr_mcast,
 coap_session_get_addr_remote,
 coap_session_get_context,
+coap_session_get_endpoint,
 coap_session_get_ifindex,
 coap_session_get_proto,
 coap_session_get_state,
 coap_session_get_tls,
 coap_session_get_type,
 coap_session_get_psk_hint,
-coap_session_get_psk_key
+coap_session_get_psk_key,
+coap_endpoint_set_app_data,
+coap_endpoint_get_app_data
 - Work with CoAP sessions
 
 SYNOPSIS
@@ -58,6 +61,8 @@ const coap_session_t *_session_);*
 
 *coap_context_t *coap_session_get_context(const coap_session_t *_session_);*
 
+*coap_endpoint_t *coap_session_get_endpoint(const coap_session_t *_session_);*
+
 *int coap_session_get_ifindex(const coap_session_t *_session_);*
 
 *coap_proto_t coap_session_get_proto(const coap_session_t *_session_);*
@@ -74,6 +79,11 @@ const coap_session_t *_session_);*
 
 *const coap_bin_const_t *coap_session_get_psk_key(
 const coap_session_t *_session_);*
+
+*void *coap_endpoint_set_app_data(coap_endpoint_t *_endpoint_, void *_app_data_,
+                                  coap_app_data_free_callback_t _app_cb_);*
+
+*void *coap_endpoint_get_app_data(const coap_endpoint_t *_endpoint_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -190,6 +200,20 @@ associated with the _session_.
 The  *coap_session_get_ifindex*() function is used to get the network interface
 index that the traffic came in over from the _session_.
 
+*Function: coap_endpoint_set_app_data()*
+
+The *coap_endpoint_set_app_data*() function is used to define a _app_data_ pointer
+for the _endpoint_ which can then be retrieved at a later date. There is an
+additional callback _app_cb_ (if set) to be used if the data is to be released
+when the _endpoint_ is deleted. If this is a subsequent call for the _endpoint_,
+then the existing data is returned, and it is the responsibility of the caller to
+release this previous data.  On the first call, NULL is returned.
+
+*Function: coap_endpoint_get_app_data()*
+
+The *coap_session_get_app_data*() function is used to retrieve the data
+pointer previously defined by *coap_endpoint_set_app_data*() in _endpoint_.
+
 [source, c]
 ----
 COAP_PROTO_UDP
@@ -264,6 +288,9 @@ address / port or NULL on error or this is not a multicast session.
 *coap_session_get_context*() returns a pointer to the current CoAP Context or
 NULL on error.
 
+*coap_session_get_endpoint*() returns the endpoint over which this session was
+created, or NULL on error.
+
 *coap_session_get_ifindex*() returns the network interface the traffic last
 came in over, or -1 on error.
 
@@ -282,6 +309,10 @@ pre-shared-key identity hint, or NULL if not defined.
 
 *coap_session_get_psk_key*() returns the current session's pre-shared-key
 key information, or NULL if not defined.
+
+*coap_endpoint_set_app_data*() returns a previously defined pointer or NULL.
+
+*coap_endpoint_get_app_data*() returns a previously defined pointer.
 
 SEE ALSO
 --------

@@ -2214,6 +2214,17 @@ coap_session_get_state(const coap_session_t *session) {
   return 0;
 }
 
+coap_endpoint_t *
+coap_session_get_endpoint(const coap_session_t *session) {
+#if COAP_SERVER_SUPPORT
+  if (session)
+    return session->endpoint;
+#else /* ! COAP_SERVER_SUPPORT */
+  (void)session;
+#endif /* ! COAP_SERVER_SUPPORT */
+  return 0;
+}
+
 int
 coap_session_get_ifindex(const coap_session_t *session) {
   if (session)
@@ -2439,6 +2450,34 @@ coap_free_endpoint_lkd(coap_endpoint_t *ep) {
     coap_mfree_endpoint(ep);
   }
 }
+
+void *
+coap_endpoint_get_app_data(const coap_endpoint_t *endpoint) {
+  assert(endpoint);
+  return endpoint->app_data;
+}
+
+COAP_API void *
+coap_endpoint_set_app_data(coap_endpoint_t *endpoint, void *app_data,
+                           coap_app_data_free_callback_t callback) {
+  void *old_data;
+
+  coap_lock_lock(endpoint->context, return NULL);
+  old_data = coap_endpoint_set_app_data_lkd(endpoint, app_data, callback);
+  coap_lock_unlock(endpoint->context);
+  return old_data;
+}
+
+void *
+coap_endpoint_set_app_data_lkd(coap_endpoint_t *endpoint, void *app_data,
+                               coap_app_data_free_callback_t callback) {
+  void *old_data = endpoint->app_data;
+
+  endpoint->app_data = app_data;
+  endpoint->app_cb = app_data ? callback : NULL;
+  return old_data;
+}
+
 #endif /* COAP_SERVER_SUPPORT */
 
 coap_session_t *
