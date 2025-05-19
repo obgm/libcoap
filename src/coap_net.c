@@ -2560,12 +2560,14 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
             memcpy(session->partial_pdu->token - hdr_size, session->read_header, hdr_size + tok_ext_bytes);
             session->partial_read = hdr_size + tok_ext_bytes;
             if (size == 0) {
-              if (coap_pdu_parse_header(session->partial_pdu, session->proto)) {
-                coap_dispatch(ctx, session, session->partial_pdu);
-              }
-              coap_delete_pdu_lkd(session->partial_pdu);
+              coap_pdu_t *pdu = session->partial_pdu;
+
               session->partial_pdu = NULL;
               session->partial_read = 0;
+              if (coap_pdu_parse_header(pdu, session->proto)) {
+                coap_dispatch(ctx, session, pdu);
+              }
+              coap_delete_pdu_lkd(pdu);
             }
           } else {
             /* More of the header to go */
