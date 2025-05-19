@@ -255,6 +255,9 @@ struct coap_endpoint_t {
                                        any */
   coap_address_t bind_addr;       /**< local interface address */
   coap_session_t *sessions;       /**< hash table or list of active sessions */
+
+  void *app_data;                       /**< application-specific data */
+  coap_app_data_free_callback_t app_cb; /**< call-back to release app_data */
 };
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -649,6 +652,27 @@ void coap_session_server_keepalive_failed(coap_session_t *session);
  * @return The previous data (if any) stored in the session.
  */
 void *coap_session_set_app_data2_lkd(coap_session_t *session, void *data,
+                                     coap_app_data_free_callback_t callback);
+
+/**
+ * Stores @p data with the given endpoint, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the endpoint is deleted.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param endpoint The CoAP endpoint.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on endpoint
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the endpoint.
+ */
+void *coap_endpoint_set_app_data_lkd(coap_endpoint_t *endpoint, void *data,
                                      coap_app_data_free_callback_t callback);
 
 void coap_session_free(coap_session_t *session);

@@ -101,6 +101,8 @@ global:
   coap_enable_pdu_data_output;
   coap_encode_var_safe8;
   coap_encode_var_safe;
+  coap_endpoint_get_app_data;
+  coap_endpoint_set_app_data;
   coap_endpoint_set_default_mtu;
   coap_endpoint_str;
   coap_epoll_is_supported;
@@ -266,6 +268,7 @@ global:
   coap_session_get_by_peer;
   coap_session_get_context;
   coap_session_get_default_leisure;
+  coap_session_get_endpoint;
   coap_session_get_ifindex;
   coap_session_get_max_payloads;
   coap_session_get_max_retransmit;

@@ -204,6 +204,15 @@ coap_session_type_t coap_session_get_type(const coap_session_t *session);
 coap_session_state_t coap_session_get_state(const coap_session_t *session);
 
 /**
+ * Get the endpoint of a session
+ *
+ * @param session The CoAP session.
+ *
+ * @return The session's endpoint, or @c NULL on error.
+ */
+coap_endpoint_t *coap_session_get_endpoint(const coap_session_t *session);
+
+/**
  * Get the session if index
  *
  * @param session The CoAP session.
@@ -454,6 +463,36 @@ void coap_endpoint_set_default_mtu(coap_endpoint_t *endpoint, unsigned mtu);
  * @param endpoint The endpoint to release.
  */
 COAP_API void coap_free_endpoint(coap_endpoint_t *endpoint);
+
+/**
+ * Returns any application-specific data that has been stored with @p
+ * endpoint using the function coap_endpoint_set_app_data(). This function
+ * will return @c NULL if no data has been stored.
+ *
+ * @param endpoint The CoAP endpoint.
+ *
+ * @return Pointer to the stored data or @c NULL.
+ */
+void *coap_endpoint_get_app_data(const coap_endpoint_t *endpoint);
+
+/**
+ * Stores @p data with the given endpoint, returning the previously stored
+ * value or NULL. The data @p callback can be defined if the data is to be
+ * released when the endpoint is deleted.
+ *
+ * Note: It is the responsibility of the caller to free off (if appropriate) any
+ * returned data.
+ *
+ * @param endpoint The CoAP endpoint.
+ * @param data The pointer to the data to store or NULL to just clear out the
+ *             previous data.
+ * @param callback The optional release call-back for data on endpoint
+ *                 removal or NULL.
+ *
+ * @return The previous data (if any) stored in the endpoint.
+ */
+COAP_API void *coap_endpoint_set_app_data(coap_endpoint_t *endpoint, void *data,
+                                          coap_app_data_free_callback_t callback);
 
 /**
  * Get the session associated with the specified @p remote_addr and @p index.
