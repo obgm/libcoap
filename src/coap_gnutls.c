@@ -648,7 +648,7 @@ psk_client_callback(gnutls_session_t g_session,
 
     lhint.length = temp.length;
     lhint.s = temp.s;
-    coap_lock_callback_ret(cpsk_info, c_session->context,
+    coap_lock_callback_ret(cpsk_info,
                            setup_data->validate_ih_call_back(&lhint,
                                                              c_session,
                                                              setup_data->ih_call_back_arg));
@@ -808,7 +808,7 @@ check_rpk_cert(coap_gnutls_context_t *g_context,
     G_CHECK(gnutls_pubkey_export(pcert.pubkey, GNUTLS_X509_FMT_DER, der, &size),
             "gnutls_pubkey_export");
     gnutls_pcert_deinit(&pcert);
-    coap_lock_callback_ret(ret, c_session->context,
+    coap_lock_callback_ret(ret,
                            g_context->setup_data.validate_cn_call_back(COAP_DTLS_RPK_CERT_CN,
                                der,
                                size,
@@ -969,7 +969,7 @@ cert_verify_gnutls(gnutls_session_t g_session) {
     G_CHECK(gnutls_x509_crt_export(cert, GNUTLS_X509_FMT_DER, der, &size),
             "gnutls_x509_crt_export");
     gnutls_x509_crt_deinit(cert);
-    coap_lock_callback_ret(ret, c_session->context,
+    coap_lock_callback_ret(ret,
                            g_context->setup_data.validate_cn_call_back(OUTPUT_CERT_NAME,
                                der,
                                size,
@@ -1599,7 +1599,7 @@ post_client_hello_gnutls_psk(gnutls_session_t g_session) {
        */
       const coap_dtls_spsk_info_t *new_entry;
 
-      coap_lock_callback_ret(new_entry, c_session->context,
+      coap_lock_callback_ret(new_entry,
                              c_session->context->spsk_setup_data.validate_sni_call_back(name,
                                  c_session,
                                  c_session->context->spsk_setup_data.sni_call_back_arg));
@@ -1715,7 +1715,7 @@ post_client_hello_gnutls_pki(gnutls_session_t g_session) {
        */
       coap_dtls_key_t *new_entry;
 
-      coap_lock_callback_ret(new_entry, c_session->context,
+      coap_lock_callback_ret(new_entry,
                              g_context->setup_data.validate_sni_call_back(name,
                                  g_context->setup_data.sni_call_back_arg));
       if (!new_entry) {

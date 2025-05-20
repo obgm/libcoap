@@ -608,7 +608,7 @@ coap_dtls_psk_client_callback(WOLFSSL *ssl,
 
     lhint.s = temp.s;
     lhint.length = temp.length;
-    coap_lock_callback_ret(cpsk_info, c_session->context,
+    coap_lock_callback_ret(cpsk_info,
                            setup_data->validate_ih_call_back(&lhint,
                                                              c_session,
                                                              setup_data->ih_call_back_arg));
@@ -1577,7 +1577,7 @@ tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
 
       /* base_buf2 gets moved to the end */
       wolfSSL_i2d_X509(x509, &base_buf2);
-      coap_lock_callback_ret(ret, session->context,
+      coap_lock_callback_ret(ret,
                              setup_data->validate_cn_call_back(cn, base_buf, length, session,
                                                                depth, preverify_ok,
                                                                setup_data->cn_call_back_arg));
@@ -1628,7 +1628,7 @@ tls_server_name_call_back(WOLFSSL *ssl,
     if (!sni || !sni[0]) {
       sni = "";
     }
-    coap_lock_callback_ret(new_entry, session->context,
+    coap_lock_callback_ret(new_entry,
                            setup_data->validate_sni_call_back(sni,
                                                               setup_data->sni_call_back_arg));
     if (!new_entry) {
@@ -1675,7 +1675,7 @@ psk_tls_server_name_call_back(WOLFSSL *ssl,
     if (!sni || !sni[0]) {
       sni = "";
     }
-    coap_lock_callback_ret(new_entry, c_session->context,
+    coap_lock_callback_ret(new_entry,
                            setup_data->validate_sni_call_back(sni,
                                                               c_session,
                                                               setup_data->sni_call_back_arg));

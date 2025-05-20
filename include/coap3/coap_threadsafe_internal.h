@@ -45,8 +45,7 @@
  * not like the solution.
  *
  * So the initial support for thread safe is done at global lock level
- * using global_lock. However, context is provided as a parameter should
- * context level locking be subsequently used.
+ * using global_lock.
  *
  * Any public API call needs to potentially lock global_lock.
  *
@@ -178,11 +177,10 @@ int coap_lock_lock_func(const char *file, int line);
  * Called when
  *   Locked
  *
- * @param c Context.
  * @param func app call-back function to invoke.
  *
  */
-#define coap_lock_callback(c,func) do { \
+#define coap_lock_callback(func) do { \
     coap_lock_check_locked(c); \
     global_lock.in_callback++; \
     global_lock.callback_file = __FILE__; \
@@ -199,11 +197,10 @@ int coap_lock_lock_func(const char *file, int line);
  *   Locked
  *
  * @param r Return value from @p func.
- * @param c Context.
  * @param func app call-back function to invoke.
  *
  */
-#define coap_lock_callback_ret(r,c,func) do { \
+#define coap_lock_callback_ret(r,func) do { \
     coap_lock_check_locked(c); \
     global_lock.in_callback++; \
     global_lock.callback_file = __FILE__; \
@@ -218,12 +215,11 @@ int coap_lock_lock_func(const char *file, int line);
  * Called when
  *   Locked
  *
- * @param c Context.
  * @param func app call-back function to invoke.
  * @param failed Code to execute on (re-)lock failure.
  *
  */
-#define coap_lock_callback_release(c,func,failed) do { \
+#define coap_lock_callback_release(func,failed) do { \
     coap_lock_check_locked(c); \
     coap_lock_unlock(c); \
     func; \
@@ -238,12 +234,11 @@ int coap_lock_lock_func(const char *file, int line);
  *   Locked (need to unlock over app call-back)
  *
  * @param r Return value from @p func.
- * @param c Context to unlock.
  * @param func app call-back function to invoke.
  * @param failed Code to execute on lock failure
  *
  */
-#define coap_lock_callback_ret_release(r,c,func,failed) do { \
+#define coap_lock_callback_ret_release(r,func,failed) do { \
     coap_lock_check_locked(c); \
     coap_lock_unlock(c); \
     (r) = func; \
@@ -328,11 +323,10 @@ int coap_lock_lock_func(void);
  * Called when
  *   Locked
  *
- * @param c Context.
  * @param func app call-back function to invoke.
  *
  */
-#define coap_lock_callback(c,func) do { \
+#define coap_lock_callback(func) do { \
     coap_lock_check_locked(c); \
     global_lock.in_callback++; \
     func; \
@@ -347,11 +341,10 @@ int coap_lock_lock_func(void);
  *   Locked
  *
  * @param r Return value from @p func.
- * @param c Context.
  * @param func app call-back function to invoke.
  *
  */
-#define coap_lock_callback_ret(r,c,func) do { \
+#define coap_lock_callback_ret(r,func) do { \
     coap_lock_check_locked(c); \
     global_lock.in_callback++; \
     global_lock.in_callback++; \
@@ -365,12 +358,11 @@ int coap_lock_lock_func(void);
  * Called when
  *   Locked (need to unlock over app call-back)
  *
- * @param c Context.
  * @param func app call-back function to invoke.
  * @param failed Code to execute on (re-)lock failure.
  *
  */
-#define coap_lock_callback_release(c,func,failed) do { \
+#define coap_lock_callback_release(func,failed) do { \
     coap_lock_check_locked(c); \
     coap_lock_unlock(c); \
     func; \
@@ -385,12 +377,11 @@ int coap_lock_lock_func(void);
  *   Locked (need to unlock over app call-back)
  *
  * @param r Return value from @p func.
- * @param c Context.
  * @param func app call-back function to invoke.
  * @param failed Code to execute on lock failure.
  *
  */
-#define coap_lock_callback_ret_release(r,c,func,failed) do { \
+#define coap_lock_callback_ret_release(r,func,failed) do { \
     coap_lock_check_locked(c); \
     coap_lock_unlock(c); \
     (r) = func; \
@@ -422,12 +413,11 @@ int coap_lock_lock_func(void);
  * Called when
  *   Locked (need to unlock over locking of alternative lock)
  *
- * @param c Context.
  * @param alt_lock Alternative lock locking code.
  * @param failed Code to execute on lock failure.
  *
  */
-#define coap_lock_invert(c,alt_lock,failed) do { \
+#define coap_lock_invert(alt_lock,failed) do { \
     coap_lock_check_locked(c); \
     coap_lock_unlock(c); \
     alt_lock; \
@@ -497,11 +487,10 @@ typedef coap_mutex_t coap_lock_t;
  * Called when
  *   Locked
  *
- * @param c Context.
  * @param func app call-back function to invoke.
  *
  */
-#define coap_lock_callback(c,func) func
+#define coap_lock_callback(func) func
 
 /**
  * Dummy for no thread-safe code
@@ -513,11 +502,10 @@ typedef coap_mutex_t coap_lock_t;
  *   Locked
  *
  * @param r Return value from @p func.
- * @param c Context.
  * @param func app call-back function to invoke.
  *
  */
-#define coap_lock_callback_ret(r,c,func) (r) = func
+#define coap_lock_callback_ret(r,func) (r) = func
 
 /**
  * Dummy for no thread-safe code
@@ -527,12 +515,11 @@ typedef coap_mutex_t coap_lock_t;
  * Called when
  *   Locked
  *
- * @param c Context.
  * @param func app call-back function to invoke.
  * @param failed Code to execute on (re-)lock failure.
  *
  */
-#define coap_lock_callback_release(c,func,failed) func
+#define coap_lock_callback_release(func,failed) func
 
 /**
  * Dummy for no thread-safe code
@@ -545,12 +532,11 @@ typedef coap_mutex_t coap_lock_t;
  *   Unlocked by thread free'ing off context
  *
  * @param r Return value from @p func.
- * @param c Context to unlock.
  * @param func app call-back function to invoke.
  * @param failed Code to execute on lock failure
  *
  */
-#define coap_lock_callback_ret_release(r,c,func,failed) (r) = func
+#define coap_lock_callback_ret_release(r,func,failed) (r) = func
 
 /**
  * Dummy for no thread-safe code
@@ -562,12 +548,11 @@ typedef coap_mutex_t coap_lock_t;
  * Called when
  *   Locked (need to unlock over locking of alternative lock)
  *
- * @param c Context.
  * @param alt_lock Alternative lock locking code.
  * @param failed Code to execute on lock failure.
  *
  */
-#define coap_lock_invert(c,alt_lock,failed) alt_lock
+#define coap_lock_invert(alt_lock,failed) alt_lock
 
 #endif /* ! COAP_THREAD_SAFE */
 

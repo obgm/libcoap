@@ -500,7 +500,7 @@ coap_free_resource(coap_resource_t *resource, coap_deleting_resource_t deleting)
                                         resource->context->observe_user_data);
 
   if (resource->context->release_userdata && resource->user_data) {
-    coap_lock_callback(resource->context, resource->context->release_userdata(resource->user_data));
+    coap_lock_callback(resource->context->release_userdata(resource->user_data));
   }
 
   /* delete registered attributes */
@@ -1227,8 +1227,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                        r->uri_path->s);
 
         /* obs may get deleted during callback (potentially by another thread) */
-        coap_lock_callback_release(obs->session->context,
-                                   h(r, obs->session, obs->pdu, query, response),
+        coap_lock_callback_release(h(r, obs->session, obs->pdu, query, response),
                                    /* context is being freed off */
                                    coap_delete_string(query);
                                    coap_delete_pdu_lkd(response);

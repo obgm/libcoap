@@ -3875,8 +3875,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     coap_log_debug("call custom handler for resource '%*.*s' (3)\n",
                    (int)resource->uri_path->length, (int)resource->uri_path->length,
                    resource->uri_path->s);
-    coap_lock_callback_release(context,
-                               h(resource, session, pdu, query, response),
+    coap_lock_callback_release(h(resource, session, pdu, query, response),
                                /* context is being freed off */
                                coap_delete_string(query); goto finish);
   }
@@ -4078,7 +4077,7 @@ coap_call_response_handler(coap_session_t *session,
     session->last_con_handler_res = COAP_RESPONSE_OK;
     return;
   } else if (context->response_handler) {
-    coap_lock_callback_ret_release(ret, context,
+    coap_lock_callback_ret_release(ret,
                                    context->response_handler(session,
                                                              sent,
                                                              rcvd,
@@ -4241,8 +4240,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   } else if (pdu->code == COAP_SIGNALING_CODE_PING) {
     coap_pdu_t *pong = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_PONG, 0, 1);
     if (context->ping_handler) {
-      coap_lock_callback(context,
-                         context->ping_handler(session, pdu, pdu->mid));
+      coap_lock_callback(context->ping_handler(session, pdu, pdu->mid));
     }
     if (pong) {
       coap_add_option_internal(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
@@ -4251,8 +4249,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   } else if (pdu->code == COAP_SIGNALING_CODE_PONG) {
     session->last_pong = session->last_rx_tx;
     if (context->pong_handler) {
-      coap_lock_callback(context,
-                         context->pong_handler(session, pdu, pdu->mid));
+      coap_lock_callback(context->pong_handler(session, pdu, pdu->mid));
     }
   } else if (pdu->code == COAP_SIGNALING_CODE_RELEASE
              || pdu->code == COAP_SIGNALING_CODE_ABORT) {
@@ -4599,8 +4596,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         }
       } else if (is_ping_rst) {
         if (context->pong_handler) {
-          coap_lock_callback(context,
-                             context->pong_handler(session, pdu, pdu->mid));
+          coap_lock_callback(context->pong_handler(session, pdu, pdu->mid));
         }
         session->last_pong = session->last_rx_tx;
         session->last_ping_mid = COAP_INVALID_MID;
@@ -4692,8 +4688,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       {
         if (COAP_PDU_IS_EMPTY(pdu)) {
           if (context->ping_handler) {
-            coap_lock_callback(context,
-                               context->ping_handler(session, pdu, pdu->mid));
+            coap_lock_callback(context->ping_handler(session, pdu, pdu->mid));
           }
         } else {
           packet_is_bad = 1;
@@ -4815,7 +4810,7 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
   coap_log_debug("***EVENT: %s\n", coap_event_name(event));
 
   if (context->handle_event) {
-    coap_lock_callback_ret(ret, context, context->handle_event(session, event));
+    coap_lock_callback_ret(ret, context->handle_event(session, event));
 #if COAP_PROXY_SUPPORT
     if (event == COAP_EVENT_SERVER_SESSION_DEL)
       coap_proxy_remove_association(session, 0);

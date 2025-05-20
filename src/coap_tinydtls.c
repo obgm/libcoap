@@ -496,7 +496,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
 
       lhint.length = id_len;
       lhint.s = id;
-      coap_lock_callback_ret(cpsk_info, coap_session->context,
+      coap_lock_callback_ret(cpsk_info,
                              setup_cdata->validate_ih_call_back(&lhint,
                                                                 coap_session,
                                                                 setup_cdata->ih_call_back_arg));
@@ -700,7 +700,7 @@ verify_ecdsa_key(struct dtls_context_t *dtls_context COAP_UNUSED,
                                          &remote_addr, dtls_session->ifindex);
     if (!c_session)
       return -3;
-    coap_lock_callback_ret(ret, t_context->coap_context,
+    coap_lock_callback_ret(ret,
                            t_context->setup_data.validate_cn_call_back(COAP_DTLS_RPK_CERT_CN,
                                buf, p-buf, c_session, 0, 1, t_context->setup_data.cn_call_back_arg));
     if (!ret) {

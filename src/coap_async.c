@@ -190,7 +190,7 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
       s->pdu = NULL;
     }
     if (s->app_cb && s->app_data) {
-      coap_lock_callback(context, s->app_cb(s->app_data));
+      coap_lock_callback(s->app_cb(s->app_data));
     }
     coap_free_type(COAP_STRING, s);
   }

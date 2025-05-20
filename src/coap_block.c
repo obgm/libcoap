@@ -804,7 +804,7 @@ coap_add_data_large_internal(coap_session_t *session,
   if (pdu->data) {
     coap_log_warn("coap_add_data_large: PDU already contains data\n");
     if (release_func) {
-      coap_lock_callback(session->context, release_func(session, app_ptr));
+      coap_lock_callback(release_func(session, app_ptr));
     }
     return 0;
   }
@@ -1047,7 +1047,7 @@ coap_add_data_large_internal(coap_session_t *session,
         goto fail;
     }
     if (release_func) {
-      coap_lock_callback(session->context, release_func(session, app_ptr));
+      coap_lock_callback(release_func(session, app_ptr));
     }
   } else if ((have_block_defined && length > chunk) || (ssize_t)length > avail) {
     /* Only add in lg_xmit if more than one block needs to be handled */
@@ -1225,7 +1225,7 @@ add_data:
       goto fail;
 
     if (release_func) {
-      coap_lock_callback(session->context, release_func(session, app_ptr));
+      coap_lock_callback(release_func(session, app_ptr));
     }
   }
   return 1;
@@ -1234,7 +1234,7 @@ fail:
   if (lg_xmit) {
     coap_block_delete_lg_xmit(session, lg_xmit);
   } else if (release_func) {
-    coap_lock_callback(session->context, release_func(session, app_ptr));
+    coap_lock_callback(release_func(session, app_ptr));
   }
   return 0;
 }
@@ -1270,7 +1270,7 @@ coap_add_data_large_request_lkd(coap_session_t *session,
    */
   if (coap_client_delay_first(session) == 0) {
     if (release_func) {
-      coap_lock_callback(session->context, release_func(session, app_ptr));
+      coap_lock_callback(release_func(session, app_ptr));
     }
     return 0;
   }
@@ -1411,7 +1411,7 @@ coap_add_data_large_response_lkd(coap_resource_t *resource,
 
 error:
   if (release_func) {
-    coap_lock_callback(session->context, release_func(session, app_ptr));
+    coap_lock_callback(release_func(session, app_ptr));
   }
 error_released:
 #if COAP_ERROR_PHRASE_LENGTH > 0
@@ -2356,8 +2356,7 @@ coap_block_release_lg_xmit_data(coap_session_t *session,
     return;
   }
   if (data_info->release_func) {
-    coap_lock_callback(session->context,
-                       data_info->release_func(session,
+    coap_lock_callback(data_info->release_func(session,
                                                data_info->app_ptr));
   }
   coap_free_type(COAP_STRING, data_info);

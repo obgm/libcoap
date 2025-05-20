@@ -720,7 +720,7 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
       goto failed;
     }
   }
-  coap_lock_callback_ret_release(fwd_pdu, session->context,
+  coap_lock_callback_ret_release(fwd_pdu,
                                  session->context->proxy_response_handler(session,
                                      sent,
                                      resp_pdu,
