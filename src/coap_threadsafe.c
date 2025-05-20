@@ -127,9 +127,9 @@ coap_io_process_worker_thread(void *arg) {
   while (!coap_thread_quit) {
     int result;
 
-    coap_lock_lock(context, return 0);
+    coap_lock_lock(return 0);
     result = coap_io_process_lkd(context, COAP_IO_WAIT);
-    coap_lock_unlock(context);
+    coap_lock_unlock();
     if (result < 0)
       break;
   }
@@ -180,7 +180,7 @@ coap_io_process_remove_threads(coap_context_t *context) {
 
   (void)context;
 
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   coap_mutex_lock(&m_io_threads);
 
   for (i = 0; i < thread_id_count ; i++) {
@@ -201,7 +201,7 @@ coap_io_process_remove_threads(coap_context_t *context) {
   thread_id_count = 0;
 
   coap_mutex_unlock(&m_io_threads);
-  coap_lock_lock(context, return);
+  coap_lock_lock(return);
 }
 #endif /* !WITH_LWIP */
 

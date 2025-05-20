@@ -346,9 +346,9 @@ coap_session_get_non_receive_timeout(const coap_session_t *session) {
 
 COAP_API coap_session_t *
 coap_session_reference(coap_session_t *session) {
-  coap_lock_lock(session->context, return NULL);
+  coap_lock_lock(return NULL);
   coap_session_reference_lkd(session);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return session;
 }
 
@@ -366,9 +366,9 @@ coap_session_release(coap_session_t *session) {
     (void)context;
 #endif /* COAP_THREAD_SAFE */
 
-    coap_lock_lock(context, return);
+    coap_lock_lock(return);
     coap_session_release_lkd(session);
-    coap_lock_unlock(context);
+    coap_lock_unlock();
   }
 }
 
@@ -398,9 +398,9 @@ coap_session_release_lkd(coap_session_t *session) {
 COAP_API void
 coap_session_set_app_data(coap_session_t *session, void *app_data) {
   assert(session);
-  coap_lock_lock(session->context, return);
+  coap_lock_lock(return);
   coap_session_set_app_data2_lkd(session, app_data, NULL);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
 }
 
 void *
@@ -414,9 +414,9 @@ coap_session_set_app_data2(coap_session_t *session, void *app_data,
                            coap_app_data_free_callback_t callback) {
   void *old_data;
 
-  coap_lock_lock(session->context, return NULL);
+  coap_lock_lock(return NULL);
   old_data = coap_session_set_app_data2_lkd(session, app_data, callback);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return old_data;
 }
 
@@ -724,9 +724,9 @@ coap_session_max_pdu_size(const coap_session_t *session) {
    * but need to maintain source code backward compatibility
    */
   memcpy(&session_rw, &session, sizeof(session_rw));
-  coap_lock_lock(session_rw->context, return 0);
+  coap_lock_lock(return 0);
   size = coap_session_max_pdu_size_lkd(session_rw);
-  coap_lock_unlock(session_rw->context);
+  coap_lock_unlock();
   return size;
 }
 
@@ -866,9 +866,9 @@ COAP_API coap_mid_t
 coap_session_send_ping(coap_session_t *session) {
   coap_mid_t mid;
 
-  coap_lock_lock(session->context, return COAP_INVALID_MID);
+  coap_lock_lock(return COAP_INVALID_MID);
   mid = coap_session_send_ping_lkd(session);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return mid;
 }
 
@@ -1017,9 +1017,9 @@ coap_handle_nack(coap_session_t *session,
 
 COAP_API void
 coap_session_disconnected(coap_session_t *session, coap_nack_reason_t reason) {
-  coap_lock_lock(session->context, return);
+  coap_lock_lock(return);
   coap_session_disconnected_lkd(session, reason);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
 }
 
 void
@@ -1626,9 +1626,9 @@ coap_new_client_session(coap_context_t *ctx,
                         coap_proto_t proto) {
   coap_session_t *session;
 
-  coap_lock_lock(ctx, return NULL);
+  coap_lock_lock(return NULL);
   session = coap_new_client_session_lkd(ctx, local_if, server, proto);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return session;
 }
 
@@ -1658,9 +1658,9 @@ coap_new_client_session_psk(coap_context_t *ctx,
                             const uint8_t *key, unsigned key_len) {
   coap_session_t *session;
 
-  coap_lock_lock(ctx, return NULL);
+  coap_lock_lock(return NULL);
   session = coap_new_client_session_psk_lkd(ctx, local_if, server, proto, identity, key, key_len);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return session;
 }
 
@@ -1813,9 +1813,9 @@ coap_new_client_session_psk2(coap_context_t *ctx,
                              coap_dtls_cpsk_t *setup_data) {
   coap_session_t *session;
 
-  coap_lock_lock(ctx, return NULL);
+  coap_lock_lock(return NULL);
   session = coap_new_client_session_psk2_lkd(ctx, local_if, server, proto, setup_data);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return session;
 }
 
@@ -2001,9 +2001,9 @@ coap_new_client_session_pki(coap_context_t *ctx,
                             coap_dtls_pki_t *setup_data) {
   coap_session_t *session;
 
-  coap_lock_lock(ctx, return NULL);
+  coap_lock_lock(return NULL);
   session = coap_new_client_session_pki_lkd(ctx, local_if, server, proto, setup_data);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return session;
 }
 
@@ -2120,9 +2120,9 @@ COAP_API uint16_t
 coap_new_message_id(coap_session_t *session) {
   uint16_t mid;
 
-  coap_lock_lock(session->context, return 0);
+  coap_lock_lock(return 0);
   mid = coap_new_message_id_lkd(session);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return mid;
 }
 
@@ -2186,9 +2186,9 @@ COAP_API int
 coap_session_set_type_client(coap_session_t *session) {
   int ret;
 
-  coap_lock_lock(session->context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_session_set_type_client_lkd(session);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -2257,9 +2257,9 @@ COAP_API coap_endpoint_t *
 coap_new_endpoint(coap_context_t *context, const coap_address_t *listen_addr, coap_proto_t proto) {
   coap_endpoint_t *endpoint;
 
-  coap_lock_lock(context, return NULL);
+  coap_lock_lock(return NULL);
   endpoint = coap_new_endpoint_lkd(context, listen_addr, proto);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return endpoint;
 }
 
@@ -2390,11 +2390,11 @@ coap_free_endpoint(coap_endpoint_t *ep) {
   if (ep) {
     coap_context_t *context = ep->context;
     if (context) {
-      coap_lock_lock(context, return);
+      coap_lock_lock(return);
     }
     coap_free_endpoint_lkd(ep);
     if (context) {
-      coap_lock_unlock(context);
+      coap_lock_unlock();
     }
   }
 }

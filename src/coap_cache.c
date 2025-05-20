@@ -50,9 +50,9 @@ coap_cache_ignore_options(coap_context_t *ctx,
                           size_t count) {
   int ret;
 
-  coap_lock_lock(ctx, return 0);
+  coap_lock_lock(return 0);
   ret = coap_cache_ignore_options_lkd(ctx, options, count);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -168,10 +168,10 @@ coap_new_cache_entry(coap_session_t *session, const coap_pdu_t *pdu,
                      unsigned int idle_timeout) {
   coap_cache_entry_t *cache;
 
-  coap_lock_lock(session->context, return NULL);
+  coap_lock_lock(return NULL);
   cache = coap_new_cache_entry_lkd(session, pdu, record_pdu, session_based,
                                    idle_timeout);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return cache;
 }
 
@@ -225,9 +225,9 @@ COAP_API coap_cache_entry_t *
 coap_cache_get_by_key(coap_context_t *ctx, const coap_cache_key_t *cache_key) {
   coap_cache_entry_t *cache;
 
-  coap_lock_lock(ctx, return NULL);
+  coap_lock_lock(return NULL);
   cache = coap_cache_get_by_key_lkd(ctx, cache_key);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return cache;
 }
 
@@ -253,9 +253,9 @@ coap_cache_get_by_pdu(coap_session_t *session,
                       coap_cache_session_based_t session_based) {
   coap_cache_entry_t *entry;
 
-  coap_lock_lock(session->context, return NULL);
+  coap_lock_lock(return NULL);
   entry = coap_cache_get_by_pdu_lkd(session, request, session_based);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return entry;
 }
 
@@ -306,9 +306,9 @@ COAP_API void
 coap_cache_set_app_data(coap_cache_entry_t *cache_entry,
                         void *data,
                         coap_app_data_free_callback_t callback) {
-  coap_lock_lock(NULL, return);
+  coap_lock_lock(return);
   coap_cache_set_app_data2_lkd(cache_entry, data, callback);
-  coap_lock_unlock(NULL);
+  coap_lock_unlock();
 }
 
 COAP_API void *
@@ -316,9 +316,9 @@ coap_cache_set_app_data2(coap_cache_entry_t *cache_entry, void *app_data,
                          coap_app_data_free_callback_t callback) {
   void *old_data;
 
-  coap_lock_lock(NULL, return NULL);
+  coap_lock_lock(return NULL);
   old_data = coap_cache_set_app_data2_lkd(cache_entry, app_data, callback);
-  coap_lock_unlock(NULL);
+  coap_lock_unlock();
   return old_data;
 }
 

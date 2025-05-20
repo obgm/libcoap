@@ -63,14 +63,14 @@ coap_persist_observe_add(coap_context_t *context,
                          const coap_bin_const_t *oscore_info) {
   coap_subscription_t *subs;
 
-  coap_lock_lock(context, return NULL);
+  coap_lock_lock(return NULL);
   subs = coap_persist_observe_add_lkd(context,
                                       e_proto,
                                       e_listen_addr,
                                       s_addr_info,
                                       raw_packet,
                                       oscore_info);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return subs;
 }
 
@@ -1156,13 +1156,13 @@ coap_persist_startup(coap_context_t *context,
                      uint32_t save_freq) {
   int ret;
 
-  coap_lock_lock(context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_persist_startup_lkd(context,
                                  dyn_resource_save_file,
                                  observe_save_file,
                                  obs_cnt_save_file,
                                  save_freq);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1225,9 +1225,9 @@ COAP_API void
 coap_persist_stop(coap_context_t *context) {
   if (!context)
     return;
-  coap_lock_lock(context, return);
+  coap_lock_lock(return);
   coap_persist_stop_lkd(context);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
 }
 
 void

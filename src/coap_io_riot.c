@@ -32,9 +32,9 @@ int
 coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   int ret;
 
-  coap_lock_lock(ctx, return 0);
+  coap_lock_lock(return 0);
   ret = coap_io_process_lkd(ctx, timeout_ms);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -68,12 +68,12 @@ coap_io_process_lkd(coap_context_t *ctx, uint32_t timeout_ms) {
     ctx->selecting_thread = thread_get_active();
 
     /* Unlock so that other threads can lock/update ctx */
-    coap_lock_unlock(ctx);
+    coap_lock_unlock();
 
     tflags = thread_flags_wait_any(COAP_SELECT_THREAD_FLAG |
                                    THREAD_FLAG_TIMEOUT);
     /* Take control of ctx again */
-    coap_lock_lock(ctx, return -1);
+    coap_lock_lock(return -1);
 
     if (tflags & THREAD_FLAG_TIMEOUT) {
       errno = EINTR;

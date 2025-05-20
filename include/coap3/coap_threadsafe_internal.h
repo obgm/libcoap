@@ -152,7 +152,7 @@ int coap_lock_lock_func(const char *file, int line);
  * @param failed Code to execute on lock failure.
  *
  */
-#define coap_lock_lock(c,failed) do { \
+#define coap_lock_lock(failed) do { \
     if (!coap_lock_lock_func(__FILE__, __LINE__)) { \
       failed; \
     } \
@@ -167,7 +167,7 @@ int coap_lock_lock_func(const char *file, int line);
  *
  * @param c Context.
  */
-#define coap_lock_unlock(c) do { \
+#define coap_lock_unlock() do { \
     coap_lock_unlock_func(__FILE__, __LINE__); \
   } while (0)
 
@@ -221,9 +221,9 @@ int coap_lock_lock_func(const char *file, int line);
  */
 #define coap_lock_callback_release(func,failed) do { \
     coap_lock_check_locked(); \
-    coap_lock_unlock(c); \
+    coap_lock_unlock(); \
     func; \
-    coap_lock_lock(c,failed); \
+    coap_lock_lock(failed); \
   } while (0)
 
 /**
@@ -240,9 +240,9 @@ int coap_lock_lock_func(const char *file, int line);
  */
 #define coap_lock_callback_ret_release(r,func,failed) do { \
     coap_lock_check_locked(); \
-    coap_lock_unlock(c); \
+    coap_lock_unlock(); \
     (r) = func; \
-    coap_lock_lock(c,failed); \
+    coap_lock_lock(failed); \
   } while (0)
 
 extern coap_lock_t global_lock;
@@ -298,7 +298,7 @@ int coap_lock_lock_func(void);
  * @param failed Code to execute on lock failure
  *
  */
-#define coap_lock_lock(c,failed) do { \
+#define coap_lock_lock(failed) do { \
     if (!coap_lock_lock_func()) { \
       failed; \
     } \
@@ -313,7 +313,7 @@ int coap_lock_lock_func(void);
  *
  * @param c Context.
  */
-#define coap_lock_unlock(c) do { \
+#define coap_lock_unlock() do { \
     coap_lock_unlock_func(); \
   } while (0)
 
@@ -364,9 +364,9 @@ int coap_lock_lock_func(void);
  */
 #define coap_lock_callback_release(func,failed) do { \
     coap_lock_check_locked(); \
-    coap_lock_unlock(c); \
+    coap_lock_unlock(); \
     func; \
-    coap_lock_lock(c,failed); \
+    coap_lock_lock(failed); \
   } while (0)
 
 /**
@@ -383,9 +383,9 @@ int coap_lock_lock_func(void);
  */
 #define coap_lock_callback_ret_release(r,func,failed) do { \
     coap_lock_check_locked(); \
-    coap_lock_unlock(c); \
+    coap_lock_unlock(); \
     (r) = func; \
-    coap_lock_lock(c,failed); \
+    coap_lock_lock(failed); \
   } while (0)
 
 # endif /* ! COAP_THREAD_RECURSIVE_CHECK */
@@ -419,9 +419,9 @@ int coap_lock_lock_func(void);
  */
 #define coap_lock_invert(alt_lock,failed) do { \
     coap_lock_check_locked(); \
-    coap_lock_unlock(c); \
+    coap_lock_unlock(); \
     alt_lock; \
-    coap_lock_lock(c,failed); \
+    coap_lock_lock(failed); \
   } while (0)
 
 extern coap_lock_t global_lock;
@@ -447,11 +447,10 @@ typedef coap_mutex_t coap_lock_t;
  *   global_lock not locked if libcoap not started and @p failed is executed. @p failed must
  *   be code that skips doing the lock protected code.
  *
- * @param c Context.
  * @param failed Code to execute on lock failure.
  *
  */
-#define coap_lock_lock(c,failed)
+#define coap_lock_lock(failed)
 
 /**
  * Dummy for no thread-safe code
@@ -460,10 +459,8 @@ typedef coap_mutex_t coap_lock_t;
  *
  * Unlocked when
  *   Same thread locked context
- *
- * @param c Context.
  */
-#define coap_lock_unlock(c)
+#define coap_lock_unlock()
 
 /**
  * Dummy for no thread-safe code

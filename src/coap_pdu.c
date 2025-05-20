@@ -160,9 +160,9 @@ coap_new_pdu(coap_pdu_type_t type, coap_pdu_code_t code,
              coap_session_t *session) {
   coap_pdu_t *pdu;
 
-  coap_lock_lock(session->context, return NULL);
+  coap_lock_lock(return NULL);
   pdu = coap_new_pdu_lkd(type, code, session);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return pdu;
 }
 
@@ -181,9 +181,9 @@ coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
 
 COAP_API void
 coap_delete_pdu(coap_pdu_t *pdu) {
-  coap_lock_lock(NULL, return);
+  coap_lock_lock(return);
   coap_delete_pdu_lkd(pdu);
-  coap_lock_unlock(NULL);
+  coap_lock_unlock();
 }
 
 void
@@ -212,13 +212,13 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
                    coap_opt_filter_t *drop_options) {
   coap_pdu_t *new_pdu;
 
-  coap_lock_lock(session->context, return NULL);
+  coap_lock_lock(return NULL);
   new_pdu = coap_pdu_duplicate_lkd(old_pdu,
                                    session,
                                    token_length,
                                    token,
                                    drop_options);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return new_pdu;
 }
 

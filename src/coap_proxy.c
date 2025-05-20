@@ -754,14 +754,14 @@ coap_proxy_forward_request(coap_session_t *session,
                            coap_proxy_server_list_t *server_list) {
   int ret;
 
-  coap_lock_lock(session->context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_proxy_forward_request_lkd(session,
                                        request,
                                        response,
                                        resource,
                                        cache_key,
                                        server_list);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1069,11 +1069,11 @@ coap_proxy_forward_response(coap_session_t *session,
                             coap_cache_key_t **cache_key) {
   int ret;
 
-  coap_lock_lock(session->context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_proxy_forward_response_lkd(session,
                                         received,
                                         cache_key);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1357,9 +1357,9 @@ coap_new_client_session_proxy(coap_context_t *ctx,
                               coap_proxy_server_list_t *server_list) {
   coap_session_t *session;
 
-  coap_lock_lock(ctx, return NULL);
+  coap_lock_lock(return NULL);
   session = coap_new_client_session_proxy_lkd(ctx, server_list);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return session;
 }
 

@@ -40,9 +40,9 @@ coap_register_async(coap_session_t *session,
                     const coap_pdu_t *request, coap_tick_t delay) {
   coap_async_t *async;
 
-  coap_lock_lock(session->context, return NULL);
+  coap_lock_lock(return NULL);
   async = coap_register_async_lkd(session, request, delay);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return async;
 }
 
@@ -110,9 +110,9 @@ coap_register_async_lkd(coap_session_t *session,
 
 COAP_API void
 coap_async_trigger(coap_async_t *async) {
-  coap_lock_lock(async->session->context, return);
+  coap_lock_lock(return);
   coap_async_trigger_lkd(async);
-  coap_lock_unlock(async->session->context);
+  coap_lock_unlock();
 }
 
 void
@@ -128,9 +128,9 @@ coap_async_trigger_lkd(coap_async_t *async) {
 
 COAP_API void
 coap_async_set_delay(coap_async_t *async, coap_tick_t delay) {
-  coap_lock_lock(async->session->context, return);
+  coap_lock_lock(return);
   coap_async_set_delay_lkd(async, delay);
-  coap_lock_unlock(async->session->context);
+  coap_lock_unlock();
 }
 
 void
@@ -160,9 +160,9 @@ COAP_API coap_async_t *
 coap_find_async(coap_session_t *session, coap_bin_const_t token) {
   coap_async_t *tmp;
 
-  coap_lock_lock(session->context, return NULL);
+  coap_lock_lock(return NULL);
   tmp = coap_find_async_lkd(session, token);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return tmp;
 }
 
@@ -198,9 +198,9 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
 
 COAP_API void
 coap_free_async(coap_session_t *session, coap_async_t *async) {
-  coap_lock_lock(session->context, return);
+  coap_lock_lock(return);
   coap_free_async_lkd(session, async);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
 }
 
 void
@@ -220,9 +220,9 @@ coap_delete_all_async(coap_context_t *context) {
 
 COAP_API void
 coap_async_set_app_data(coap_async_t *async_entry, void *app_data) {
-  coap_lock_lock(NULL, return);
+  coap_lock_lock(return);
   coap_async_set_app_data2_lkd(async_entry, app_data, NULL);
-  coap_lock_unlock(NULL);
+  coap_lock_unlock();
 }
 
 COAP_API void *
@@ -230,9 +230,9 @@ coap_async_set_app_data2(coap_async_t *async_entry, void *app_data,
                          coap_app_data_free_callback_t callback) {
   void *old_data;
 
-  coap_lock_lock(NULL, return NULL);
+  coap_lock_lock(return NULL);
   old_data = coap_async_set_app_data2_lkd(async_entry, app_data, callback);
-  coap_lock_unlock(NULL);
+  coap_lock_unlock();
   return old_data;
 }
 

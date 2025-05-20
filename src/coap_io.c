@@ -1263,9 +1263,9 @@ COAP_API unsigned int
 coap_io_prepare_epoll(coap_context_t *ctx, coap_tick_t now) {
   unsigned int ret;
 
-  coap_lock_lock(ctx, return 0);
+  coap_lock_lock(return 0);
   ret = coap_io_prepare_epoll_lkd(ctx, now);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1328,9 +1328,9 @@ coap_io_prepare_io(coap_context_t *ctx,
                    coap_tick_t now) {
   unsigned int ret;
 
-  coap_lock_lock(ctx, return 0);
+  coap_lock_lock(return 0);
   ret = coap_io_prepare_io_lkd(ctx, sockets, max_sockets, num_sockets, now);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1673,10 +1673,10 @@ coap_io_get_fds(coap_context_t *ctx,
                 unsigned int *rem_timeout_ms) {
   unsigned int ret;
 
-  coap_lock_lock(ctx, return 0);
+  coap_lock_lock(return 0);
   ret = coap_io_get_fds_lkd(ctx, read_fds, have_read_fds, max_read_fds, write_fds,
                             have_write_fds, max_write_fds, rem_timeout_ms);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1804,9 +1804,9 @@ COAP_API int
 coap_io_process(coap_context_t *ctx, uint32_t timeout_ms) {
   int ret;
 
-  coap_lock_lock(ctx, return 0);
+  coap_lock_lock(return 0);
   ret = coap_io_process_lkd(ctx, timeout_ms);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1821,10 +1821,10 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                          fd_set *eexceptfds) {
   int ret;
 
-  coap_lock_lock(ctx, return 0);
+  coap_lock_lock(return 0);
   ret = coap_io_process_with_fds_lkd(ctx, timeout_ms, enfds, ereadfds, ewritefds,
                                      eexceptfds);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1977,12 +1977,12 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   /* on Windows select will return an error if called without FDs */
   if (nfds > 0) {
     /* Unlock so that other threads can lock/update ctx */
-    coap_lock_unlock(ctx);
+    coap_lock_unlock();
 
     result = select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds,
                     timeout > 0 ? &tv : NULL);
 
-    coap_lock_lock(ctx, return -1);
+    coap_lock_lock(return -1);
   } else {
     goto all_over;
   }
@@ -2098,7 +2098,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
     }
 
     /* Unlock so that other threads can lock/update ctx */
-    coap_lock_unlock(ctx);
+    coap_lock_unlock();
 
     nfds = epoll_wait(ctx->epfd, events, COAP_MAX_EPOLL_EVENTS, etimeout);
     if (nfds < 0) {
@@ -2106,11 +2106,11 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
         coap_log_err("epoll_wait: unexpected error: %s (%d)\n",
                      coap_socket_strerror(), nfds);
       }
-      coap_lock_lock(ctx, return -1);
+      coap_lock_lock(return -1);
       break;
     }
 
-    coap_lock_lock(ctx, return -1);
+    coap_lock_lock(return -1);
 #if COAP_THREAD_SAFE
     /* Need to refresh what is available to read / write etc. */
     nfds = epoll_wait(ctx->epfd, events, COAP_MAX_EPOLL_EVENTS, 0);
@@ -2170,11 +2170,11 @@ coap_io_process_loop(coap_context_t *context,
 
   if (!context)
     return 0;
-  coap_lock_lock(context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_io_process_loop_lkd(context, main_loop_code,
                                  main_loop_code_arg, timeout_ms,
                                  thread_count);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -2271,9 +2271,9 @@ COAP_API int
 coap_io_pending(coap_context_t *context) {
   int ret;
 
-  coap_lock_lock(context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_io_pending_lkd(context);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return ret;
 }
 
