@@ -2203,7 +2203,7 @@ coap_io_process_loop_lkd(coap_context_t *context,
        * main_loop_codecode should not be blocking for any time, and not calling
        * coap_io_process().
        */
-      coap_lock_callback_release(context, main_loop_code(main_loop_code_arg),
+      coap_lock_callback_release(main_loop_code(main_loop_code_arg),
                                  /* On re-lock failure */
                                  ret = 0; break);
       /*

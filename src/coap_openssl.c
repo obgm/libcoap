@@ -784,7 +784,7 @@ coap_dtls_psk_client_callback(SSL *ssl,
 
     lhint.s = temp.s;
     lhint.length = temp.length;
-    coap_lock_callback_ret(cpsk_info, c_session->context,
+    coap_lock_callback_ret(cpsk_info,
                            setup_data->validate_ih_call_back(&lhint,
                                                              c_session,
                                                              setup_data->ih_call_back_arg));
@@ -2468,7 +2468,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
 
     /* base_buf2 gets moved to the end */
     i2d_X509(x509, &base_buf2);
-    coap_lock_callback_ret(ret, session->context,
+    coap_lock_callback_ret(ret,
                            setup_data->validate_cn_call_back(cn, base_buf, length, session,
                                                              depth, preverify_ok,
                                                              setup_data->cn_call_back_arg));
@@ -2623,7 +2623,7 @@ tls_server_name_call_back(SSL *ssl,
       coap_dtls_pki_t sni_setup_data;
       coap_dtls_key_t *new_entry;
 
-      coap_lock_callback_ret(new_entry, session->context,
+      coap_lock_callback_ret(new_entry,
                              setup_data->validate_sni_call_back(sni,
                                                                 setup_data->sni_call_back_arg));
       if (!new_entry) {
@@ -2723,7 +2723,7 @@ psk_tls_server_name_call_back(SSL *ssl,
       SSL_CTX *ctx;
       const coap_dtls_spsk_info_t *new_entry;
 
-      coap_lock_callback_ret(new_entry, c_session->context,
+      coap_lock_callback_ret(new_entry,
                              setup_data->validate_sni_call_back(sni,
                                                                 c_session,
                                                                 setup_data->sni_call_back_arg));
@@ -2944,7 +2944,7 @@ is_x509:
        */
       coap_dtls_key_t *new_entry;
 
-      coap_lock_callback_ret(new_entry, session->context,
+      coap_lock_callback_ret(new_entry,
                              setup_data->validate_sni_call_back(sni,
                                                                 setup_data->sni_call_back_arg));
       if (!new_entry) {
@@ -3073,7 +3073,7 @@ psk_tls_client_hello_call_back(SSL *ssl,
        */
       const coap_dtls_spsk_info_t *new_entry;
 
-      coap_lock_callback_ret(new_entry, c_session->context,
+      coap_lock_callback_ret(new_entry,
                              setup_data->validate_sni_call_back(
                                  sni,
                                  c_session,

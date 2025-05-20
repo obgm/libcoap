@@ -1003,8 +1003,7 @@ coap_handle_nack(coap_session_t *session,
       coap_check_update_token(session, sent);
       token = sent->actual_token;
     }
-    coap_lock_callback(session->context,
-                       session->context->nack_handler(session, sent, reason, mid));
+    coap_lock_callback(session->context->nack_handler(session, sent, reason, mid));
     if (sent) {
       coap_update_token(sent, token.length, token.s);
     }

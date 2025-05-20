@@ -104,8 +104,7 @@ coap_io_process_lkd(coap_context_t *context, uint32_t timeout_ms) {
   if (timeout_ms == COAP_IO_NO_WAIT)
     timeout = 1;
 
-  coap_lock_invert(context,
-                   LOCK_TCPIP_CORE(),
+  coap_lock_invert(LOCK_TCPIP_CORE(),
                    UNLOCK_TCPIP_CORE(); return 0);
 
   if (context->timer_configured) {
@@ -124,19 +123,16 @@ coap_io_process_lkd(coap_context_t *context, uint32_t timeout_ms) {
   UNLOCK_TCPIP_CORE();
 
   if (context->input_wait) {
-    coap_lock_callback_release(context,
-                               context->input_wait(context->input_arg, timeout),
+    coap_lock_callback_release(context->input_wait(context->input_arg, timeout),
                                return 0);
 #if NO_SYS == 0
   } else {
-    coap_lock_callback_release(context,
-                               sys_arch_sem_wait(&coap_io_timeout_sem, timeout),
+    coap_lock_callback_release(sys_arch_sem_wait(&coap_io_timeout_sem, timeout),
                                return 0);
 #endif /* NO_SYS == 0 */
   }
 
-  coap_lock_invert(context,
-                   LOCK_TCPIP_CORE(),
+  coap_lock_invert(LOCK_TCPIP_CORE(),
                    UNLOCK_TCPIP_CORE(); return 0);
 
   sys_check_timeouts();
@@ -415,8 +411,7 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
       return -1;
     memcpy(pbuf->payload, data, data_len);
 
-    coap_lock_invert(session->context,
-                     LOCK_TCPIP_CORE(),
+    coap_lock_invert(LOCK_TCPIP_CORE(),
                      UNLOCK_TCPIP_CORE(); return -1);
 
     err = udp_sendto(sock->udp_pcb, pbuf, &session->addr_info.remote.addr,
@@ -483,8 +478,7 @@ coap_socket_connect_udp(coap_socket_t *sock,
   if (connect_addr.port == 0)
     connect_addr.port = default_port;
 
-  coap_lock_invert(sock->session->context,
-                   LOCK_TCPIP_CORE(),
+  coap_lock_invert(LOCK_TCPIP_CORE(),
                    goto err_unlock);
 
   pcb = udp_new();
@@ -782,8 +776,7 @@ coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
     return -1;
   memcpy(pbuf->payload, data, data_len);
 
-  coap_lock_invert(context,
-                   LOCK_TCPIP_CORE(),
+  coap_lock_invert(LOCK_TCPIP_CORE(),
                    UNLOCK_TCPIP_CORE(); return 0);
 
   err = tcp_write(sock->tcp_pcb, pbuf->payload, pbuf->len, 1);
@@ -828,8 +821,7 @@ void
 coap_socket_close(coap_socket_t *sock) {
   if (sock->udp_pcb) {
     if (sock->session) {
-      coap_lock_invert(sock->session->context,
-                       LOCK_TCPIP_CORE(),
+      coap_lock_invert(LOCK_TCPIP_CORE(),
                        UNLOCK_TCPIP_CORE(); return);
     } else {
       LOCK_TCPIP_CORE();
@@ -846,8 +838,7 @@ coap_socket_close(coap_socket_t *sock) {
 #endif /* COAP_SERVER_SUPPORT */
       tcp_recv(sock->tcp_pcb, NULL);
     if (sock->session) {
-      coap_lock_invert(sock->session->context,
-                       LOCK_TCPIP_CORE(),
+      coap_lock_invert(LOCK_TCPIP_CORE(),
                        UNLOCK_TCPIP_CORE(); return);
     } else {
       LOCK_TCPIP_CORE();
