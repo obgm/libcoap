@@ -120,7 +120,7 @@ coap_new_client_session_oscore_psk_lkd(coap_context_t *ctx,
                                        coap_oscore_conf_t *oscore_conf) {
   coap_session_t *session;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   session = coap_new_client_session_psk2_lkd(ctx, local_if, server, proto, psk_data);
 
   if (!session)
@@ -158,7 +158,7 @@ coap_new_client_session_oscore_pki_lkd(coap_context_t *ctx,
                                        coap_oscore_conf_t *oscore_conf) {
   coap_session_t *session;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   session = coap_new_client_session_pki_lkd(ctx, local_if, server, proto, pki_data);
 
   if (!session)
@@ -189,7 +189,7 @@ coap_context_oscore_server_lkd(coap_context_t *context,
                                coap_oscore_conf_t *oscore_conf) {
   oscore_ctx_t *osc_ctx;
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   osc_ctx = coap_oscore_init(context, oscore_conf);
   /* osc_ctx already added to context->osc_ctx */
   if (osc_ctx)
@@ -2160,7 +2160,7 @@ coap_new_oscore_recipient(coap_context_t *context,
 int
 coap_new_oscore_recipient_lkd(coap_context_t *context,
                               coap_bin_const_t *recipient_id) {
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   if (context->p_osc_ctx == NULL)
     return 0;
   if (oscore_add_recipient(context->p_osc_ctx, recipient_id, 0) == NULL)
@@ -2184,7 +2184,7 @@ coap_delete_oscore_recipient(coap_context_t *context,
 int
 coap_delete_oscore_recipient_lkd(coap_context_t *context,
                                  coap_bin_const_t *recipient_id) {
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   if (context->p_osc_ctx == NULL)
     return 0;
   return oscore_delete_recipient(context->p_osc_ctx, recipient_id);

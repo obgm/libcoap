@@ -171,7 +171,7 @@ coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
                  coap_session_t *session) {
   coap_pdu_t *pdu;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   pdu = coap_pdu_init(type, code, coap_new_message_id_lkd(session),
                       coap_session_max_pdu_size_lkd(session));
   if (!pdu)
@@ -235,7 +235,7 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
   uint8_t doing_first = session->doing_first;
   coap_pdu_t *pdu;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   /*
    * Need to make sure that coap_session_max_pdu_size_lkd() immediately
    * returns, rather than wait for the first CSM response from remote

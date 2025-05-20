@@ -375,7 +375,7 @@ coap_session_release(coap_session_t *session) {
 void
 coap_session_release_lkd(coap_session_t *session) {
   if (session) {
-    coap_lock_check_locked(session->context);
+    coap_lock_check_locked();
 #ifndef __COVERITY__
     assert(session->ref > 0);
     if (session->ref > 0)
@@ -598,7 +598,7 @@ void
 coap_session_free(coap_session_t *session) {
   if (!session)
     return;
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   assert(session->ref == 0);
   if (session->ref)
     return;
@@ -734,7 +734,7 @@ size_t
 coap_session_max_pdu_size_lkd(const coap_session_t *session) {
   size_t max_with_header;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
 #if COAP_CLIENT_SUPPORT
   /*
    * Delay if session->doing_first is set.
@@ -876,7 +876,7 @@ coap_mid_t
 coap_session_send_ping_lkd(coap_session_t *session) {
   coap_pdu_t *ping = NULL;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   if (session->state != COAP_SESSION_STATE_ESTABLISHED ||
       session->con_active)
     return COAP_INVALID_MID;
@@ -1037,7 +1037,7 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
   int sent_nack = 0;
   coap_queue_t *q;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
 #if COAP_CLIENT_SUPPORT
   coap_session_failed(session);
 #endif /* COAP_CLIENT_SUPPORT */
@@ -1639,7 +1639,7 @@ coap_new_client_session_lkd(coap_context_t *ctx,
                             coap_proto_t proto) {
   coap_session_t *session;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   session = coap_session_create_client(ctx, local_if, server,
                                        proto);
   if (session) {
@@ -1672,7 +1672,7 @@ coap_new_client_session_psk_lkd(coap_context_t *ctx,
                                 const uint8_t *key, unsigned key_len) {
   coap_dtls_cpsk_t setup_data;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   memset(&setup_data, 0, sizeof(setup_data));
   setup_data.version = COAP_DTLS_CPSK_SETUP_VERSION;
 
@@ -1827,7 +1827,7 @@ coap_new_client_session_psk2_lkd(coap_context_t *ctx,
                                  coap_dtls_cpsk_t *setup_data) {
   coap_session_t *session;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   session = coap_session_create_client(ctx, local_if, server, proto);
 
   if (!session || !setup_data)
@@ -2023,7 +2023,7 @@ coap_new_client_session_pki_lkd(coap_context_t *ctx,
     return NULL;
   }
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   l_setup_data = *setup_data;
   coap_sanitize_client_sni(&l_setup_data.client_sni);
 
@@ -2128,7 +2128,7 @@ coap_new_message_id(coap_session_t *session) {
 
 uint16_t
 coap_new_message_id_lkd(coap_session_t *session) {
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   if (COAP_PROTO_NOT_RELIABLE(session->proto))
     return ++session->tx_mid;
   /* TCP/TLS have no notion of mid */
@@ -2273,7 +2273,7 @@ coap_new_endpoint_lkd(coap_context_t *context, const coap_address_t *listen_addr
     return NULL;
   }
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
 
   switch (proto) {
   case COAP_PROTO_UDP:
@@ -2406,7 +2406,7 @@ coap_free_endpoint_lkd(coap_endpoint_t *ep) {
 
     if (ep->context) {
       /* If fully allocated and inserted */
-      coap_lock_check_locked(ep->context);
+      coap_lock_check_locked();
       SESSIONS_ITER_SAFE(ep->sessions, session, rtmp) {
         assert(session->ref == 0);
         if (session->ref == 0) {

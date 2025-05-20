@@ -60,7 +60,7 @@ int
 coap_cache_ignore_options_lkd(coap_context_t *ctx,
                               const uint16_t *options,
                               size_t count) {
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   if (ctx->cache_ignore_options) {
     coap_free_type(COAP_STRING, ctx->cache_ignore_options);
   }
@@ -182,7 +182,7 @@ coap_new_cache_entry_lkd(coap_session_t *session, const coap_pdu_t *pdu,
                          unsigned int idle_timeout) {
   coap_cache_entry_t *entry;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   entry = coap_malloc_type(COAP_CACHE_ENTRY,
                            sizeof(coap_cache_entry_t));
   if (!entry) {
@@ -235,7 +235,7 @@ coap_cache_entry_t *
 coap_cache_get_by_key_lkd(coap_context_t *ctx, const coap_cache_key_t *cache_key) {
   coap_cache_entry_t *cache_entry = NULL;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   assert(cache_key);
   if (cache_key) {
     HASH_FIND(hh, ctx->cache, cache_key, sizeof(coap_cache_key_t), cache_entry);
@@ -269,7 +269,7 @@ coap_cache_get_by_pdu_lkd(coap_session_t *session,
   if (!cache_key)
     return NULL;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   cache_entry = coap_cache_get_by_key_lkd(session->context, cache_key);
   coap_delete_cache_key(cache_key);
   if (cache_entry && cache_entry->idle_timeout > 0) {

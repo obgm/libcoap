@@ -95,7 +95,7 @@ coap_io_process_lkd(coap_context_t *context, uint32_t timeout_ms) {
   unsigned int num_sockets;
   unsigned int timeout;
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   coap_ticks(&before);
   timeout = coap_io_prepare_io_lkd(context, NULL, 0, &num_sockets, before);
   if (timeout == 0 || (timeout_ms != COAP_IO_WAIT && timeout_ms < timeout))
