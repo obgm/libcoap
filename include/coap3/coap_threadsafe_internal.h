@@ -181,7 +181,7 @@ int coap_lock_lock_func(const char *file, int line);
  *
  */
 #define coap_lock_callback(func) do { \
-    coap_lock_check_locked(c); \
+    coap_lock_check_locked(); \
     global_lock.in_callback++; \
     global_lock.callback_file = __FILE__; \
     global_lock.callback_line = __LINE__; \
@@ -201,7 +201,7 @@ int coap_lock_lock_func(const char *file, int line);
  *
  */
 #define coap_lock_callback_ret(r,func) do { \
-    coap_lock_check_locked(c); \
+    coap_lock_check_locked(); \
     global_lock.in_callback++; \
     global_lock.callback_file = __FILE__; \
     global_lock.callback_line = __LINE__; \
@@ -220,7 +220,7 @@ int coap_lock_lock_func(const char *file, int line);
  *
  */
 #define coap_lock_callback_release(func,failed) do { \
-    coap_lock_check_locked(c); \
+    coap_lock_check_locked(); \
     coap_lock_unlock(c); \
     func; \
     coap_lock_lock(c,failed); \
@@ -239,7 +239,7 @@ int coap_lock_lock_func(const char *file, int line);
  *
  */
 #define coap_lock_callback_ret_release(r,func,failed) do { \
-    coap_lock_check_locked(c); \
+    coap_lock_check_locked(); \
     coap_lock_unlock(c); \
     (r) = func; \
     coap_lock_lock(c,failed); \
@@ -327,7 +327,7 @@ int coap_lock_lock_func(void);
  *
  */
 #define coap_lock_callback(func) do { \
-    coap_lock_check_locked(c); \
+    coap_lock_check_locked(); \
     global_lock.in_callback++; \
     func; \
     global_lock.in_callback--; \
@@ -345,7 +345,7 @@ int coap_lock_lock_func(void);
  *
  */
 #define coap_lock_callback_ret(r,func) do { \
-    coap_lock_check_locked(c); \
+    coap_lock_check_locked(); \
     global_lock.in_callback++; \
     global_lock.in_callback++; \
     (r) = func; \
@@ -363,7 +363,7 @@ int coap_lock_lock_func(void);
  *
  */
 #define coap_lock_callback_release(func,failed) do { \
-    coap_lock_check_locked(c); \
+    coap_lock_check_locked(); \
     coap_lock_unlock(c); \
     func; \
     coap_lock_lock(c,failed); \
@@ -382,7 +382,7 @@ int coap_lock_lock_func(void);
  *
  */
 #define coap_lock_callback_ret_release(r,func,failed) do { \
-    coap_lock_check_locked(c); \
+    coap_lock_check_locked(); \
     coap_lock_unlock(c); \
     (r) = func; \
     coap_lock_lock(c,failed); \
@@ -401,7 +401,7 @@ int coap_lock_lock_func(void);
 /**
  * libcoap library code. Check that global_lock is locked.
  */
-#define coap_lock_check_locked(c) do { \
+#define coap_lock_check_locked() do { \
     assert(coap_thread_pid == global_lock.pid); \
   } while (0)
 
@@ -418,7 +418,7 @@ int coap_lock_lock_func(void);
  *
  */
 #define coap_lock_invert(alt_lock,failed) do { \
-    coap_lock_check_locked(c); \
+    coap_lock_check_locked(); \
     coap_lock_unlock(c); \
     alt_lock; \
     coap_lock_lock(c,failed); \
@@ -477,7 +477,7 @@ typedef coap_mutex_t coap_lock_t;
  *
  * libcoap library code. Check that global_lock is locked.
  */
-#define coap_lock_check_locked(c) {}
+#define coap_lock_check_locked() {}
 
 /**
  * Dummy for no thread-safe code

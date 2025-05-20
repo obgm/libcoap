@@ -48,7 +48,7 @@ coap_io_process_lkd(coap_context_t *ctx, uint32_t timeout_ms) {
   ztimer64_t timeout_timer;
   thread_flags_t tflags;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
 
   coap_ticks(&before);
   /* Use the common logic */

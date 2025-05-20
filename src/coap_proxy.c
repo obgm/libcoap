@@ -1370,7 +1370,7 @@ coap_new_client_session_proxy_lkd(coap_context_t *ctx,
   coap_addr_info_t *info_list = NULL;
   coap_str_const_t remote;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
 
 #if COAP_IPV6_SUPPORT
   remote.s = (const uint8_t *)"::1";

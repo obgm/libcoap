@@ -101,7 +101,7 @@ coap_persist_observe_add_lkd(coap_context_t *context,
   coap_subscription_t *s;
   coap_endpoint_t *ep;
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   if (e_listen_addr == NULL || s_addr_info == NULL || raw_packet == NULL)
     return NULL;
 
@@ -1172,7 +1172,7 @@ coap_persist_startup_lkd(coap_context_t *context,
                          const char *observe_save_file,
                          const char *obs_cnt_save_file,
                          uint32_t save_freq) {
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   if (dyn_resource_save_file) {
     context->dyn_resource_save_file =
         coap_new_bin_const((const uint8_t *)dyn_resource_save_file,
@@ -1234,7 +1234,7 @@ void
 coap_persist_stop_lkd(coap_context_t *context) {
   if (context == NULL)
     return;
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   context->observe_no_clear = 1;
   coap_persist_cleanup(context);
 }

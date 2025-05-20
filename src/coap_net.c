@@ -365,7 +365,7 @@ coap_context_set_psk_lkd(coap_context_t *ctx,
                          size_t key_len) {
   coap_dtls_spsk_t setup_data;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   memset(&setup_data, 0, sizeof(setup_data));
   if (hint) {
     setup_data.psk_info.hint.s = (const uint8_t *)hint;
@@ -395,7 +395,7 @@ coap_context_set_psk2_lkd(coap_context_t *ctx, coap_dtls_spsk_t *setup_data) {
   if (!setup_data)
     return 0;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   ctx->spsk_setup_data = *setup_data;
 
   if (coap_dtls_is_supported() || coap_tls_is_supported()) {
@@ -418,7 +418,7 @@ coap_context_set_pki(coap_context_t *ctx,
 int
 coap_context_set_pki_lkd(coap_context_t *ctx,
                          const coap_dtls_pki_t *setup_data) {
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   if (!setup_data)
     return 0;
   if (setup_data->version != COAP_DTLS_PKI_SETUP_VERSION) {
@@ -820,7 +820,7 @@ coap_free_context_lkd(coap_context_t *context) {
   if (!context)
     return;
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
 #if COAP_SERVER_SUPPORT
   /* Removing a resource may cause a NON unsolicited observe to be sent */
   if (context->shutdown_no_send_observe)
@@ -1086,7 +1086,7 @@ coap_send_ack_lkd(coap_session_t *session, const coap_pdu_t *request) {
   coap_pdu_t *response;
   coap_mid_t result = COAP_INVALID_MID;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   if (request && request->type == COAP_MESSAGE_CON &&
       COAP_PROTO_NOT_RELIABLE(session->proto)) {
     response = coap_pdu_init(COAP_MESSAGE_ACK, 0, request->mid, 0);
@@ -1196,7 +1196,7 @@ coap_send_message_type_lkd(coap_session_t *session, const coap_pdu_t *request,
   coap_pdu_t *response;
   coap_mid_t result = COAP_INVALID_MID;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   if (request && COAP_PROTO_NOT_RELIABLE(session->proto)) {
     response = coap_pdu_init(type, 0, request->mid, 0);
     if (response)
@@ -1468,7 +1468,7 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
 
   assert(pdu);
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
 
   /* Check validity of sending code */
   if (!coap_check_code_class(session, pdu)) {
@@ -2113,7 +2113,7 @@ coap_send_recv_lkd(coap_session_t *session, coap_pdu_t *request_pdu,
   coap_ticks(&start);
   assert(request_pdu);
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
 
   session->resp_pdu = NULL;
   session->req_token = coap_new_bin_const(request_pdu->actual_token.s,
@@ -2673,7 +2673,7 @@ coap_io_do_io_lkd(coap_context_t *ctx, coap_tick_t now) {
 #else /* ! COAP_EPOLL_SUPPORT */
   coap_session_t *s, *rtmp;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
 #if COAP_SERVER_SUPPORT
   coap_endpoint_t *ep, *tmp;
   LL_FOREACH_SAFE(ctx->endpoint, ep, tmp) {
@@ -2740,7 +2740,7 @@ coap_io_do_epoll_lkd(coap_context_t *ctx, struct epoll_event *events, size_t nev
   coap_tick_t now;
   size_t j;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   coap_ticks(&now);
   for (j = 0; j < nevents; j++) {
     coap_socket_t *sock = (coap_socket_t *)events[j].data.ptr;
@@ -4869,7 +4869,7 @@ coap_can_exit_lkd(coap_context_t *context) {
   coap_session_t *s, *rtmp;
   if (!context)
     return 1;
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   if (context->sendqueue)
     return 0;
 #if COAP_SERVER_SUPPORT

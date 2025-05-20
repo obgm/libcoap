@@ -144,7 +144,7 @@ coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
   };
 #endif /* WITHOUT_QUERY_FILTER */
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
 #ifndef WITHOUT_QUERY_FILTER
   /* split query filter, if any */
   if (query_filter) {
@@ -534,7 +534,7 @@ coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
 
 void
 coap_add_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   if (resource->is_unknown) {
     if (context->unknown_resource)
       coap_free_resource(context->unknown_resource, COAP_DELETING_RESOURCE);
@@ -600,7 +600,7 @@ coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
 
   context = resource->context;
   if (context) {
-    coap_lock_check_locked(context);
+    coap_lock_check_locked();
   }
 
   if (resource->is_unknown) {
@@ -663,7 +663,7 @@ coap_get_resource_from_uri_path_lkd(coap_context_t *context,
                                     coap_str_const_t *uri_path) {
   coap_resource_t *result;
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
 
   RESOURCES_FIND(context->resources, uri_path, result);
 
@@ -1112,7 +1112,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
   coap_block_b_t block;
   coap_tick_t now;
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
 
   if (r->observable && (r->dirty || r->partiallydirty)) {
     if (r->list_being_traversed)
@@ -1364,7 +1364,7 @@ coap_resource_notify_observers(coap_resource_t *r,
 int
 coap_resource_notify_observers_lkd(coap_resource_t *r,
                                    const coap_string_t *query COAP_UNUSED) {
-  coap_lock_check_locked(r->context);
+  coap_lock_check_locked();
   if (!r->observable)
     return 0;
   if (!r->subscribers)
@@ -1440,7 +1440,7 @@ coap_check_notify(coap_context_t *context) {
 void
 coap_check_notify_lkd(coap_context_t *context) {
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   if (context->observe_pending) {
     context->observe_pending = 0;
     RESOURCES_ITER(context->resources, r) {

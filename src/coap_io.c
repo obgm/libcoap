@@ -1282,7 +1282,7 @@ coap_io_prepare_epoll_lkd(coap_context_t *ctx, coap_tick_t now) {
   unsigned int num_sockets;
   unsigned int timeout;
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   /* Use the common logic */
   timeout = coap_io_prepare_io_lkd(ctx, sockets, max_sockets, &num_sockets, now);
   /* Save when the next expected I/O is to take place */
@@ -1356,7 +1356,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
   (void)max_sockets;
 #endif /* COAP_EPOLL_SUPPORT || WITH_LWIP || RIOT_VERSION*/
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   *num_sockets = 0;
 
 #if COAP_SERVER_SUPPORT
@@ -1916,7 +1916,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   unsigned int i;
 #endif /* ! COAP_EPOLL_SUPPORT */
 
-  coap_lock_check_locked(ctx);
+  coap_lock_check_locked();
   coap_ticks(&before);
 
 #ifndef COAP_EPOLL_SUPPORT
@@ -2290,7 +2290,7 @@ coap_io_pending_lkd(coap_context_t *context) {
 
   if (!context)
     return 0;
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   if (coap_io_process_lkd(context, COAP_IO_NO_WAIT) < 0)
     return 0;
 

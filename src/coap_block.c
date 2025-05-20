@@ -416,7 +416,7 @@ coap_context_set_block_mode(coap_context_t *context,
 void
 coap_context_set_block_mode_lkd(coap_context_t *context,
                                 uint32_t block_mode) {
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   if (!(block_mode & COAP_BLOCK_USE_LIBCOAP))
     block_mode = 0;
   context->block_mode &= ~COAP_BLOCK_SET_MASK;
@@ -455,7 +455,7 @@ coap_context_set_max_block_size_lkd(coap_context_t *context, size_t max_block_si
                   max_block_size);
     return 0;
   }
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   max_block_size = (coap_fls((uint32_t)max_block_size >> 4) - 1) & 0x07;
   context->block_mode &= ~COAP_BLOCK_MAX_SIZE_MASK;
   context->block_mode |= COAP_BLOCK_MAX_SIZE_SET((uint32_t)max_block_size);
@@ -555,7 +555,7 @@ coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
   if (!session)
     return 0;
 
-  coap_lock_check_locked(session->context);
+  coap_lock_check_locked();
   if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
     coap_log_debug("** %s: coap_cancel_observe: COAP_BLOCK_USE_LIBCOAP not enabled\n",
                    coap_session_str(session));
@@ -3902,7 +3902,7 @@ coap_handle_response_get_block(coap_context_t *context,
   size_t offset;
   int ack_rst_sent = 0;
 
-  coap_lock_check_locked(context);
+  coap_lock_check_locked();
   memset(&block, 0, sizeof(block));
 #if COAP_Q_BLOCK_SUPPORT
   memset(&qblock, 0, sizeof(qblock));
