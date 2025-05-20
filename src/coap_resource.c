@@ -106,9 +106,9 @@ coap_print_wellknown(coap_context_t *context, unsigned char *buf,
                      size_t *buflen, size_t offset,
                      const coap_string_t *query_filter) {
   coap_print_status_t result;
-  coap_lock_lock(context, return COAP_PRINT_STATUS_ERROR);
+  coap_lock_lock(return COAP_PRINT_STATUS_ERROR);
   result = coap_print_wellknown_lkd(context, buf, buflen, offset, query_filter);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return result;
 }
 
@@ -527,9 +527,9 @@ coap_free_resource(coap_resource_t *resource, coap_deleting_resource_t deleting)
 
 COAP_API void
 coap_add_resource(coap_context_t *context, coap_resource_t *resource) {
-  coap_lock_lock(context, return);
+  coap_lock_lock(return);
   coap_add_resource_lkd(context, resource);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
 }
 
 void
@@ -581,9 +581,9 @@ coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
 
   context = resource->context;
   if (context) {
-    coap_lock_lock(context, return 0);
+    coap_lock_lock(return 0);
     ret = coap_delete_resource_lkd(context, resource);
-    coap_lock_unlock(context);
+    coap_lock_unlock();
   } else {
     ret = coap_delete_resource_lkd(context, resource);
   }
@@ -651,9 +651,9 @@ COAP_API coap_resource_t *
 coap_get_resource_from_uri_path(coap_context_t *context, coap_str_const_t *uri_path) {
   coap_resource_t *result;
 
-  coap_lock_lock(context, return NULL);
+  coap_lock_lock(return NULL);
   result = coap_get_resource_from_uri_path_lkd(context, uri_path);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
 
   return result;
 }
@@ -1344,9 +1344,9 @@ COAP_API int
 coap_resource_set_dirty(coap_resource_t *r, const coap_string_t *query) {
   int ret;
 
-  coap_lock_lock(r->context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_resource_notify_observers_lkd(r, query);
-  coap_lock_unlock(r->context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1355,9 +1355,9 @@ coap_resource_notify_observers(coap_resource_t *r,
                                const coap_string_t *query) {
   int ret;
 
-  coap_lock_lock(r->context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_resource_notify_observers_lkd(r, query);
-  coap_lock_unlock(r->context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1432,9 +1432,9 @@ coap_resource_get_uri_path(coap_resource_t *resource) {
 
 COAP_API void
 coap_check_notify(coap_context_t *context) {
-  coap_lock_lock(context, return);
+  coap_lock_lock(return);
   coap_check_notify_lkd(context);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
 }
 
 void

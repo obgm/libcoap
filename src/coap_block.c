@@ -408,9 +408,9 @@ error:
 COAP_API void
 coap_context_set_block_mode(coap_context_t *context,
                             uint32_t block_mode) {
-  coap_lock_lock(context, return);
+  coap_lock_lock(return);
   coap_context_set_block_mode_lkd(context, block_mode);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
 }
 
 void
@@ -432,9 +432,9 @@ coap_context_set_max_block_size(coap_context_t *context,
                                 size_t max_block_size) {
   int ret;
 
-  coap_lock_lock(context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_context_set_max_block_size_lkd(context, max_block_size);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -540,9 +540,9 @@ coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                     coap_pdu_type_t type) {
   int ret;
 
-  coap_lock_lock(session->context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_cancel_observe_lkd(session, token, type);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1250,10 +1250,10 @@ coap_add_data_large_request(coap_session_t *session,
                            ) {
   int ret;
 
-  coap_lock_lock(session->context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_add_data_large_request_lkd(session, pdu, length, data,
                                         release_func, app_ptr);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -1296,11 +1296,11 @@ coap_add_data_large_response(coap_resource_t *resource,
                             ) {
   int ret;
 
-  coap_lock_lock(session->context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_add_data_large_response_lkd(resource, session, request,
                                          response, query, media_type, maxage, etag,
                                          length, data, release_func, app_ptr);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
   return ret;
 }
 

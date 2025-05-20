@@ -70,9 +70,9 @@ coap_new_client_session_oscore(coap_context_t *ctx,
                                coap_oscore_conf_t *oscore_conf) {
   coap_session_t *session;
 
-  coap_lock_lock(ctx, return NULL);
+  coap_lock_lock(return NULL);
   session = coap_new_client_session_oscore_lkd(ctx, local_if, server, proto, oscore_conf);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return session;
 }
 
@@ -104,10 +104,10 @@ coap_new_client_session_oscore_psk(coap_context_t *ctx,
                                    coap_oscore_conf_t *oscore_conf) {
   coap_session_t *session;
 
-  coap_lock_lock(ctx, return NULL);
+  coap_lock_lock(return NULL);
   session = coap_new_client_session_oscore_psk_lkd(ctx, local_if, server, proto, psk_data,
                                                    oscore_conf);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return session;
 }
 
@@ -142,10 +142,10 @@ coap_new_client_session_oscore_pki(coap_context_t *ctx,
                                    coap_oscore_conf_t *oscore_conf) {
   coap_session_t *session;
 
-  coap_lock_lock(ctx, return NULL);
+  coap_lock_lock(return NULL);
   session = coap_new_client_session_oscore_pki_lkd(ctx, local_if, server, proto, pki_data,
                                                    oscore_conf);
-  coap_lock_unlock(ctx);
+  coap_lock_unlock();
   return session;
 }
 
@@ -178,9 +178,9 @@ coap_context_oscore_server(coap_context_t *context,
                            coap_oscore_conf_t *oscore_conf) {
   int ret;
 
-  coap_lock_lock(context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_context_oscore_server_lkd(context, oscore_conf);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -300,9 +300,9 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
                               oscore_partial_iv_t send_partial_iv) {
   coap_pdu_t *ret_pdu;
 
-  coap_lock_lock(session->context, return NULL);
+  coap_lock_lock(return NULL);
   ret_pdu = coap_oscore_new_pdu_encrypted_lkd(session, pdu, kid_context, send_partial_iv);
-  coap_lock_unlock(session->context);
+  coap_lock_unlock();
 
   return ret_pdu;
 }
@@ -2151,9 +2151,9 @@ coap_new_oscore_recipient(coap_context_t *context,
                           coap_bin_const_t *recipient_id) {
   int ret;
 
-  coap_lock_lock(context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_new_oscore_recipient_lkd(context, recipient_id);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -2175,9 +2175,9 @@ coap_delete_oscore_recipient(coap_context_t *context,
 
   if (!context || !recipient_id)
     return 0;
-  coap_lock_lock(context, return 0);
+  coap_lock_lock(return 0);
   ret = coap_delete_oscore_recipient_lkd(context, recipient_id);
-  coap_lock_unlock(context);
+  coap_lock_unlock();
   return ret;
 }
 

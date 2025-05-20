@@ -57,18 +57,18 @@ coap_prng_impl(unsigned char *buf, size_t len) {
 
 COAP_API void
 coap_prng_init(unsigned int seed) {
-  coap_lock_lock(NULL, return);
+  coap_lock_lock(return);
   coap_prng_init_lkd(seed);
-  coap_lock_unlock(NULL);
+  coap_lock_unlock();
 }
 
 COAP_API int
 coap_prng(void *buf, size_t len) {
   int ret;
 
-  coap_lock_lock(NULL, return 0);
+  coap_lock_lock(return 0);
   ret = coap_prng_lkd(buf, len);
-  coap_lock_unlock(NULL);
+  coap_lock_unlock();
   return ret;
 }
 
