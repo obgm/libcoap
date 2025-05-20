@@ -21,6 +21,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef RIOT_VERSION
 #ifndef UTLIST_H
 #define UTLIST_H
 
@@ -1071,3 +1072,4 @@ do {                                                                            
 #endif /* NO_DECLTYPE */
 
 #endif /* UTLIST_H */
+#endif /* ! RIOT_VERSION */
