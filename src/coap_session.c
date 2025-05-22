@@ -2461,9 +2461,9 @@ coap_endpoint_set_app_data(coap_endpoint_t *endpoint, void *app_data,
                            coap_app_data_free_callback_t callback) {
   void *old_data;
 
-  coap_lock_lock(endpoint->context, return NULL);
+  coap_lock_lock(return NULL);
   old_data = coap_endpoint_set_app_data_lkd(endpoint, app_data, callback);
-  coap_lock_unlock(endpoint->context);
+  coap_lock_unlock();
   return old_data;
 }
 
