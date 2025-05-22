@@ -15,7 +15,7 @@ LIBCOAP_API_VERSION = $(shell if [ -f $(libcoap_dir)/configure.ac ];  then \
 
 coap_include_dir = $(libcoap_dir)/include/coap$(LIBCOAP_API_VERSION)
 
-WITH_LWIP_BRANCH=STABLE-2_2_0_RELEASE
+WITH_LWIP_BRANCH=STABLE-2_2_1_RELEASE
 # Update to latest TinyDTLS submodule as defined for libcoap
 WITH_TINYDTLS_BRANCH=4a6a78236043da7f8af9ad7be8488aeed6884eda
 
@@ -45,14 +45,14 @@ lwip:
 		echo Try 1 $$CHECK ; \
 		sleep 1 ;\
 		CHECK=`git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $(WITH_LWIP_BRANCH) ; echo $$?` ; \
-		echo Try 2 $$CHECK ; \
 	fi ; \
 	if [ "$$CHECK" != 0 ] ; then \
+		echo Try 2 $$CHECK ; \
 		sleep 1 ;\
 		CHECK=`git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $(WITH_LWIP_BRANCH) ; echo $$?` ; \
-		echo Try 3 $$CHECK ; \
 	fi ; \
 	if [ "$$CHECK" != 0 ] ; then \
+		echo Try 3 $$CHECK ; \
 		sleep 1 ;\
 		git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $(WITH_LWIP_BRANCH) ; \
 	fi
