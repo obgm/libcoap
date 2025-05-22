@@ -2446,6 +2446,11 @@ coap_free_endpoint_lkd(coap_endpoint_t *ep) {
         LL_DELETE(ep->context->endpoint, ep);
       }
     }
+
+    if (ep->app_cb) {
+      ep->app_cb(ep->app_data);
+    }
+
     coap_mfree_endpoint(ep);
   }
 }
