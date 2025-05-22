@@ -42,6 +42,8 @@ coap_proxy_del_req(coap_proxy_list_t *proxy_entry,  coap_proxy_req_t *proxy_req)
   coap_delete_pdu_lkd(proxy_req->pdu);
   coap_delete_bin_const(proxy_req->token_used);
   coap_delete_cache_key(proxy_req->cache_key);
+  /* To prevent potential loops */
+  proxy_req->incoming = NULL;
   if (proxy_req->proxy_cache) {
     assert(proxy_req->proxy_cache->ref);
     proxy_req->proxy_cache->ref--;
@@ -438,12 +440,13 @@ coap_proxy_remove_association(coap_session_t *session, int send_failure) {
     coap_proxy_list_t *proxy_entry = &proxy_list[i];
 
     /* Check for incoming match */
+retry:
     for (j = 0; j < proxy_entry->req_count; j++) {
       coap_proxy_req_t *proxy_req = &proxy_entry->req_list[j];
 
       if (proxy_req->incoming == session) {
         coap_proxy_del_req(proxy_entry, proxy_req);
-        break;
+        goto retry;
       }
     }
     if (proxy_entry->incoming == session) {
