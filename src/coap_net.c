@@ -4305,6 +4305,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   coap_pdu_t *dec_pdu = NULL;
 #endif /* COAP_OSCORE_SUPPORT */
   int is_ext_token_rst;
+  int oscore_invalid = 0;
 
   pdu->session = session;
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
@@ -4435,6 +4436,14 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       coap_log_debug("Decrypted PDU\n");
       coap_show_pdu(COAP_LOG_DEBUG, pdu);
     }
+  } else if (COAP_PDU_IS_RESPONSE(pdu) &&
+             session->oscore_encryption &&
+             pdu->type != COAP_MESSAGE_RST) {
+    if (COAP_RESPONSE_CLASS(pdu->code) == 2) {
+      /* Violates RFC 8613 2 */
+      coap_log_err("received an invalid response to the OSCORE request\n");
+      oscore_invalid = 1;
+    }
   }
 #endif /* COAP_OSCORE_SUPPORT */
 
@@ -4449,7 +4458,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         /* Flush out any entries on session->delayqueue */
         coap_session_connected(session);
     }
-    if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+    if (oscore_invalid || coap_option_check_critical(session, pdu, &opt_filter) == 0) {
       packet_is_bad = 1;
       goto cleanup;
     }
@@ -4651,8 +4660,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     goto cleanup;
 
   case COAP_MESSAGE_NON:
-    /* check for unknown critical options */
-    if (coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+    /* check for oscore issue or unknown critical options */
+    if (oscore_invalid || coap_option_check_critical(session, pdu, &opt_filter) == 0) {
       packet_is_bad = 1;
       coap_send_rst_lkd(session, pdu);
       goto cleanup;
@@ -4662,7 +4671,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     }
     break;
 
-  case COAP_MESSAGE_CON:        /* check for unknown critical options */
+  case COAP_MESSAGE_CON:
     /* In a lossy context, the ACK of a separate response may have
      * been lost, so we need to stop retransmitting requests with the
      * same token. Matching on token potentially containing ext length bytes.
@@ -4670,8 +4679,9 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     /* find message token in sendqueue to stop retransmission */
     coap_remove_from_queue_token(&context->sendqueue, session, &pdu->actual_token, &sent);
 
-    if (!COAP_PDU_IS_SIGNALING(pdu) &&
-        coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+    /* check for oscore issue or unknown critical options in non-signaling messages */
+    if (oscore_invalid ||
+        (!COAP_PDU_IS_SIGNALING(pdu) && coap_option_check_critical(session, pdu, &opt_filter) == 0)) {
       packet_is_bad = 1;
       if (COAP_PDU_IS_REQUEST(pdu)) {
         response =
