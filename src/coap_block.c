@@ -633,7 +633,7 @@ coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
       }
     }
   }
-  return 0;
+  return 1;
 }
 
 coap_lg_crcv_t *
