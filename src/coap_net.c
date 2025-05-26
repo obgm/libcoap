@@ -4620,6 +4620,34 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #endif /* COAP_SERVER_SUPPORT */
       coap_handle_nack(session, NULL, COAP_NACK_RST, pdu->mid);
     }
+#if COAP_PROXY_SUPPORT
+    /* Need to check is there is a proxy subscription active and delete it */
+    size_t i, j;
+
+    for (i = 0; i < context->proxy_list_count; i++) {
+      coap_proxy_list_t *proxy_entry = &context->proxy_list[i];
+
+      for (j = 0; j < proxy_entry->req_count; j++) {
+        coap_proxy_req_t *proxy_req = &proxy_entry->req_list[j];
+
+        if (proxy_req->mid == pdu->mid && proxy_req->incoming == session) {
+          if (proxy_entry->req_count == 1 && proxy_req->token_used) {
+            coap_binary_t tmp;
+
+            coap_log_debug("coap_send: Using coap_cancel_observe() to do Proxy OBSERVE cancellation\n");
+            /* Unfortunately need to change the ptr type to be r/w */
+            memcpy(&tmp.s, &proxy_req->token_used->s, sizeof(tmp.s));
+            tmp.length = proxy_req->token_used->length;
+            coap_cancel_observe_lkd(proxy_entry->ongoing, &tmp, COAP_MESSAGE_CON);
+          }
+          coap_proxy_del_req(proxy_entry, proxy_req);
+          break;
+        }
+      }
+      if (j != proxy_entry->req_count)
+        break;
+    }
+#endif /* COAP_PROXY_SUPPORT */
     goto cleanup;
 
   case COAP_MESSAGE_NON:

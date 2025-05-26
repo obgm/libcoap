@@ -46,6 +46,7 @@ typedef struct coap_proxy_req_t {
   coap_bin_const_t *token_used; /**< Token used in forwarded request */
   coap_cache_key_t *cache_key;  /**< Cache-Key passed into coap_proxy_forward_request() */
   coap_proxy_cache_t *proxy_cache; /**< Cache that this proxy request is using */
+  coap_mid_t mid;               /**< Last mid sent back to client */
 } coap_proxy_req_t;
 
 struct coap_proxy_list_t {
@@ -197,8 +198,8 @@ struct coap_proxy_req_t *coap_proxy_map_outgoing_request(coap_session_t *ongoing
  * @param session The upstream proxy client session.
  * @param rcvd The received PDU from the upstream server.
  * @param body_data The data to be freed off once all responses sent for rcvd,
- * @param proxy_req The current proxy request object
- * @param proxy_entry The current proxy entry object
+ * @param proxy_req The current proxy request object.
+ * @param proxy_entry The current proxy entry object.
  *
  * @return The proxy request information, or NULL on mapping failure.
  */
@@ -206,6 +207,16 @@ void coap_proxy_process_incoming(coap_session_t *session,
                                  coap_pdu_t *rcvd, void *body_free,
                                  coap_proxy_req_t *proxy_req,
                                  coap_proxy_list_t *proxy_entry);
+
+/*
+ * coap_proxy_del_req() deletes the specific proxy request.
+ *
+ * @param proxy_entry The current proxy entry object.
+ * @param proxy_req The proxy request object to delete.
+ *
+ */
+void coap_proxy_del_req(coap_proxy_list_t *proxy_entry,  coap_proxy_req_t *proxy_req);
+
 /** @} */
 
 #define PROXY_CACHE_ADD(e, obj) \

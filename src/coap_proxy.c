@@ -35,7 +35,7 @@ coap_proxy_is_supported(void) {
   return 1;
 }
 
-static void
+void
 coap_proxy_del_req(coap_proxy_list_t *proxy_entry,  coap_proxy_req_t *proxy_req) {
   size_t i;
 
@@ -45,6 +45,8 @@ coap_proxy_del_req(coap_proxy_list_t *proxy_entry,  coap_proxy_req_t *proxy_req)
   /* To prevent potential loops */
   proxy_req->incoming = NULL;
   if (proxy_req->proxy_cache) {
+    coap_log_debug("Removing Proxy Observe Cache (Active %d)\n",
+                   proxy_req->proxy_cache->ref);
     assert(proxy_req->proxy_cache->ref);
     proxy_req->proxy_cache->ref--;
     if (proxy_req->proxy_cache->ref == 0) {
@@ -662,7 +664,8 @@ coap_proxy_free_response_data(coap_session_t *session COAP_UNUSED, void *app_ptr
 static coap_response_t
 coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent,
                                  coap_pdu_t *rcvd, coap_bin_const_t *token,
-                                 coap_proxy_req_t *proxy_req, int replace_mid) {
+                                 coap_proxy_req_t *proxy_req, int replace_mid,
+                                 int remove_observe) {
   coap_response_t ret = COAP_RESPONSE_FAIL;
   coap_pdu_t *resp_pdu;
   coap_pdu_t *fwd_pdu = NULL;
@@ -672,13 +675,27 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
   const uint8_t *data;
   coap_string_t *l_query = NULL;
 
-  /* Correct the token */
-  resp_pdu = coap_pdu_duplicate_lkd(rcvd, session, token->length, token->s, NULL);
+  if (remove_observe) {
+    coap_opt_filter_t drop_options;
+
+    memset(&drop_options, 0, sizeof(coap_opt_filter_t));
+    coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
+    /* Correct the token */
+    resp_pdu = coap_pdu_duplicate_lkd(rcvd, session, token->length, token->s,
+                                      &drop_options);
+  } else {
+    /* Correct the token */
+    resp_pdu = coap_pdu_duplicate_lkd(rcvd, session, token->length, token->s,
+                                      NULL);
+  }
   if (!resp_pdu)
     return COAP_RESPONSE_FAIL;
 
   if (replace_mid)
-    resp_pdu->mid = rcvd->mid;
+    resp_pdu->mid = sent->mid;
+
+  proxy_req->mid =  resp_pdu->mid;
+
   if (coap_get_data_large(rcvd, &size, &data, &offset, &total)) {
     uint16_t media_type = 0;
     int maxage = -1;
@@ -814,7 +831,6 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   /* Is this a observe cached request? */
   if (obs_opt && session->context->proxy_response_handler) {
     coap_cache_key_t *cache_key_l;
-    coap_tick_t now;
 
     cache_key_l = coap_cache_derive_key_w_ignore(session, request,
                                                  COAP_CACHE_NOT_SESSION_BASED,
@@ -826,16 +842,13 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
     }
     PROXY_CACHE_FIND(proxy_entry->rsp_cache, cache_key_l, proxy_cache);
     coap_delete_cache_key(cache_key_l);
-    coap_ticks(&now);
-    if (proxy_cache && (proxy_cache->expire + COAP_TICKS_PER_SECOND) < now) {
-      /* Need to get an updated rsp_pdu */
-      proxy_cache = NULL;
-    }
   }
 
   if (proxy_cache) {
     proxy_req = coap_proxy_get_req(proxy_entry, session);
     if (proxy_req) {
+      coap_tick_t now;
+
       if (obs_opt) {
         int observe_action;
 
@@ -843,26 +856,38 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
                                                coap_opt_length(obs_opt));
 
         if (observe_action == COAP_OBSERVE_CANCEL) {
-          assert(proxy_cache->ref);
-          proxy_cache->ref--;
-          if (proxy_cache->ref > 0) {
+          if (proxy_entry->req_count == 1 && proxy_req->token_used) {
+            coap_binary_t tmp;
+
+            coap_log_debug("coap_send: Using coap_cancel_observe() to do Proxy OBSERVE cancellation\n");
+            /* Unfortunately need to change the ptr type to be r/w */
+            memcpy(&tmp.s, &proxy_req->token_used->s, sizeof(tmp.s));
+            tmp.length = proxy_req->token_used->length;
+            coap_cancel_observe_lkd(proxy_entry->ongoing, &tmp, COAP_MESSAGE_CON);
+            /* Let the upstream cancellation be the response */
+            return 1;
+          } else {
+            obs_opt = 0;
             goto return_cached_info;
           }
-          proxy_cache = NULL;
-          if (proxy_req->proxy_cache->ref == 0) {
-            PROXY_CACHE_DELETE(proxy_entry->rsp_cache, proxy_req->proxy_cache);
-            coap_delete_pdu_lkd(proxy_req->proxy_cache->req_pdu);
-            coap_delete_pdu_lkd(proxy_req->proxy_cache->rsp_pdu);
-            coap_free_type(COAP_STRING, proxy_req->proxy_cache);
-            proxy_req->proxy_cache = NULL;
-          }
-          /* Last user of proxy_cache.  Need to de-register upstream */
         } else if (observe_action == COAP_OBSERVE_ESTABLISH) {
           /* Client must be re-registering */
-          goto return_cached_info;
+          coap_ticks(&now);
+          if (proxy_cache && (proxy_cache->expire + COAP_TICKS_PER_SECOND) < now) {
+            /* Need to get an updated rsp_pdu */
+            proxy_cache = NULL;
+          } else {
+            goto return_cached_info;
+          }
         }
       } else {
-        goto return_cached_info;
+        coap_ticks(&now);
+        if (proxy_cache && (proxy_cache->expire + COAP_TICKS_PER_SECOND) < now) {
+          /* Need to get an updated rsp_pdu */
+          proxy_cache = NULL;
+        } else {
+          goto return_cached_info;
+        }
       }
     }
   }
@@ -1033,13 +1058,13 @@ failed:
 
 return_cached_info:
   coap_proxy_call_response_handler(session, request, proxy_cache->rsp_pdu,
-                                   &r_token, proxy_req, 1);
+                                   &r_token, proxy_req, 1, obs_opt ? 0 : 1);
   if (!obs_opt)
     coap_proxy_del_req(proxy_entry, proxy_req);
   return 1;
 }
 
-struct coap_proxy_req_t *
+coap_proxy_req_t *
 coap_proxy_map_outgoing_request(coap_session_t *ongoing,
                                 const coap_pdu_t *received,
                                 coap_proxy_list_t **proxy_entry) {
@@ -1102,7 +1127,7 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
   coap_binary_t *body_data = NULL;
   coap_pdu_t *req_pdu;
   coap_resource_t *resource;
-  struct coap_proxy_req_t *proxy_req = NULL;
+  coap_proxy_req_t *proxy_req = NULL;
 
   proxy_req = coap_proxy_map_outgoing_request(session, received, &proxy_entry);
   if (!proxy_req || proxy_req->incoming->server_list) {
@@ -1284,7 +1309,7 @@ coap_proxy_process_incoming(coap_session_t *session,
         token = coap_pdu_get_token(proxy_req->pdu);
         if (coap_proxy_call_response_handler(proxy_req->incoming, proxy_req->pdu,
                                              rcvd, &token,
-                                             proxy_req, 0) == COAP_RESPONSE_OK) {
+                                             proxy_req, 0, 0) == COAP_RESPONSE_OK) {
           /* At least one success */
           ret = COAP_RESPONSE_OK;
         }
@@ -1295,7 +1320,7 @@ coap_proxy_process_incoming(coap_session_t *session,
 cache_fail:
   token = coap_pdu_get_token(proxy_req->pdu);
   ret = coap_proxy_call_response_handler(proxy_req->incoming, proxy_req->pdu,
-                                         rcvd, &token, proxy_req, 0);
+                                         rcvd, &token, proxy_req, 0, 0);
 
 finish:
   if (ret == COAP_RESPONSE_FAIL && rcvd->type != COAP_MESSAGE_ACK) {
