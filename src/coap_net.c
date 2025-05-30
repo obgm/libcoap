@@ -1292,6 +1292,7 @@ coap_send_test_extended_token(coap_session_t *session) {
   coap_mid_t mid = COAP_INVALID_MID;
   size_t i;
   coap_binary_t *token;
+  coap_lg_crcv_t *lg_crcv;
 
   coap_log_debug("Testing for Extended Token support\n");
   /* https://rfc-editor.org/rfc/rfc8974#section-2.2.2 */
@@ -1312,10 +1313,21 @@ coap_send_test_extended_token(coap_session_t *session) {
   coap_add_token(pdu, session->max_token_size, token->s);
   coap_delete_binary(token);
 
+  coap_delete_bin_const(session->last_token);
+  session->last_token = coap_new_bin_const(pdu->actual_token.s,
+                                           pdu->actual_token.length);
+
   coap_insert_option(pdu, COAP_OPTION_IF_NONE_MATCH, 0, NULL);
 
   session->max_token_checked = COAP_EXT_T_CHECKING; /* Checking out this one */
-  if ((mid = coap_send_internal(session, pdu, NULL)) == COAP_INVALID_MID)
+
+  /* Need to track incase OSCORE / Echo etc. comes back after non-piggy-backed ACK */
+  lg_crcv = coap_block_new_lg_crcv(session, pdu, NULL);
+  if (lg_crcv) {
+    LL_PREPEND(session->lg_crcv, lg_crcv);
+  }
+  mid = coap_send_internal(session, pdu, NULL);
+  if (mid == COAP_INVALID_MID)
     return COAP_INVALID_MID;
   session->remote_test_mid = mid;
   return mid;
@@ -4126,9 +4138,11 @@ handle_response(coap_context_t *context, coap_session_t *session,
   }
   /* Check to see if checking out extended token support */
   if (session->max_token_checked == COAP_EXT_T_CHECKING &&
-      session->remote_test_mid == rcvd->mid) {
+      session->last_token) {
+    coap_lg_crcv_t *lg_crcv;
 
-    if (rcvd->actual_token.length != session->max_token_size ||
+    if (!coap_binary_equal(session->last_token, &rcvd->actual_token) ||
+        rcvd->actual_token.length != session->max_token_size ||
         rcvd->code == COAP_RESPONSE_CODE(400) ||
         rcvd->code == COAP_RESPONSE_CODE(503)) {
       coap_log_debug("Extended Token requested size support not available\n");
@@ -4137,6 +4151,13 @@ handle_response(coap_context_t *context, coap_session_t *session,
       coap_log_debug("Extended Token support available\n");
     }
     session->max_token_checked = COAP_EXT_T_CHECKED;
+    /* Need to remove lg_crcv set up for this test */
+    lg_crcv = coap_find_lg_crcv(session, rcvd);
+    if (lg_crcv) {
+      LL_DELETE(session->lg_crcv, lg_crcv);
+      coap_block_delete_lg_crcv(session, lg_crcv);
+    }
+    coap_send_ack_lkd(session, rcvd);
     session->doing_first = 0;
     return;
   }
@@ -4355,6 +4376,11 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     }
   }
 #endif /* COAP_SERVER_SUPPORT */
+  if (pdu->type == COAP_MESSAGE_NON || pdu->type == COAP_MESSAGE_CON) {
+    if (!check_token_size(session, pdu)) {
+      goto cleanup;
+    }
+  }
 #if COAP_OSCORE_SUPPORT
   if (!COAP_PDU_IS_SIGNALING(pdu) &&
       coap_option_check_critical(session, pdu, &opt_filter) == 0) {
@@ -4666,9 +4692,6 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       coap_send_rst_lkd(session, pdu);
       goto cleanup;
     }
-    if (!check_token_size(session, pdu)) {
-      goto cleanup;
-    }
     break;
 
   case COAP_MESSAGE_CON:
@@ -4696,9 +4719,6 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       } else {
         coap_send_rst_lkd(session, pdu);
       }
-      goto cleanup;
-    }
-    if (!check_token_size(session, pdu)) {
       goto cleanup;
     }
     break;
