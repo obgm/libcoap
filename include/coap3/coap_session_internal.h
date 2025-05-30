@@ -204,7 +204,7 @@ struct coap_session_t {
   coap_str_const_t *ws_host;      /**< Host to use in WS Request */
 #endif /* COAP_WS_SUPPORT */
 #if COAP_OSCORE_SUPPORT
-  uint8_t done_b_1_2;             /**< Have sent initial request */
+  uint8_t doing_b_1_2;            /**< Set if doing RFC8613 B.1.2 */
 #endif /* COAP_OSCORE_SUPPORT */
   volatile uint8_t max_token_checked; /**< Check for max token size
                                            coap_ext_token_check_t */

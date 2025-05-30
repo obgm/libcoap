@@ -721,7 +721,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
         goto error;
       association->recipient_ctx = rcp_ctx;
       coap_delete_pdu_lkd(association->sent_pdu);
-      if (session->b_2_step != COAP_OSCORE_B_2_NONE && !session->done_b_1_2) {
+      if (session->b_2_step != COAP_OSCORE_B_2_NONE || association->just_set_up) {
         size_t size;
 
         association->sent_pdu = coap_pdu_duplicate_lkd(pdu, session,
@@ -732,6 +732,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
         if (coap_get_data(pdu, &size, &data)) {
           coap_add_data(association->sent_pdu, size, data);
         }
+        association->just_set_up = 0;
       } else {
         association->sent_pdu = NULL;
       }
@@ -745,7 +746,6 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
                                        doing_observe)) {
       goto error;
     }
-    session->done_b_1_2 = 1;
   }
   return osc_pdu;
 
@@ -1629,15 +1629,32 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                              &pdu->actual_token);
     if (session->con_active)
       session->con_active--;
+    if (!sent_pdu) {
+      coap_lg_crcv_t *lg_crcv = coap_find_lg_crcv(session, pdu);
+
+      if (lg_crcv)
+        sent_pdu = lg_crcv->sent_pdu;
+    }
     if (sent_pdu) {
       coap_send_ack_lkd(session, pdu);
       coap_log_debug("PDU requesting re-transmit\n");
       coap_show_pdu(COAP_LOG_DEBUG, decrypt_pdu);
       coap_log_oscore("RFC9175 retransmit pdu\n");
       /* Do not care if this fails */
-      coap_retransmit_oscore_pdu(session, sent_pdu, opt);
+      if (coap_retransmit_oscore_pdu(session, sent_pdu, opt) != COAP_INVALID_MID) {
+        session->doing_b_1_2 = 1;
+      }
       goto error_no_ack;
     }
+  } else if (session->doing_b_1_2) {
+    coap_lg_crcv_t *lg_crcv = coap_find_lg_crcv(session, pdu);
+
+    if (lg_crcv) {
+      if (!coap_binary_equal(&decrypt_pdu->actual_token, lg_crcv->app_token)) {
+        coap_update_token(decrypt_pdu, lg_crcv->app_token->length, lg_crcv->app_token->s);
+      }
+    }
+    session->doing_b_1_2 = 0;
   }
 #endif /* COAP_CLIENT_SUPPORT */
   if (association && association->is_observe == 0)

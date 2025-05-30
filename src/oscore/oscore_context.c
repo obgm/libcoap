@@ -701,6 +701,7 @@ oscore_new_association(coap_session_t *session,
   memset(association, 0, sizeof(oscore_association_t));
   association->recipient_ctx = recipient_ctx;
   association->is_observe = is_observe;
+  association->just_set_up = 1;
 
   if (sent_pdu) {
     size_t size;

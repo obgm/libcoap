@@ -287,8 +287,8 @@ coap_new_request(coap_context_t *ctx,
    */
   if (the_token.length > COAP_TOKEN_DEFAULT_MAX) {
     coap_session_new_token(session, &tokenlen, token);
-    /* Update the last part 8 bytes of the large token */
-    memcpy(&the_token.s[the_token.length - tokenlen], token, tokenlen);
+    /* Update the first 8 bytes of the large token */
+    memcpy(the_token.s, token, tokenlen);
   } else {
     coap_session_new_token(session, &the_token.length, the_token.s);
   }
