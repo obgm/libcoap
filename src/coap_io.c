@@ -1501,7 +1501,7 @@ release_1:
       }
       if (s->type == COAP_SESSION_TYPE_SERVER &&
           s->state == COAP_SESSION_STATE_ESTABLISHED &&
-          s->ref_subscriptions && !s->con_active &&
+          (s->ref_subscriptions || s->ref_proxy_subs) && !s->con_active &&
           ctx->ping_timeout > 0) {
         /* Only do this if this session is observing */
         if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {

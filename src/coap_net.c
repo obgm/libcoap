@@ -1592,7 +1592,20 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
       /* Warn about re-use of tokens */
       if (session->last_token &&
           coap_binary_equal(&pdu->actual_token, session->last_token)) {
-        coap_log_debug("Token reused - see https://rfc-editor.org/rfc/rfc9175.html#section-4.2\n");
+        if (coap_get_log_level() >= COAP_LOG_DEBUG) {
+          char scratch[24];
+          size_t size;
+          size_t i;
+
+          scratch[0] = '\000';
+          for (i = 0; i < pdu->actual_token.length; i++) {
+            size = strlen(scratch);
+            snprintf(&scratch[size], sizeof(scratch)-size,
+                     "%02x", pdu->actual_token.s[i]);
+          }
+          coap_log_debug("Token {%s} reused - see https://rfc-editor.org/rfc/rfc9175.html#section-4.2\n",
+                         scratch);
+        }
       }
       coap_delete_bin_const(session->last_token);
       session->last_token = coap_new_bin_const(pdu->actual_token.s,
@@ -2304,13 +2317,21 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
 #if COAP_SERVER_SUPPORT
   /* Check if subscriptions exist that should be canceled after
      COAP_OBS_MAX_FAIL */
-  if (COAP_RESPONSE_CLASS(node->pdu->code) >= 2 && node->session->ref_subscriptions) {
+  if (COAP_RESPONSE_CLASS(node->pdu->code) >= 2 &&
+      (node->session->ref_subscriptions || node->session->ref_proxy_subs)) {
     if (context->ping_timeout) {
       coap_session_server_keepalive_failed(node->session);
       coap_delete_node_lkd(node);
       return COAP_INVALID_MID;
     } else {
-      coap_handle_failed_notify(context, node->session, &node->pdu->actual_token);
+      if (node->session->ref_subscriptions)
+        coap_handle_failed_notify(context, node->session, &node->pdu->actual_token);
+#if COAP_PROXY_SUPPORT
+      /* Need to check is there is a proxy subscription active and delete it */
+      if (node->session->ref_proxy_subs)
+        coap_delete_proxy_subscriber(node->session, &node->pdu->actual_token,
+                                     0, COAP_PROXY_SUBS_TOKEN);
+#endif /* COAP_PROXY_SUPPORT */
     }
   }
 #endif /* COAP_SERVER_SUPPORT */
@@ -2512,14 +2533,18 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
           bytes_read -= n;
           if (n == len) {
             coap_opt_filter_t error_opts;
+            coap_pdu_t *pdu = session->partial_pdu;
+
+            session->partial_pdu = NULL;
+            session->partial_read = 0;
 
             coap_option_filter_clear(&error_opts);
-            if (coap_pdu_parse_header(session->partial_pdu, session->proto)
-                && coap_pdu_parse_opt(session->partial_pdu, &error_opts)) {
-              coap_dispatch(ctx, session, session->partial_pdu);
+            if (coap_pdu_parse_header(pdu, session->proto)
+                && coap_pdu_parse_opt(pdu, &error_opts)) {
+              coap_dispatch(ctx, session, pdu);
             } else if (error_opts.mask) {
               coap_pdu_t *response =
-                  coap_new_error_response(session->partial_pdu,
+                  coap_new_error_response(pdu,
                                           COAP_RESPONSE_CODE(402), &error_opts);
               if (!response) {
                 coap_log_warn("coap_read_session: cannot create error response\n");
@@ -2528,9 +2553,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
                   coap_log_warn("coap_read_session: error sending response\n");
               }
             }
-            coap_delete_pdu_lkd(session->partial_pdu);
-            session->partial_pdu = NULL;
-            session->partial_read = 0;
+            coap_delete_pdu_lkd(pdu);
           } else {
             session->partial_read += n;
           }
@@ -4656,31 +4679,9 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       coap_handle_nack(session, NULL, COAP_NACK_RST, pdu->mid);
     }
 #if COAP_PROXY_SUPPORT
-    /* Need to check is there is a proxy subscription active and delete it */
-    size_t i, j;
-
-    for (i = 0; i < context->proxy_list_count; i++) {
-      coap_proxy_list_t *proxy_entry = &context->proxy_list[i];
-
-      for (j = 0; j < proxy_entry->req_count; j++) {
-        coap_proxy_req_t *proxy_req = &proxy_entry->req_list[j];
-
-        if (proxy_req->mid == pdu->mid && proxy_req->incoming == session) {
-          if (proxy_entry->req_count == 1 && proxy_req->token_used) {
-            coap_binary_t tmp;
-
-            coap_log_debug("coap_send: Using coap_cancel_observe() to do Proxy OBSERVE cancellation\n");
-            /* Unfortunately need to change the ptr type to be r/w */
-            memcpy(&tmp.s, &proxy_req->token_used->s, sizeof(tmp.s));
-            tmp.length = proxy_req->token_used->length;
-            coap_cancel_observe_lkd(proxy_entry->ongoing, &tmp, COAP_MESSAGE_CON);
-          }
-          coap_proxy_del_req(proxy_entry, proxy_req);
-          break;
-        }
-      }
-      if (j != proxy_entry->req_count)
-        break;
+    if (!is_ping_rst) {
+      /* Need to check is there is a proxy subscription active and delete it */
+      coap_delete_proxy_subscriber(session, NULL, pdu->mid, COAP_PROXY_SUBS_MID);
     }
 #endif /* COAP_PROXY_SUPPORT */
     goto cleanup;

@@ -40,6 +40,7 @@ typedef struct coap_proxy_cache_t {
 } coap_proxy_cache_t;
 
 typedef struct coap_proxy_req_t {
+  struct coap_proxy_req_t *next;
   coap_pdu_t *pdu;              /**< Requesting PDU */
   coap_resource_t *resource;    /**< P-Server resource */
   coap_session_t *incoming;     /**< Incoming session from client */
@@ -47,13 +48,13 @@ typedef struct coap_proxy_req_t {
   coap_cache_key_t *cache_key;  /**< Cache-Key passed into coap_proxy_forward_request() */
   coap_proxy_cache_t *proxy_cache; /**< Cache that this proxy request is using */
   coap_mid_t mid;               /**< Last mid sent back to client */
+  unsigned doing_observe;       /**< Set if doing upstream observe */
 } coap_proxy_req_t;
 
 struct coap_proxy_list_t {
   coap_session_t *ongoing;    /**< Ongoing session */
   coap_session_t *incoming;   /**< Incoming session (used if client tracking( */
-  coap_proxy_req_t *req_list; /**< Incoming list of request info */
-  size_t req_count;           /**< Count of incoming request info */
+  coap_proxy_req_t *proxy_req; /**< Incoming list of request info */
   coap_proxy_cache_t *rsp_cache; /* Response cache list */
   coap_uri_t uri;             /**< URI info for connection */
   uint8_t *uri_host_keep;     /**< memory for uri.host */
@@ -62,6 +63,12 @@ struct coap_proxy_list_t {
                                        upstream Observe requests */
   coap_tick_t last_used;      /**< Last time entry was used */
 };
+
+typedef enum {
+  COAP_PROXY_SUBS_ALL,
+  COAP_PROXY_SUBS_TOKEN,
+  COAP_PROXY_SUBS_MID,
+} coap_proxy_subs_delete_t;
 
 /**
  * Close down proxy tracking, releasing any memory used.
@@ -167,7 +174,7 @@ coap_response_t coap_proxy_forward_response_lkd(coap_session_t *session,
 coap_session_t *coap_new_client_session_proxy_lkd(coap_context_t *context,
                                                   coap_proxy_server_list_t *server_list);
 
-/*
+/**
  * coap_proxy_local_write() is used to send the PDU for a session created by
  * coap_new_client_session_proxy() into the proxy logic for onward transmittion.
  *
@@ -178,7 +185,7 @@ coap_session_t *coap_new_client_session_proxy_lkd(coap_context_t *context,
  */
 coap_mid_t coap_proxy_local_write(coap_session_t *session, coap_pdu_t *pdu);
 
-/*
+/**
  * coap_proxy_map_outgoing_request() takes the upstream proxy client session and
  * maps it back to the incoming request.
  *
@@ -192,7 +199,7 @@ struct coap_proxy_req_t *coap_proxy_map_outgoing_request(coap_session_t *ongoing
                                                          const coap_pdu_t *received,
                                                          coap_proxy_list_t **proxy_entry);
 
-/*
+/**
  * coap_proxy_process_incoming() handles the Server response back to P-Client.
  *
  * @param session The upstream proxy client session.
@@ -208,7 +215,7 @@ void coap_proxy_process_incoming(coap_session_t *session,
                                  coap_proxy_req_t *proxy_req,
                                  coap_proxy_list_t *proxy_entry);
 
-/*
+/**
  * coap_proxy_del_req() deletes the specific proxy request.
  *
  * @param proxy_entry The current proxy entry object.
@@ -216,6 +223,18 @@ void coap_proxy_process_incoming(coap_session_t *session,
  *
  */
 void coap_proxy_del_req(coap_proxy_list_t *proxy_entry,  coap_proxy_req_t *proxy_req);
+
+/**
+ * coap_delete_proxy_subscriber() removes a proxy set up subscription.  If token
+ * is provided, then it is a token match, else a MID match.
+ *
+ * @param session Client session to delete proxy subscription from.
+ * @param token Token to match if set, or NULL.
+ * @param mid MID to match if @p token is not set.
+ *
+ */
+void coap_delete_proxy_subscriber(coap_session_t *session, coap_bin_const_t *token,
+                                  coap_mid_t mid, coap_proxy_subs_delete_t type);
 
 /** @} */
 

@@ -519,6 +519,10 @@ coap_session_mfree(coap_session_t *session) {
   coap_queue_t *q, *tmp;
   coap_lg_xmit_t *lq, *ltmp;
 
+#if COAP_PROXY_SUPPORT
+  if (session->ref_proxy_subs)
+    coap_delete_proxy_subscriber(session, NULL, 0, COAP_PROXY_SUBS_ALL);
+#endif /* COAP_PROXY_SUPPORT */
 #if COAP_CLIENT_SUPPORT
   coap_lg_crcv_t *lg_crcv, *etmp;
 
@@ -563,7 +567,7 @@ coap_session_mfree(coap_session_t *session) {
       coap_delete_cache_entry(session->context, cp);
     }
   }
-#endif /* COAP_SERVER_SUPPORT */
+#endif /* COAP_PROXY_SUPPORT */
   LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
     if (q->pdu->type==COAP_MESSAGE_CON) {
       coap_handle_nack(session, q->pdu,

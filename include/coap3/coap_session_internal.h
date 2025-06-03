@@ -81,7 +81,10 @@ struct coap_session_t {
   coap_address_t local_reconnect;   /**< local address to initiate reconnect from */
 #endif /* COAP_CLIENT_SUPPORT */
   int ifindex;                      /**< interface index */
+#if COAP_SERVER_SUPPORT
   unsigned ref_subscriptions;       /**< reference count of current subscriptions */
+  unsigned ref_proxy_subs;          /**< reference count of current proxy subscriptions */
+#endif /* COAP_SERVER_SUPPORT */
   coap_socket_t sock;               /**< socket object for the session, if
                                          any */
 #if COAP_SERVER_SUPPORT
