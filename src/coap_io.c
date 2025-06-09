@@ -92,7 +92,9 @@ coap_mfree_endpoint(coap_endpoint_t *ep) {
 #define CMSG_NXTHDR WSA_CMSG_NXTHDR
 #define CMSG_LEN WSA_CMSG_LEN
 #define CMSG_SPACE WSA_CMSG_SPACE
+#if(_WIN32_WINNT < 0x0603)
 #define cmsghdr _WSACMSGHDR
+#endif /* (_WIN32_WINNT<0x0603) */
 #endif /* (_WIN32_WINNT>=0x0600) */
 #endif /* defined(__MINGW32__) */
 
