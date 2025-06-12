@@ -4971,6 +4971,9 @@ coap_check_async(coap_context_t *context, coap_tick_t now, coap_tick_t *tim_rem)
   coap_async_t *async, *tmp;
   int ret = 0;
 
+  if (context->async_state_traversing)
+    return 0;
+  context->async_state_traversing = 1;
   LL_FOREACH_SAFE(context->async_state, async, tmp) {
     if (async->delay != 0) {
       if (async->delay <= now) {
@@ -4989,6 +4992,7 @@ coap_check_async(coap_context_t *context, coap_tick_t now, coap_tick_t *tim_rem)
   }
   if (tim_rem)
     *tim_rem = next_due;
+  context->async_state_traversing = 0;
   return ret;
 }
 #endif /* COAP_ASYNC_SUPPORT */
