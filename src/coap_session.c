@@ -509,6 +509,9 @@ coap_session_mfree(coap_session_t *session) {
         }
       }
     }
+    /* In case coap_cancel_observe_lkd() failure, which could clear down lg_crcv */
+    if (!session->lg_crcv)
+      break;
     LL_DELETE(session->lg_crcv, lg_crcv);
     coap_block_delete_lg_crcv(session, lg_crcv);
   }
