@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <signal.h>
+#include <limits.h>
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
@@ -368,14 +369,37 @@ hnd_put_time(coap_resource_t *resource,
   if (size == 0) {      /* re-init */
     my_clock_base = clock_offset;
   } else {
+#define IS_TYPE_SIGNED(a) ((a - 1) < 0)
+    time_t z_time_t = 0;
+    time_t max_clock_base = 0;
+    int fail = 0;
+
+    /* Let server can run for at least a year past defined new time in seconds */
+    switch (sizeof(max_clock_base)) {
+    case 4:
+      max_clock_base = (IS_TYPE_SIGNED(z_time_t) ? INT_MAX/10 : UINT_MAX/10) -
+                       1 * 365 * 24 * 60 * 60;
+      break;
+    case 8:
+      max_clock_base = (IS_TYPE_SIGNED(z_time_t) ? LONG_MAX/10 : ULONG_MAX/10) -
+                       1 * 365 * 24 * 60 * 60;
+      break;
+    default:
+      break;
+    }
     my_clock_base = 0;
     coap_ticks(&t);
-    while (size--)
-      my_clock_base = my_clock_base * 10 + *data++;
+    while (size--) {
+      if (my_clock_base > max_clock_base) {
+        fail = 1;
+      } else {
+        my_clock_base = my_clock_base * 10 + *data++;
+      }
+    }
     my_clock_base -= t / COAP_TICKS_PER_SECOND;
 
     /* Sanity check input value */
-    if (!gmtime(&my_clock_base)) {
+    if (fail || !gmtime(&my_clock_base)) {
       unsigned char buf[3];
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
       coap_add_option(response,
