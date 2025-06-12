@@ -66,6 +66,7 @@ struct coap_context_t {
   /**
    * list of asynchronous message ids */
   coap_async_t *async_state;
+  int async_state_traversing; /**< If hte async state list is being ttaversed */
 #endif /* COAP_ASYNC_SUPPORT */
 
   /**

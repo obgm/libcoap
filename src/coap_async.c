@@ -179,20 +179,21 @@ coap_find_async_lkd(coap_session_t *session, coap_bin_const_t token) {
 }
 
 static void
-coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
-  if (s) {
-    LL_DELETE(context->async_state,s);
-    if (s->session) {
-      coap_session_release_lkd(s->session);
+coap_free_async_sub(coap_context_t *context, coap_async_t *async) {
+  if (async) {
+    LL_DELETE(context->async_state,async);
+    if (async->session) {
+      coap_session_release_lkd(async->session);
+      async->session = NULL;
     }
-    if (s->pdu) {
-      coap_delete_pdu_lkd(s->pdu);
-      s->pdu = NULL;
+    if (async->pdu) {
+      coap_delete_pdu_lkd(async->pdu);
+      async->pdu = NULL;
     }
-    if (s->app_cb && s->app_data) {
-      coap_lock_callback(s->app_cb(s->app_data));
+    if (async->app_cb && async->app_data) {
+      coap_lock_callback(async->app_cb(async->app_data));
     }
-    coap_free_type(COAP_STRING, s);
+    coap_free_type(COAP_STRING, async);
   }
 }
 
