@@ -93,6 +93,12 @@ typedef enum {
    */
   COAP_EVENT_SERVER_SESSION_DEL = 0x4002,
 
+  /**
+   * Called in the CoAP IO loop once a server session is active and (D)TLS
+   * (if any) is established.
+   */
+  COAP_EVENT_SERVER_SESSION_CONNECTED = 0x4003,
+
   /*
    * Message receive and transmit events
    */

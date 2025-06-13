@@ -409,10 +409,29 @@ coap_session_t *coap_session_reference_lkd(coap_session_t *session);
  * Note: This function must be called in the locked state.
  *
  * @param session The CoAP session.
+ * @param report_changed 1 if to report change (at COAP_LOG_DEBUG), else 0.
  *
  * @return @c 1 if updated, @c 0 on failure.
  */
-int coap_session_set_type_client_lkd(coap_session_t *session);
+int coap_session_set_type_client_lkd(coap_session_t *session, int report_changed);
+
+/**
+ * Set the session type to server. Typically used in a call-home environment
+ * where the 'server' initiates a client connection to the 'client' followed
+ * by 'client' then taking over the client role.
+ * The session initially needs to be of type COAP_SESSION_TYPE_CLIENT,
+ * which is then made COAP_SESSION_TYPE_SERVER.
+ * Note: If this function is successful, the session reference count is
+ * decremented (to balance out with a client starting with a reference count of
+ * 1) so the session acts like a normal server session that may idle timeout.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ *
+ * @return @c 1 if updated, @c 0 on failure.
+ */
+int coap_session_set_type_server_lkd(coap_session_t *session);
 
 /**
  * Decrement reference counter on a session.

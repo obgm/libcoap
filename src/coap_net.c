@@ -859,6 +859,7 @@ coap_free_context_lkd(coap_context_t *context) {
 
 #if COAP_SERVER_SUPPORT
   coap_cache_entry_t *cp, *ctmp;
+  coap_endpoint_t *ep, *tmp;
 
   HASH_ITER(hh, context->cache, cp, ctmp) {
     coap_delete_cache_entry(context, cp);
@@ -866,8 +867,6 @@ coap_free_context_lkd(coap_context_t *context) {
   if (context->cache_ignore_count) {
     coap_free_type(COAP_STRING, context->cache_ignore_options);
   }
-
-  coap_endpoint_t *ep, *tmp;
 
   LL_FOREACH_SAFE(context->endpoint, ep, tmp) {
     coap_free_endpoint_lkd(ep);
@@ -4623,7 +4622,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
      * have. */
     is_ping_rst = 0;
     if (pdu->mid == session->last_ping_mid &&
-        context->ping_timeout && session->last_ping > 0)
+        session->last_ping > 0)
       is_ping_rst = 1;
 
 #if COAP_Q_BLOCK_SUPPORT
@@ -4835,6 +4834,8 @@ coap_event_name(coap_event_t event) {
     return "COAP_EVENT_SERVER_SESSION_NEW";
   case COAP_EVENT_SERVER_SESSION_DEL:
     return "COAP_EVENT_SERVER_SESSION_DEL";
+  case COAP_EVENT_SERVER_SESSION_CONNECTED:
+    return "COAP_EVENT_SERVER_SESSION_CONNECTED";
   case COAP_EVENT_BAD_PACKET:
     return "COAP_EVENT_BAD_PACKET";
   case COAP_EVENT_MSG_RETRANSMITTED:
@@ -4907,16 +4908,38 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
       session->doing_send_recv = 0;
       break;
     case COAP_EVENT_DTLS_CONNECTED:
+      /* Session will now be available as well - for call-home */
+      if (session->type == COAP_SESSION_TYPE_SERVER && session->proto == COAP_PROTO_DTLS) {
+        coap_handle_event_lkd(context, COAP_EVENT_SERVER_SESSION_CONNECTED,
+                              session);
+      }
+      break;
     case COAP_EVENT_DTLS_RENEGOTIATE:
     case COAP_EVENT_DTLS_ERROR:
     case COAP_EVENT_TCP_CONNECTED:
     case COAP_EVENT_TCP_FAILED:
+      break;
     case COAP_EVENT_SESSION_CONNECTED:
+      /* Session will now be available as well - for call-home if not (D)TLS */
+      if (session->type == COAP_SESSION_TYPE_SERVER &&
+          (session->proto == COAP_PROTO_TCP || session->proto == COAP_PROTO_TLS)) {
+        coap_handle_event_lkd(context, COAP_EVENT_SERVER_SESSION_CONNECTED,
+                              session);
+      }
+      break;
     case COAP_EVENT_SESSION_FAILED:
     case COAP_EVENT_PARTIAL_BLOCK:
     case COAP_EVENT_XMIT_BLOCK_FAIL:
+      break;
     case COAP_EVENT_SERVER_SESSION_NEW:
+      /* Session will now be available as well - for call-home if not (D)TLS */
+      if (session->proto == COAP_PROTO_UDP) {
+        coap_handle_event_lkd(context, COAP_EVENT_SERVER_SESSION_CONNECTED,
+                              session);
+      }
+      break;
     case COAP_EVENT_SERVER_SESSION_DEL:
+    case COAP_EVENT_SERVER_SESSION_CONNECTED:
     case COAP_EVENT_MSG_RETRANSMITTED:
     case COAP_EVENT_WS_CONNECTED:
     case COAP_EVENT_KEEPALIVE_FAILURE:

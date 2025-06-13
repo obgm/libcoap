@@ -303,6 +303,7 @@ coap_session_set_non_timeout
 coap_session_set_nstart
 coap_session_set_probing_rate
 coap_session_set_type_client
+coap_session_set_type_server
 coap_session_str
 coap_set_app_data
 coap_set_event_handler

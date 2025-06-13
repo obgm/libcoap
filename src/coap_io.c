@@ -388,7 +388,7 @@ error:
 
 void
 coap_socket_close(coap_socket_t *sock) {
-  if (sock->fd != COAP_INVALID_SOCKET) {
+  if (sock->fd != COAP_INVALID_SOCKET && !(sock->flags & COAP_SOCKET_SLAVE)) {
 #ifdef COAP_EPOLL_SUPPORT
 #if COAP_SERVER_SUPPORT
     coap_context_t *context = sock->session ? sock->session->context :
@@ -403,8 +403,9 @@ coap_socket_close(coap_socket_t *sock) {
       /* Kernels prior to 2.6.9 expect non NULL event parameter */
       ret = epoll_ctl(context->epfd, EPOLL_CTL_DEL, sock->fd, &event);
       if (ret == -1 && errno != ENOENT) {
-        coap_log_err("%s: epoll_ctl DEL failed: %s (%d)\n",
+        coap_log_err("%s: epoll_ctl DEL failed: %d: %s (%d)\n",
                      "coap_socket_close",
+                     sock->fd,
                      coap_socket_strerror(), errno);
       }
     }
@@ -1497,7 +1498,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
         }
 #if !defined(COAP_EPOLL_SUPPORT) && !defined(WITH_LWIP) && !defined(RIOT_VERSION)
         if (s->sock.flags & (COAP_SOCKET_WANT_READ|COAP_SOCKET_WANT_WRITE)) {
-          if (*num_sockets < max_sockets)
+          if (*num_sockets < max_sockets && !(s->sock.flags & COAP_SOCKET_SLAVE))
             sockets[(*num_sockets)++] = &s->sock;
         }
 #endif /* ! COAP_EPOLL_SUPPORT && ! WITH_LWIP && ! RIOT_VERSION */
@@ -1665,7 +1666,7 @@ release_1:
     if (s->sock.flags & (COAP_SOCKET_WANT_READ |
                          COAP_SOCKET_WANT_WRITE |
                          COAP_SOCKET_WANT_CONNECT)) {
-      if (*num_sockets < max_sockets)
+      if (*num_sockets < max_sockets && !(s->sock.flags & COAP_SOCKET_SLAVE))
         sockets[(*num_sockets)++] = &s->sock;
     }
 #endif /* ! COAP_EPOLL_SUPPORT && ! WITH_LWIP && ! RIOT_VERSION */

@@ -137,6 +137,10 @@ static int enable_ws = 0;
 static int ws_port = 80;
 static int wss_port = 443;
 static uint32_t reconnect_secs = 0;
+#if COAP_CLIENT_SUPPORT
+static coap_uri_t call_home_uri;
+static int call_home = 0;
+#endif /* COAP_CLIENT_SUPPORT */
 
 static coap_dtls_pki_t *setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
 
@@ -1113,6 +1117,7 @@ proxy_event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_XMIT_BLOCK_FAIL:
   case COAP_EVENT_SERVER_SESSION_NEW:
   case COAP_EVENT_SERVER_SESSION_DEL:
+  case COAP_EVENT_SERVER_SESSION_CONNECTED:
   case COAP_EVENT_BAD_PACKET:
   case COAP_EVENT_MSG_RETRANSMITTED:
   case COAP_EVENT_WS_CONNECTED:
@@ -1293,9 +1298,9 @@ update_pki_key(coap_dtls_key_t *dtls_key, const char *key_name,
   memset(dtls_key, 0, sizeof(*dtls_key));
   if (doing_tls_engine) {
     dtls_key->key_type = COAP_PKI_KEY_DEFINE;
-    dtls_key->key.define.public_cert.s_byte = cert_file;
-    dtls_key->key.define.private_key.s_byte = key_file ? key_file : cert_file;
-    dtls_key->key.define.ca.s_byte = ca_file;
+    dtls_key->key.define.public_cert.s_byte = cert_name;
+    dtls_key->key.define.private_key.s_byte = key_name ? key_name : cert_name;
+    dtls_key->key.define.ca.s_byte = ca_name;
     dtls_key->key.define.public_cert_def = COAP_PKI_KEY_DEF_ENGINE;
     dtls_key->key.define.private_key_def = COAP_PKI_KEY_DEF_ENGINE;
     dtls_key->key.define.ca_def = COAP_PKI_KEY_DEF_ENGINE;
@@ -1603,10 +1608,10 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
           "Usage: %s [-a priority] [-b max_block_size] [-d max] [-e]\n"
-          "\t\t[-f scheme://address[:port] [-g group] -l loss] [-o] [-p port]\n"
+          "\t\t[-f scheme://address[:port]] [-g group] -l loss] [-o] [-p port]\n"
           "\t\t[-q tls_engine_conf_file] [-r] [-v num] [-w [port][,secure_port]]\n"
-          "\t\t[-x] [-y rec_secs] [-A address] [-E oscore_conf_file[,seq_file]]\n"
-          "\t\t[-G group_if]\n"
+          "\t\t[-x] [-y rec_secs] [-z scheme://addr[:port]] [-A address]\n"
+          "\t\t[-E oscore_conf_file[,seq_file]] [-G group_if]\n"
           "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
@@ -1661,6 +1666,10 @@ usage(const char *program, const char *version) {
           "\t-x     \t\tDisable output of PDU data when displaying PDUs\n"
           "\t-y rec_secs\tAttempt to reconnect a failed proxy session every\n"
           "\t       \t\trec_secs\n"
+          "\t-z scheme://address[:port]\n"
+          "\t       \t\tInitiate a call-home to the specified scheme, address and\n"
+          "\t       \t\toptional port define how to connect to the call-home client.\n"
+          "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
           "\t-A address\tInterface address to bind to\n"
           "\t-E oscore_conf_file[,seq_file]\n"
           "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
@@ -1673,11 +1682,11 @@ usage(const char *program, const char *version) {
           "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
           "\t       \t\t(Sum of one or more of 1,2,4 64, 128 and 256)\n"
+          , program);
+  fprintf(stderr,
           "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
           "\t       \t\tevery fifth response will still be sent as a confirmable\n"
           "\t       \t\tresponse (RFC 7641 requirement)\n"
-          , program);
-  fprintf(stderr,
           "\t-P scheme://address[:port],[name1[,name2[,name3..]]]\n"
           "\t       \t\tScheme, address, optional port of how to connect to the\n"
           "\t       \t\tnext proxy server and zero or more names (comma\n"
@@ -1793,6 +1802,71 @@ usage(const char *program, const char *version) {
          );
 }
 
+#if COAP_CLIENT_SUPPORT
+static int
+do_call_home(coap_context_t *ctx) {
+  coap_address_t dst;
+  coap_uri_scheme_t scheme;
+  coap_proto_t proto;
+  static char client_sni[256];
+  coap_str_const_t server;
+  uint16_t port;
+  coap_addr_info_t *info_list = NULL;
+  coap_session_t *session;
+
+  server = call_home_uri.host;
+  port = call_home_uri.port;
+  scheme = call_home_uri.scheme;
+
+  /* resolve destination address where call-home should be sent */
+  info_list = coap_resolve_address_info(&server, port, port, port, port,
+                                        0,
+                                        1 << scheme,
+                                        COAP_RESOLVE_TYPE_REMOTE);
+  if (info_list == NULL) {
+    return 0;
+  }
+  proto = info_list->proto;
+  memcpy(&dst, &info_list->addr, sizeof(dst));
+  coap_free_address_info(info_list);
+
+  switch (scheme) {
+  case COAP_URI_SCHEME_COAP:
+  case COAP_URI_SCHEME_COAP_TCP:
+  case COAP_URI_SCHEME_COAP_WS:
+    session = coap_new_client_session(ctx, NULL, &dst, proto);
+    break;
+  case COAP_URI_SCHEME_COAPS:
+  case COAP_URI_SCHEME_COAPS_TCP:
+  case COAP_URI_SCHEME_COAPS_WS:
+    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)server.length, (int)server.length, server.s);
+    if (!key_defined) {
+      /* Use our defined PKI certs (or NULL)  */
+      coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT,
+                                            client_sni);
+      session = coap_new_client_session_pki(ctx, NULL, &dst, proto, dtls_pki);
+    } else {
+      /* Use our defined PSK */
+      coap_dtls_cpsk_t *dtls_cpsk = setup_cpsk(client_sni);
+
+      session = coap_new_client_session_psk2(ctx, NULL, &dst, proto, dtls_cpsk);
+    }
+    break;
+  case COAP_URI_SCHEME_HTTP:
+  case COAP_URI_SCHEME_HTTPS:
+  case COAP_URI_SCHEME_LAST:
+  default:
+    assert(0);
+    break;
+  }
+  if (!session) {
+    return 0;
+  }
+  coap_session_set_type_server(session);
+  return 1;
+}
+#endif /* COAP_CLIENT_SUPPORT */
+
 static coap_context_t *
 get_context(const char *node, const char *port) {
   coap_context_t *ctx = NULL;
@@ -1811,6 +1885,12 @@ get_context(const char *node, const char *port) {
 
   /* Need PKI/RPK/PSK set up before we set up (D)TLS endpoints */
   fill_keystore(ctx);
+
+#if COAP_CLIENT_SUPPORT
+  if (call_home) {
+    return ctx;
+  }
+#endif /* COAP_CLIENT_SUPPORT */
 
   if (node) {
     local.s = (const uint8_t *)node;
@@ -2401,7 +2481,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:y:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y2")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:y:z:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y2")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2594,6 +2674,19 @@ main(int argc, char **argv) {
     case 'Y':
       no_trust_store = 1;
       break;
+    case 'z':
+#if COAP_CLIENT_SUPPORT
+      if (coap_split_uri((u_char *)optarg, strlen(optarg), &call_home_uri) < 0 ||
+          call_home_uri.path.length != 0 || call_home_uri.query.length != 0) {
+        fprintf(stderr, "invalid CoAP URI '%s'\n", optarg);
+        exit(1);
+      }
+      call_home = 1;
+#else /* ! COAP_CLIENT_SUPPORT */
+      fprintf(stderr, "Client support not enabled in libcoap for '-z'\n");
+      exit(1);
+#endif /* ! COAP_CLIENT_SUPPORT */
+      break;
     case '2':
       ec_jpake = 1;
       break;
@@ -2683,6 +2776,15 @@ main(int argc, char **argv) {
       goto finish;
     }
   }
+
+#if COAP_CLIENT_SUPPORT
+  if (call_home) {
+    if (!do_call_home(ctx)) {
+      fprintf(stderr, "Unable to set up call home\n");
+      goto finish;
+    }
+  }
+#endif /* COAP_CLIENT_SUPPORT */
 
   wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
