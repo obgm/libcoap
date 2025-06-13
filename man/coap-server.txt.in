@@ -20,10 +20,10 @@ coap-server-notls
 SYNOPSIS
 --------
 *coap-server* [*-a* priority] [*-b* max_block_size] [*-d* max] [*-e*]
-              [*-f* scheme://addr[:port] [*-g* group]
+              [*-f* scheme://addr[:port]] [*-g* group]
               [*-l* loss] [*-o*] [*-p* port] [*-q* tls_engine_conf_file]
               [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]] [*-x*]
-              [*-y* rec_secs]
+              [*-y* rec_secs] [*-z* scheme://addr[:port]]
               [*-A* address] [*-E* oscore_conf_file[,seq_file]]
               [*-G* group_if] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port],[name1[,name2..]]]
@@ -118,6 +118,11 @@ OPTIONS - General
 
 *-y* rec_secs::
    Attempt to reconnect a failed proxy session every rec_secs.
+
+*-z* scheme://address[:port]::
+   Initiate a call-home to the specified scheme, address and optional port
+   define how to connect to the call-home client. Scheme is one of coap,
+   coaps, coap+tcp and coaps+tcp.
 
 *-A* address::
    The local address of the interface which the server has to listen on.

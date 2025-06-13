@@ -48,6 +48,7 @@ strndup(const char *s1, size_t n) {
 #endif
 
 #include <coap3/coap.h>
+#include <coap3/coap_defines.h>
 
 #define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
                       * identity) in bytes. */
@@ -158,6 +159,11 @@ static int doing_oscore = 0;
 static int doing_tls_engine = 0;
 static char *tls_engine_conf = NULL;
 static int ec_jpake = 0;
+
+#if COAP_SERVER_SUPPORT
+static int call_home = 0;
+static coap_session_t *call_home_session = NULL;
+#endif /* COAP_SERVER_SUPPORT */
 
 static int quit = 0;
 
@@ -331,6 +337,12 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_BAD_PACKET:
     quit = 1;
     break;
+  case COAP_EVENT_SERVER_SESSION_CONNECTED:
+#if COAP_SERVER_SUPPORT
+    call_home_session = session;
+    coap_session_set_type_client(session);
+    break;
+#endif /* COAP_SERVER_SUPPORT */
   case COAP_EVENT_DTLS_CONNECTED:
   case COAP_EVENT_DTLS_RENEGOTIATE:
   case COAP_EVENT_DTLS_ERROR:
@@ -519,8 +531,8 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "\n"
           "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
           "\t\t[-m method] [-o file] [-p port] [-q tls_engine_conf_file] [-r]\n"
-          "\t\t[-s duration] [-t type] [-v num] [-w] [-x]  [-y rec_secs]\n"
-          "\t\t[-A type] [-B seconds]\n"
+          "\t\t[-s duration] [-t type] [-v num] [-w] [-x] [-y rec_secs]\n"
+          "\t\t[-z] [-A type] [-B seconds]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
           "\t\t[-T token] [-U] [-V num] [-X size]\n"
@@ -558,6 +570,11 @@ usage(const char *program, const char *version) {
           "\t-w     \t\tAppend a newline to received data\n"
           "\t-x     \t\tDisable output of PDU data when displaying PDUs\n"
           "\t-y rec_secs\tAttempt to reconnect a failed session every rec_secs\n"
+          "\t-z     \t\tAct as a server listening on the port with the scheme\n"
+          "\t       \t\tdetermined from the URI parameter. When the remote end\n"
+          "\t       \t\tconnects, change the role to being a Client and then send\n"
+          "\t       \t\tthe CoAP request specified in the rest of the URI\n"
+          "\t       \t\t(call home scenario). Host ignored in URI parameter\n"
           "\t-A type\t\tAccepted media type\n"
           "\t-B seconds\tBreak operation after waiting given seconds\n"
           "\t       \t\t(default is %d)\n"
@@ -590,10 +607,10 @@ usage(const char *program, const char *version) {
           "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
           "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
           "\t       \t\tlibrary logging\n"
-          "\t-X size\t\tMaximum message size to use for TCP based connections\n"
-          "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
           ,program, wait_seconds);
   fprintf(stderr,
+          "\t-X size\t\tMaximum message size to use for TCP based connections\n"
+          "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
           "DTLS Options (if supported by underlying (D)TLS library)\n"
           "\t-d count\n"
           "\t       \t\tFor DTLS, enable use of Connection-ID. If count\n"
@@ -910,7 +927,7 @@ cmdline_uri(char *arg) {
 
   } else {      /* split arg into Uri-* options */
     if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0) {
-      coap_log_err("invalid CoAP URI\n");
+      coap_log_err("invalid CoAP URI '%s'\n", arg);
       return -1;
     }
 
@@ -1403,8 +1420,54 @@ verify_ih_callback(coap_str_const_t *hint,
   return psk_info;
 }
 
+static void
+update_pki_key(coap_dtls_key_t *dtls_key, const char *key_name,
+               const char *cert_name, const char *ca_name) {
+  memset(dtls_key, 0, sizeof(*dtls_key));
+  if (doing_tls_engine) {
+    dtls_key->key_type = COAP_PKI_KEY_DEFINE;
+    dtls_key->key.define.public_cert.s_byte = cert_name;
+    dtls_key->key.define.private_key.s_byte = key_name ? key_name : cert_name;
+    dtls_key->key.define.ca.s_byte = ca_name;
+    dtls_key->key.define.public_cert_def = COAP_PKI_KEY_DEF_ENGINE;
+    dtls_key->key.define.private_key_def = COAP_PKI_KEY_DEF_ENGINE;
+    dtls_key->key.define.ca_def = COAP_PKI_KEY_DEF_ENGINE;
+    dtls_key->key.define.user_pin = pkcs11_pin;
+  } else if ((key_name && strncasecmp(key_name, "pkcs11:", 7) == 0) ||
+             (cert_name && strncasecmp(cert_name, "pkcs11:", 7) == 0) ||
+             (ca_name && strncasecmp(ca_name, "pkcs11:", 7) == 0)) {
+    dtls_key->key_type = COAP_PKI_KEY_PKCS11;
+    dtls_key->key.pkcs11.public_cert = cert_name;
+    dtls_key->key.pkcs11.private_key = key_name ?  key_name : cert_name;
+    dtls_key->key.pkcs11.ca = ca_name;
+    dtls_key->key.pkcs11.user_pin = pkcs11_pin;
+  } else if (!is_rpk_not_cert) {
+    dtls_key->key_type = COAP_PKI_KEY_PEM;
+    dtls_key->key.pem.public_cert = cert_name;
+    dtls_key->key.pem.private_key = key_name ? key_name : cert_name;
+    dtls_key->key.pem.ca_file = ca_name;
+  } else {
+    /* Map file into memory */
+    coap_free(ca_mem);
+    coap_free(cert_mem);
+    coap_free(key_mem);
+    ca_mem = read_file_mem(ca_name, &ca_mem_len);
+    cert_mem = read_file_mem(cert_name, &cert_mem_len);
+    key_mem = read_file_mem(key_name, &key_mem_len);
+
+    dtls_key->key_type = COAP_PKI_KEY_PEM_BUF;
+    dtls_key->key.pem_buf.ca_cert = ca_mem;
+    dtls_key->key.pem_buf.public_cert = cert_mem;
+    dtls_key->key.pem_buf.private_key = key_mem ? key_mem : cert_mem;
+    dtls_key->key.pem_buf.ca_cert_len = ca_mem_len;
+    dtls_key->key.pem_buf.public_cert_len = cert_mem_len;
+    dtls_key->key.pem_buf.private_key_len = key_mem ?
+                                            key_mem_len : cert_mem_len;
+  }
+}
+
 static coap_dtls_pki_t *
-setup_pki(coap_context_t *ctx) {
+setup_pki(coap_context_t *ctx, coap_dtls_role_t role) {
   static coap_dtls_pki_t dtls_pki;
   static char client_sni[256];
 
@@ -1451,53 +1514,17 @@ setup_pki(coap_context_t *ctx) {
   dtls_pki.is_rpk_not_cert = is_rpk_not_cert;
   dtls_pki.use_cid = setup_cid;
   dtls_pki.validate_cn_call_back = verify_cn_callback;
-  if (proxy.host.length) {
-    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)proxy.host.length, (int)proxy.host.length,
-             proxy.host.s);
-  } else {
-    snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)uri.host.length, (int)uri.host.length,
-             uri.host.s);
+  if (role == COAP_DTLS_ROLE_CLIENT) {
+    if (proxy.host.length) {
+      snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)proxy.host.length, (int)proxy.host.length,
+               proxy.host.s);
+    } else {
+      snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)uri.host.length, (int)uri.host.length,
+               uri.host.s);
+    }
   }
   dtls_pki.client_sni = client_sni;
-  if (doing_tls_engine) {
-    dtls_pki.pki_key.key_type = COAP_PKI_KEY_DEFINE;
-    dtls_pki.pki_key.key.define.public_cert.s_byte = cert_file;
-    dtls_pki.pki_key.key.define.private_key.s_byte = key_file ? key_file : cert_file;
-    dtls_pki.pki_key.key.define.ca.s_byte = ca_file;
-    dtls_pki.pki_key.key.define.public_cert_def = COAP_PKI_KEY_DEF_ENGINE;
-    dtls_pki.pki_key.key.define.private_key_def = COAP_PKI_KEY_DEF_ENGINE;
-    dtls_pki.pki_key.key.define.ca_def = COAP_PKI_KEY_DEF_ENGINE;
-    dtls_pki.pki_key.key.define.user_pin = pkcs11_pin;
-  } else if ((key_file && strncasecmp(key_file, "pkcs11:", 7) == 0) ||
-             (cert_file && strncasecmp(cert_file, "pkcs11:", 7) == 0) ||
-             (ca_file && strncasecmp(ca_file, "pkcs11:", 7) == 0)) {
-    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PKCS11;
-    dtls_pki.pki_key.key.pkcs11.public_cert = cert_file;
-    dtls_pki.pki_key.key.pkcs11.private_key = key_file ?
-                                              key_file : cert_file;
-    dtls_pki.pki_key.key.pkcs11.ca = ca_file;
-    dtls_pki.pki_key.key.pkcs11.user_pin = pkcs11_pin;
-  } else if (!is_rpk_not_cert) {
-    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
-    dtls_pki.pki_key.key.pem.public_cert = cert_file;
-    dtls_pki.pki_key.key.pem.private_key = key_file ? key_file : cert_file;
-    dtls_pki.pki_key.key.pem.ca_file = ca_file;
-  } else {
-    /* Map file into memory */
-    if (ca_mem == 0 && cert_mem == 0 && key_mem == 0) {
-      ca_mem = read_file_mem(ca_file, &ca_mem_len);
-      cert_mem = read_file_mem(cert_file, &cert_mem_len);
-      key_mem = read_file_mem(key_file, &key_mem_len);
-    }
-    dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM_BUF;
-    dtls_pki.pki_key.key.pem_buf.ca_cert = ca_mem;
-    dtls_pki.pki_key.key.pem_buf.public_cert = cert_mem;
-    dtls_pki.pki_key.key.pem_buf.private_key = key_mem ? key_mem : cert_mem;
-    dtls_pki.pki_key.key.pem_buf.ca_cert_len = ca_mem_len;
-    dtls_pki.pki_key.key.pem_buf.public_cert_len = cert_mem_len;
-    dtls_pki.pki_key.key.pem_buf.private_key_len = key_mem ?
-                                                   key_mem_len : cert_mem_len;
-  }
+  update_pki_key(&dtls_pki.pki_key, key_file, cert_file, ca_file);
   return &dtls_pki;
 }
 
@@ -1548,7 +1575,7 @@ open_session(coap_context_t *ctx,
     /* Encrypted session */
     if (root_ca_file || ca_file || cert_file) {
       /* Setup PKI session */
-      coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
+      coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT);
       if (doing_oscore) {
         session = coap_new_client_session_oscore_pki(ctx, bind_addr, dst,
                                                      proto, dtls_pki,
@@ -1569,7 +1596,7 @@ open_session(coap_context_t *ctx,
                                                dtls_psk);
     } else {
       /* No PKI or PSK defined, as encrypted, use PKI */
-      coap_dtls_pki_t *dtls_pki = setup_pki(ctx);
+      coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT);
       if (doing_oscore) {
         session = coap_new_client_session_oscore_pki(ctx, bind_addr, dst,
                                                      proto, dtls_pki,
@@ -1592,6 +1619,79 @@ open_session(coap_context_t *ctx,
   return session;
 }
 
+#if COAP_SERVER_SUPPORT
+static coap_session_t *
+get_call_home_session(coap_context_t *ctx,
+                      const char *local_addr,
+                      coap_uri_scheme_t scheme,
+                      uint16_t port,
+                      const uint8_t *key,
+                      size_t key_len) {
+  coap_session_t *session = NULL;
+  coap_addr_info_t *info = NULL;
+  coap_addr_info_t *info_list = NULL;
+  coap_str_const_t local;
+  int have_ep = 0;
+
+  if (cert_file) {
+    coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_SERVER);
+    if (!coap_context_set_pki(ctx, dtls_pki)) {
+      coap_log_info("Unable to set up %s keys\n",
+                    is_rpk_not_cert ? "RPK" : "PKI");
+      /* So we do not set up DTLS */
+      cert_file = NULL;
+    }
+  }
+  if (key_len) {
+    static coap_dtls_spsk_t dtls_spsk;
+
+    memset(&dtls_spsk, 0, sizeof(dtls_spsk));
+    dtls_spsk.version = COAP_DTLS_SPSK_SETUP_VERSION;
+    dtls_spsk.ec_jpake = ec_jpake;
+    dtls_spsk.psk_info.key.s = key;
+    dtls_spsk.psk_info.key.length = key_len;
+
+    if (!coap_context_set_psk2(ctx, &dtls_spsk)) {
+      coap_log_info("Unable to set up PSK\n");
+    }
+  }
+  if (local_addr) {
+    local.s = (const uint8_t *)local_addr;
+    local.length = strlen(local_addr);
+  } else {
+    local.s = (const uint8_t *)"::";
+    local.length = strlen("::");
+  }
+  info_list = coap_resolve_address_info(&local, port,
+                                        port,
+                                        port, port,
+                                        AI_PASSIVE | AI_NUMERICHOST,
+                                        1 << scheme,
+                                        COAP_RESOLVE_TYPE_LOCAL);
+  for (info = info_list; info != NULL; info = info->next) {
+    coap_endpoint_t *ep;
+
+    ep = coap_new_endpoint(ctx, &info->addr, info->proto);
+    if (!ep) {
+      coap_log_warn("cannot create endpoint for proto %u\n",
+                    info->proto);
+    } else {
+      have_ep = 1;
+    }
+  }
+  coap_free_address_info(info_list);
+
+  if (have_ep) {
+    /* Need to wait for a session to come in */
+    while (!quit && !call_home_session) {
+      coap_io_process(ctx, 1000);
+    }
+    session = call_home_session;
+  }
+  return session;
+}
+#endif /* COAP_SERVER_SUPPORT */
+
 static coap_session_t *
 get_session(coap_context_t *ctx,
             const char *local_addr,
@@ -1606,7 +1706,16 @@ get_session(coap_context_t *ctx,
   coap_session_t *session = NULL;
 
   is_mcast = coap_is_mcast(dst);
-  if (coap_is_af_unix(dst)) {
+
+#if COAP_SERVER_SUPPORT
+  if (call_home) {
+    session = get_call_home_session(ctx, local_addr, scheme,
+                                    coap_address_get_port(dst), key, key_len);
+  } else if (coap_is_af_unix(dst))
+#else  /* ! COAP_SERVER_SUPPORT */
+  if (coap_is_af_unix(dst))
+#endif /* ! COAP_SERVER_SUPPORT */
+  {
     coap_address_t bind_addr;
 
     if (local_addr) {
@@ -1718,7 +1827,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:A:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:Y2")) != -1) {
+                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:Y2")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1786,6 +1895,14 @@ main(int argc, char **argv) {
       break;
     case 'y':
       reconnect_secs = atoi(optarg);
+      break;
+    case 'z':
+#if COAP_SERVER_SUPPORT
+      call_home = 1;
+#else /* ! COAP_SERVER_SUPPORT */
+      fprintf(stderr, "Server support not enabled in libcoap for '-z'\n");
+      exit(1);
+#endif /* ! COAP_SERVER_SUPPORT */
       break;
     case 'N':
       msgtype = COAP_MESSAGE_NON;

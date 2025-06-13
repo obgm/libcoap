@@ -250,17 +250,40 @@ coap_context_t *coap_session_get_context(const coap_session_t *session);
  * Set the session type to client. Typically used in a call-home server.
  * The session initially needs to be of type COAP_SESSION_TYPE_SERVER,
  * which is then made COAP_SESSION_TYPE_CLIENT.
+ *
  * Note: If this function is successful, the session reference count is
  * incremented and a subsequent coap_session_release() taking the
  * reference count to 0 will cause the (now client) session to be freed off.
+ *
  * Note: This function will fail for a DTLS server type session if done before
- * the ClientHello is seen.
+ * the ClientHello is seen. It should be called on receipt of event
+ * COAP_EVENT_SERVER_SESSION_CONNECTED in the event handler.
  *
  * @param session The CoAP session.
  *
  * @return @c 1 if updated, @c 0 on failure.
  */
 COAP_API int coap_session_set_type_client(coap_session_t *session);
+
+/**
+ * Set the session type to server. Typically used in a call-home environment
+ * where the 'server' initiates a client connection to the 'client' followed
+ * by 'client' then taking over the client role.
+ * The session initially needs to be of type COAP_SESSION_TYPE_CLIENT,
+ * which is then made COAP_SESSION_TYPE_SERVER.
+ *
+ * Note: If this function is successful, the session reference count is
+ * decremented (to balance out with a client starting with a reference count
+ * of 1) so the session acts like a normal server session that may idle timeout.
+ *
+ * Note: this should be immediately called after a successful
+ * coap_new_client_session*() type function.
+ *
+ * @param session The CoAP session.
+ *
+ * @return @c 1 if updated, @c 0 on failure.
+ */
+COAP_API int coap_session_set_type_server(coap_session_t *session);
 
 /**
  * Set the session MTU. This is the maximum message size that can be sent,

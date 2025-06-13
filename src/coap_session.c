@@ -631,12 +631,12 @@ coap_session_free(coap_session_t *session) {
 #if COAP_SERVER_SUPPORT
   coap_delete_pdu_lkd(session->cached_pdu);
 #endif /* COAP_SERVER_SUPPORT */
-  coap_log_debug("***%s: session %p: closed\n", coap_session_str(session),
-                 (void *)session);
 
   if (session->app_cb) {
     session->app_cb(session->app_data);
   }
+  coap_log_debug("***%s: session %p: closed\n", coap_session_str(session),
+                 (void *)session);
   assert(session->ref == 1);
   coap_free_type(COAP_SESSION, session);
 }
@@ -677,7 +677,7 @@ coap_session_server_keepalive_failed(coap_session_t *session) {
     coap_delete_node_lkd(q);
   }
   /* Force session to go away */
-  coap_session_set_type_client_lkd(session);
+  coap_session_set_type_client_lkd(session, 0);
   coap_session_release_lkd(session);
 
   coap_session_release_lkd(session);
@@ -876,6 +876,14 @@ coap_session_send_ping(coap_session_t *session) {
 
   coap_lock_lock(return COAP_INVALID_MID);
   mid = coap_session_send_ping_lkd(session);
+  if (mid != COAP_INVALID_MID) {
+    coap_tick_t now;
+
+    coap_ticks(&now);
+    session->last_ping_mid = mid;
+    session->last_rx_tx = now;
+    session->last_ping = now;
+  }
   coap_lock_unlock();
   return mid;
 }
@@ -1217,6 +1225,15 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
   }
 
 #if COAP_CLIENT_SUPPORT
+  SESSIONS_FIND(endpoint->context->sessions, addr_hash, session);
+  if (session) {
+    /* Maybe mcast or unicast IP address which is not in the hash */
+    coap_address_copy(&session->addr_info.local, &packet->addr_info.local);
+    session->ifindex = packet->ifindex;
+    session->last_rx_tx = now;
+    return session;
+  }
+
   if (coap_is_mcast(&packet->addr_info.local)) {
     /* Check if this a proxy client packet we sent on another socket */
     SESSIONS_ITER(endpoint->context->sessions, session, rtmp) {
@@ -2195,22 +2212,118 @@ coap_session_set_type_client(coap_session_t *session) {
   int ret;
 
   coap_lock_lock(return 0);
-  ret = coap_session_set_type_client_lkd(session);
+  ret = coap_session_set_type_client_lkd(session, 1);
   coap_lock_unlock();
   return ret;
 }
 
 int
-coap_session_set_type_client_lkd(coap_session_t *session) {
-#if COAP_SERVER_SUPPORT
+coap_session_set_type_client_lkd(coap_session_t *session, int report_changed) {
+#if COAP_CLIENT_SUPPORT && COAP_SERVER_SUPPORT
   if (session && session->type == COAP_SESSION_TYPE_SERVER) {
     coap_session_reference_lkd(session);
     session->type = COAP_SESSION_TYPE_CLIENT;
+    if (session->endpoint) {
+      SESSIONS_DELETE(session->endpoint->sessions, session);
+      SESSIONS_ADD(session->context->sessions, session);
+      if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+        session->sock = session->endpoint->sock;
+        session->sock.flags |= COAP_SOCKET_SLAVE;
+        session->sock.flags &= ~COAP_SOCKET_CAN_READ;
+        session->sock.flags &= ~COAP_SOCKET_WANT_READ;
+      }
+      session->endpoint = NULL;
+    }
+    if (report_changed) {
+      coap_log_debug("***%s: session now is type Client\n",
+                     coap_session_str(session));
+    }
     return 1;
   }
-#else /* ! COAP_SERVER_SUPPORT */
+#else /* ! COAP_CLIENT_SUPPORT || ! COAP_SERVER_SUPPORT */
   (void)session;
-#endif /* ! COAP_SERVER_SUPPORT */
+  (void)report_changed;
+#endif /* ! COAP_CLIENT_SUPPORT || ! COAP_SERVER_SUPPORT */
+  return 0;
+}
+
+COAP_API int
+coap_session_set_type_server(coap_session_t *session) {
+  int ret;
+
+  coap_lock_lock(return 0);
+  ret = coap_session_set_type_server_lkd(session);
+  coap_lock_unlock();
+  return ret;
+}
+
+int
+coap_session_set_type_server_lkd(coap_session_t *session) {
+#if COAP_CLIENT_SUPPORT && COAP_SERVER_SUPPORT
+  if (session && session->type == COAP_SESSION_TYPE_CLIENT) {
+    coap_endpoint_t *ep;
+    coap_mid_t mid;
+    coap_pdu_t *ping = NULL;
+
+    LL_FOREACH(session->context->endpoint, ep) {
+      if (session->proto == ep->proto)
+        break;
+    }
+    if (!ep) {
+      /* Need a dummy endpoint to 'hang' off as this is now a server */
+      ep = coap_malloc_endpoint();
+      if (!ep) {
+        coap_log_warn("coap_new_endpoint: malloc");
+        return 0;
+      }
+
+      memset(ep, 0, sizeof(coap_endpoint_t));
+      ep->context = session->context;
+      ep->proto = session->proto;
+      ep->sock.endpoint = ep;
+      memcpy(&ep->sock.lfunc, coap_layers_coap[session->proto], sizeof(ep->sock.lfunc));
+
+      ep->default_mtu = COAP_DEFAULT_MTU;
+      LL_PREPEND(session->context->endpoint, ep);
+    }
+    /* Need to use coap_send_lkd() here to get traffic flowing */
+    if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+      ping = coap_new_pdu_lkd(COAP_MESSAGE_CON, COAP_EMPTY_CODE, session);
+    }
+#if !COAP_DISABLE_TCP
+    else {
+      ping = coap_new_pdu_lkd(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_PING, session);
+    }
+#endif /* !COAP_DISABLE_TCP */
+    if (!ping) {
+      session->type = COAP_SESSION_TYPE_SERVER;
+      return 0;
+    }
+    mid = coap_send_lkd(session, ping);
+    if (mid != COAP_INVALID_MID) {
+      coap_tick_t now;
+
+      coap_ticks(&now);
+      session->last_ping_mid = mid;
+      session->last_rx_tx = now;
+      session->last_ping = now;
+    }
+    if (session->context) {
+      if (session->context->sessions) {
+        SESSIONS_DELETE(session->context->sessions, session);
+      }
+    }
+    SESSIONS_ADD(ep->sessions, session);
+    session->endpoint = ep;
+    session->type = COAP_SESSION_TYPE_SERVER;
+    coap_session_release_lkd(session);
+    coap_log_debug("***%s: session now is type Server\n",
+                   coap_session_str(session));
+    return 1;
+  }
+#else /* ! COAP_CLIENT_SUPPORT || ! COAP_SERVER_SUPPORT */
+  (void)session;
+#endif /* ! COAP_CLIENT_SUPPORT || ! COAP_SERVER_SUPPORT */
   return 0;
 }
 
