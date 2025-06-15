@@ -265,6 +265,7 @@ coap_resource_init(coap_str_const_t *uri_path, int flags) {
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
+    r->ref = 1;
 
     if (!(flags & COAP_RESOURCE_FLAGS_RELEASE_URI)) {
       /* Need to take a copy if caller is not providing a release request */
@@ -299,6 +300,7 @@ coap_resource_unknown_init2(coap_method_handler_t put_handler, int flags) {
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
+    r->ref = 1;
     r->is_unknown = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_unknown_resource_uri, sizeof(coap_unknown_resource_uri)-1);
@@ -329,6 +331,7 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
   if (r) {
     size_t i;
     memset(r, 0, sizeof(coap_resource_t));
+    r->ref = 1;
     r->is_proxy_uri = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_proxy_resource_uri, sizeof(coap_proxy_resource_uri)-1);
@@ -381,6 +384,7 @@ coap_resource_reverse_proxy_init(coap_method_handler_t handler, int flags) {
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
+    r->ref = 1;
     r->is_unknown = 1;
     r->is_reverse_proxy = 1;
     /* Something unlikely to be used, but it shows up in the logs */
@@ -513,6 +517,17 @@ coap_free_resource(coap_resource_t *resource, coap_deleting_resource_t deleting)
   LL_FOREACH_SAFE(resource->subscribers, obs, otmp) {
     coap_delete_observer_internal(resource, obs->session, obs);
   }
+  coap_resource_release_lkd(resource);
+}
+
+void
+coap_resource_release_lkd(coap_resource_t *resource) {
+
+  assert(resource->ref);
+  resource->ref--;
+  if (resource->ref)
+    return;
+
   if (resource->proxy_name_count && resource->proxy_name_list) {
     size_t i;
 
@@ -580,13 +595,9 @@ coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
     return 0;
 
   context = resource->context;
-  if (context) {
-    coap_lock_lock(return 0);
-    ret = coap_delete_resource_lkd(context, resource);
-    coap_lock_unlock();
-  } else {
-    ret = coap_delete_resource_lkd(context, resource);
-  }
+  coap_lock_lock(return 0);
+  ret = coap_delete_resource_lkd(context, resource);
+  coap_lock_unlock();
   return ret;
 }
 
@@ -595,13 +606,12 @@ coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
  */
 int
 coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
+  (void)context;
+
   if (!resource)
     return 0;
 
-  context = resource->context;
-  if (context) {
-    coap_lock_check_locked();
-  }
+  coap_lock_check_locked();
 
   if (resource->is_unknown) {
     if (context && context->unknown_resource == resource) {
@@ -614,6 +624,12 @@ coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
   } else if (context) {
     /* remove resource from list */
     RESOURCES_DELETE(context->resources, resource);
+  }
+  if (resource->is_dynamic) {
+    if (context) {
+      assert(context->dynamic_cur);
+      context->dynamic_cur--;
+    }
   }
 
   /* and free its allocated memory */
@@ -1119,6 +1135,8 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       return;
     r->list_being_traversed = 1;
 
+    coap_resource_reference_lkd(r);
+
     r->partiallydirty = 0;
 
     LL_FOREACH_SAFE(r->subscribers, obs, otmp) {
@@ -1234,6 +1252,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                                    coap_session_release_lkd(obs_session);
                                    coap_pdu_release_lkd(obs_pdu);
                                    r->list_being_traversed = 0;
+                                   coap_resource_release_lkd(r);
                                    return);
 
         /* Check validity of response code */
@@ -1246,6 +1265,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
           coap_session_release_lkd(obs_session);
           coap_pdu_release_lkd(obs_pdu);
           r->list_being_traversed = 0;
+          coap_resource_release_lkd(r);
           return;
         }
 
@@ -1335,6 +1355,7 @@ cleanup:
       coap_session_release_lkd(obs_session);
       coap_pdu_release_lkd(obs_pdu);
     }
+    coap_resource_release_lkd(r);
     r->list_being_traversed = 0;
   }
   r->dirty = 0;
@@ -1501,4 +1522,8 @@ coap_handle_failed_notify(coap_context_t *context,
   }
 }
 
+void
+coap_resource_reference_lkd(coap_resource_t *resource) {
+  resource->ref++;
+}
 #endif /* ! COAP_SERVER_SUPPORT */
