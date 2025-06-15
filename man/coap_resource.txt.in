@@ -231,6 +231,11 @@ more of the COAP_RESOURCE_FLAGS MCAST definitions.
 *NOTE:* There can only be one reverse-proxy or unknown resource handler per
 context - attaching a new one overrides the previous definition.
 
+*NOTE:* If resources are created in the request handlers accociated with this
+resource, as multiple threads can be running in the same handler either lock
+protection needs to be provided in the handler, or consider using
+*coap_register_dynamic_resource_handler*(3) instead for multi-thread environments.
+
 *Function: coap_resource_proxy_uri_init()*
 
 The *coap_resource_proxy_uri_init*() function returns a newly created
@@ -491,7 +496,150 @@ init_resources(coap_context_t *ctx) {
 }
 ----
 
-*Dynamic Resources Set Up*
+*Dynamic Resources Set Up using coap_register_dynamic_resource_handler()*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+/* Regular DELETE handler - used by resources created by the
+ * Dynamic Resource PUT/POST handler */
+
+static void
+hnd_delete(coap_resource_t *resource, coap_session_t *session,
+           const coap_pdu_t *request, const coap_string_t *query,
+           coap_pdu_t *response) {
+  /* Remove (void) definition if variable is used */
+  (void)session;
+  (void)request;
+  (void)query;
+  (void)response;
+
+  /* .. code .. */
+
+  /* Dynamic resource no longer required - delete it */
+  coap_delete_resource(NULL, resource);
+
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
+}
+
+/* Regular GET handler - used by resources created by the
+ * Dynamic Resource PUT/POST handler */
+
+static void
+hnd_get(coap_resource_t *resource, coap_session_t *session,
+        const coap_pdu_t *request, const coap_string_t *query,
+        coap_pdu_t *response) {
+  coap_str_const_t *get_uri_path;
+
+  /* Remove (void) definition if variable is used */
+  (void)resource;
+  (void)session;
+  (void)request;
+  (void)query;
+
+  /*
+   * Get the specific resource being requested to determine what the response is
+   * The uri_path string is a const pointer
+   */
+
+  get_uri_path = coap_resource_get_uri_path(resource);
+
+  /* .. code .. */
+
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+}
+
+/* Regular PUT handler - used by resources created by the
+ * Dynamic Resource PUT/POST handler */
+
+static void
+hnd_put_post(coap_resource_t *resource, coap_session_t *session,
+             const coap_pdu_t *request, const coap_string_t *query,
+             coap_pdu_t *response) {
+  /* Remove (void) definition if variable is used */
+  (void)resource;
+  (void)session;
+  (void)query;
+
+  coap_string_t *put_uri_path;
+  size_t length;
+  const uint8_t *data;
+  size_t offset;
+  size_t total;
+  int new_resource = 0;
+
+  /* get the uri_path */
+  put_uri_path = coap_get_uri_path(request);
+  if (!put_uri_path) {
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
+    return;
+  }
+  coap_get_data_large(request, &length, &data, &offset, &total);
+
+  /* .. code .. */
+
+  /* Need to do this as coap_get_uri_path() created it */
+  coap_delete_string(put_uri_path);
+
+  if (length + offset < total)
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTINUE);
+  else if (new_resource)
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
+  else
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
+}
+
+/*
+ * Dynamic Resource PUT / POST handler
+ * Create the appropriate resource and pass it back.
+ */
+
+static coap_resource_t *
+dyn_create_handler(coap_session_t *session, const coap_pdu_t *request) {
+  coap_resource_t *r;
+  coap_string_t *uri_path;
+
+  /* get the uri_path - will get used by coap_resource_init() */
+  uri_path = coap_get_uri_path(request);
+  if (!uri_path) {
+    return NULL;
+  }
+
+  /*
+   * Create a resource to handle the new URI
+   * uri_path will get deleted when the resource is removed.
+   * It may be that he resource information is held in the POST data.
+   */
+  r = coap_resource_init((coap_str_const_t *)uri_path,
+                         COAP_RESOURCE_FLAGS_RELEASE_URI | COAP_RESOURCE_FLAGS_NOTIFY_NON);
+  if (!r) {
+    return NULL;
+  }
+  coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Dynamic\""), 0);
+  coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_post);
+  coap_register_request_handler(r, COAP_REQUEST_POST, hnd_put_post);
+  coap_register_request_handler(r, COAP_REQUEST_DELETE, hnd_delete);
+  coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get);
+  /* We possibly want to Observe the GETs */
+  coap_resource_set_get_observable(r, 1);
+  coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get);
+  coap_add_resource(coap_session_get_context(session), r);
+  return r;
+}
+
+/* Initialize single Dynamic Resource PUT / POST handler */
+
+static void
+init_resources(coap_context_t *ctx) {
+
+  coap_register_dynamic_resource_handler(ctx, dyn_create_handler, 20);
+
+}
+----
+
+
+*Dynamic Resources Set Up using coap_resource_unknown_init2()*
 
 [source, c]
 ----

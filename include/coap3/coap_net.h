@@ -107,6 +107,16 @@ typedef void (*coap_pong_handler_t)(coap_session_t *session,
                                     const coap_mid_t mid);
 
 /**
+ * Definition of resource dynamic creation handler function
+ *
+ * @param session The CoAP session.
+ * @param request The request PDU.
+ *
+ * @return       A pointer to the new resource or @c NULL on error.
+ */
+typedef coap_resource_t *(*coap_resource_dynamic_create_t)(coap_session_t *session,
+                                                           const coap_pdu_t *request);
+/**
  * Registers a new message handler that is called whenever a response is
  * received.
  *
@@ -147,6 +157,24 @@ void coap_register_ping_handler(coap_context_t *context,
  */
 void coap_register_pong_handler(coap_context_t *context,
                                 coap_pong_handler_t handler);
+
+/**
+ * Sets up a handler for calling when an unknown resource is requested.
+ * The @p create_handler is expected to create the required resource to handle
+ * the request which is then used to call the appropriate method handler.
+ *
+ * Doing this stops multiple threads asking for the same unknown resource and
+ * means that a resource unknown handler does not need to be thread safe.
+ *
+ * @param context The context to add this support to.
+ * @param create_handler Called to create a new resource.
+ * @param dynamic_max Maximum number of currently created dynamic resources.  If
+ *                    0, unlimited.
+ *
+ */
+void coap_register_dynamic_resource_handler(coap_context_t *context,
+                                            coap_resource_dynamic_create_t create_handler,
+                                            uint32_t dynamic_max);
 
 /**
  * Registers the option number @p number with the given context object @p context.

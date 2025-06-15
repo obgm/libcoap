@@ -215,6 +215,9 @@ struct coap_context_t {
   uint8_t testing_cids;            /**< Change client's source port every testing_cids */
 #endif /* COAP_CLIENT_SUPPORT */
   uint32_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
+  coap_resource_dynamic_create_t dyn_create_handler; /**< Dynamc resource create handler */
+  uint32_t dynamic_cur;            /* Current number of dynamic resources */
+  uint32_t dynamic_max;            /* Max number of dynamic resources or 0 is unlimited */
 };
 
 /**

@@ -3605,6 +3605,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
           /* Cannot handle critical option */
           pdu->crit_opt = 0;
           resp = 402;
+          resource = NULL;
           goto fail_response;
         }
         is_proxy_uri = 0;
@@ -3614,6 +3615,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
     resource = NULL;
   }
+  assert(resource == NULL);
 
   if (!skip_hop_limit_check) {
     opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
@@ -3726,6 +3728,28 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
                      uri_path->s);
       resp = 202;
       goto fail_response;
+    } else if ((context->dyn_create_handler != NULL) &&
+               (pdu->code == COAP_REQUEST_CODE_PUT || pdu->code == COAP_REQUEST_CODE_POST)) {
+      /* Above test must be the same as in coap_op_dyn_resource_load_disk() */
+      if (context->dynamic_cur < context->dynamic_max || context->dynamic_max == 0) {
+#if COAP_WITH_OBSERVE_PERSIST
+        /* If we are maintaining Observe persist */
+        context->unknown_pdu = pdu;
+        context->unknown_session = session;
+#endif /* COAP_WITH_OBSERVE_PERSIST */
+        coap_lock_callback_ret(resource, context->dyn_create_handler(session, pdu));
+#if COAP_WITH_OBSERVE_PERSIST
+        /* If we are maintaining Observe persist */
+        context->unknown_pdu = NULL;
+        context->unknown_session = NULL;
+#endif /* COAP_WITH_OBSERVE_PERSIST */
+      }
+      if (!resource) {
+        resp = 406;
+        goto fail_response;
+      }
+      context->dynamic_cur++;
+      resource->is_dynamic = 1;
     } else { /* request for any another resource, return 4.04 */
 
       coap_log_debug("request for unknown resource '%*.*s', return 4.04\n",
@@ -3735,6 +3759,8 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
 
   }
+
+  coap_resource_reference_lkd(resource);
 
 #if COAP_OSCORE_SUPPORT
   if ((resource->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY) && !session->oscore_encryption) {
@@ -3920,7 +3946,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
                    resource->uri_path->s);
     coap_lock_callback_release(h(resource, session, pdu, query, response),
                                /* context is being freed off */
-                               coap_delete_string(query); goto finish);
+                               goto finish);
   }
 
   /* Check validity of response code */
@@ -4072,6 +4098,8 @@ drop_it_no_debug:
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
 finish:
+  if (resource)
+    coap_resource_release_lkd(resource);
   coap_delete_string(uri_path);
   return;
 
@@ -4082,6 +4110,8 @@ fail_response:
                               &opt_filter);
   if (response)
     goto skip_handler;
+  if (resource)
+    coap_resource_release_lkd(resource);
   coap_delete_string(uri_path);
 }
 #endif /* COAP_SERVER_SUPPORT */
@@ -5087,6 +5117,7 @@ coap_startup(void) {
                                          (const uint8_t *)".well-known/core"
                                        };
   memset(&resource_uri_wellknown, 0, sizeof(resource_uri_wellknown));
+  resource_uri_wellknown.ref = 1;
   resource_uri_wellknown.handler[COAP_REQUEST_GET-1] = hnd_get_wellknown_lkd;
   resource_uri_wellknown.flags = COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT;
   resource_uri_wellknown.uri_path = &well_known;
@@ -5156,6 +5187,15 @@ void
 coap_register_pong_handler(coap_context_t *context,
                            coap_pong_handler_t handler) {
   context->pong_handler = handler;
+}
+
+void
+coap_register_dynamic_resource_handler(coap_context_t *context,
+                                       coap_resource_dynamic_create_t dyn_create_handler,
+                                       uint32_t dynamic_max) {
+  context->dyn_create_handler = dyn_create_handler;
+  context->dynamic_max = dynamic_max;
+  return;
 }
 
 COAP_API void

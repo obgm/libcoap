@@ -714,7 +714,8 @@ coap_op_obs_cnt_load_disk(coap_context_t *context) {
     resource_key.length = strlen(buf);
     r = coap_get_resource_from_uri_path_lkd(context, &resource_key);
     if (r) {
-      coap_log_debug("persist: Initial observe number being updated\n");
+      coap_log_debug("persist: Initial observe number being updated '%s' %u\n",
+                     buf, observe_num);
       coap_persist_set_observe_num(r, observe_num);
     }
   }
@@ -933,7 +934,7 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
   coap_pdu_t *response = NULL;
   coap_string_t *query = NULL;
 
-  if (!ctx->unknown_resource)
+  if (!ctx->unknown_resource && !ctx->dyn_create_handler)
     return;
 
   fp_orig = fopen((const char *)ctx->dyn_resource_save_file->s, "r");
@@ -954,7 +955,7 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
     if (!r) {
       /* Create the new resource using the application logic */
 
-      coap_log_debug("persist: dynamic resource being re-created\n");
+      coap_log_debug("persist: dynamic resource '%s' being re-created\n", name->s);
       /*
        * Need max space incase PDU is updated with updated token,
        * huge size etc.
@@ -968,24 +969,38 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
                           raw_packet->length, request)) {
         goto fail;
       }
-      if (!ctx->unknown_resource->handler[request->code-1])
-        goto fail;
+      r = ctx->unknown_resource;
+      if ((ctx->dyn_create_handler != NULL) &&
+          (request->code == COAP_REQUEST_CODE_PUT || request->code == COAP_REQUEST_CODE_POST)) {
+        /* Above test must be the same as in handle_request() */
+        if (ctx->dynamic_cur < ctx->dynamic_max || ctx->dynamic_max == 0) {
+          ctx->unknown_pdu = request;
+          ctx->unknown_session = session;
+          coap_lock_callback_ret(r, ctx->dyn_create_handler(session, request));
+          ctx->unknown_pdu = NULL;
+          ctx->unknown_session = NULL;
+        }
+      }
+      if (!r || !r->handler[request->code-1])
+        goto next;
+
       response = coap_pdu_init(0, 0, 0, 0);
       if (!response)
         goto fail;
       query = coap_get_query(request);
       /* Call the application handler to set up this dynamic resource */
-      coap_lock_callback_release(ctx->unknown_resource->handler[request->code-1](ctx->unknown_resource,
-                                 session, request,
-                                 query, response),
+      coap_lock_callback_release(r->handler[request->code-1](r,
+                                                             session, request,
+                                                             query, response),
                                  /* context is being freed off */
                                  goto fail);
       coap_delete_string(query);
       query = NULL;
-      coap_delete_pdu_lkd(request);
-      request = NULL;
       coap_delete_pdu_lkd(response);
       response = NULL;
+next:
+      coap_delete_pdu_lkd(request);
+      request = NULL;
     }
     coap_delete_string(name);
     coap_delete_binary(raw_packet);

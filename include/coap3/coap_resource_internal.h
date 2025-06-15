@@ -60,7 +60,9 @@ struct coap_resource_t {
   unsigned int is_proxy_uri:1;   /**< resource created for proxy URI handler */
   unsigned int is_reverse_proxy:1; /**< resource created for reverse proxy URI handler */
   unsigned int list_being_traversed:1; /**< resource subscriber list being traversed */
+  unsigned int is_dynamic:1;     /**< create unknown resource dynamically */
 
+  uint32_t ref;                  /**< Resource reference count */
   /**
    * Used to store handlers for the seven coap methods @c GET, @c POST, @c PUT,
    * @c DELETE, @c FETCH, @c PATCH and @c IPATCH.
@@ -146,6 +148,26 @@ int coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource)
  * @param context The CoAP context with the resources to be deleted.
  */
 void coap_delete_all_resources(coap_context_t *context);
+
+/**
+ * Increment reference counter on a resource.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param resource The CoAP resource.
+ */
+void coap_resource_reference_lkd(coap_resource_t *resource);
+
+/**
+ * Decrement reference counter on a resource.
+ * Note that the resource storage may be deleted as a result and should not be
+ * used after this call.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param resource The CoAP resource.
+ */
+void coap_resource_release_lkd(coap_resource_t *resource);
 
 #define RESOURCES_ADD(r, obj) \
   HASH_ADD(hh, (r), uri_path->s[0], (obj)->uri_path->length, (obj))

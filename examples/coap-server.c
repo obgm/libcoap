@@ -249,6 +249,7 @@ release_resource_data(coap_session_t *session COAP_UNUSED,
   if (!transient_value)
     return;
 
+  assert(transient_value->ref_cnt);
   if (--transient_value->ref_cnt > 0)
     return;
   coap_delete_binary(transient_value->value);
@@ -722,15 +723,10 @@ hnd_reverse_proxy_uri(coap_resource_t *resource,
 #endif /* COAP_PROXY_SUPPORT */
 
 typedef struct dynamic_resource_t {
-  coap_string_t *uri_path;
   transient_value_t *value;
-  coap_resource_t *resource;
   int created;
   uint16_t media_type;
 } dynamic_resource_t;
-
-static int dynamic_count = 0;
-static dynamic_resource_t *dynamic_entry = NULL;
 
 /*
  * Regular DELETE handler - used by resources created by the
@@ -740,37 +736,10 @@ static dynamic_resource_t *dynamic_entry = NULL;
 static void
 hnd_delete(coap_resource_t *resource,
            coap_session_t *session COAP_UNUSED,
-           const coap_pdu_t *request,
+           const coap_pdu_t *request COAP_UNUSED,
            const coap_string_t *query COAP_UNUSED,
            coap_pdu_t *response) {
-  int i;
-  coap_string_t *uri_path;
-
-  /* get the uri_path */
-  uri_path = coap_get_uri_path(request);
-  if (!uri_path) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
-    return;
-  }
-
-  for (i = 0; i < dynamic_count; i++) {
-    if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
-      /* Dynamic entry no longer required - delete it */
-      release_resource_data(session, dynamic_entry[i].value);
-      coap_delete_string(dynamic_entry[i].uri_path);
-      if (dynamic_count-i > 1) {
-        memmove(&dynamic_entry[i],
-                &dynamic_entry[i+1],
-                (dynamic_count-i-1) * sizeof(dynamic_entry[0]));
-      }
-      dynamic_count--;
-      break;
-    }
-  }
-
-  /* Dynamic resource no longer required - delete it */
   coap_delete_resource(NULL, resource);
-  coap_delete_string(uri_path);
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_DELETED);
 }
 
@@ -785,33 +754,14 @@ hnd_get(coap_resource_t *resource,
         const coap_pdu_t *request,
         const coap_string_t *query,
         coap_pdu_t *response) {
-  coap_str_const_t *uri_path;
-  int i;
   dynamic_resource_t *resource_entry = NULL;
   coap_binary_t body;
-  /*
-   * request will be NULL if an Observe triggered request, so the uri_path,
-   * if needed, must be abstracted from the resource.
-   * The uri_path string is a const pointer
-   */
 
-  uri_path = coap_resource_get_uri_path(resource);
-  if (!uri_path) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
+  resource_entry = coap_resource_get_userdata(resource);
+  if (!resource_entry) {
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
     return;
   }
-
-  for (i = 0; i < dynamic_count; i++) {
-    if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
-      break;
-    }
-  }
-  if (i == dynamic_count) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
-    return;
-  }
-
-  resource_entry = &dynamic_entry[i];
 
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   body = reference_resource_data(resource_entry->value);
@@ -833,80 +783,35 @@ hnd_put_post(coap_resource_t *resource,
              const coap_pdu_t *request,
              const coap_string_t *query COAP_UNUSED,
              coap_pdu_t *response) {
-  coap_string_t *uri_path;
-  int i;
   size_t size;
   const uint8_t *data;
   size_t offset;
   size_t total;
   dynamic_resource_t *resource_entry = NULL;
-  unsigned char buf[6];      /* space to hold encoded/decoded uints */
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
   coap_binary_t *data_so_far;
   transient_value_t *transient_value;
 
-  /* get the uri_path */
-  uri_path = coap_get_uri_path(request);
-  if (!uri_path) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
-    return;
-  }
-
-  /*
-   * Locate the correct dynamic block for this request
-   */
-  for (i = 0; i < dynamic_count; i++) {
-    if (coap_string_equal(uri_path, dynamic_entry[i].uri_path)) {
-      break;
-    }
-  }
-  if (i == dynamic_count) {
-    if (dynamic_count >= support_dynamic) {
-      /* Should have been caught hnd_put_post_unknown() */
-      coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_ACCEPTABLE);
-      coap_delete_string(uri_path);
-      return;
-    }
-    dynamic_count++;
-    dynamic_entry = realloc(dynamic_entry,
-                            dynamic_count * sizeof(dynamic_entry[0]));
-    if (dynamic_entry) {
-      dynamic_entry[i].uri_path = uri_path;
-      dynamic_entry[i].value = NULL;
-      dynamic_entry[i].resource = resource;
-      dynamic_entry[i].created = 1;
-      if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
-                                      &opt_iter)) != NULL) {
-        dynamic_entry[i].media_type =
-            coap_decode_var_bytes(coap_opt_value(option),
-                                  coap_opt_length(option));
-      } else {
-        dynamic_entry[i].media_type = COAP_MEDIATYPE_TEXT_PLAIN;
-      }
-      /* Store media type of new resource in ct. We can use buf here
-       * as coap_add_attr() will copy the passed string. */
-      memset(buf, 0, sizeof(buf));
-      snprintf((char *)buf, sizeof(buf), "%d", dynamic_entry[i].media_type);
-      /* ensure that buf is always zero-terminated */
-      assert(buf[sizeof(buf) - 1] == '\0');
-      buf[sizeof(buf) - 1] = '\0';
-      coap_add_attr(resource,
-                    coap_make_str_const("ct"),
-                    coap_make_str_const((char *)buf),
-                    0);
-    } else {
-      dynamic_count--;
+  resource_entry = coap_resource_get_userdata(resource);
+  if (!resource_entry) {
+    resource_entry = malloc(sizeof(dynamic_resource_t));
+    if (!resource_entry) {
       coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
-      coap_delete_string(uri_path);
       return;
     }
-  } else {
-    /* Need to do this as coap_get_uri_path() created it */
-    coap_delete_string(uri_path);
+    memset(resource_entry, 0, sizeof(dynamic_resource_t));
+    resource_entry->created = 1;
+    if ((option = coap_check_option(request, COAP_OPTION_CONTENT_FORMAT,
+                                    &opt_iter)) != NULL) {
+      resource_entry->media_type =
+          coap_decode_var_bytes(coap_opt_value(option),
+                                coap_opt_length(option));
+    } else {
+      resource_entry->media_type = COAP_MEDIATYPE_TEXT_PLAIN;
+    }
+    coap_resource_set_userdata(resource, resource_entry);
   }
-
-  resource_entry = &dynamic_entry[i];
 
   if (coap_get_data_large(request, &size, &data, &offset, &total) &&
       size != total) {
@@ -1023,7 +928,7 @@ hnd_put_post(coap_resource_t *resource,
     }
   } else {
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
-    coap_resource_notify_observers(resource_entry->resource, NULL);
+    coap_resource_notify_observers(resource, NULL);
   }
 
   if (echo_back) {
@@ -1044,29 +949,19 @@ fail:
 }
 
 /*
- * Unknown Resource PUT handler
+ * Dynamic Resource PUT / POST handler
+ * Create the appropriate resource and pass it back.
  */
 
-static void
-hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
-                     coap_session_t *session,
-                     const coap_pdu_t *request,
-                     const coap_string_t *query,
-                     coap_pdu_t *response) {
+static coap_resource_t *
+dyn_create_handler(coap_session_t *session, const coap_pdu_t *request) {
   coap_resource_t *r;
   coap_string_t *uri_path;
-
-  /* check if creating a new resource is allowed */
-  if (dynamic_count >= support_dynamic) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_ACCEPTABLE);
-    return;
-  }
 
   /* get the uri_path - will get used by coap_resource_init() */
   uri_path = coap_get_uri_path(request);
   if (!uri_path) {
-    coap_pdu_set_code(response, COAP_RESPONSE_CODE_NOT_FOUND);
-    return;
+    return NULL;
   }
 
   /*
@@ -1075,6 +970,9 @@ hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
    */
   r = coap_resource_init((coap_str_const_t *)uri_path,
                          COAP_RESOURCE_FLAGS_RELEASE_URI | resource_flags);
+  if (!r) {
+    return NULL;
+  }
   coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Dynamic\""), 0);
   coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_post);
   coap_register_request_handler(r, COAP_REQUEST_POST, hnd_put_post);
@@ -1084,9 +982,7 @@ hnd_put_post_unknown(coap_resource_t *resource COAP_UNUSED,
   coap_resource_set_get_observable(r, 1);
   coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get);
   coap_add_resource(coap_session_get_context(session), r);
-
-  /* Do the PUT/POST for this first call */
-  hnd_put_post(r, session, request, query, response);
+  return r;
 }
 
 #if COAP_PROXY_SUPPORT
@@ -1161,6 +1057,15 @@ proxy_nack_handler(coap_session_t *session COAP_UNUSED,
 #endif /* COAP_PROXY_SUPPORT */
 
 static void
+resource_data_delete(void *ptr) {
+  dynamic_resource_t *resource_entry = (dynamic_resource_t *)ptr;
+  if (resource_entry->value) {
+    release_resource_data(NULL, resource_entry->value);
+  }
+  free(resource_entry);
+}
+
+static void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
 
@@ -1200,11 +1105,8 @@ init_resources(coap_context_t *ctx) {
     time_resource = r;
 
     if (support_dynamic > 0) {
-      /* Create a resource to handle PUTs to unknown URIs */
-      r = coap_resource_unknown_init2(hnd_put_post_unknown, 0);
-      /* Add in handling POST as well */
-      coap_register_handler(r, COAP_REQUEST_POST, hnd_put_post_unknown);
-      coap_add_resource(ctx, r);
+      coap_register_dynamic_resource_handler(ctx, dyn_create_handler,
+                                             support_dynamic);
     }
 
     if (coap_async_is_supported()) {
@@ -1239,6 +1141,7 @@ init_resources(coap_context_t *ctx) {
     coap_register_nack_handler(ctx, proxy_nack_handler);
   }
 #endif /* COAP_PROXY_SUPPORT */
+  coap_resource_release_userdata_handler(ctx, resource_data_delete);
 }
 
 static int
@@ -2916,11 +2819,6 @@ finish:
   if (valid_pki_snis.count)
     free(valid_pki_snis.pki_sni_list);
 
-  for (i = 0; i < (size_t)dynamic_count; i++) {
-    coap_delete_string(dynamic_entry[i].uri_path);
-    release_resource_data(NULL, dynamic_entry[i].value);
-  }
-  free(dynamic_entry);
   release_resource_data(NULL, example_data_value);
 #if COAP_PROXY_SUPPORT
   free(reverse_proxy.entry);
