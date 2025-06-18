@@ -1435,9 +1435,7 @@ setup_client_ssl_session(coap_session_t *c_session,
       }
     }
 #endif /* MBEDTLS_SSL_SRV_C && MBEDTLS_SSL_ALPN */
-    if (m_context->setup_data.client_sni) {
-      mbedtls_ssl_set_hostname(&m_env->ssl, m_context->setup_data.client_sni);
-    }
+    mbedtls_ssl_set_hostname(&m_env->ssl, m_context->setup_data.client_sni);
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 #if MBEDTLS_VERSION_NUMBER >= 0x02100100
     mbedtls_ssl_set_mtu(&m_env->ssl, (uint16_t)c_session->mtu);
