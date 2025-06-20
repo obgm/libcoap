@@ -173,8 +173,8 @@ on a Windows host.
 
 Remove any old copy of MSYS2 using Windows program remove.
 
-Download https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20230318.exe and
-run the executable, accepting the defaults.
+Download https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20230318.exe or
+later and run the executable, accepting the defaults.
 
 In a UCRT64 window, add in the following packages
 
@@ -191,6 +191,22 @@ Alternatively, in a MINGW64 window, add in the following packages
  pacman -S mingw-w64-x86_64-cmake
  pacman -S mingw-w64-x86_64-gcc
  pacman -S mingw-w64-x86_64-openssl
+
+Alternatively, in a MINGW32 window, add in the following packages
+
+ pacman -S git
+ pacman -S vim
+ pacman -S mingw-w64-i686-cmake
+ pacman -S mingw-w64-i686-gcc
+ pacman -S mingw-w64-i686-openssl
+
+Alternatively, in a CLANG64 window, add in the following packages
+
+ pacman -S git
+ pacman -S vim
+ pacman -S mingw-w64-clang-x86_64-cmake
+ pacman -S mingw-w64-clang-x86_64-gcc
+ pacman -S mingw-w64-clang-x86_64-openssl
 
 Then clone a copy of the github libcoap repository in a UCRT64 or MINGW64 window
 
