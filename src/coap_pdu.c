@@ -175,7 +175,8 @@ coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
   pdu = coap_pdu_init(type, code, coap_new_message_id_lkd(session),
                       coap_session_max_pdu_size_lkd(session));
   if (!pdu)
-    coap_log_crit("coap_new_pdu: cannot allocate memory for new PDU\n");
+    coap_log_crit("coap_new_pdu: cannot allocate memory for new PDU (size = %zu)\n",
+                  coap_session_max_pdu_size_lkd(session));
   return pdu;
 }
 
