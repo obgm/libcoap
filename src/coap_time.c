@@ -30,12 +30,12 @@
 
 static coap_tick_t coap_clock_offset = 0;
 
-#if _POSIX_TIMERS && !defined(__APPLE__)
+#if _POSIX_TIMERS && !defined(__APPLE__) && !defined(__MINGW32__)
 /* _POSIX_TIMERS is > 0 when clock_gettime() is available */
 
 /* Use real-time clock for correct timestamps in coap_log(). */
 #define COAP_CLOCK CLOCK_REALTIME
-#endif
+#endif /* _POSIX_TIMERS && ! __APPLE__ && ! __MINGW32__ */
 
 #if defined(HAVE_WINSOCK2_H) && !defined(__MINGW32__)
 static int

@@ -2700,7 +2700,7 @@ main(int argc, char **argv) {
   if (coap_fd != -1) {
     /* if coap_fd is -1, then epoll is not supported within libcoap */
     FD_ZERO(&m_readfds);
-    FD_SET(coap_fd, &m_readfds);
+    FD_SET((coap_fd_t)coap_fd, &m_readfds);
     nfds = coap_fd + 1;
   }
 
