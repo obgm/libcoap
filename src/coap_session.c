@@ -767,10 +767,11 @@ coap_session_max_pdu_size_lkd(const coap_session_t *session) {
 
 void
 coap_session_set_mtu(coap_session_t *session, unsigned mtu) {
-#if defined(WITH_CONTIKI) || defined(WITH_LWIP)
-  if (mtu > COAP_DEFAULT_MAX_PDU_RX_SIZE)
+  if (mtu > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
     mtu = COAP_DEFAULT_MAX_PDU_RX_SIZE;
-#endif
+    coap_log_debug("*  %s: Restricting MTU size to %u\n",
+                   coap_session_str(session), mtu);
+  }
   if (mtu < 64)
     mtu = 64;
   session->mtu = mtu;

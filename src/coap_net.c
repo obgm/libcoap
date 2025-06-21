@@ -553,6 +553,12 @@ void
 coap_context_set_csm_max_message_size(coap_context_t *context,
                                       uint32_t csm_max_message_size) {
   assert(csm_max_message_size >= 64);
+  if (csm_max_message_size > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
+    csm_max_message_size = COAP_DEFAULT_MAX_PDU_RX_SIZE;
+    coap_log_debug("Restricting CSM Max-Message-Size size to %u\n",
+                   csm_max_message_size);
+  }
+
   context->csm_max_message_size = csm_max_message_size;
 }
 
@@ -4259,9 +4265,9 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       if (opt_iter.number == COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE) {
         unsigned max_recv = coap_decode_var_bytes(coap_opt_value(option), coap_opt_length(option));
 
-        if (max_recv > context->csm_max_message_size) {
-          max_recv = context->csm_max_message_size;
-          coap_log_debug("*  %s: Setting size to %u\n",
+        if (max_recv > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
+          max_recv = COAP_DEFAULT_MAX_PDU_RX_SIZE;
+          coap_log_debug("*  %s: Restricting CSM Max-Message-Size size to %u\n",
                          coap_session_str(session), max_recv);
         }
         coap_session_set_mtu(session, max_recv);
