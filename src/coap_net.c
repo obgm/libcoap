@@ -3957,7 +3957,21 @@ skip_handler:
       goto drop_it_no_debug;
     }
   }
-  respond = no_response(pdu, response, session, resource);
+#if COAP_ASYNC_SUPPORT
+  if (async) {
+    coap_tick_t now;
+
+    coap_ticks(&now);
+
+    if (async->delay == 0 || async->delay > now) {
+      respond = RESPONSE_DROP;
+    } else {
+#endif /* COAP_ASYNC_SUPPORT */
+      respond = no_response(pdu, response, session, resource);
+#if COAP_ASYNC_SUPPORT
+    }
+  }
+#endif /* COAP_ASYNC_SUPPORT */
   if (respond != RESPONSE_DROP) {
 #if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG)
     coap_mid_t mid = pdu->mid;
@@ -4988,8 +5002,10 @@ coap_check_async(coap_context_t *context, coap_tick_t now, coap_tick_t *tim_rem)
         coap_show_pdu(COAP_LOG_DEBUG, async->pdu);
         handle_request(context, async->session, async->pdu, NULL);
 
-        /* Remove this async entry as it has now fired */
-        coap_free_async_lkd(async->session, async);
+        if (async->delay != 0 && async->delay <= now) {
+          /* Remove this async entry as it has now fired */
+          coap_free_async_lkd(async->session, async);
+        }
       } else {
         next_due = async->delay - now;
         ret = 1;

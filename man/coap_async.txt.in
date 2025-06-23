@@ -209,7 +209,10 @@ hnd_get_with_delay(coap_session_t *session,
                                (const uint8_t *)"done", NULL, NULL);
   coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
-  /* async is automatically removed by libcoap on return from this handler */
+  /*
+   * async is automatically removed by libcoap on return from this handler unless
+   * coap_async_set_delay() is called.
+   */
 }
 ----
 
