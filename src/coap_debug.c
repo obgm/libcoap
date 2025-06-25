@@ -24,12 +24,14 @@
 #include <string.h>
 #include <ctype.h>
 
+#ifndef __ZEPHYR__
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
 #ifdef HAVE_WS2TCPIP_H
 #include <ws2tcpip.h>
 #endif
+#endif /* !__ZEPHYR__ */
 
 #ifdef HAVE_TIME_H
 #include <time.h>
@@ -168,7 +170,7 @@ print_timestamp(char *s, size_t len, coap_tick_t t) {
 
 #endif /* HAVE_TIME_H */
 
-#if !defined(HAVE_STRNLEN) && !defined(__MINGW32__)
+#if !defined(HAVE_STRNLEN) && !defined(__MINGW32__) && !defined(__ZEPHYR__)
 /**
  * A length-safe strlen() fake.
  *
@@ -184,7 +186,7 @@ strnlen(const char *s, size_t maxlen) {
     ++n;
   return n;
 }
-#endif /* HAVE_STRNLEN && !__MINGW32__ */
+#endif /* HAVE_STRNLEN && !__MINGW32__ && !__ZEPHYR__*/
 
 static size_t
 print_readable(const uint8_t *data, size_t len,
@@ -237,7 +239,7 @@ print_readable(const uint8_t *data, size_t len,
  */
 size_t
 coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
-#if (defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )) && !defined(RIOT_VERSION)
+#if (defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )) && !defined(RIOT_VERSION) || defined(__ZEPHYR__)
   char scratch[INET6_ADDRSTRLEN];
 
   assert(buf);
@@ -413,7 +415,7 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
  */
 const char *
 coap_print_ip_addr(const coap_address_t *addr, char *buf, size_t len) {
-#if (defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )) && !defined(RIOT_VERSION)
+#if (defined( HAVE_ARPA_INET_H ) || defined( HAVE_WS2TCPIP_H )) && !defined(RIOT_VERSION) || defined(__ZEPHYR__)
   const void *addrptr = NULL;
 
   assert(buf);

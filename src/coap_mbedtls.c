@@ -173,6 +173,57 @@ typedef enum coap_enc_method_t {
   COAP_ENC_ECJPAKE,
 } coap_enc_method_t;
 
+#ifdef __ZEPHYR__
+
+typedef struct {
+  uint32_t start_time;
+  uint32_t int_time;
+  uint32_t fin_time;
+} zephyr_timing_delay_context;
+
+static void
+zephyr_timing_set_delay(void *data, uint32_t int_ms, uint32_t fin_ms) {
+  zephyr_timing_delay_context *ctx = (zephyr_timing_delay_context *)data;
+
+  if (ctx == NULL) {
+    return;
+  }
+
+  ctx->start_time = k_uptime_get_32();
+
+  if (fin_ms != 0) {
+    ctx->int_time = ctx->start_time + int_ms;
+    ctx->fin_time = ctx->start_time + fin_ms;
+  } else {
+    ctx->int_time = 0;
+    ctx->fin_time = 0;
+  }
+}
+
+static int
+zephyr_timing_get_delay(void *data) {
+  zephyr_timing_delay_context *ctx = (zephyr_timing_delay_context *)data;
+  uint32_t now;
+
+  if (ctx == NULL || ctx->fin_time == 0) {
+    return -1;
+  }
+
+  now = k_uptime_get_32();
+
+  if (now >= ctx->fin_time) {
+    return 2;
+  }
+
+  if (now >= ctx->int_time) {
+    return 1;
+  }
+
+  return 0;
+}
+
+#endif /* __ZEPHYR__ */
+
 #ifndef MBEDTLS_2_X_COMPAT
 /*
  * mbedtls_ callback functions expect 0 on success, -ve on failure.
@@ -1904,9 +1955,15 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
     mbedtls_ssl_set_hs_ecjpake_password(&m_env->ssl, psk_key->s, psk_key->length);
   }
 #endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
+#ifdef __ZEPHYR__
+  mbedtls_ssl_set_timer_cb(&m_env->ssl, &m_env->timer,
+                           zephyr_timing_set_delay,
+                           zephyr_timing_get_delay);
+#else
   mbedtls_ssl_set_timer_cb(&m_env->ssl, &m_env->timer,
                            mbedtls_timing_set_delay,
                            mbedtls_timing_get_delay);
+#endif
 
   mbedtls_ssl_conf_dbg(&m_env->conf, mbedtls_debug_out, stdout);
   return m_env;
@@ -2371,7 +2428,11 @@ coap_dtls_get_context_timeout(void *dtls_context COAP_UNUSED) {
 coap_tick_t
 coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
+#ifdef __ZEPHYR__
+  int ret = zephyr_timing_get_delay(&m_env->timer);
+#else
   int ret = mbedtls_timing_get_delay(&m_env->timer);
+#endif
   unsigned int scalar = 1 << m_env->retry_scalar;
 
   assert(c_session->state == COAP_SESSION_STATE_HANDSHAKE);

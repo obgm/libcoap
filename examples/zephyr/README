@@ -10,3 +10,11 @@ To build the coap-client example, do
 
 The executable gets built in ~/zephyrproject/zephyr/build/zephyr/zephyr.exe
 which is then copied to coap-client .
+
+For using the native_sim board using Linux, you may need to do something like
+the following (ens32 is the external interface name)
+
+    $ sudo iptables -t nat -A POSTROUTING -o ens32 -j MASQUERADE
+    $ sudo sysctl -w net.ipv4.conf.all.forwarding=1
+
+so that ./coap-client is able to get out onto the internet.

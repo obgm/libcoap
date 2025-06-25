@@ -21,6 +21,8 @@
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
+
+#ifndef __ZEPHYR__
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #else
@@ -57,6 +59,7 @@
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
+#endif /* !__ZEPHYR__ */
 
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
@@ -5144,7 +5147,7 @@ coap_register_option_lkd(coap_context_t *ctx, uint16_t type) {
   coap_option_filter_set(&ctx->known_options, type);
 }
 
-#if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION
+#if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION && !defined(__ZEPHYR__)
 #if COAP_SERVER_SUPPORT
 COAP_API int
 coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
@@ -5438,7 +5441,7 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops) {
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
-#else /* defined WITH_CONTIKI || defined WITH_LWIP */
+#else /* defined WITH_CONTIKI || defined WITH_LWIP || defined RIOT_VERSION || defined(__ZEPHYR__) */
 COAP_API int
 coap_join_mcast_group_intf(coap_context_t *ctx COAP_UNUSED,
                            const char *group_name COAP_UNUSED,
@@ -5455,4 +5458,4 @@ coap_mcast_set_hops(coap_session_t *session COAP_UNUSED,
 void
 coap_mcast_per_resource(coap_context_t *context COAP_UNUSED) {
 }
-#endif /* defined WITH_CONTIKI || defined WITH_LWIP */
+#endif /* defined WITH_CONTIKI || defined WITH_LWIP || defined RIOT_VERSION || defined(__ZEPHYR__) */

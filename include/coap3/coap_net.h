@@ -31,6 +31,11 @@
 #include <lwip/ip_addr.h>
 #endif
 
+#if defined(__ZEPHYR__) && !defined(__unix__) && !defined(__linux__)
+#include <zephyr/net/socket_select.h>
+#define fd_set zsock_fd_set
+#endif
+
 #include "coap_io.h"
 #include "coap_dtls.h"
 #include "coap_event.h"
