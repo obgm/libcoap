@@ -38,6 +38,8 @@ typedef USHORT in_port_t;
 #define        _IN_PORT_T_DECLARED
 #endif
 #endif /* !defined(__MINGW32__) */
+#elif defined(__ZEPHYR__)
+#include <zephyr/net/socket.h>
 #elif !defined (CONTIKI) && !defined (WITH_LWIP) && !defined (RIOT_VERSION)
 #include <netinet/in.h>
 #include <sys/socket.h>

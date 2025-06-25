@@ -11,9 +11,11 @@
 #ifndef CONFIG_MBEDTLS_LIBCOAP_H
 #define CONFIG_MBEDTLS_LIBCOAP_H
 
+#if defined(__unix__) || defined(_WIN32)
 #ifndef MBEDTLS_TIMING_C
 #define MBEDTLS_TIMING_C
 #endif /* ! MBEDTLS_TIMING_C */
+#endif /* Unix/Windows platforms */
 
 #ifndef MBEDTLS_VERSION_C
 #define MBEDTLS_VERSION_C

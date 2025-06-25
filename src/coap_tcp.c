@@ -48,6 +48,19 @@ coap_tcp_is_supported(void) {
 # define CMSG_DATA WSA_CMSG_DATA
 #endif
 
+#if defined(__ZEPHYR__)
+# include <zephyr/posix/sys/ioctl.h>
+# ifndef OPTVAL_T
+#  define OPTVAL_T(t)         (t)
+# endif
+# ifndef OPTVAL_GT
+#  define OPTVAL_GT(t)        (t)
+# endif
+# ifndef FIONBIO
+#  define FIONBIO            0x5421
+# endif
+#endif /* __ZEPHYR__ */
+
 int
 coap_socket_connect_tcp1(coap_socket_t *sock,
                          const coap_address_t *local_if,

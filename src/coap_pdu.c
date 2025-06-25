@@ -22,12 +22,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef __ZEPHYR__
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
 #endif
+#endif /* !__ZEPHYR__ */
+
 #include <ctype.h>
 
 #ifndef min

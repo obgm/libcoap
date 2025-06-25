@@ -16,7 +16,10 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#ifdef HAVE_GETRANDOM
+
+#if defined(__ZEPHYR__)
+#include <zephyr/random/random.h>
+#elif defined(HAVE_GETRANDOM)
 #include <sys/random.h>
 #elif defined(WITH_CONTIKI)
 #include "lib/csprng.h"
@@ -106,6 +109,15 @@ coap_prng_default(void *buf, size_t len) {
 #if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
   /* mbedtls_hardware_poll() returns 0 on success */
   return (mbedtls_hardware_poll(NULL, buf, len, NULL) ? 0 : 1);
+
+#elif defined(__ZEPHYR__)
+  /* Use Zephyr's cryptographically secure random number generator */
+  if (!buf || len == 0) {
+    return 0;
+  }
+
+  sys_rand_get(buf, len);
+  return 1;
 
 #elif defined(HAVE_GETRANDOM)
   return (getrandom(buf, len, 0) > 0) ? 1 : 0;

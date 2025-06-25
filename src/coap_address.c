@@ -16,6 +16,7 @@
 #include "coap3/coap_libcoap_build.h"
 
 #if !defined(WITH_CONTIKI) && !defined(WITH_LWIP) && !defined(RIOT_VERSION)
+#ifndef __ZEPHYR__
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
@@ -34,6 +35,19 @@
 #ifdef HAVE_WS2TCPIP_H
 #include <ws2tcpip.h>
 #endif
+#else /* __ZEPHYR__ */
+#ifndef IN_MULTICAST
+#define IN_MULTICAST(a) ((((long int) (a)) & 0xf0000000) == 0xe0000000)
+#endif
+#ifndef IN6_IS_ADDR_MULTICAST
+#define IN6_IS_ADDR_MULTICAST(a) ((a)->s6_addr[0] == 0xff)
+#endif
+#ifndef IN6_IS_ADDR_V4MAPPED
+#define IN6_IS_ADDR_V4MAPPED(a) \
+  ((((a)->s6_addr32[0]) == 0) && (((a)->s6_addr32[1]) == 0) && \
+   (((a)->s6_addr32[2]) == htonl(0xffff)))
+#endif
+#endif /* __ZEPHYR__ */
 
 #ifdef RIOT_VERSION
 /* FIXME */
@@ -159,20 +173,20 @@ coap_is_mcast(const coap_address_t *a) {
 #define COAP_BCST_REFRESH_SECS 30
 #endif /* COAP_BCST_REFRESH_SECS */
 
-#if COAP_IPV4_SUPPORT && defined(HAVE_IFADDRS_H)
+#if COAP_IPV4_SUPPORT && defined(HAVE_IFADDRS_H) && !defined(__ZEPHYR__)
 static int bcst_cnt = -1;
 static coap_tick_t last_refresh;
 static struct in_addr b_ipv4[COAP_BCST_CNT];
-#endif /* COAP_IPV4_SUPPORT && HAVE_IFADDRS_H */
+#endif /* COAP_IPV4_SUPPORT && HAVE_IFADDRS_H && !defined(__ZEPHYR__) */
 
 int
 coap_is_bcast(const coap_address_t *a) {
 #if COAP_IPV4_SUPPORT
   struct in_addr ipv4;
-#if defined(HAVE_IFADDRS_H)
+#if defined(HAVE_IFADDRS_H) && !defined(__ZEPHYR__)
   int i;
   coap_tick_t now;
-#endif /* HAVE_IFADDRS_H */
+#endif /* HAVE_IFADDRS_H && !defined(__ZEPHYR__) */
 #endif /* COAP_IPV4_SUPPORT */
 
   if (!a)
@@ -205,7 +219,7 @@ coap_is_bcast(const coap_address_t *a) {
   if (ipv4.s_addr == INADDR_BROADCAST)
     return 1;
 
-#if defined(HAVE_IFADDRS_H)
+#if defined(HAVE_IFADDRS_H) && !defined(__ZEPHYR__)
   coap_ticks(&now);
   if (bcst_cnt == -1 ||
       (now - last_refresh) > (COAP_BCST_REFRESH_SECS * COAP_TICKS_PER_SECOND)) {
@@ -247,7 +261,7 @@ coap_is_bcast(const coap_address_t *a) {
     if (ipv4.s_addr == b_ipv4[i].s_addr)
       return 1;
   }
-#endif /* HAVE_IFADDRS_H */
+#endif /* HAVE_IFADDRS_H && !defined(__ZEPHYR__) */
   return 0;
 #endif /* COAP_IPV4_SUPPORT */
 }
