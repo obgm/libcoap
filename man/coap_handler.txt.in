@@ -392,6 +392,10 @@ typedef enum {
 } coap_event_t;
 ----
 
+*NOTE:* For the COAP_*_CLOSED events, as these are triggered when a session is
+closing down, not all the information may be there in the _session_ parameter
+passed to the application event handler.
+
 EXAMPLES
 --------
 *GET Resource Callback Handler*

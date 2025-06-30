@@ -551,6 +551,15 @@ coap_session_mfree(coap_session_t *session) {
   }
 #endif /* COAP_CLIENT_SUPPORT */
 
+  LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
+    if (q->pdu->type==COAP_MESSAGE_CON) {
+      coap_handle_nack(session, q->pdu,
+                       session->proto == COAP_PROTO_DTLS ?
+                       COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE,
+                       q->id);
+    }
+    coap_delete_node_lkd(q);
+  }
   if (session->partial_pdu)
     coap_delete_pdu_lkd(session->partial_pdu);
   if (session->sock.lfunc[COAP_LAYER_SESSION].l_close)
@@ -571,15 +580,6 @@ coap_session_mfree(coap_session_t *session) {
     }
   }
 #endif /* COAP_PROXY_SUPPORT */
-  LL_FOREACH_SAFE(session->delayqueue, q, tmp) {
-    if (q->pdu->type==COAP_MESSAGE_CON) {
-      coap_handle_nack(session, q->pdu,
-                       session->proto == COAP_PROTO_DTLS ?
-                       COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE,
-                       q->id);
-    }
-    coap_delete_node_lkd(q);
-  }
   LL_FOREACH_SAFE(session->lg_xmit, lq, ltmp) {
     LL_DELETE(session->lg_xmit, lq);
     coap_block_delete_lg_xmit(session, lq);
