@@ -558,7 +558,7 @@ coap_context_set_csm_max_message_size(coap_context_t *context,
   assert(csm_max_message_size >= 64);
   if (csm_max_message_size > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
     csm_max_message_size = COAP_DEFAULT_MAX_PDU_RX_SIZE;
-    coap_log_debug("Restricting CSM Max-Message-Size size to %u\n",
+    coap_log_debug("Restricting CSM Max-Message-Size size to %" PRIu32 "\n",
                    csm_max_message_size);
   }
 
