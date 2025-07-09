@@ -627,6 +627,9 @@ coap_win_error_to_errno(void) {
   case WSAECONNREFUSED:
     errno = ECONNREFUSED;
     break;
+  case WSAEADDRNOTAVAIL:
+    errno = EADDRNOTAVAIL;
+    break;
   default:
     coap_log_err("WSAGetLastError: %d mapping to errno failed - please fix\n",
                  w_error);
