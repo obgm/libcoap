@@ -855,7 +855,8 @@ target_link_libraries(
          $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDX509_LIBRARY}>
          $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDCRYPTO_LIBRARY}>
          $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:${WOLFSSL_LIBRARY}>
-         $<$<BOOL:${MINGW}>:ws2_32>)
+         $<$<BOOL:${MINGW}>:ws2_32>
+         $<$<BOOL:${MINGW}>:iphlpapi>)
 
 target_compile_options(
   ${COAP_LIBRARY_NAME}

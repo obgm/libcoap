@@ -173,11 +173,11 @@ coap_is_mcast(const coap_address_t *a) {
 #define COAP_BCST_REFRESH_SECS 30
 #endif /* COAP_BCST_REFRESH_SECS */
 
-#if COAP_IPV4_SUPPORT && defined(HAVE_IFADDRS_H) && !defined(__ZEPHYR__)
+#if (COAP_IPV4_SUPPORT && defined(HAVE_IFADDRS_H) && !defined(__ZEPHYR__)) || defined(_WIN32)
 static int bcst_cnt = -1;
 static coap_tick_t last_refresh;
 static struct in_addr b_ipv4[COAP_BCST_CNT];
-#endif /* COAP_IPV4_SUPPORT && HAVE_IFADDRS_H && !defined(__ZEPHYR__) */
+#endif /* (COAP_IPV4_SUPPORT && HAVE_IFADDRS_H && !defined(__ZEPHYR__)) || defined(_WIN32) */
 
 int
 coap_is_bcast(const coap_address_t *a) {
@@ -219,7 +219,7 @@ coap_is_bcast(const coap_address_t *a) {
   if (ipv4.s_addr == INADDR_BROADCAST)
     return 1;
 
-#if defined(HAVE_IFADDRS_H) && !defined(__ZEPHYR__)
+#if defined(HAVE_IFADDRS_H) && !defined(__ZEPHYR__) && !defined(_WIN32)
   coap_ticks(&now);
   if (bcst_cnt == -1 ||
       (now - last_refresh) > (COAP_BCST_REFRESH_SECS * COAP_TICKS_PER_SECOND)) {
@@ -261,9 +261,81 @@ coap_is_bcast(const coap_address_t *a) {
     if (ipv4.s_addr == b_ipv4[i].s_addr)
       return 1;
   }
-#endif /* HAVE_IFADDRS_H && !defined(__ZEPHYR__) */
-  return 0;
+#endif /* HAVE_IFADDRS_H && !defined(__ZEPHYR__) && !defined(_WIN32) */
+
+#if defined(_WIN32)
+
+#include <iphlpapi.h>
+#if !defined(__MINGW32__)
+#pragma comment(lib, "iphlpapi.lib")
+#endif /* ! __MINGW32__ */
+
+  int i;
+  coap_tick_t now;
+
+  coap_ticks(&now);
+  if (bcst_cnt == -1 ||
+      (now - last_refresh) > (COAP_BCST_REFRESH_SECS * COAP_TICKS_PER_SECOND)) {
+    /* Determine the list of broadcast interfaces */
+
+    /* Variables used by GetIpAddrTable */
+    PMIB_IPADDRTABLE pIPAddrTable;
+    DWORD dwSize = 0;
+    DWORD dwRetVal = 0;
+
+    /* Assume just 2 interfaces as a starting point */
+    pIPAddrTable = (MIB_IPADDRTABLE *)coap_malloc_type(COAP_STRING, 2 * sizeof(MIB_IPADDRTABLE));
+
+    if (pIPAddrTable) {
+      /* Check that 2 interfaces are sufficient */
+      if (GetIpAddrTable(pIPAddrTable, &dwSize, 0) == ERROR_INSUFFICIENT_BUFFER) {
+        coap_free_type(COAP_STRING, pIPAddrTable);
+        pIPAddrTable = (MIB_IPADDRTABLE *)coap_malloc_type(COAP_STRING, dwSize);
+
+      }
+      if (pIPAddrTable == NULL) {
+        coap_log_warn("coap_is_bcst: Cannot determine any broadcast addresses\n");
+        return 0;
+      }
+    }
+    /* Now get the actual data */
+    if ((dwRetVal = GetIpAddrTable(pIPAddrTable, &dwSize, 0)) != NO_ERROR) {
+      coap_log_warn("GetIpAddrTable failed with error %d\n", dwRetVal);
+      return 0;
+    }
+
+    bcst_cnt = 0;
+    last_refresh = now;
+
+    for (i = 0; i < (int)pIPAddrTable->dwNumEntries && bcst_cnt < COAP_BCST_CNT; i++) {
+      struct in_addr netmask;
+
+      /* Unsafe to use dwBCastAddr */
+      netmask.s_addr = (u_long)pIPAddrTable->table[i].dwMask;
+      if (netmask.s_addr != 0xffffffff) {
+        b_ipv4[bcst_cnt].s_addr = (u_long)pIPAddrTable->table[i].dwAddr |
+                                  ~netmask.s_addr;
+        bcst_cnt++;
+      }
+    }
+    if (i != (int)pIPAddrTable->dwNumEntries) {
+      coap_log_warn("coap_is_bcst: Insufficient space for broadcast addresses\n");
+    }
+
+    if (pIPAddrTable) {
+      coap_free_type(COAP_STRING, pIPAddrTable);
+      pIPAddrTable = NULL;
+    }
+  }
+
+  for (i = 0; i < bcst_cnt; i++) {
+    if (ipv4.s_addr == b_ipv4[i].s_addr)
+      return 1;
+  }
+#endif /* _WIN32 */
+
 #endif /* COAP_IPV4_SUPPORT */
+  return 0;
 }
 
 #endif /* !defined(WITH_CONTIKI) && !defined(WITH_LWIP) */
