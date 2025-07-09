@@ -207,19 +207,38 @@ jobs:
         cmake --build .
   mingw-cmake:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        OS: ["UCRT64", "CLANG64", "MINGW64", "MINGW32"]
     defaults:
       run:
         shell: msys2 {0}
     steps:
       - uses: actions/checkout@v4
+      - name: Environment Setup
+        shell: bash
+        run: |
+          if [ "${{matrix.OS}}" = "UCRT64" ]; then
+            mingw_var="ucrt-x86_64"
+          elif [ "${{matrix.OS}}" = "CLANG64" ]; then
+            mingw_var="clang-x86_64"
+          elif [ "${{matrix.OS}}" = "MINGW64" ]; then
+            mingw_var="x86_64"
+          elif [ "${{matrix.OS}}" = "MINGW32" ]; then
+            mingw_var="i686"
+          else
+            echo "Unsupported MinGW variant: ${{matrix.OS}}"
+            mingw_var=""
+          fi
+          echo "MINGW_VARIANT=${mingw_var}" >> $GITHUB_ENV
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
+          msystem: ${{matrix.OS}}
           update: true
-          install: git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl
-      - name: MinGW build
+          install: git mingw-w64-${{env.MINGW_VARIANT}}-gcc mingw-w64-${{env.MINGW_VARIANT}}-cmake mingw-w64-${{env.MINGW_VARIANT}}-openssl
+      - name: MinGW ${{matrix.OS}} build
         run: |
-          echo 'Running in MSYS2!'
+          echo 'Running in MSYS2 ${{matrix.OS}}!'
           scripts/mingw-cmake.sh
 
   additional-tests:
