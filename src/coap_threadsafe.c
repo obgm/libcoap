@@ -207,14 +207,16 @@ coap_io_process_remove_threads(coap_context_t *context) {
 
 #else /* ! COAP_THREAD_SAFE */
 
-#ifdef __clang__
-/* Make compilers happy that do not like empty modules. As this function is
- * never used, we ignore -Wunused-function at the end of compiling this file
- */
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
-static inline void
-dummy(void) {
+int
+coap_io_process_configure_threads(coap_context_t *context, uint32_t thread_count) {
+  (void)context;
+  (void)thread_count;
+  return 0;
+}
+
+void
+coap_io_process_remove_threads(coap_context_t *context) {
+  (void)context;
 }
 
 #endif /* ! COAP_THREAD_SAFE */
