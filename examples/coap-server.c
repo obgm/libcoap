@@ -487,11 +487,11 @@ hnd_get_async(coap_resource_t *resource,
   }
   /* no request (observe) or async set up, so this is the delayed request */
 
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
   /* Send back the appropriate data */
   coap_add_data_large_response(resource, session, request, response,
                                query, COAP_MEDIATYPE_TEXT_PLAIN, -1, 0, 4,
                                (const uint8_t *)"done", NULL, NULL);
-  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
 
   /* async is automatically removed by libcoap on return from this handler */
 }

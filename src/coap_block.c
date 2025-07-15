@@ -834,7 +834,8 @@ coap_add_data_large_internal(coap_session_t *session,
 #endif /* UINT_MAX > MAX_BLK_LEN */
 
 #if COAP_SERVER_SUPPORT
-  if (COAP_PDU_IS_RESPONSE(pdu) && length) {
+  /* Possible response code not yet set, so check if not request */
+  if (!COAP_PDU_IS_REQUEST(pdu) && length) {
     coap_opt_t *etag_opt = coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter);
 
     if (etag_opt) {
