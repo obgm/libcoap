@@ -258,8 +258,13 @@ coap_socket_connect_udp(coap_socket_t *sock,
   if (ioctl(sock->fd, FIONBIO, &on) == COAP_SOCKET_ERROR)
 #endif
   {
-    coap_log_warn("coap_socket_connect_udp: ioctl FIONBIO: %s\n",
-                  coap_socket_strerror());
+    /* Ignore Zephyr unexpected Success response */
+    if (errno != 0) {
+      int keep_errno = errno;
+
+      coap_log_warn("coap_socket_connect_udp: ioctl FIONBIO: %s (%d)\n",
+                    coap_socket_strerror(), keep_errno);
+    }
   }
 
   switch (connect_addr.addr.sa.sa_family) {

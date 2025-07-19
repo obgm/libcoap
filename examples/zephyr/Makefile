@@ -1,8 +1,27 @@
-ZEPHYR_PROJECT?=~/zephyrproject
+ZEPHYR_PROJECT?=zephyrproject
 
-all: coap-client
+all: $(ZEPHYR_PROJECT) coap-client
 
-coap-client: client-src/src/main.c client-src/*
+${ZEPHYR_PROJECT}:
+	python3 -m venv ${ZEPHYR_PROJECT}/.venv ;\
+	ls -l ${ZEPHYR_PROJECT}/.venv/bin/activate ;\
+	. ${ZEPHYR_PROJECT}/.venv/bin/activate ;\
+	pip install west ;\
+	west init ${ZEPHYR_PROJECT} ;\
+	cd ${ZEPHYR_PROJECT} ;\
+	west update -n ;\
+	west zephyr-export ;\
+	west packages pip --install ;\
+	cd zephyr ;\
+	if [ "${GITHUB_WORKSPACE}"a = "a" ] ; then \
+		west sdk install --install-base=$(ZEPHYR_PROJECT)/../ ;\
+	else \
+		west sdk install --install-base=$(ZEPHYR_PROJECT)/../ -t x86_64-zephyr-elf ;\
+	fi ;\
+        cd ../../ ;\
+	deactivate
+
+coap-client: client-src/src/main.c client-src/* ../../src/*.c ../../include/*/*
 	@LIBCOAP_DIR=`pwd`/../.. ;\
 	(if [ -f $(ZEPHYR_PROJECT)/.venv/bin/activate ]; then \
 	  . $(ZEPHYR_PROJECT)/.venv/bin/activate ;\
