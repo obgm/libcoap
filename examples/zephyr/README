@@ -1,20 +1,28 @@
 Example of libcoap running in Zephyr
 ====================================
+If the Zephyr project environment is already installed outside of the libcoap
+environment, then ZEPHYR_PROJECT need to be set to where it is already installed
+(i.e export ZEPHYR_PROJECT=~/zephyrproject ).
 
-The Zephyr project environment needs to be pre-installed.  By default, the
-libcoap Makefile assumes that this is located at ~/zephyrproject .
+If ZEPHYR_PROJECT is not set, then this defaults in this Makefile to the directory
+zephyrproject under the examples/zephyr directory.
 
 To build the coap-client example, do
 
     $ make
 
-The executable gets built in ~/zephyrproject/zephyr/build/zephyr/zephyr.exe
-which is then copied to coap-client .
+The executable gets built in ${ZEPHYR_PROJECT}/zephyr/build/zephyr/zephyr.exe
+which is then copied to coap-client in the examples/zephyr directory.
+
+./coap-client does a 'GET coaps://libcoap-net' using PSK with logging enabled.
 
 For using the native_sim board using Linux, you may need to do something like
-the following (ens32 is the external interface name)
+the following (ens32 is the external interface name, your environment may
+be different)
 
+    $ sudo ${ZEPHYR_PROJECT}/tools/net-tools/net-setup.sh start
     $ sudo iptables -t nat -A POSTROUTING -o ens32 -j MASQUERADE
     $ sudo sysctl -w net.ipv4.conf.all.forwarding=1
 
-so that ./coap-client is able to get out onto the internet.
+so that ./coap-client is able to route traffic out onto the internet and get
+responses.

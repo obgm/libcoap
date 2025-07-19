@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        OS: ["contiki", "lwip", "riot"]
+        OS: ["contiki", "lwip", "riot", "zephyr"]
     steps:
       - uses: actions/checkout@v4
       - name: setup
