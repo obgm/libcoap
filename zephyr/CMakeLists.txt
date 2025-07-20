@@ -12,14 +12,23 @@
 cmake_minimum_required(VERSION 3.20.0)
 
 if(CONFIG_LIBCOAP)
-  if(CONFIG_MBEDTLS)
+  if(CONFIG_MBEDTLS AND NOT CONFIG_WOLFSSL)
     set(ENABLE_DTLS ON)
     set(DTLS_BACKEND "zephyr" CACHE STRING "Zephyr build")
-    set_property(
-      CACHE DTLS_BACKEND
-      PROPERTY STRINGS
-             zephyr)
+    set_property(CACHE DTLS_BACKEND PROPERTY STRINGS zephyr wolfssl)
     set(COAP_WITH_LIBMBEDTLS 1)
+    message(STATUS "libcoap: Using mbedTLS for DTLS")
+  elseif(CONFIG_WOLFSSL)
+    set(ENABLE_DTLS ON)
+    set(DTLS_BACKEND "wolfssl" CACHE STRING "Zephyr build")
+    set_property(CACHE DTLS_BACKEND PROPERTY STRINGS zephyr wolfssl)
+    set(COAP_WITH_LIBWOLFSSL 1)
+    # Set wolfSSL variables to prevent find_package call
+    set(wolfSSL_FOUND TRUE CACHE BOOL "wolfSSL found via Zephyr module")
+    set(WOLFSSL_INCLUDE_DIR "${ZEPHYR_BASE}/../modules/crypto/wolfssl" CACHE PATH "wolfSSL include dir")
+    set(WOLFSSL_LIBRARIES "wolfSSL" CACHE STRING "wolfSSL library")
+    set(HAVE_LIBWOLFSSL 1 CACHE STRING "Have wolfSSL library")
+    message(STATUS "libcoap: Using wolfSSL for DTLS")
   else()
     set(ENABLE_DTLS OFF)
   endif()
@@ -110,6 +119,11 @@ if(CONFIG_LIBCOAP)
 
   if(CONFIG_MBEDTLS AND TARGET mbedTLS)
     target_link_libraries(coap-3 PUBLIC mbedTLS)
+  endif()
+
+  if(CONFIG_WOLFSSL)
+    target_compile_definitions(coap-3 PRIVATE WOLFSSL_USER_SETTINGS)
+    target_link_libraries(coap-3 PUBLIC wolfSSL)
   endif()
 
   set_property(GLOBAL APPEND PROPERTY ZEPHYR_INTERFACE_LIBS coap-3)
