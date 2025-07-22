@@ -2947,7 +2947,6 @@ coap_handle_request_put_block(coap_context_t *context,
     coap_log_debug("** %s: lg_srcv %p initialized\n",
                    coap_session_str(session), (void *)lg_srcv);
     memset(lg_srcv, 0, sizeof(coap_lg_srcv_t));
-    coap_ticks(&lg_srcv->last_used);
     lg_srcv->resource = resource;
     if (resource == context->unknown_resource ||
         resource == context->proxy_uri_resource)
@@ -2975,6 +2974,7 @@ coap_handle_request_put_block(coap_context_t *context,
     lg_srcv->body_data = NULL;
     LL_PREPEND(session->lg_srcv, lg_srcv);
   }
+  coap_ticks(&lg_srcv->last_used);
 
   if (block_option == COAP_OPTION_BLOCK1 &&
       session->block_mode & COAP_BLOCK_NOT_RANDOM_BLOCK1 &&
