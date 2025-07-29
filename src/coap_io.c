@@ -18,6 +18,9 @@
 #ifdef HAVE_STDIO_H
 #  include <stdio.h>
 #endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
 
 #ifndef __ZEPHYR__
 #ifdef HAVE_SYS_SELECT_H
@@ -44,9 +47,6 @@
 #ifdef HAVE_SYS_UIO_H
 # include <sys/uio.h>
 #endif
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
-#endif
 #ifdef _WIN32
 #include <stdio.h>
 #endif /* _WIN32 */
@@ -58,8 +58,8 @@
 #endif
 #endif /* COAP_EPOLL_SUPPORT */
 #else /* __ZEPHYR__ */
-#include <zephyr/posix/sys/ioctl.h>
-#include <zephyr/posix/sys/select.h>
+#include <sys/ioctl.h>
+#include <sys/select.h>
 #define OPTVAL_T(t)         (const void*)(t)
 #define OPTVAL_GT(t)        (void*)(t)
 

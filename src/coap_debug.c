@@ -24,10 +24,10 @@
 #include <string.h>
 #include <ctype.h>
 
-#ifndef __ZEPHYR__
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+#ifndef __ZEPHYR__
 #ifdef HAVE_WS2TCPIP_H
 #include <ws2tcpip.h>
 #endif
