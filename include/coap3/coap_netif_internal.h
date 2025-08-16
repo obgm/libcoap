@@ -117,6 +117,13 @@ ssize_t coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
                               size_t datalen);
 
 /**
+ * Layer function interface for netif datagram close for a session.
+ *
+ * @param session  Session to do the netif datagram close on.
+ */
+void coap_netif_dgrm_close(coap_session_t *session);
+
+/**
  * Layer function interface for Netif stream listem (tcp).
  *
  * @param endpoint  Endpoint to do the listen on.
@@ -195,11 +202,11 @@ ssize_t coap_netif_strm_write(coap_session_t *session,
                               const uint8_t *data, size_t datalen);
 
 /**
- * Layer function interface for Netif close for a session.
+ * Layer function interface for netif stream close for a session.
  *
- * @param session  Session to do the netif close on.
+ * @param session  Session to do the netif stream close on.
  */
-void coap_netif_close(coap_session_t *session);
+void coap_netif_strm_close(coap_session_t *session);
 
 /**
  * Layer function interface for Netif close for a endpoint.

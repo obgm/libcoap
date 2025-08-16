@@ -156,6 +156,12 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
   return bytes_written;
 }
 
+void
+coap_netif_dgrm_close(coap_session_t *session) {
+  if (coap_netif_available(session))
+    coap_socket_dgrm_close(&session->sock);
+}
+
 #if !COAP_DISABLE_TCP
 #if COAP_SERVER_SUPPORT
 int
@@ -256,17 +262,23 @@ coap_netif_strm_write(coap_session_t *session, const uint8_t *data,
   }
   return bytes_written;
 }
-#endif /* COAP_DISABLE_TCP */
 
 void
-coap_netif_close(coap_session_t *session) {
+coap_netif_strm_close(coap_session_t *session) {
   if (coap_netif_available(session))
-    coap_socket_close(&session->sock);
+    coap_socket_strm_close(&session->sock);
 }
+#endif /* COAP_DISABLE_TCP */
 
 #if COAP_SERVER_SUPPORT
 void
 coap_netif_close_ep(coap_endpoint_t *endpoint) {
-  coap_socket_close(&endpoint->sock);
+  if (COAP_PROTO_NOT_RELIABLE(endpoint->proto)) {
+    coap_socket_dgrm_close(&endpoint->sock);
+#if ! COAP_DISABLE_TCP
+  } else {
+    coap_socket_strm_close(&endpoint->sock);
+#endif /* ! COAP_DISABLE_TCP */
+  }
 }
 #endif /* COAP_SERVER_SUPPORT */

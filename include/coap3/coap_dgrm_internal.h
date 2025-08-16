@@ -113,14 +113,15 @@ ssize_t coap_socket_send(coap_socket_t *sock, coap_session_t *session,
  */
 ssize_t coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet);
 
-
 /**
- * Function interface to close off a socket (for both TCP and UDP).
+ * Function interface to close off a datagram socket.
+ *
+ * Internal function.
  *
  * @param sock             Socket to close.
  *
  */
-void coap_socket_close(coap_socket_t *sock);
+void coap_socket_dgrm_close(coap_socket_t *sock);
 
 /** @} */
 

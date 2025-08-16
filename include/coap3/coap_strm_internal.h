@@ -131,6 +131,16 @@ ssize_t coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_
  */
 ssize_t coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len);
 
+/**
+ * Function interface to close off a stream socket.
+ *
+ * Internal function.
+ *
+ * @param sock             Socket to close.
+ *
+ */
+void coap_socket_strm_close(coap_socket_t *sock);
+
 #endif /* !COAP_DISABLE_TCP */
 
 /** @} */

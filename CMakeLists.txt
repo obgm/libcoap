@@ -775,11 +775,13 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_block.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_cache.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_debug.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_dgrm_posix.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_dtls.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_encode.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_io_posix.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_layers.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_mem.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_net.c
@@ -794,8 +796,8 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_sha1.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_str.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_strm_posix.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_subscribe.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/coap_tcp.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_threadsafe.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_time.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_uri.c
