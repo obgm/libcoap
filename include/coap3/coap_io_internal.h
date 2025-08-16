@@ -97,6 +97,10 @@ void coap_mfree_endpoint(coap_endpoint_t *ep);
 
 const char *coap_socket_format_errno(int error);
 
+#ifdef _WIN32
+void coap_win_error_to_errno(void);
+#endif /* _WIN32 */
+
 /**
  * Epoll specific function to add the state of events that epoll is to track
  * for the appropriate file descriptor.

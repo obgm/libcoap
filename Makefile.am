@@ -133,6 +133,12 @@ EXTRA_DIST = \
   src/coap_io_contiki.c \
   src/coap_io_lwip.c \
   src/coap_io_riot.c \
+  src/coap_dgrm_contiki.c \
+  src/coap_dgrm_lwip.c \
+  src/coap_dgrm_riot.c \
+  src/coap_strm_contiki.c \
+  src/coap_strm_lwip.c \
+  src/coap_strm_riot.c \
   tests/test_common.h \
   tests/test_error_response.h \
   tests/test_encode.h \
@@ -193,12 +199,14 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_block.c \
   src/coap_cache.c \
   src/coap_debug.c \
+  src/coap_dgrm_posix.c \
   src/coap_dtls.c \
   src/coap_encode.c \
   src/coap_event.c \
   src/coap_hashkey.c \
   src/coap_gnutls.c \
   src/coap_io.c \
+  src/coap_io_posix.c \
   src/coap_layers.c \
   src/coap_mbedtls.c \
   src/coap_mem.c \
@@ -215,8 +223,8 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_session.c \
   src/coap_sha1.c \
   src/coap_str.c \
+  src/coap_strm_posix.c \
   src/coap_subscribe.c \
-  src/coap_tcp.c \
   src/coap_threadsafe.c \
   src/coap_time.c \
   src/coap_tinydtls.c \

@@ -150,6 +150,7 @@ COAP_SRC = coap_address.c \
 	   coap_block.c \
 	   coap_cache.c \
 	   coap_debug.c \
+	   coap_dgrm_lwip.c \
 	   coap_dtls.c \
 	   coap_encode.c \
 	   coap_hashkey.c \
@@ -168,8 +169,8 @@ COAP_SRC = coap_address.c \
 	   coap_session.c \
 	   coap_sha1.c \
 	   coap_str.c \
+	   coap_strm_lwip.c \
 	   coap_subscribe.c \
-	   coap_tcp.c \
 	   coap_threadsafe.c \
 	   coap_tinydtls.c \
 	   coap_uri.c \

@@ -30,8 +30,12 @@
     <ClCompile Include="..\src\coap_debug.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\coap_dgrm.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_dtls.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\coap_encode.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -45,6 +49,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_io.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\coap_io_posix.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_layers.c">
@@ -92,10 +99,10 @@
     <ClCompile Include="..\src\coap_str.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\coap_subscribe.c">
+    <ClCompile Include="..\src\coap_strm.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\coap_tcp.c">
+    <ClCompile Include="..\src\coap_subscribe.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\coap_threadsafe.c">

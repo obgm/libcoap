@@ -1,5 +1,5 @@
 /*
- * coap_tcp.c -- TCP functions for libcoap
+ * coap_strm_posix.c -- Stream (TCP) functions for libcoap
  *
  * Copyright (C) 2019-2025 Olaf Bergmann <bergmann@tzi.org> and others
  *
@@ -10,8 +10,8 @@
  */
 
 /**
- * @file coap_tcp.c
- * @brief CoAP TCP handling functions
+ * @file coap_strm_posix.c
+ * @brief Posix CoAP Stream (TCP) handling functions
  */
 
 #include "coap3/coap_libcoap_build.h"
@@ -24,13 +24,17 @@
 #include <stdio.h>
 #endif /* _WIN32 */
 #endif /* COAP_AF_UNIX_SUPPORT */
+#ifdef COAP_EPOLL_SUPPORT
+#include <sys/epoll.h>
+#include <sys/timerfd.h>
+#endif /* COAP_EPOLL_SUPPORT */
 
 int
 coap_tcp_is_supported(void) {
   return !COAP_DISABLE_TCP;
 }
 
-#if !COAP_DISABLE_TCP && !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
+#if !COAP_DISABLE_TCP
 #include <sys/types.h>
 #ifdef HAVE_SYS_SOCKET_H
 # include <sys/socket.h>
@@ -184,7 +188,7 @@ error:
 #endif /* ! _WIN32 */
   }
 #endif /* COAP_AF_UNIX_SUPPORT */
-  coap_socket_close(sock);
+  coap_socket_strm_close(sock);
   return 0;
 }
 
@@ -210,7 +214,7 @@ coap_socket_connect_tcp2(coap_socket_t *sock,
   if (error) {
     coap_log_warn("coap_socket_connect_tcp2: connect failed: %s\n",
                   coap_socket_format_errno(error));
-    coap_socket_close(sock);
+    coap_socket_strm_close(sock);
     return 0;
   }
 
@@ -314,7 +318,7 @@ coap_socket_bind_tcp(coap_socket_t *sock,
   return 1;
 
 error:
-  coap_socket_close(sock);
+  coap_socket_strm_close(sock);
   return 0;
 }
 
@@ -357,4 +361,113 @@ coap_socket_accept_tcp(coap_socket_t *server,
   }
   return 1;
 }
+
+/*
+ * strm
+ * return +ve Number of bytes written.
+ *          0 No data written.
+ *         -1 Error (error in errno).
+ */
+ssize_t
+coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
+  ssize_t r;
+
+  sock->flags &= ~(COAP_SOCKET_WANT_WRITE | COAP_SOCKET_CAN_WRITE);
+#ifdef _WIN32
+  r = send(sock->fd, (const char *)data, (int)data_len, 0);
+#else
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif /* MSG_NOSIGNAL */
+  r = send(sock->fd, data, data_len, MSG_NOSIGNAL);
+#endif
+  if (r == COAP_SOCKET_ERROR) {
+#ifdef _WIN32
+    coap_win_error_to_errno();
+#endif /* _WIN32 */
+    if (errno==EAGAIN ||
+#if EAGAIN != EWOULDBLOCK
+        errno == EWOULDBLOCK ||
+#endif
+        errno == EINTR) {
+      sock->flags |= COAP_SOCKET_WANT_WRITE;
+#ifdef COAP_EPOLL_SUPPORT
+      coap_epoll_ctl_mod(sock,
+                         EPOLLOUT |
+                         ((sock->flags & COAP_SOCKET_WANT_READ) ?
+                          EPOLLIN : 0),
+                         __func__);
+#endif /* COAP_EPOLL_SUPPORT */
+      return 0;
+    }
+    if (errno == EPIPE || errno == ECONNRESET) {
+      coap_log_info("coap_socket_write: send: %s\n",
+                    coap_socket_strerror());
+    } else {
+      coap_log_warn("coap_socket_write: send: %s\n",
+                    coap_socket_strerror());
+    }
+    return -1;
+  }
+  if (r < (ssize_t)data_len) {
+    sock->flags |= COAP_SOCKET_WANT_WRITE;
+#ifdef COAP_EPOLL_SUPPORT
+    coap_epoll_ctl_mod(sock,
+                       EPOLLOUT |
+                       ((sock->flags & COAP_SOCKET_WANT_READ) ?
+                        EPOLLIN : 0),
+                       __func__);
+#endif /* COAP_EPOLL_SUPPORT */
+  }
+  return r;
+}
+
+/*
+ * strm
+ * return >=0 Number of bytes read.
+ *         -1 Error (error in errno).
+ */
+ssize_t
+coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
+  ssize_t r;
+
+#ifdef _WIN32
+  r = recv(sock->fd, (char *)data, (int)data_len, 0);
+#else
+  r = recv(sock->fd, data, data_len, 0);
+#endif
+  if (r == 0) {
+    /* graceful shutdown */
+    sock->flags &= ~COAP_SOCKET_CAN_READ;
+    errno = ECONNRESET;
+    return -1;
+  } else if (r == COAP_SOCKET_ERROR) {
+    sock->flags &= ~COAP_SOCKET_CAN_READ;
+#ifdef _WIN32
+    coap_win_error_to_errno();
+#endif /* _WIN32 */
+    if (errno==EAGAIN ||
+#if EAGAIN != EWOULDBLOCK
+        errno == EWOULDBLOCK ||
+#endif
+        errno == EINTR) {
+      return 0;
+    }
+    if (errno != ECONNRESET) {
+      coap_log_warn("coap_socket_read: recv: %s\n",
+                    coap_socket_strerror());
+    }
+    return -1;
+  }
+  if (r < (ssize_t)data_len)
+    sock->flags &= ~COAP_SOCKET_CAN_READ;
+  return r;
+}
+
+void
+coap_socket_strm_close(coap_socket_t *sock) {
+  /* For POSIX, this is the same as the datagram version */
+  coap_socket_dgrm_close(sock);
+}
+
 #endif /* !COAP_DISABLE_TCP */
