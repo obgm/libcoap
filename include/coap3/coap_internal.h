@@ -105,6 +105,7 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #include "coap_crypto_internal.h"
 #endif /* COAP_OSCORE_SUPPORT || COAP_WS_SUPPORT */
 #include "coap_debug_internal.h"
+#include "coap_dgrm_internal.h"
 #include "coap_dtls_internal.h"
 #include "coap_hashkey_internal.h"
 #include "coap_io_internal.h"
@@ -121,8 +122,8 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #include "coap_resource_internal.h"
 #include "coap_session_internal.h"
 #include "coap_sha1_internal.h"
+#include "coap_strm_internal.h"
 #include "coap_subscribe_internal.h"
-#include "coap_tcp_internal.h"
 #include "coap_threadsafe_internal.h"
 #include "coap_uri_internal.h"
 #include "coap_utlist_internal.h"

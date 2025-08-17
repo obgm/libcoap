@@ -103,6 +103,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_cache_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_crypto_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_debug_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_dgrm_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_dtls_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_hashkey_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_io_internal.h \
@@ -117,8 +118,8 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_resource_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_sha1_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_strm_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_subscribe_internal.h \
-  include/coap$(LIBCOAP_API_VERSION)/coap_tcp_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_threadsafe_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_uri_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_uthash_internal.h \
