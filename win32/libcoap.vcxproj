@@ -95,6 +95,7 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_crypto_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_debug.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_debug_internal.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_dgrm_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_dtls.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_dtls_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_encode.h" />
@@ -124,10 +125,10 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_session_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_sha1_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_str.h" />
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_strm_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_supported.h" />
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_tcp_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_threadsafe_internal.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_time.h" />
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_uri.h" />

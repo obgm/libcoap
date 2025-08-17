@@ -93,53 +93,6 @@ void coap_mfree_endpoint(coap_endpoint_t *ep);
 
 const char *coap_socket_format_errno(int error);
 
-#if COAP_CLIENT_SUPPORT
-int coap_socket_connect_udp(coap_socket_t *sock,
-                            const coap_address_t *local_if,
-                            const coap_address_t *server,
-                            int default_port,
-                            coap_address_t *local_addr,
-                            coap_address_t *remote_addr);
-#endif /* COAP_CLIENT_SUPPORT */
-
-#if COAP_SERVER_SUPPORT
-int coap_socket_bind_udp(coap_socket_t *sock,
-                         const coap_address_t *listen_addr,
-                         coap_address_t *bound_addr);
-#endif /* COAP_SERVER_SUPPORT */
-
-/**
- * Function interface to close off a socket.
- *
- * @param sock             Socket to close.
- *
- */
-void coap_socket_close(coap_socket_t *sock);
-
-/**
- * Function interface for data stream sending off a socket.
- *
- * @param sock             Socket to send data over.
- * @param data             The data to send.
- * @param data_len         The length of @p data.
- *
- * @return                 >=0 Number of bytes sent.
- *                         -1 Error error in errno).
- */
-ssize_t coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len);
-
-/**
- * Function interface for data stream receiving off a socket.
- *
- * @param sock             Socket to receive data on.
- * @param data             The data to receive.
- * @param data_len         The maximum length of @p data.
- *
- * @return                 >=0 Number of bytes read.
- *                         -1 Error error in errno).
- */
-ssize_t coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len);
-
 /**
  * Epoll specific function to add the state of events that epoll is to track
  * for the appropriate file descriptor.
@@ -170,40 +123,6 @@ void coap_epoll_ctl_mod(coap_socket_t *sock, uint32_t events, const char *func);
  * @param delay The time to delay before continuing with I/O processing.
  */
 void coap_update_io_timer(coap_context_t *context, coap_tick_t delay);
-
-#ifdef WITH_LWIP
-ssize_t coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
-                             coap_pdu_t *pdu);
-#endif
-
-/**
- * Function interface for data transmission. This function returns the number of
- * bytes that have been transmitted, or a value less than zero on error.
- *
- * @param sock          Socket to send data over.
- * @param session       Addressing information for unconnected sockets, or NULL
- * @param data          The data to send.
- * @param datalen       The actual length of @p data.
- *
- * @return              The number of bytes written on success, or a value
- *                      less than zero on error.
- */
-ssize_t coap_socket_send(coap_socket_t *sock, coap_session_t *session,
-                         const uint8_t *data, size_t datalen);
-
-/**
- * Function interface for reading data. This function returns the number of
- * bytes that have been read, or a value less than zero on error. In case of an
- * error, @p *packet is set to NULL.
- *
- * @param sock   Socket to read data from.
- * @param packet Received packet metadata and payload. src and dst
- *               should be preset.
- *
- * @return       The number of bytes received on success, or a value less than
- *               zero on error.
- */
-ssize_t coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet);
 
 #ifndef coap_mcast_interface
 # define coap_mcast_interface(Local) 0

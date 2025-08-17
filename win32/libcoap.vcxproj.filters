@@ -175,6 +175,9 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_debug_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_dgrm_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_dtls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -262,6 +265,9 @@
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_str.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_strm_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_subscribe.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -269,9 +275,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_supported.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_tcp_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_threadsafe_internal.h">
