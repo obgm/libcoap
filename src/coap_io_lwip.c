@@ -212,7 +212,7 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
           if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
             coap_log_warn("coap_handle_dgram: error sending response\n");
         }
-        coap_delete_pdu_lkd(pdu);
+        coap_delete_pdu_lkd(&pdu);
         coap_lock_unlock();
 #if NO_SYS == 0
         sys_sem_signal(&coap_io_timeout_sem);
@@ -227,7 +227,7 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 #if NO_SYS == 0
   sys_sem_signal(&coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
-  coap_delete_pdu_lkd(pdu);
+  coap_delete_pdu_lkd(&pdu);
   coap_lock_unlock();
   return;
 
@@ -238,7 +238,7 @@ error:
    */
   if (session)
     coap_send_rst_lkd(session, pdu);
-  coap_delete_pdu_lkd(pdu);
+  coap_delete_pdu_lkd(&pdu);
   coap_lock_unlock();
 #if NO_SYS == 0
   sys_sem_signal(&coap_io_timeout_sem);
@@ -340,7 +340,7 @@ coap_udp_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
     coap_dispatch(ep->context, session, pdu);
   }
 
-  coap_delete_pdu_lkd(pdu);
+  coap_delete_pdu_lkd(&pdu);
   coap_free_packet(packet);
   coap_lock_unlock();
 #if NO_SYS == 0
@@ -359,7 +359,7 @@ error:
   if (session && pdu)
     coap_send_rst_lkd(session, pdu);
 cleanup:
-  coap_delete_pdu_lkd(pdu);
+  coap_delete_pdu_lkd(&pdu);
   coap_free_packet(packet);
   coap_lock_unlock();
 #if NO_SYS == 0

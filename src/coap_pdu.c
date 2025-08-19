@@ -186,17 +186,21 @@ coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
 COAP_API void
 coap_delete_pdu(coap_pdu_t *pdu) {
   coap_lock_lock(return);
-  coap_delete_pdu_lkd(pdu);
+  coap_delete_pdu_lkd(&pdu);
   coap_lock_unlock();
 }
 
 void
-coap_delete_pdu_lkd(coap_pdu_t *pdu) {
-  if (pdu != NULL) {
+coap_delete_pdu_lkd(coap_pdu_t **pdu_ptr) {
+  if (pdu_ptr != NULL && *pdu_ptr != NULL) {
+    coap_pdu_t *pdu = *pdu_ptr;
+    
     if (pdu->ref) {
       pdu->ref--;
+      /* Don't set to NULL if still referenced */
       return;
     }
+    
 #ifdef WITH_LWIP
     pbuf_free(pdu->pbuf);
 #else
@@ -205,6 +209,9 @@ coap_delete_pdu_lkd(coap_pdu_t *pdu) {
 #endif
     coap_delete_binary(pdu->data_free);
     coap_free_type(COAP_PDU, pdu);
+    
+    /* Set caller's pointer to NULL to prevent use-after-free */
+    *pdu_ptr = NULL;
   }
 }
 
@@ -289,7 +296,7 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
   return pdu;
 
 fail:
-  coap_delete_pdu_lkd(pdu);
+  coap_delete_pdu_lkd(&pdu);
   return NULL;
 }
 

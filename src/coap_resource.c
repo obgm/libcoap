@@ -875,7 +875,7 @@ coap_add_observer(coap_resource_t *resource,
                                                cache_ignore_options,
                                                sizeof(cache_ignore_options)/sizeof(cache_ignore_options[0]));
     if (cache_key == NULL) {
-      coap_delete_pdu_lkd(s->pdu);
+      coap_delete_pdu_lkd(&s->pdu);
       coap_delete_cache_key(cache_key);
       coap_free_type(COAP_SUBSCRIPTION, s);
       return NULL;
@@ -1045,7 +1045,7 @@ coap_delete_observer_internal(coap_resource_t *resource, coap_session_t *session
     assert(session->ref_subscriptions > 0);
     session->ref_subscriptions--;
     coap_session_release_lkd(session);
-    coap_delete_pdu_lkd(s->pdu);
+    coap_delete_pdu_lkd(&s->pdu);
     coap_delete_cache_key(s->cache_key);
     coap_free_type(COAP_SUBSCRIPTION, s);
   }
@@ -1109,7 +1109,7 @@ coap_delete_observers(coap_context_t *context, coap_session_t *session) {
         assert(resource->subscribers);
         LL_DELETE(resource->subscribers, s);
         coap_session_release_lkd(session);
-        coap_delete_pdu_lkd(s->pdu);
+        coap_delete_pdu_lkd(&s->pdu);
         coap_delete_cache_key(s->cache_key);
         coap_free_type(COAP_SUBSCRIPTION, s);
       }
@@ -1190,7 +1190,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                           obs->pdu->actual_token.s)) {
         coap_log_debug("coap_check_notify: cannot add token, resource stays "
                        "partially dirty\n");
-        coap_delete_pdu_lkd(response);
+        coap_delete_pdu_lkd(&response);
         goto next_one_fail_no_pending;
       }
 
@@ -1248,7 +1248,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         coap_lock_callback_release(h(r, obs->session, obs->pdu, query, response),
                                    /* context is being freed off */
                                    coap_delete_string(query);
-                                   coap_delete_pdu_lkd(response);
+                                   coap_delete_pdu_lkd(&response);
                                    coap_session_release_lkd(obs_session);
                                    coap_pdu_release_lkd(obs_pdu);
                                    r->list_being_traversed = 0;
@@ -1261,7 +1261,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                         COAP_RESPONSE_CLASS(response->code),
                         response->code & 0x1f);
           coap_delete_string(query);
-          coap_delete_pdu_lkd(response);
+          coap_delete_pdu_lkd(&response);
           coap_session_release_lkd(obs_session);
           coap_pdu_release_lkd(obs_pdu);
           r->list_being_traversed = 0;

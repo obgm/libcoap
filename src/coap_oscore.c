@@ -660,8 +660,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
   coap_free_type(COAP_OSCORE_BUF, ciphertext_buffer);
   ciphertext_buffer = NULL;
 
-  coap_delete_pdu_lkd(plain_pdu);
-  plain_pdu = NULL;
+  coap_delete_pdu_lkd(&plain_pdu);
 
   if (association && association->is_observe == 0)
     oscore_delete_association(session, association);
@@ -720,7 +719,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
       if (association->partial_iv == NULL)
         goto error;
       association->recipient_ctx = rcp_ctx;
-      coap_delete_pdu_lkd(association->sent_pdu);
+      coap_delete_pdu_lkd(&association->sent_pdu);
       if (session->b_2_step != COAP_OSCORE_B_2_NONE || association->just_set_up) {
         size_t size;
 
@@ -752,8 +751,8 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
 error:
   if (ciphertext_buffer)
     coap_free_type(COAP_OSCORE_BUF, ciphertext_buffer);
-  coap_delete_pdu_lkd(osc_pdu);
-  coap_delete_pdu_lkd(plain_pdu);
+  coap_delete_pdu_lkd(&osc_pdu);
+  coap_delete_pdu_lkd(&plain_pdu);
   return NULL;
 }
 
@@ -802,15 +801,14 @@ build_and_send_error_pdu(coap_session_t *session,
       goto fail_resp;
     session->oscore_encryption = 0;
     coap_send_internal(session, osc_pdu, NULL);
-    coap_delete_pdu_lkd(err_pdu);
-    err_pdu = NULL;
+    coap_delete_pdu_lkd(&err_pdu);
   } else {
     coap_send_internal(session, err_pdu, NULL);
     err_pdu = NULL;
   }
 fail_resp:
   session->oscore_encryption = oscore_encryption;
-  coap_delete_pdu_lkd(err_pdu);
+  coap_delete_pdu_lkd(&err_pdu);
   return;
 }
 
@@ -1604,8 +1602,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       goto error;
     }
   }
-  coap_delete_pdu_lkd(plain_pdu);
-  plain_pdu = NULL;
+  coap_delete_pdu_lkd(&plain_pdu);
 
   /* Make sure headers are correctly set up */
   if (!coap_pdu_encode_header(decrypt_pdu, session->proto)) {
@@ -1666,8 +1663,8 @@ error:
 error_no_ack:
   if (association && association->is_observe == 0)
     oscore_delete_association(session, association);
-  coap_delete_pdu_lkd(decrypt_pdu);
-  coap_delete_pdu_lkd(plain_pdu);
+  coap_delete_pdu_lkd(&decrypt_pdu);
+  coap_delete_pdu_lkd(&plain_pdu);
   return NULL;
 }
 

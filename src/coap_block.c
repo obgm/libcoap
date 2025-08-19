@@ -2033,7 +2033,7 @@ coap_send_q_blocks(coap_session_t *session,
   if (send_pdu == COAP_SEND_INC_PDU &&
       (mid = coap_send_internal(session, pdu, NULL)) == COAP_INVALID_MID) {
     /* Not expected, underlying issue somewhere */
-    coap_delete_pdu_lkd(block_pdu);
+    coap_delete_pdu_lkd(&block_pdu);
     return COAP_INVALID_MID;
   }
 
@@ -2076,8 +2076,8 @@ coap_send_q_blocks(coap_session_t *session,
                                                  block.szx),
                             buf)) {
       coap_log_warn("Internal update issue option\n");
-      coap_delete_pdu_lkd(block_pdu);
-      coap_delete_pdu_lkd(t_pdu);
+      coap_delete_pdu_lkd(&block_pdu);
+      coap_delete_pdu_lkd(&t_pdu);
       break;
     }
 
@@ -2087,8 +2087,8 @@ coap_send_q_blocks(coap_session_t *session,
                         block.num,
                         block.szx)) {
       coap_log_warn("Internal update issue data\n");
-      coap_delete_pdu_lkd(block_pdu);
-      coap_delete_pdu_lkd(t_pdu);
+      coap_delete_pdu_lkd(&block_pdu);
+      coap_delete_pdu_lkd(&t_pdu);
       break;
     }
     if (COAP_PDU_IS_RESPONSE(block_pdu)) {
@@ -2097,7 +2097,7 @@ coap_send_q_blocks(coap_session_t *session,
     mid = coap_send_internal(session, block_pdu, NULL);
     if (mid == COAP_INVALID_MID) {
       /* Not expected, underlying issue somewhere */
-      coap_delete_pdu_lkd(t_pdu);
+      coap_delete_pdu_lkd(&t_pdu);
       return COAP_INVALID_MID;
     }
     block_pdu = t_pdu;
@@ -2523,7 +2523,7 @@ coap_block_delete_lg_crcv(coap_session_t *session,
     coap_delete_bin_const(lg_crcv->obs_token[i]);
   }
   coap_free_type(COAP_STRING, lg_crcv->obs_token);
-  coap_delete_pdu_lkd(lg_crcv->sent_pdu);
+  coap_delete_pdu_lkd(&lg_crcv->sent_pdu);
   coap_free_type(COAP_LG_CRCV, lg_crcv);
 }
 #endif /* COAP_CLIENT_SUPPORT */
@@ -2558,7 +2558,7 @@ coap_block_delete_lg_xmit(coap_session_t *session,
     coap_delete_binary(lg_xmit->b.b1.app_token);
   else
     coap_delete_string(lg_xmit->b.b2.query);
-  coap_delete_pdu_lkd(lg_xmit->sent_pdu);
+  coap_delete_pdu_lkd(&lg_xmit->sent_pdu);
 
   coap_log_debug("** %s: lg_xmit %p released\n",
                  coap_session_str(session), (void *)lg_xmit);

@@ -411,11 +411,11 @@ coap_pdu_t *coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
  *
  * @param pdu The PDU for free off.
  */
-void coap_delete_pdu_lkd(coap_pdu_t *pdu);
+void coap_delete_pdu_lkd(coap_pdu_t **pdu);
 
 COAP_STATIC_INLINE void
 coap_pdu_release_lkd(coap_pdu_t *pdu) {
-  coap_delete_pdu_lkd(pdu);
+  coap_delete_pdu_lkd(&pdu);
 }
 
 /**

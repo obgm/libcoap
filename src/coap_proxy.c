@@ -79,7 +79,7 @@ void
 coap_proxy_del_req(coap_proxy_list_t *proxy_entry, coap_proxy_req_t *proxy_req) {
   coap_proxy_log_entry(proxy_req->incoming, proxy_req->pdu,  proxy_req->token_used, "del");
 
-  coap_delete_pdu_lkd(proxy_req->pdu);
+  coap_delete_pdu_lkd(&proxy_req->pdu);
   coap_delete_bin_const(proxy_req->token_used);
   coap_delete_cache_key(proxy_req->cache_key);
   if (proxy_req->proxy_cache) {
@@ -97,8 +97,8 @@ coap_proxy_del_req(coap_proxy_list_t *proxy_entry, coap_proxy_req_t *proxy_req) 
     proxy_req->proxy_cache->ref--;
     if (proxy_req->proxy_cache->ref == 0) {
       PROXY_CACHE_DELETE(proxy_entry->rsp_cache, proxy_req->proxy_cache);
-      coap_delete_pdu_lkd(proxy_req->proxy_cache->req_pdu);
-      coap_delete_pdu_lkd(proxy_req->proxy_cache->rsp_pdu);
+      coap_delete_pdu_lkd(&proxy_req->proxy_cache->req_pdu);
+      coap_delete_pdu_lkd(&proxy_req->proxy_cache->rsp_pdu);
       coap_free_type(COAP_STRING, proxy_req->proxy_cache);
       proxy_req->proxy_cache = NULL;
     }
@@ -798,12 +798,12 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
     }
     if (fwd_pdu != resp_pdu) {
       /* Application created a new PDU */
-      coap_delete_pdu_lkd(resp_pdu);
+      coap_delete_pdu_lkd(&resp_pdu);
     }
   } else {
 failed:
     ret = COAP_RESPONSE_FAIL;
-    coap_delete_pdu_lkd(resp_pdu);
+    coap_delete_pdu_lkd(&resp_pdu);
   }
   coap_delete_string(l_query);
   return ret;
@@ -1022,7 +1022,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
                                  &uri) < 0) {
           /* Need to return a 5.05 RFC7252 Section 5.7.2 */
           coap_log_warn("Proxy URI not decodable\n");
-          coap_delete_pdu_lkd(pdu);
+          coap_delete_pdu_lkd(&pdu);
           return 0;
         }
         if (!coap_uri_into_optlist(&uri, NULL, &optlist, 0)) {
@@ -1107,7 +1107,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
 
 failed:
   response->code = COAP_RESPONSE_CODE(500);
-  coap_delete_pdu_lkd(pdu);
+  coap_delete_pdu_lkd(&pdu);
   return 0;
 
 return_cached_info:
@@ -1353,7 +1353,7 @@ coap_proxy_process_incoming(coap_session_t *session,
 
     /* Need to cache the response */
     if (proxy_req->proxy_cache) {
-      coap_delete_pdu_lkd(proxy_req->proxy_cache->rsp_pdu);
+      coap_delete_pdu_lkd(&proxy_req->proxy_cache->rsp_pdu);
       proxy_cache = proxy_req->proxy_cache;
     } else {
       proxy_cache = coap_malloc_type(COAP_STRING, sizeof(coap_proxy_cache_t));
@@ -1485,8 +1485,8 @@ coap_proxy_local_write(coap_session_t *session, coap_pdu_t *pdu) {
     mid = COAP_INVALID_MID;
   }
 fail:
-  coap_delete_pdu_lkd(response);
-  coap_delete_pdu_lkd(pdu);
+  coap_delete_pdu_lkd(&response);
+  coap_delete_pdu_lkd(&pdu);
   return mid;
 }
 

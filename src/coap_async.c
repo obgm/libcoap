@@ -187,8 +187,7 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *async) {
       async->session = NULL;
     }
     if (async->pdu) {
-      coap_delete_pdu_lkd(async->pdu);
-      async->pdu = NULL;
+      coap_delete_pdu_lkd(&async->pdu);
     }
     if (async->app_cb && async->app_data) {
       coap_lock_callback(async->app_cb(async->app_data));
