@@ -20,6 +20,10 @@
 #include "coap_internal.h"
 #include "coap_io.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup strm Stream (TCP) Support
@@ -130,5 +134,9 @@ ssize_t coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len);
 #endif /* !COAP_DISABLE_TCP */
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_STRM_INTERNAL_H_ */

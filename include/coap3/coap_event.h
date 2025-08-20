@@ -20,6 +20,10 @@
 
 #include "libcoap.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup events Event Handling
@@ -189,5 +193,9 @@ void coap_set_event_handler(coap_context_t *context,
  */
 COAP_DEPRECATED
 void coap_clear_event_handler(coap_context_t *context);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_EVENT_H */

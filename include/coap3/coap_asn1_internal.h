@@ -19,6 +19,10 @@
 
 #include "coap_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup asn1 ASN.1 Support
@@ -100,5 +104,9 @@ coap_binary_t *get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr,
 coap_binary_t *get_asn1_spki(const uint8_t *data, size_t size);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_ASN1_INTERNAL_H_ */

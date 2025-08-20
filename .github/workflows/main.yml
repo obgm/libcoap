@@ -165,7 +165,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libc6-dev-i386
+          sudo apt-get update && sudo apt-get install -y libc6-dev-i386 lib32stdc++-13-dev
       - name: compile
         run: |
           make -C examples/${{matrix.OS}} EXTRA_CFLAGS=-Werror

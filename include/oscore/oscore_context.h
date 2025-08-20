@@ -52,6 +52,10 @@
 #include "coap3/coap_uthash_internal.h"
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @addtogroup oscore_internal
@@ -277,5 +281,9 @@ int oscore_derive_keystream(oscore_ctx_t *osc_ctx,
                             size_t keystream_size);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _OSCORE_CONTEXT_H */

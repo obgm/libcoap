@@ -20,6 +20,10 @@
 #include "coap_internal.h"
 #include "coap_net.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Note that if COAP_SERVER_SUPPORT is not set, then COAP_ASYNC_SUPPORT undefined */
 #if COAP_ASYNC_SUPPORT
 
@@ -165,5 +169,9 @@ void coap_delete_all_async(coap_context_t *context);
 /** @} */
 
 #endif /* COAP_ASYNC_SUPPORT */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_ASYNC_INTERNAL_H_ */

@@ -25,6 +25,10 @@
 
 #include "coap3/coap_pdu.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(WITH_LWIP)
 
 #include <lwip/ip_addr.h>
@@ -338,5 +342,9 @@ coap_is_af_unix(const coap_address_t *a) {
 }
 
 #endif /* WITH_CONTIKI || RIOT_VERSION */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_ADDRESS_H_ */

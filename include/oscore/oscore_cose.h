@@ -48,6 +48,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup oscore_cose_internal OSCORE COSE Support
@@ -266,5 +270,9 @@ int cose_encrypt0_decrypt(cose_encrypt0_t *ptr,
                           size_t plaintext_len);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _OSCORE_COSE_H */

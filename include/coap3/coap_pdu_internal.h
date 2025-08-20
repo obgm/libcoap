@@ -33,6 +33,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup pdu_internal PDU
@@ -472,5 +476,9 @@ coap_pdu_t *coap_pdu_reference_lkd(coap_pdu_t *pdu);
 coap_pdu_t *coap_const_pdu_reference_lkd(const coap_pdu_t *pdu);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_COAP_PDU_INTERNAL_H_ */

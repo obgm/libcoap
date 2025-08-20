@@ -22,6 +22,10 @@
 #include "coap_io_internal.h"
 #include "coap_ws_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define COAP_DEFAULT_SESSION_TIMEOUT 300
 #define COAP_PARTIAL_SESSION_TIMEOUT_TICKS (30 * COAP_TICKS_PER_SECOND)
 #define COAP_DEFAULT_MAX_HANDSHAKE_SESSIONS 100
@@ -881,5 +885,9 @@ void coap_session_reestablished(coap_session_t *session);
 #define SESSIONS_FIND(e, k, res) {                     \
     HASH_FIND(hh, (e), &(k), sizeof(k), (res)); \
   }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_SESSION_INTERNAL_H_ */

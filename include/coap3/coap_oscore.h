@@ -21,6 +21,10 @@
 #ifndef COAP_OSCORE_H_
 #define COAP_OSCORE_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup oscore OSCORE Support
@@ -187,5 +191,9 @@ COAP_API int coap_delete_oscore_recipient(coap_context_t *context,
                                           coap_bin_const_t *recipient_id);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_OSCORE_H */

@@ -50,6 +50,10 @@
 
 #include <coap3/coap_internal.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @addtogroup oscore_internal
@@ -139,5 +143,9 @@ int oscore_hkdf(cose_hkdf_alg_t hkdf_alg,
                 size_t okm_len);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _OSCORE_CRYPTO_H */

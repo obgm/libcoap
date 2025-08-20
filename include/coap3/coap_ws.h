@@ -18,6 +18,10 @@
 #ifndef COAP_WS_H_
 #define COAP_WS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup ws WebSockets Support
@@ -33,5 +37,9 @@
 int coap_ws_set_host_request(coap_session_t *session, coap_str_const_t *ws_host);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_WS_H */

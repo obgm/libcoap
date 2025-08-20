@@ -17,6 +17,10 @@
 #ifndef COAP_SUPPORTED_H_
 #define COAP_SUPPORTED_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup supported Optional functionality
@@ -179,5 +183,9 @@ int coap_ws_is_supported(void);
 int coap_wss_is_supported(void);
 
 /**@}*/
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_SUPPORTED_H_ */

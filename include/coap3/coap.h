@@ -36,10 +36,6 @@
 /* Define the numeric version identifier for libcoap */
 #define LIBCOAP_VERSION (4003005ULL)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "coap3/libcoap.h"
 
 #include "coap3/coap_forward_decls.h"
@@ -66,9 +62,5 @@ extern "C" {
 #include "coap3/coap_time.h"
 #include "coap3/coap_uri.h"
 #include "coap3/coap_ws.h"
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* COAP_H_ */

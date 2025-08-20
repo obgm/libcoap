@@ -18,6 +18,10 @@
 #ifndef COAP_SUBSCRIBE_H_
 #define COAP_SUBSCRIBE_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup observe Resource Observation
@@ -283,5 +287,9 @@ COAP_API int coap_cancel_observe(coap_session_t *session, coap_binary_t *token,
                                  coap_pdu_type_t message_type);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_SUBSCRIBE_H_ */

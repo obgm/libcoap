@@ -18,6 +18,10 @@
 
 #include "coap_forward_decls.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup cache Cache Support
@@ -253,5 +257,9 @@ COAP_API void *coap_cache_set_app_data2(coap_cache_entry_t *cache_entry,
 void *coap_cache_get_app_data(const coap_cache_entry_t *cache_entry);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* COAP_CACHE_H */

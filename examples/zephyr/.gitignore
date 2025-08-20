@@ -1,2 +1,4 @@
 # never objects, and not the resulting binary
 coap-client
+coap-cpp-test
+zephyrproject

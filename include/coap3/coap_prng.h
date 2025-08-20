@@ -17,6 +17,10 @@
 #ifndef COAP_PRNG_H_
 #define COAP_PRNG_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup coap_prng Pseudo Random Numbers
@@ -62,5 +66,9 @@ COAP_API void coap_prng_init(unsigned int seed);
 COAP_API int coap_prng(void *buf, size_t len);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_PRNG_H_ */

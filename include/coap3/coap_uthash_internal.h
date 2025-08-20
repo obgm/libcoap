@@ -29,15 +29,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>   /* memcmp, memset, strlen */
 #include <stddef.h>   /* ptrdiff_t */
 #include <stdlib.h>   /* exit */
+#ifdef HASH_DEBUG
+#include <stdio.h>   /* fprintf, stderr */
+#endif
+#if defined(HASH_DEFINE_OWN_STDINT) && HASH_DEFINE_OWN_STDINT
+#elif defined(HASH_NO_STDINT) && HASH_NO_STDINT
+#else
+#include <stdint.h>   /* uint8_t, uint32_t */
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #if defined(HASH_DEFINE_OWN_STDINT) && HASH_DEFINE_OWN_STDINT
 /* This codepath is provided for backward compatibility, but I plan to remove it. */
 #warning "HASH_DEFINE_OWN_STDINT is deprecated; please use HASH_NO_STDINT instead"
 typedef unsigned int uint32_t;
 typedef unsigned char uint8_t;
-#elif defined(HASH_NO_STDINT) && HASH_NO_STDINT
-#else
-#include <stdint.h>   /* uint8_t, uint32_t */
 #endif
 
 /* These macros use decltype or the earlier __typeof GNU extension.
@@ -512,7 +521,6 @@ do {                                                                            
  * This is for uthash developer only; it compiles away if HASH_DEBUG isn't defined.
  */
 #ifdef HASH_DEBUG
-#include <stdio.h>   /* fprintf, stderr */
 #define HASH_OOPS(...) do { fprintf(stderr, __VA_ARGS__); exit(-1); } while (0)
 #define HASH_FSCK(hh,head,where)                                                 \
 do {                                                                             \
@@ -1132,5 +1140,9 @@ typedef struct UT_hash_handle {
    uint32_t keylen;                  /* enclosing struct's key len     */
    uint32_t hashv;                   /* result of hash-fcn(key)        */
 } UT_hash_handle;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* UTHASH_H */

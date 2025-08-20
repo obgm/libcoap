@@ -29,6 +29,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <assert.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * This file contains macros to manipulate singly and doubly-linked lists.
  *
@@ -1072,4 +1076,9 @@ do {                                                                            
 #endif /* NO_DECLTYPE */
 
 #endif /* UTLIST_H */
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* ! RIOT_VERSION */

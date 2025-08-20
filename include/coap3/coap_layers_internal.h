@@ -19,6 +19,10 @@
 
 #include "coap_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
   COAP_LAYER_SESSION,
   COAP_LAYER_WS,
@@ -111,5 +115,9 @@ typedef struct {
 } coap_layer_func_t;
 
 extern coap_layer_func_t coap_layers_coap[COAP_PROTO_LAST][COAP_LAYER_LAST];
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_LAYERS_INTERNAL_H_ */

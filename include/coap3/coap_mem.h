@@ -21,6 +21,14 @@
 #include "coap3/coap_proxy.h"
 #include <stdlib.h>
 
+#ifdef WITH_LWIP
+#include <lwip/memp.h>
+#endif /* WITH_LWIP */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef WITH_LWIP
 /**
  * Initializes libcoap's memory management.
@@ -28,6 +36,7 @@
  * constrained devices.
  */
 void coap_memory_init(void);
+
 #endif /* WITH_LWIP */
 
 /**
@@ -137,8 +146,6 @@ coap_free(void *object) {
 
 #ifdef WITH_LWIP
 
-#include <lwip/memp.h>
-
 /* no initialization needed with lwip (or, more precisely: lwip must be
  * completely initialized anyway by the time coap gets active)  */
 COAP_STATIC_INLINE void
@@ -188,5 +195,9 @@ coap_free(void *pointer) {
 #define coap_dump_memory_type_counts(l) coap_lwip_dump_memory_pools(l)
 
 #endif /* WITH_LWIP */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_MEM_H_ */

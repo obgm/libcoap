@@ -28,6 +28,19 @@
 
 #include <stdint.h>
 #include <lwip/sys.h>
+#elif defined(WITH_CONTIKI)
+#include "clock.h"
+#elif defined(RIOT_VERSION)
+#include <xtimer.h>
+#else /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
+#include <stdint.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if defined(WITH_LWIP)
 
 /* lwIP provides ms in sys_now */
 #define COAP_TICKS_PER_SECOND 1000
@@ -59,8 +72,6 @@ coap_ticks_to_rt_us(coap_tick_t t) {
 }
 
 #elif defined(WITH_CONTIKI)
-
-#include "clock.h"
 
 typedef clock_time_t coap_tick_t;
 typedef clock_time_t coap_time_t;
@@ -94,7 +105,6 @@ coap_ticks_to_rt_us(coap_tick_t t) {
 }
 
 #elif defined(RIOT_VERSION)
-#include <xtimer.h>
 
 #ifdef XTIMER_HZ
 #define COAP_TICKS_PER_SECOND (XTIMER_HZ)
@@ -134,7 +144,6 @@ coap_ticks_from_rt_us(uint64_t t) {
 }
 #else /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
 
-#include <stdint.h>
 
 /**
  * This data type represents internal timer ticks with COAP_TICKS_PER_SECOND
@@ -221,5 +230,9 @@ coap_time_le(coap_tick_t a, coap_tick_t b) {
 #define COAP_MAX_DELAY_TICKS (24 * 60 * 60 * COAP_TICKS_PER_SECOND)
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_TIME_H_ */

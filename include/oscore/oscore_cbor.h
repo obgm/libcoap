@@ -49,6 +49,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup oscore_cbor_internal OSCORE CBOR Support
@@ -140,5 +144,9 @@ uint8_t oscore_cbor_strip_value(const uint8_t **data, size_t *buf_size,
                                 uint8_t **result, size_t *len);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _OSCORE_CBOR_H */

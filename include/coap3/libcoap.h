@@ -43,6 +43,10 @@ typedef USHORT in_port_t;
 #include <sys/socket.h>
 #endif /* ! CONTIKI && ! WITH_LWIP && ! RIOT_VERSION */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef COAP_STATIC_INLINE
 #  if defined(__cplusplus)
 #    define COAP_STATIC_INLINE inline
@@ -88,5 +92,9 @@ typedef USHORT in_port_t;
 void coap_startup(void);
 
 void coap_cleanup(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_LIBCOAP_H_ */

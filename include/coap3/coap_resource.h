@@ -17,6 +17,10 @@
 #ifndef COAP_RESOURCE_H_
 #define COAP_RESOURCE_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef COAP_RESOURCE_CHECK_TIME
 /** The interval in seconds to check if resources have changed. */
 #define COAP_RESOURCE_CHECK_TIME 2
@@ -555,5 +559,9 @@ COAP_API coap_print_status_t coap_print_wellknown(coap_context_t *context,
  */
 COAP_DEPRECATED COAP_API int coap_resource_set_dirty(coap_resource_t *r,
                                                      const coap_string_t *query);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_RESOURCE_H_ */

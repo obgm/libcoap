@@ -21,6 +21,10 @@
 #include "coap_uthash_internal.h"
 #include "coap_str.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef unsigned char coap_key_t[4];
 
 #ifndef coap_hash
@@ -57,5 +61,9 @@ void coap_hash_impl(const unsigned char *s, size_t len, coap_key_t h);
     memset((H), 0, sizeof(coap_key_t));      \
     coap_hash((Str)->s, (Str)->length, (H)); \
   }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_HASHKEY_INTERNAL_H_ */

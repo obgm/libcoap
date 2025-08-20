@@ -23,6 +23,10 @@
 
 #include "oscore/oscore_context.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup oscore_internal OSCORE Support
@@ -292,5 +296,9 @@ int coap_new_oscore_recipient_lkd(coap_context_t *context,
                                   coap_bin_const_t *recipient_id);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_OSCORE_INTERNAL_H */

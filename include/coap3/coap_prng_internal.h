@@ -17,6 +17,10 @@
 #ifndef COAP_PRNG_INTERNAL_H_
 #define COAP_PRNG_INTERNAL_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup coap_prng_internal Pseudo Random Numbers
@@ -45,6 +49,10 @@ void coap_prng_init_lkd(unsigned int seed);
  * @return 1 on success, 0 otherwise.
  */
 int coap_prng_lkd(void *buf, size_t len);
+
+#ifdef __cplusplus
+}
+#endif
 
 /** @} */
 

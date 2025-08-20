@@ -20,6 +20,10 @@
 #include "coap_internal.h"
 #include "coap_io.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup dgrm Datagram (UDP) Support
@@ -119,5 +123,9 @@ ssize_t coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet);
 void coap_socket_close(coap_socket_t *sock);
 
 /** @} */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #endif /* COAP_DGRM_INTERNAL_H_ */

@@ -58,6 +58,10 @@
  */
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
  * If you do not have the ISO standard stdint.h header file, then you
  * must typdef the following:
@@ -107,5 +111,9 @@ int SHA1Input(SHA1Context *,
               unsigned int);
 int SHA1Result(SHA1Context *,
                uint8_t Message_Digest[SHA1HashSize]);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_SHA1_INTERNAL_H_ */

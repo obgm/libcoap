@@ -1,6 +1,6 @@
 ZEPHYR_PROJECT?=zephyrproject
 
-all: $(ZEPHYR_PROJECT) coap-client
+all: $(ZEPHYR_PROJECT) coap-client coap-cpp-test
 
 ${ZEPHYR_PROJECT}:
 	python3 -m venv ${ZEPHYR_PROJECT}/.venv ;\
@@ -34,7 +34,20 @@ coap-client: client-src/src/main.c client-src/* ../../src/*.c ../../include/*/*
 		-DEXTRA_ZEPHYR_MODULES=$${LIBCOAP_DIR} \
 		-DEXTRA_CONF_FILE=$${LIBCOAP_DIR}/zephyr/libcoap-mbedtls.conf)
 	@cp -f $(ZEPHYR_PROJECT)/zephyr/build/zephyr/zephyr.exe coap-client
+	@rm -rf $(ZEPHYR_PROJECT)/zephyr/build
 
+coap-cpp-test: test-cpp-src/src/test.cpp test-cpp-src/* ../../src/*.c ../../include/*/*
+	@LIBCOAP_DIR=`pwd`/../.. ;\
+	(if [ -f $(ZEPHYR_PROJECT)/.venv/bin/activate ]; then \
+	  . $(ZEPHYR_PROJECT)/.venv/bin/activate ;\
+	fi ;\
+	cd $(ZEPHYR_PROJECT)/zephyr ;\
+	west build -p always -b native_sim \
+		$${LIBCOAP_DIR}/examples/zephyr/test-cpp-src -- \
+		-DCONF_FILE=prj.conf \
+		-DEXTRA_ZEPHYR_MODULES=$${LIBCOAP_DIR})
+	@cp -f $(ZEPHYR_PROJECT)/zephyr/build/zephyr/zephyr.exe coap-cpp-test
+	@rm -rf $(ZEPHYR_PROJECT)/zephyr/build
 clean:
 	@rm -rf $(ZEPHYR_PROJECT)/zephyr/build
-	@rm -f coap-client
+	@rm -f coap-client coap-cpp-test

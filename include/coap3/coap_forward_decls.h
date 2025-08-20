@@ -18,6 +18,10 @@
 #ifndef COAP_FORWARD_DECLS_H_
 #define COAP_FORWARD_DECLS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Define the forward declations for the structures (even non-opaque)
  * so that applications (using coap.h) as well as libcoap builds
@@ -120,5 +124,9 @@ typedef struct coap_session_t coap_session_t;
  * Observe subscriber information.
  */
 typedef struct coap_subscription_t coap_subscription_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_FORWARD_DECLS_H_ */

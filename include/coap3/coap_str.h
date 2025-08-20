@@ -19,6 +19,9 @@
 
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @ingroup application_api
@@ -214,5 +217,9 @@ coap_str_const_t *coap_make_str_const(const char *string);
                                                memcmp((binary1)->s, (binary2)->s, (binary1)->length) == 0)))
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_STR_H_ */

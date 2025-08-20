@@ -20,6 +20,10 @@
 
 #include "coap_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup subscribe_internal Observe Subscription
@@ -303,4 +307,9 @@ int coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
 #endif /* COAP_CLIENT_SUPPORT */
 
 /** @} */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #endif /* COAP_SUBSCRIBE_INTERNAL_H_ */

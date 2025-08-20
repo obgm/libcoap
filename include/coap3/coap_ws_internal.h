@@ -20,6 +20,10 @@
 
 #include "coap_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup ws_internal WebSockets Support
@@ -151,5 +155,9 @@ void coap_ws_establish(coap_session_t *session);
 void coap_ws_close(coap_session_t *session);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_WS_INTERNAL_H */
