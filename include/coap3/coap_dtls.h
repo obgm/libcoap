@@ -22,6 +22,10 @@
 #include "coap_time.h"
 #include "coap_str.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup dtls DTLS Support
@@ -534,5 +538,9 @@ typedef struct coap_dtls_spsk_t {
 } coap_dtls_spsk_t;
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_DTLS_H */

@@ -19,6 +19,10 @@
 
 #include "coap_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup netif_internal Netif Support
@@ -205,5 +209,9 @@ void coap_netif_close(coap_session_t *session);
 void coap_netif_close_ep(coap_endpoint_t *endpoint);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_NETIF_INTERNAL_H */

@@ -24,6 +24,12 @@
  * @{
  */
 
+#include "coap_pdu.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef COAP_DEBUG_FD
 /**
  * Used for output for @c COAP_LOG_OSCORE to @c COAP_LOG_ERR.
@@ -303,8 +309,6 @@ void coap_print_contiki_prefix(coap_log_t level);
   } while(0)
 #endif
 
-#include "coap_pdu.h"
-
 /**
  * Defines the output mode for the coap_show_pdu() function.
  *
@@ -403,5 +407,9 @@ const char *coap_print_ip_addr(const coap_address_t *address,
  * @return @c 1 If loss level set, @c 0 if there is an error.
  */
 int coap_debug_set_packet_loss(const char *loss_level);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_DEBUG_H_ */

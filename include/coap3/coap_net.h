@@ -43,6 +43,10 @@
 #include "coap_session.h"
 #include "coap_debug.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup context Context Handling
@@ -1160,5 +1164,9 @@ void coap_lwip_set_input_wait_handler(coap_context_t *context,
 /* Old definitions which may be hanging around in old code - be helpful! */
 #define COAP_RUN_NONBLOCK COAP_RUN_NONBLOCK_deprecated_use_COAP_IO_NO_WAIT
 #define COAP_RUN_BLOCK COAP_RUN_BLOCK_deprecated_use_COAP_IO_WAIT
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_NET_H_ */

@@ -22,6 +22,10 @@
 #include "coap_option.h"
 #include "coap_pdu.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup block Block Transfer
@@ -438,5 +442,9 @@ COAP_API void coap_context_set_block_mode(coap_context_t *context,
 COAP_API int coap_context_set_max_block_size(coap_context_t *context, size_t max_block_size);
 
 /**@}*/
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_BLOCK_H_ */

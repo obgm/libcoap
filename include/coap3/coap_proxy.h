@@ -17,6 +17,10 @@
 #ifndef COAP_PROXY_H_
 #define COAP_PROXY_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup proxy Proxy
@@ -178,5 +182,9 @@ COAP_API coap_session_t *coap_new_client_session_proxy(coap_context_t *context,
                                                        coap_proxy_server_list_t *server_list);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_PROXY_H_ */

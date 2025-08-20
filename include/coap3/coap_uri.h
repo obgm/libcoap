@@ -21,6 +21,10 @@
 
 #include "coap_str.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * The scheme specifiers. Secure schemes have an odd numeric value,
  * others are even.
@@ -316,5 +320,9 @@ coap_string_t *coap_get_query(const coap_pdu_t *request);
 coap_string_t *coap_get_uri_path(const coap_pdu_t *request);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_URI_H_ */

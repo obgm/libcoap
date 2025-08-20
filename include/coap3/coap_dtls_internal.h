@@ -21,6 +21,10 @@
 
 #include "coap_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup dtls_internal DTLS Support
@@ -503,5 +507,9 @@ int coap_dtls_define_issue(coap_define_issue_key_t type,
 int coap_dtls_set_cid_tuple_change(coap_context_t *context, uint8_t every);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_DTLS_INTERNAL_H */

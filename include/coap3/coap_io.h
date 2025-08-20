@@ -25,6 +25,10 @@
 #include "net/gnrc.h"
 #endif /* RIOT_VERSION */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef COAP_RXBUFFER_SIZE
 #define COAP_RXBUFFER_SIZE 1472
 #endif /* COAP_RXBUFFER_SIZE */
@@ -70,5 +74,9 @@ typedef enum {
   COAP_NACK_WS_LAYER_FAILED,
   COAP_NACK_WS_FAILED
 } coap_nack_reason_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_IO_H_ */

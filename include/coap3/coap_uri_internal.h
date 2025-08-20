@@ -19,6 +19,10 @@
 
 #include "coap_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup uri URI Support
@@ -44,5 +48,9 @@ extern coap_uri_info_t coap_uri_scheme[COAP_URI_SCHEME_LAST];
 void coap_replace_percents(coap_optlist_t *optlist);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_URI_INTERNAL_H_ */

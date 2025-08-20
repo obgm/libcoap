@@ -30,6 +30,10 @@
 
 #include "oscore/oscore_cose.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef COAP_CRYPTO_MAX_KEY_SIZE
 #define COAP_CRYPTO_MAX_KEY_SIZE (32)
 #endif /* COAP_CRYPTO_MAX_KEY_SIZE */
@@ -153,5 +157,9 @@ int coap_crypto_hash(cose_alg_t alg,
                      coap_bin_const_t **hash);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_CRYPTO_INTERNAL_H_ */

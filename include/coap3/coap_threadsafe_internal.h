@@ -24,6 +24,10 @@
 #ifndef COAP_THREADSAFE_INTERNAL_H_
 #define COAP_THREADSAFE_INTERNAL_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Support thread safe access into libcoap
  *
@@ -554,5 +558,9 @@ typedef coap_mutex_t coap_lock_t;
 #endif /* ! COAP_THREAD_SAFE */
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_THREADSAFE_INTERNAL_H_ */

@@ -22,6 +22,10 @@
 #include "coap_subscribe.h"
 #include "coap_threadsafe_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup context_internal Context Handling
@@ -994,5 +998,9 @@ void coap_call_response_handler(coap_session_t *session, coap_pdu_t *sent,
 /**@}*/
 
 extern int coap_started;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_NET_INTERNAL_H_ */

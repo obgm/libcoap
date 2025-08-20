@@ -25,6 +25,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef HAVE_FLS
 /* include this only if fls() is not available */
 extern int coap_fls(unsigned int i);
@@ -123,5 +127,9 @@ COAP_STATIC_INLINE COAP_DEPRECATED int
 coap_encode_var_bytes(uint8_t *buf, unsigned int value) {
   return (int)coap_encode_var_safe(buf, sizeof(value), value);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_ENCODE_H_ */

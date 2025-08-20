@@ -1,0 +1,8 @@
+# Private config options for coap-client sample app
+
+# Copyright (c) 2020 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Test cpp build application"
+
+source "Kconfig.zephyr"

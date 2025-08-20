@@ -35,6 +35,10 @@ struct uip_udp_conn;
 #endif /* ! COAP_DISABLE_TCP */
 #endif /* RIOT_VERSION */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct coap_socket_t {
 #if defined(WITH_LWIP)
   struct pbuf *p;
@@ -153,5 +157,9 @@ struct coap_packet_t {
 void coap_start_io_process(void);
 void coap_stop_io_process(void);
 #endif /* WITH_CONTIKI */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_IO_INTERNAL_H_ */

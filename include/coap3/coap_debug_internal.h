@@ -14,6 +14,10 @@
  * @brief CoAP Logging support internal information
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef COAP_DEBUG_INTERNAL_H_
 #define COAP_DEBUG_INTERNAL_H_
 
@@ -32,5 +36,9 @@ int coap_debug_send_packet(void);
  * Internal function
  */
 void coap_debug_reset(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_DEBUG_INTERNAL_H_ */

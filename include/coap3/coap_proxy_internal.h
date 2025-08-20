@@ -19,6 +19,10 @@
 
 #include "coap_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if COAP_PROXY_SUPPORT
 /**
  * @ingroup internal_api
@@ -255,4 +259,9 @@ void coap_delete_proxy_subscriber(coap_session_t *session, coap_bin_const_t *tok
   }
 
 #endif /* COAP_PROXY_SUPPORT */
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* COAP_PROXY_INTERNAL_H_ */

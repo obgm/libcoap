@@ -23,6 +23,10 @@
 #include "coap_pdu_internal.h"
 #include "coap_resource.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup block_internal Block Transfer
@@ -582,5 +586,9 @@ void coap_check_update_token(coap_session_t *session, coap_pdu_t *pdu);
 #endif /* ! COAP_CLIENT_SUPPORT */
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_BLOCK_INTERNAL_H_ */

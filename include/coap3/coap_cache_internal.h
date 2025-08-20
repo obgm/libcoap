@@ -21,6 +21,10 @@
 #include "coap_io.h"
 #include "coap_uthash_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if COAP_SERVER_SUPPORT
 /**
  * @ingroup internal_api
@@ -215,5 +219,9 @@ int coap_digest_final(coap_digest_ctx_t *digest_ctx,
 /** @} */
 
 #endif /* COAP_SERVER_SUPPORT */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_CACHE_INTERNAL_H_ */

@@ -16,6 +16,10 @@
 #ifndef COAP_RIOT_H_
 #define COAP_RIOT_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef LIBCOAP_MSG_QUEUE_SIZE
 /**
  * Size of the queue for passing messages between the network
@@ -35,5 +39,9 @@
  * RIOT-specific initialization.
  */
 void coap_riot_startup(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_RIOT_H_ */

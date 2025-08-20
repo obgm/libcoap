@@ -51,6 +51,10 @@
 #include "oscore_cose.h"
 #include "oscore_context.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup internal_api
  * @addtogroup oscore_internal
@@ -123,5 +127,9 @@ uint8_t oscore_increment_sender_seq(oscore_ctx_t *ctx);
 void oscore_roll_back_seq(oscore_recipient_ctx_t *ctx);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _OSCORE_H */

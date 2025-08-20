@@ -19,14 +19,31 @@
 #define COAP_MUTEX_INTERNAL_H_
 
 /*
+ * Do all the #include before the extern "C"
+ */
+#if defined(HAVE_PTHREAD_H) && defined(HAVE_PTHREAD_MUTEX_LOCK)
+#include <pthread.h>
+#elif defined(RIOT_VERSION)
+/* use RIOT's mutex API */
+#include <mutex.h>
+#elif defined(WITH_LWIP) && defined(NO_SYS)
+#include <lwip/sys.h>
+#elif defined(__ZEPHYR__)
+#include <zephyr/sys/mutex.h>
+#endif /* !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*
  * Mutexes are used for
  * 1) If there is a constrained stack, and large static variables (instead
  *    of the large variable being on the stack) need to be protected.
  * 2) libcoap if built with thread safe support.
  */
-#if defined(HAVE_PTHREAD_H) && defined(HAVE_PTHREAD_MUTEX_LOCK)
-#include <pthread.h>
 
+#if defined(HAVE_PTHREAD_H) && defined(HAVE_PTHREAD_MUTEX_LOCK)
 typedef pthread_mutex_t coap_mutex_t;
 
 #define coap_mutex_init(a)    pthread_mutex_init(a, NULL)
@@ -43,8 +60,6 @@ typedef pthread_mutex_t coap_mutex_t;
 #endif /* !ESPIDF_VERSION */
 
 #elif defined(RIOT_VERSION)
-/* use RIOT's mutex API */
-#include <mutex.h>
 
 typedef mutex_t coap_mutex_t;
 
@@ -119,7 +134,6 @@ typedef int coap_mutex_t;
 #define coap_thread_pid       1
 
 #elif defined(__ZEPHYR__)
-#include <zephyr/sys/mutex.h>
 
 typedef struct sys_mutex coap_mutex_t;
 
@@ -129,7 +143,7 @@ typedef struct sys_mutex coap_mutex_t;
 #define coap_mutex_trylock(a) sys_mutex_lock(a, K_NO_WAIT)
 #define coap_mutex_unlock(a)  sys_mutex_unlock(a)
 
-#else /* !__ZEPYR__ && !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
+#else /* !__ZEPHYR__ && !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
 /* define stub mutex functions */
 #if COAP_THREAD_SAFE
 #error Multi-threading not supported (no mutex support)
@@ -157,5 +171,9 @@ extern coap_mutex_t m_log_impl;
 extern coap_mutex_t m_io_threads;
 
 #endif /* COAP_THREAD_SAFE */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_MUTEX_INTERNAL_H_ */

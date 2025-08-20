@@ -17,6 +17,10 @@
 #ifndef COAP_OPTION_H_
 #define COAP_OPTION_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef uint16_t coap_option_num_t;
 
 /**
@@ -431,5 +435,9 @@ COAP_STATIC_INLINE COAP_DEPRECATED int
 coap_option_getb(coap_opt_filter_t *filter, uint16_t type) {
   return coap_option_filter_get(filter, type);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_OPTION_H_ */

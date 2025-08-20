@@ -27,6 +27,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup pdu PDU
@@ -627,5 +631,9 @@ coap_mid_t coap_pdu_get_mid(const coap_pdu_t *pdu);
 void coap_pdu_set_mid(coap_pdu_t *pdu, coap_mid_t mid);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_PDU_H_ */

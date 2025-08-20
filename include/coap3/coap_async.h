@@ -19,6 +19,10 @@
 
 #include "coap_net.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @ingroup application_api
  * @defgroup coap_async Asynchronous Messaging
@@ -136,5 +140,9 @@ COAP_API void *coap_async_set_app_data2(coap_async_t *async_entry,
                                         coap_app_data_free_callback_t callback);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_ASYNC_H_ */

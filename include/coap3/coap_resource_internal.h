@@ -20,6 +20,10 @@
 #include "coap_internal.h"
 #include "coap_uthash_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if COAP_SERVER_SUPPORT
 /**
  * @ingroup internal_api
@@ -239,5 +243,9 @@ coap_print_status_t coap_print_wellknown_lkd(coap_context_t *context,
 /** @} */
 
 #endif /* COAP_SERVER_SUPPORT */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* COAP_RESOURCE_INTERNAL_H_ */
