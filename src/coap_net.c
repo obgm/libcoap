@@ -1829,6 +1829,9 @@ coap_pdu_cksum(const coap_pdu_t *pdu, coap_digest_t *digest_buffer) {
   if (!coap_digest_update(digest_ctx, (const uint8_t *)&pdu->code, sizeof(pdu->code))) {
     goto fail;
   }
+  if (!coap_digest_update(digest_ctx, (const uint8_t *)&pdu->mid, sizeof(pdu->mid))) {
+    goto fail;
+  }
   if (!coap_digest_final(digest_ctx, digest_buffer))
     return 0;
 
