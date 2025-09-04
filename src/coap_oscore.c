@@ -1723,6 +1723,7 @@ get_split_entry(const char **start,
   const char *kend;
   const char *split;
   size_t i;
+  size_t len;
 
 retry:
   kend = end = memchr(begin, '\n', size);
@@ -1799,9 +1800,10 @@ retry:
     value->u.value_str.length = end - begin;
     break;
   case COAP_ENC_BOOL:
-    if (memcmp("true", begin, end - begin) == 0)
+    len = (size_t)(end - begin);
+    if (len == 4 && memcmp("true", begin, len) == 0)
       value->u.value_int = 1;
-    else if (memcmp("false", begin, end - begin) == 0)
+    else if (len == 5 && memcmp("false", begin, len) == 0)
       value->u.value_int = 0;
     else
       goto bad_entry;
@@ -1816,7 +1818,7 @@ bad_entry:
   coap_log_warn("oscore_conf: Unrecognized configuration entry '%.*s'\n",
                 (int)(end - begin),
                 begin);
-  return 0;
+  return -1;
 }
 
 #undef CONFIG_ENTRY
@@ -1888,6 +1890,7 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
   coap_str_const_t keyword;
   oscore_value_t value;
   coap_oscore_conf_t *oscore_conf;
+  int split_ok = -1;
 
   oscore_conf = coap_malloc_type(COAP_STRING, sizeof(coap_oscore_conf_t));
   if (oscore_conf == NULL)
@@ -1906,7 +1909,7 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
   oscore_conf->break_recipient_key = 0;
 
   while (end > start &&
-         get_split_entry(&start, end - start, &keyword, &value)) {
+         (split_ok = get_split_entry(&start, end - start, &keyword, &value)) > 0) {
     size_t i;
     size_t j;
 
@@ -1992,6 +1995,8 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
       goto error;
     }
   }
+  if (split_ok == -1)
+    goto error;
   if (!oscore_conf->master_secret) {
     coap_log_warn("oscore_conf: master_secret not defined\n");
     goto error;
