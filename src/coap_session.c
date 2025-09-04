@@ -1338,9 +1338,11 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
       SESSIONS_ITER(endpoint->sessions, session, rtmp) {
         if (session->client_cid) {
           if ((session->is_dtls13 && (payload[OFF_CONTENT_TYPE] & 0x30) == 0x30 &&
+               length > (OFF_CID_DTLS13 + session->client_cid->length) &&
                memcmp(session->client_cid->s, &payload[OFF_CID_DTLS13],
                       session->client_cid->length) == 0) ||
               (!session->is_dtls13 && payload[OFF_CONTENT_TYPE] == DTLS_CT_CID &&
+               length > (OFF_CID + session->client_cid->length) &&
                memcmp(session->client_cid->s, &payload[OFF_CID],
                       session->client_cid->length) == 0)) {
             /* Updating IP address */
