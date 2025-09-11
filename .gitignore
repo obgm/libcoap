@@ -101,7 +101,6 @@ tests/Makefile
 tests/oss-fuzz/Makefile.ci
 tests/testdriver
 tests/*.o
-tests/test_common.h
 
 # the cmake/ folder
 cmake/libcoap

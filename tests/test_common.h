@@ -8,4 +8,4 @@
  * README for terms of use.
  */
 
-#include "coap@LIBCOAP_API_VERSION@/coap_internal.h"
+#include "coap3/coap_internal.h"

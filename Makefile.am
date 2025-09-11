@@ -133,6 +133,7 @@ EXTRA_DIST = \
   src/coap_io_contiki.c \
   src/coap_io_lwip.c \
   src/coap_io_riot.c \
+  tests/test_common.h \
   tests/test_error_response.h \
   tests/test_encode.h \
   tests/test_options.h \
