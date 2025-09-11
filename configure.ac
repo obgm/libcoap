@@ -1382,7 +1382,6 @@ man/coap-rd.txt
 man/coap-tls-engine-conf.txt
 man/Makefile
 scripts/fix_version.sh
-tests/test_common.h
 tests/Makefile
 tests/oss-fuzz/Makefile.ci
 libcoap-$LIBCOAP_NAME_SUFFIX.pc:libcoap-$LIBCOAP_API_VERSION.pc.in

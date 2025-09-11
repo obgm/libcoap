@@ -16,7 +16,10 @@ echo $ARCHIVE
 if test $err = 0 -a "x$ARCHIVE" != "x"; then
     DIR=`pwd`/`tar taf $ARCHIVE |cut -d/ -f1|head -1`
     tar xaf $ARCHIVE && cd $DIR
-    err=$terr
+    terr=$?
+    if [ $err = 0 ] ; then
+        err=$terr
+    fi
 
     # LwIP
     make -C $DIR/examples/lwip EXTRA_CFLAGS=-Werror
@@ -42,6 +45,15 @@ if test $err = 0 -a "x$ARCHIVE" != "x"; then
     # Standard build
     $DIR/configure $PREFIX --enable-tests  --enable-silent-rules --enable-documentation --enable-examples --disable-dtls && \
     make EXTRA_CFLAGS=-Werror && make install EXTRA_CFLAGS=-Werror
+    terr=$?
+    if [ $err = 0 ] ; then
+        err=$terr
+    fi
+
+    # cmake
+    cmake -E make_directory test-cmake
+    cd test-cmake
+    cmake .. -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DENABLE_DTLS=OFF -DENABLE_DOCS=OFF -DWARNING_TO_ERROR=ON
     terr=$?
     if [ $err = 0 ] ; then
         err=$terr

@@ -763,9 +763,6 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_config.h.in
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_defines.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_defines.h)
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h.in
-               ${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h)
-
 #
 # sources
 #
