@@ -534,10 +534,15 @@ coap_resolve_address_info(const coap_str_const_t *address,
 #endif /* COAP_AF_UNIX_SUPPORT */
 
   memset(addrstr, 0, sizeof(addrstr));
-  if (address && address->length)
+  if (address && address->length) {
+    if (address->length >= sizeof(addrstr)) {
+      coap_log_warn("Host name too long (%zu > 255)\n", address->length);
+      return NULL;
+    }
     memcpy(addrstr, address->s, address->length);
-  else
+  } else {
     memcpy(addrstr, "localhost", 9);
+  }
 
   memset((char *)&hints, 0, sizeof(hints));
   hints.ai_socktype = 0;

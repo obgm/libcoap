@@ -59,6 +59,15 @@ coap_uri_info_t coap_uri_scheme[COAP_URI_SCHEME_LAST] = {
   { "coaps+ws",    443,               0, COAP_URI_SCHEME_COAPS_WS }
 };
 
+/*
+ * Returns  0 All OK
+ *         -1 Insufficient / Invalid parameters
+ *         -2 No '://'
+ *         -3 Ipv6 definition error or no host defined after scheme://
+ *         -4 Invalid port value
+ *         -5 Port defined for Unix domain
+ *         -6 Hostname > 255 chars
+ */
 static int
 coap_split_uri_sub(const uint8_t *str_var,
                    size_t len,
@@ -167,8 +176,10 @@ coap_split_uri_sub(const uint8_t *str_var,
   if (len && *p == '[') {
     /* IPv6 address reference */
     ++p;
+    ++q;
+    --len;
 
-    while (len && *q != ']') {
+    while (len && *q != ']' && (isxdigit(*q) || *q == ':')) {
       ++q;
       --len;
     }
@@ -199,6 +210,12 @@ coap_split_uri_sub(const uint8_t *str_var,
       goto error;
     }
 
+    if ((int)(q - p) > 255) {
+      coap_log_warn("Host name length too long (%d > 255)\n", (int)(q - p));
+      res = -6;
+      goto error;
+    }
+
     COAP_SET_STR(&uri->host, q - p, p);
   }
 
@@ -224,6 +241,7 @@ coap_split_uri_sub(const uint8_t *str_var,
 
       /* check if port number is in allowed range */
       if (uri_port > UINT16_MAX) {
+        coap_log_warn("Port number too big (%ld > 65535)\n", uri_port);
         res = -4;
         goto error;
       }
