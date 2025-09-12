@@ -912,6 +912,12 @@ cmdline_tls_engine(char *arg) {
 static int
 cmdline_uri(char *arg) {
 
+  /* Sanity check the provided (Proxy)Uri */
+  if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0) {
+    coap_log_err("invalid CoAP URI '%s'\n", arg);
+    return -1;
+  }
+
   if (!proxy_scheme_option && proxy.host.length) {
     /* create Proxy-Uri from argument */
     size_t len = strlen(arg);
@@ -926,11 +932,6 @@ cmdline_uri(char *arg) {
                                          (unsigned char *)arg));
 
   } else {      /* split arg into Uri-* options */
-    if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0) {
-      coap_log_err("invalid CoAP URI '%s'\n", arg);
-      return -1;
-    }
-
     /* Need to special case use of reliable */
     if (uri.scheme == COAP_URI_SCHEME_COAPS && reliable) {
       if (!coap_tls_is_supported()) {
