@@ -170,7 +170,7 @@ jobs:
         run: |
           make -C examples/${{matrix.OS}} EXTRA_CFLAGS=-Werror
   ms-build:
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     steps:
       - uses: actions/checkout@v4
