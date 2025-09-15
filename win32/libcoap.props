@@ -9,8 +9,8 @@
     <OpenSSLRootDirDbg>$(OPENSSL_INSTALL_PATH)</OpenSSLRootDirDbg>
     <OpenSSLIncludeDir>$(OpenSSLRootDir)include</OpenSSLIncludeDir>
     <OpenSSLIncludeDirDbg>$(OpenSSLRootDirDbg)include</OpenSSLIncludeDirDbg>
-    <OpenSSLLibDir>$(OpenSSLRootDir)lib</OpenSSLLibDir>
-    <OpenSSLLibDirDbg>$(OpenSSLRootDirDbg)lib</OpenSSLLibDirDbg>
+    <OpenSSLLibDir>$(OpenSSLRootDir)lib\VC\x64\MD</OpenSSLLibDir>
+    <OpenSSLLibDirDbg>$(OpenSSLRootDirDbg)lib\VC\x64\MD</OpenSSLLibDirDbg>
     <CUnitRootDir>$(InstallDir)</CUnitRootDir>
     <CUnitRootDirDbg>$(InstallDirDbg)</CUnitRootDirDbg>
     <CUnitIncludeDir>$(CUnitRootDir)include</CUnitIncludeDir>
