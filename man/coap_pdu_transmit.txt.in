@@ -89,7 +89,7 @@ The *coap_delete_pdu*() function is used to delete any created _pdu_. _pdu_ can
 be NULL.
 
 *NOTE:* The *coap_send*() will always internally call *coap_delete_pdu*(), even
-if there is an error, so *coap_delete*() must not be called after calling
+if there is an error, so *coap_delete_pdu*() must not be called after calling
 *coap_send*() (or for that matter further code must not reference _pdu_).
 However, *coap_send_recv*() does not delete either of _request_pdu_ or
 _response_pdu_, so _request_pdu_ must always be deleted, as well as _response_pdu_
