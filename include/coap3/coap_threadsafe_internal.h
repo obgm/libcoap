@@ -45,7 +45,7 @@ extern "C" {
  * However, when the context is going away (coap_free_context()), other
  * threads may still be access the lock in what is now freed memory.
  * A solution (by flagging being freed), worked, but still with a timing
- * window wen the context was finally de-allocated.  Coverity Scan did
+ * window when the context was finally de-allocated.  Coverity Scan did
  * not like the solution.
  *
  * So the initial support for thread safe is done at global lock level
@@ -152,7 +152,6 @@ int coap_lock_lock_func(const char *file, int line);
  *   global_lock not locked if libcoap not started and @p failed is executed. @p failed must
  *   be code that skips doing the lock protected code.
  *
- * @param c Context.
  * @param failed Code to execute on lock failure.
  *
  */
@@ -168,8 +167,6 @@ int coap_lock_lock_func(const char *file, int line);
  * Unlocked when
  *   Same thread locked context
  *   Not when called from app call-back
- *
- * @param c Context.
  */
 #define coap_lock_unlock() do { \
     coap_lock_unlock_func(__FILE__, __LINE__); \
@@ -298,7 +295,6 @@ int coap_lock_lock_func(void);
  *   global not locked if libcoap not started and @p failed is executed. @p failed must
  *   be code that skips doing the lock protected code.
  *
- * @param c Contex.
  * @param failed Code to execute on lock failure
  *
  */
@@ -314,8 +310,6 @@ int coap_lock_lock_func(void);
  * Unlocked when
  *   Same thread locked context.
  *   Not when called from app call-back.
- *
- * @param c Context.
  */
 #define coap_lock_unlock() do { \
     coap_lock_unlock_func(); \

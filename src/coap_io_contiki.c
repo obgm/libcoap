@@ -11,7 +11,7 @@
 
 /**
  * @file coap_io_contiki.c
- * @brief Contiki-NG Netowrk specific functions
+ * @brief Contiki-NG Network specific functions
  */
 
 #include "coap3/coap_libcoap_build.h"

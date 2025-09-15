@@ -33,7 +33,7 @@
  * OpenSSL 1.1.1 introduces a new function SSL_CTX_set_client_hello_cb().
  * The call back is invoked early on in the Client Hello processing giving
  * the ability to easily use different Preshared Keys, Certificates etc.
- * Certificates do not have to be set up in the SSL CTX before SSL_Accept is
+ * Certificates do not have to be set up in the SSL CTX before SSL_accept is
  * called.
  * Later in the Client Hello code, the callback for
  * SSL_CTX_set_tlsext_servername_callback() is still called, but only if SNI

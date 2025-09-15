@@ -1,5 +1,5 @@
 /*
- * coap_io.h -- Default network I/O functions for libcoap
+ * coap_io_internal.h -- Default network I/O functions for libcoap
  *
  * Copyright (C) 2012-2025 Olaf Bergmann <bergmann@tzi.org>
  *
