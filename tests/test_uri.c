@@ -94,11 +94,14 @@ t_parse_uri4(void) {
 
 static void
 t_parse_uri5(void) {
+  coap_log_t level = coap_get_log_level();
   char teststr[] = "coap://foo:100000";
   int result;
   coap_uri_t uri;
 
+  coap_set_log_level(COAP_LOG_CRIT);
   result = coap_split_uri((unsigned char *)teststr, strlen(teststr), &uri);
+  coap_set_log_level(level);
   if (result == 0) {
     CU_ASSERT(uri.host.length == 3);
     CU_ASSERT_NSTRING_EQUAL(uri.host.s, "foo", 3);
