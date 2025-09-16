@@ -1,3 +1,14 @@
+2025-09-15  Olaf Bergmann  <bergmann@tzi.org>
+
+	Change summary for version 4.3.5a:
+
+        * Fixes CVE-2025-59391.
+        * CVE-2025-50518 not fixed as user application error.
+        * Support for Mbed TLS 3.6.3.
+        * Support for RIOT update changes.
+        * Fixes for later CI environment builds.
+        * Critical reported bugs fixed.
+
 2024-05-23  Olaf Bergmann  <bergmann@tzi.org>
 
 	Change summary for version 4.3.5:
