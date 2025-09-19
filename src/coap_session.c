@@ -2644,6 +2644,10 @@ const char *
 coap_session_str(const coap_session_t *session) {
   static char szSession[2 * (INET6_ADDRSTRLEN + 8) + 24];
   char *p = szSession, *end = szSession + sizeof(szSession);
+
+  if (!session) {
+    return "Session not defined";
+  }
   if (coap_print_addr(&session->addr_info.local,
                       (unsigned char *)p, end - p) > 0)
     p += strlen(p);

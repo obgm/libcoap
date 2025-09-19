@@ -559,7 +559,7 @@ coap_dtls_get_log_level(void) {
   return dtls_log_level;
 }
 
-typedef struct coap_ssl_st {
+typedef struct coap_ssl_data {
   coap_session_t *session;
   const void *pdu;
   unsigned pdu_len;
@@ -623,7 +623,7 @@ coap_dgram_write(BIO *a, const char *in, int inl) {
   int ret = 0;
   coap_ssl_data *data = (coap_ssl_data *)BIO_get_data(a);
 
-  if (data->session) {
+  if (data && data->session) {
     if (!coap_netif_available(data->session)
 #if COAP_SERVER_SUPPORT
         && data->session->endpoint == NULL
@@ -668,10 +668,12 @@ coap_dgram_ctrl(BIO *a, int cmd, long num, void *ptr) {
     break;
   case BIO_CTRL_SET_CLOSE:
     BIO_set_shutdown(a, (int)num);
-    ret = 1;
     break;
   case BIO_CTRL_DGRAM_SET_PEEK_MODE:
-    data->peekmode = (unsigned)num;
+    if (data)
+      data->peekmode = (unsigned)num;
+    else
+      ret = 0;
     break;
   case BIO_CTRL_DGRAM_CONNECT:
   case BIO_C_SET_FD:
@@ -687,12 +689,13 @@ coap_dgram_ctrl(BIO *a, int cmd, long num, void *ptr) {
   case BIO_CTRL_FLUSH:
   case BIO_CTRL_DGRAM_MTU_DISCOVER:
   case BIO_CTRL_DGRAM_SET_CONNECTED:
-    ret = 1;
     break;
   case BIO_CTRL_DGRAM_SET_NEXT_TIMEOUT:
-    data->timeout = coap_ticks_from_rt_us((uint64_t)((struct timeval *)ptr)->tv_sec * 1000000 + ((
-                                              struct timeval *)ptr)->tv_usec);
-    ret = 1;
+    if (data)
+      data->timeout = coap_ticks_from_rt_us((uint64_t)((struct timeval *)ptr)->tv_sec * 1000000 +
+                                            ((struct timeval *)ptr)->tv_usec);
+    else
+      ret = 0;
     break;
   case BIO_CTRL_RESET:
   case BIO_C_FILE_SEEK:
@@ -721,18 +724,22 @@ static int
 coap_dtls_generate_cookie(SSL *ssl,
                           unsigned char *cookie,
                           unsigned int *cookie_len) {
-  coap_dtls_context_t *dtls =
-      (coap_dtls_context_t *)SSL_CTX_get_app_data(SSL_get_SSL_CTX(ssl));
+  SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
+  coap_dtls_context_t *dtls = ctx ? (coap_dtls_context_t *)SSL_CTX_get_app_data(ctx) : NULL;
   coap_ssl_data *data = (coap_ssl_data *)BIO_get_data(SSL_get_rbio(ssl));
-  int r = HMAC_Init_ex(dtls->cookie_hmac, NULL, 0, NULL, NULL);
-  r &= HMAC_Update(dtls->cookie_hmac,
-                   (const uint8_t *)&data->session->addr_info.local.addr,
-                   (size_t)data->session->addr_info.local.size);
-  r &= HMAC_Update(dtls->cookie_hmac,
-                   (const uint8_t *)&data->session->addr_info.remote.addr,
-                   (size_t)data->session->addr_info.remote.size);
-  r &= HMAC_Final(dtls->cookie_hmac, cookie, cookie_len);
-  return r;
+
+  if (dtls && data) {
+    int r = HMAC_Init_ex(dtls->cookie_hmac, NULL, 0, NULL, NULL);
+    r &= HMAC_Update(dtls->cookie_hmac,
+                     (const uint8_t *)&data->session->addr_info.local.addr,
+                     (size_t)data->session->addr_info.local.size);
+    r &= HMAC_Update(dtls->cookie_hmac,
+                     (const uint8_t *)&data->session->addr_info.remote.addr,
+                     (size_t)data->session->addr_info.remote.size);
+    r &= HMAC_Final(dtls->cookie_hmac, cookie, cookie_len);
+    return r;
+  }
+  return 0;
 }
 
 static int
@@ -765,7 +772,7 @@ coap_dtls_psk_client_callback(SSL *ssl,
   const coap_bin_const_t *psk_identity;
 
   c_session = (coap_session_t *)SSL_get_app_data(ssl);
-  if (c_session == NULL)
+  if (c_session == NULL || c_session->context == NULL)
     return 0;
   o_context = (coap_openssl_context_t *)c_session->context->dtls_context;
   if (o_context == NULL)
@@ -846,7 +853,7 @@ coap_dtls_psk_server_callback(
   const coap_bin_const_t *psk_key;
 
   c_session = (coap_session_t *)SSL_get_app_data(ssl);
-  if (c_session == NULL)
+  if (c_session == NULL || c_session->context == NULL)
     return 0;
 
   setup_data = &c_session->context->spsk_setup_data;
@@ -904,6 +911,11 @@ coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
   const char *pstr;
   int w = where &~SSL_ST_MASK;
 
+  if (!session) {
+    coap_dtls_log(COAP_LOG_WARN,
+                  "coap_dtls_info_callback: session not determined, where 0x%0x and ret 0x%0x\n", where, ret);
+    return;
+  }
   if (w & SSL_ST_CONNECT)
     pstr = "SSL_connect";
   else if (w & SSL_ST_ACCEPT)
@@ -985,7 +997,7 @@ coap_sock_read(BIO *a, char *out, int outl) {
   int ret = 0;
   coap_session_t *session = (coap_session_t *)BIO_get_data(a);
 
-  if (out != NULL) {
+  if (session && out != NULL) {
     ret =(int)session->sock.lfunc[COAP_LAYER_TLS].l_read(session, (uint8_t *)out,
                                                          outl);
     /* Translate layer returns into what OpenSSL expects */
@@ -1010,9 +1022,14 @@ coap_sock_write(BIO *a, const char *in, int inl) {
   int ret = 0;
   coap_session_t *session = (coap_session_t *)BIO_get_data(a);
 
-  ret = (int)session->sock.lfunc[COAP_LAYER_TLS].l_write(session,
-                                                         (const uint8_t *)in,
-                                                         inl);
+  if (!session) {
+    errno = ENOMEM;
+    ret = -1;
+  } else {
+    ret = (int)session->sock.lfunc[COAP_LAYER_TLS].l_write(session,
+                                                           (const uint8_t *)in,
+                                                           inl);
+  }
   /* Translate layer what returns into what OpenSSL expects */
   BIO_clear_retry_flags(a);
   if (ret == 0) {
@@ -1934,6 +1951,13 @@ install_engine_ca(ENGINE *engine, SSL *ssl, const char *ca,
   SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
   X509_STORE *st;
 
+  if (!ctx) {
+    coap_log_warn("*** setup_pki: (D)TLS: %s: Unable to load "
+                  "%s CA Certificate (no ctx)\n",
+                  ca,
+                  role == COAP_DTLS_ROLE_SERVER ? "Server" : "Client");
+    return 0;
+  }
   x509 = missing_ENGINE_load_cert(engine,
                                   ca);
   if (!x509) {
@@ -1975,6 +1999,9 @@ load_in_cas(SSL *ssl,
       return 0;
     }
   }
+
+  if (!ctx)
+    return 0;
 
   /* Add CA to the trusted root CA store */
   in = BIO_new(BIO_s_file());
@@ -2244,13 +2271,14 @@ setup_pki_ssl(SSL *ssl,
                                   (int)key.key.define.ca_len);
         SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
         X509 *x;
-        X509_STORE *st = SSL_CTX_get_cert_store(ctx);
+        X509_STORE *st = ctx? SSL_CTX_get_cert_store(ctx) : NULL;
 
         if (bp) {
           for (;;) {
             if ((x = PEM_read_bio_X509(bp, NULL, 0, NULL)) == NULL)
               break;
-            add_ca_to_cert_store(st, x);
+            if (st)
+              add_ca_to_cert_store(st, x);
             SSL_add_client_CA(ssl, x);
             X509_free(x);
           }
@@ -2293,8 +2321,9 @@ setup_pki_ssl(SSL *ssl,
         }
 
         /* Add CA to the trusted root CA store */
-        st = SSL_CTX_get_cert_store(ctx);
-        add_ca_to_cert_store(st, x509);
+        st = ctx ? SSL_CTX_get_cert_store(ctx) : NULL;
+        if (st)
+          add_ca_to_cert_store(st, x509);
         X509_free(x509);
       }
       break;
@@ -2347,7 +2376,7 @@ get_san_or_cn_from_cert(X509 *x509) {
       for (n = 0; n < san_count; n++) {
         const GENERAL_NAME *name = sk_GENERAL_NAME_value(san_list, n);
 
-        if (name->type == GEN_DNS) {
+        if (name && name->type == GEN_DNS) {
           const char *dns_name = (const char *)ASN1_STRING_get0_data(name->d.dNSName);
 
           /* Make sure that there is not an embedded NUL in the dns_name */
@@ -2390,20 +2419,25 @@ get_san_or_cn_from_cert(X509 *x509) {
 
 static int
 tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
-  SSL *ssl = X509_STORE_CTX_get_ex_data(ctx,
-                                        SSL_get_ex_data_X509_STORE_CTX_idx());
-  coap_session_t *session = SSL_get_app_data(ssl);
-  coap_openssl_context_t *context =
-      ((coap_openssl_context_t *)session->context->dtls_context);
-  coap_dtls_pki_t *setup_data = &context->setup_data;
+  int index = SSL_get_ex_data_X509_STORE_CTX_idx();
+  SSL *ssl = index >= 0 ? X509_STORE_CTX_get_ex_data(ctx, index) : NULL;
+  coap_session_t *session = ssl ? SSL_get_app_data(ssl) : NULL;
+  coap_openssl_context_t *context = (session && session->context) ?
+                                    ((coap_openssl_context_t *)session->context->dtls_context) : NULL;
+  coap_dtls_pki_t *setup_data = context ? &context->setup_data : NULL;
   int depth = X509_STORE_CTX_get_error_depth(ctx);
   int err = X509_STORE_CTX_get_error(ctx);
   X509 *x509 = X509_STORE_CTX_get_current_cert(ctx);
-  char *cn = get_san_or_cn_from_cert(x509);
+  char *cn = x509 ? get_san_or_cn_from_cert(x509) : NULL;
   int keep_preverify_ok = preverify_ok;
 
   coap_dtls_log(COAP_LOG_DEBUG, "depth %d error %x preverify %d cert '%s'\n",
                 depth, err, preverify_ok, cn);
+  if (!setup_data) {
+    X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
+    OPENSSL_free(cn);
+    return 0;
+  }
   if (!preverify_ok) {
     switch (err) {
     case X509_V_ERR_CERT_NOT_YET_VALID:
@@ -2463,24 +2497,29 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
   if (setup_data->validate_cn_call_back && keep_preverify_ok) {
     int length = i2d_X509(x509, NULL);
     uint8_t *base_buf;
-    uint8_t *base_buf2 = base_buf = OPENSSL_malloc(length);
+    uint8_t *base_buf2 = base_buf = length > 0 ? OPENSSL_malloc(length) : NULL;
     int ret;
 
-    /* base_buf2 gets moved to the end */
-    i2d_X509(x509, &base_buf2);
-    coap_lock_callback_ret(ret,
-                           setup_data->validate_cn_call_back(cn, base_buf, length, session,
-                                                             depth, preverify_ok,
-                                                             setup_data->cn_call_back_arg));
-    if (!ret) {
-      if (depth == 0) {
-        X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
-      } else {
-        X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_CA);
+    if (base_buf) {
+      /* base_buf2 gets moved to the end */
+      assert(i2d_X509(x509, &base_buf2) > 0);
+      coap_lock_callback_ret(ret,
+                             setup_data->validate_cn_call_back(cn, base_buf, length, session,
+                                                               depth, preverify_ok,
+                                                               setup_data->cn_call_back_arg));
+      if (!ret) {
+        if (depth == 0) {
+          X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
+        } else {
+          X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_CA);
+        }
+        preverify_ok = 0;
       }
+      OPENSSL_free(base_buf);
+    } else {
+      X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
       preverify_ok = 0;
     }
-    OPENSSL_free(base_buf);
   }
   OPENSSL_free(cn);
   return preverify_ok;
@@ -2605,27 +2644,30 @@ tls_server_name_call_back(SSL *ssl,
   if (setup_data->validate_sni_call_back) {
     /* SNI checking requested */
     coap_session_t *session = (coap_session_t *)SSL_get_app_data(ssl);
-    coap_openssl_context_t *context =
-        ((coap_openssl_context_t *)session->context->dtls_context);
+    coap_openssl_context_t *context = (session && session->context) ?
+                                      ((coap_openssl_context_t *)session->context->dtls_context) : NULL;
     const char *sni = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
     size_t i;
 
+    if !context)
+    return SSL_TLSEXT_ERR_NOACK;
+
     if (!sni || !sni[0]) {
-      sni = "";
-    }
+        sni = "";
+      }
     for (i = 0; i < context->sni_count; i++) {
-      if (!strcasecmp(sni, context->sni_entry_list[i].sni)) {
+    if (!strcasecmp(sni, context->sni_entry_list[i].sni)) {
         break;
       }
     }
     if (i == context->sni_count) {
-      SSL_CTX *ctx;
-      coap_dtls_pki_t sni_setup_data;
-      coap_dtls_key_t *new_entry;
+    SSL_CTX *ctx;
+    coap_dtls_pki_t sni_setup_data;
+    coap_dtls_key_t *new_entry;
 
-      coap_lock_callback_ret(new_entry,
-                             setup_data->validate_sni_call_back(sni,
-                                                                setup_data->sni_call_back_arg));
+    coap_lock_callback_ret(new_entry,
+                           setup_data->validate_sni_call_back(sni,
+                                                              setup_data->sni_call_back_arg));
       if (!new_entry) {
         return SSL_TLSEXT_ERR_ALERT_FATAL;
       }
@@ -2705,11 +2747,14 @@ psk_tls_server_name_call_back(SSL *ssl,
   if (setup_data->validate_sni_call_back) {
     /* SNI checking requested */
     coap_session_t *c_session = (coap_session_t *)SSL_get_app_data(ssl);
-    coap_openssl_context_t *o_context =
-        ((coap_openssl_context_t *)c_session->context->dtls_context);
+    coap_openssl_context_t *o_context = (c_session && c_session->context) ?
+                                        ((coap_openssl_context_t *)c_session->context->dtls_context) : NULL;
     const char *sni = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
     size_t i;
     char lhint[COAP_DTLS_HINT_LENGTH];
+
+    if (!o_context)
+      return SSL_TLSEXT_ERR_ALERT_FATAL;
 
     if (!sni || !sni[0]) {
       sni = "";
@@ -3368,6 +3413,7 @@ coap_dtls_new_server_session(coap_session_t *session) {
   coap_dtls_context_t *dtls = &((coap_openssl_context_t *)session->context->dtls_context)->dtls;
   int r;
   const coap_bin_const_t *psk_hint;
+  BIO *rbio;
 
   nssl = SSL_new(dtls->ctx);
   if (!nssl)
@@ -3384,7 +3430,10 @@ coap_dtls_new_server_session(coap_session_t *session) {
   nssl = NULL;
   SSL_set_app_data(ssl, session);
 
-  data = (coap_ssl_data *)BIO_get_data(SSL_get_rbio(ssl));
+  rbio = SSL_get_rbio(ssl);
+  data = rbio ? (coap_ssl_data *)BIO_get_data(rbio) : NULL;
+  if (!data)
+    goto error;
   data->session = session;
 
   /* hint may get updated if/when handling SNI callback */
@@ -3543,6 +3592,8 @@ coap_dtls_new_client_session(coap_session_t *session) {
   if (!bio)
     goto error;
   data = (coap_ssl_data *)BIO_get_data(bio);
+  if (!data)
+    goto error;
   data->session = session;
   SSL_set_bio(ssl, bio, bio);
   SSL_set_app_data(ssl, session);
@@ -3671,10 +3722,12 @@ coap_tick_t
 coap_dtls_get_timeout(coap_session_t *session, coap_tick_t now COAP_UNUSED) {
   SSL *ssl = (SSL *)session->tls;
   coap_ssl_data *ssl_data;
+  BIO *rbio;
 
   assert(ssl != NULL && session->state == COAP_SESSION_STATE_HANDSHAKE);
-  ssl_data = (coap_ssl_data *)BIO_get_data(SSL_get_rbio(ssl));
-  return ssl_data->timeout;
+  rbio = ssl ? SSL_get_rbio(ssl) : NULL;
+  ssl_data = rbio ? (coap_ssl_data *)BIO_get_data(rbio) : NULL;
+  return ssl_data ? ssl_data->timeout : 1000;
 }
 
 /*
@@ -3702,10 +3755,16 @@ coap_dtls_hello(coap_session_t *session,
   coap_dtls_context_t *dtls = &((coap_openssl_context_t *)session->context->dtls_context)->dtls;
   coap_ssl_data *ssl_data;
   int r;
+  BIO *rbio;
 
   SSL_set_mtu(dtls->ssl, (long)session->mtu);
-  ssl_data = (coap_ssl_data *)BIO_get_data(SSL_get_rbio(dtls->ssl));
+  rbio = dtls->ssl ? SSL_get_rbio(dtls->ssl) : NULL;
+  ssl_data = rbio ? (coap_ssl_data *)BIO_get_data(rbio) : NULL;
   assert(ssl_data != NULL);
+  if (!ssl_data) {
+    errno = ENOMEM;
+    return -1;
+  }
   if (ssl_data->pdu_len) {
     coap_log_err("** %s: Previous data not read %u bytes\n",
                  coap_session_str(session), ssl_data->pdu_len);
@@ -3739,6 +3798,7 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
   coap_ssl_data *ssl_data;
   SSL *ssl = (SSL *)session->tls;
   int r;
+  BIO *rbio;
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
   int retry = 0;
 #endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
@@ -3747,8 +3807,13 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
 
   int in_init = SSL_in_init(ssl);
   uint8_t pdu[COAP_RXBUFFER_SIZE];
-  ssl_data = (coap_ssl_data *)BIO_get_data(SSL_get_rbio(ssl));
+  rbio = ssl ? SSL_get_rbio(ssl) : NULL;
+  ssl_data = rbio ? (coap_ssl_data *)BIO_get_data(rbio) : NULL;
   assert(ssl_data != NULL);
+  if (!ssl_data) {
+    errno = ENOMEM;
+    return -1;
+  }
 
   if (ssl_data->pdu_len) {
     coap_log_err("** %s: Previous data not read %u bytes\n",
