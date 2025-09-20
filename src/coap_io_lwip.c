@@ -22,7 +22,7 @@
 
 void
 coap_lwip_dump_memory_pools(coap_log_t log_level) {
-#if MEMP_STATS && LWIP_STATS_DISPLAY
+#if MEMP_STATS && LWIP_STATS_DISPLAY && MEMP_USE_CUSTOM_POOLS
   int i;
 
   /* Save time if not needed */
@@ -41,7 +41,9 @@ coap_lwip_dump_memory_pools(coap_log_t log_level) {
              memp_pools[i]->stats->used, memp_pools[i]->stats->max,
              memp_pools[i]->stats->err);
   }
-#endif /* MEMP_STATS && LWIP_STATS_DISPLAY */
+#else /* !( MEMP_STATS && LWIP_STATS_DISPLAY && MEMP_USE_CUSTOM_POOLS) */
+  (void)log_level;
+#endif /* !( MEMP_STATS && LWIP_STATS_DISPLAY && MEMP_USE_CUSTOM_POOLS) */
 }
 
 void

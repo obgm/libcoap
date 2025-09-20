@@ -10,6 +10,9 @@
  * of use.
  */
 
+#ifndef LWIPOPTS_H_
+#define LWIPOPTS_H_
+
 /*
  * NO_SYS = 0
  *  Use lwIP OS-awareness (multi threaded, semaphores, mutexes and mboxes).
@@ -55,21 +58,37 @@
 #define LWIP_TCPIP_CORE_LOCKING 1
 #endif
 
-#define MEMP_NUM_SYS_TIMEOUT    10
+#define MEMP_NUM_SYS_TIMEOUT  10
 
-#define MEMP_USE_CUSTOM_POOLS 1
+/* Set to 0 if custom pools not required (and maybe set MEM_LIBC_MALLOC instead */
+#define MEMP_USE_CUSTOM_POOLS  1
 #define MEM_SIZE (4 * 1024)
-/* Support a 1500 MTU packet */
-#define PBUF_POOL_BUFSIZE LWIP_MEM_ALIGN_SIZE(2*6 + 2 + 1500)
 
-/* Set if space is to be reserved for a response PDU */
-#define MEMP_STATS                      1
+#if ! MEMP_USE_CUSTOM_POOLS
+/* Set if you want to use the standard libc for malloc */
+#define MEM_LIBC_MALLOC        0
+#endif
+
+#if MEM_LIBC_MALLOC
+#define HAVE_MALLOC            1
+#endif
 
 /*
- * Set to display (with COAP_LOG_DEBUG) custom pools information
- * (Needs MEMP_STATS set) when coap_free_context() is called.
+ * Set to display (with COAP_LOG_DEBUG) memory pools information
+ * (Needs MEMP_STATS set for MEMP_USE_CUSTOM_POOLS) when coap_free_context() is called.
  */
-#define LWIP_STATS_DISPLAY              1
+#define LWIP_STATS_DISPLAY     1
+
+#if LWIP_STATS_DISPLAY
+#if MEMP_USE_CUSTOM_POOLS
+#define MEMP_STATS             1
+#else
+#define COAP_MEMORY_TYPE_TRACK 1
+#endif
+#endif
+
+/* Support a 1500 MTU packet */
+#define PBUF_POOL_BUFSIZE LWIP_MEM_ALIGN_SIZE(2*6 + 2 + 1500)
 
 /*
  * Set to 1 for debugging UDP traffic
@@ -78,3 +97,5 @@
 #define LWIP_DEBUG 1
 #define UDP_DEBUG LWIP_DBG_ON
 #endif
+
+#endif /* LWIPOPTS_H_ */
