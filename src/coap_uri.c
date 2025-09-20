@@ -179,12 +179,12 @@ coap_split_uri_sub(const uint8_t *str_var,
   /* p points to beginning of Uri-Host */
   q = p;
   if (len && *p == '[') {
-    /* IPv6 address reference */
+    /* IPv6 address reference or Unix domain */
     ++p;
     ++q;
     --len;
 
-    while (len && *q != ']' && (isxdigit(*q) || *q == ':')) {
+    while (len && *q != ']') {
       ++q;
       --len;
     }
