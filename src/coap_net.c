@@ -103,8 +103,6 @@
 /** creates a Qx.FRAC_BITS from session's 'ack_timeout' */
 #define ACK_TIMEOUT Q(FRAC_BITS, session->ack_timeout)
 
-#ifndef WITH_LWIP
-
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
   return (coap_queue_t *)coap_malloc_type(COAP_NODE, sizeof(coap_queue_t));
@@ -114,20 +112,6 @@ COAP_STATIC_INLINE void
 coap_free_node(coap_queue_t *node) {
   coap_free_type(COAP_NODE, node);
 }
-#else /* !WITH_LWIP */
-
-#include <lwip/memp.h>
-
-COAP_STATIC_INLINE coap_queue_t *
-coap_malloc_node() {
-  return (coap_queue_t *)memp_malloc(MEMP_COAP_NODE);
-}
-
-COAP_STATIC_INLINE void
-coap_free_node(coap_queue_t *node) {
-  memp_free(MEMP_COAP_NODE, node);
-}
-#endif /* WITH_LWIP */
 
 unsigned int
 coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now) {

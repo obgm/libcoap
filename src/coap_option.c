@@ -514,13 +514,13 @@ coap_new_optlist(uint16_t number,
                 ) {
   coap_optlist_t *node;
 
-#ifdef WITH_LWIP
+#if defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS
   if (length > MEMP_LEN_COAPOPTLIST) {
     coap_log_crit("coap_new_optlist: size too large (%zu > MEMP_LEN_COAPOPTLIST)\n",
                   length);
     return NULL;
   }
-#endif /* WITH_LWIP */
+#endif /* WITH_LWIP && MEMP_USE_CUSTOM_POOLS */
   node = coap_malloc_type(COAP_OPTLIST, sizeof(coap_optlist_t) + length);
 
   if (node) {

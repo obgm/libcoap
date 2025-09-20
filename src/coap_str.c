@@ -20,13 +20,13 @@
 coap_string_t *
 coap_new_string(size_t size) {
   coap_string_t *s;
-#ifdef WITH_LWIP
+#if defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS
   if (size >= MEMP_LEN_COAPSTRING) {
     coap_log_crit("coap_new_string: size too large (%zu +1 > MEMP_LEN_COAPSTRING)\n",
                   size);
     return NULL;
   }
-#endif /* WITH_LWIP */
+#endif /* WITH_LWIP && MEMP_USE_CUSTOM_POOLS */
   assert(size+1 != 0);
   s = (coap_string_t *)coap_malloc_type(COAP_STRING,
                                         sizeof(coap_string_t) + size + 1);

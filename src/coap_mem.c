@@ -15,13 +15,13 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#ifndef WITH_LWIP
+#if ! (defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS)
 #if COAP_MEMORY_TYPE_TRACK
 static int track_counts[COAP_MEM_TAG_LAST];
 static int peak_counts[COAP_MEM_TAG_LAST];
 static int fail_counts[COAP_MEM_TAG_LAST];
 #endif /* COAP_MEMORY_TYPE_TRACK */
-#endif /* ! WITH_LWIP */
+#endif /* ! (WITH_LWIP && MEMP_USE_CUSTOM_POOLS) */
 
 #if defined(RIOT_VERSION) && defined(MODULE_MEMARRAY)
 #include <memarray.h>
@@ -478,9 +478,9 @@ coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
   return coap_malloc_type(type, size);
 
 }
-#else /* ! RIOT_VERSION && ! MODULE_MEMARRAY */
+/* End RIOT_VERSION */
 
-#if defined(__ZEPHYR__)
+#elif defined(__ZEPHYR__)
 
 #include <zephyr/kernel.h>
 
@@ -546,6 +546,87 @@ coap_free_type(coap_memory_tag_t type, void *p) {
 #endif /* COAP_MEMORY_TYPE_TRACK */
   k_free(p);
 }
+/* End __ZEPHYR__ */
+
+#elif defined(WITH_LWIP) && ! MEMP_USE_CUSTOM_POOLS && ! MEM_LIBC_MALLOC
+#include <lwip/mem.h>
+
+void
+coap_memory_init(void) {
+}
+
+void *
+coap_malloc_type(coap_memory_tag_t type, size_t size) {
+  void *ptr = mem_malloc(size + sizeof(size_t));
+
+  (void)type;
+#if COAP_MEMORY_TYPE_TRACK
+  assert(type < COAP_MEM_TAG_LAST);
+  if (ptr) {
+    track_counts[type]++;
+    if (track_counts[type] > peak_counts[type])
+      peak_counts[type] = track_counts[type];
+  } else {
+    fail_counts[type]++;
+  }
+#endif /* COAP_MEMORY_TYPE_TRACK */
+  if (ptr) {
+    size_t *s_ptr = (size_t *)ptr;
+    u_char *b_ptr = (u_char *)ptr;
+
+    *s_ptr = size;
+    return b_ptr + sizeof(size_t);
+  }
+  return NULL;
+}
+
+void *
+coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
+  void *new = mem_malloc(size + sizeof(size_t));
+
+  (void)type;
+#if COAP_MEMORY_TYPE_TRACK
+  if (new) {
+    assert(type < COAP_MEM_TAG_LAST);
+    if (!p)
+      track_counts[type]++;
+    if (track_counts[type] > peak_counts[type])
+      peak_counts[type] = track_counts[type];
+  } else {
+    fail_counts[type]++;
+  }
+#endif /* COAP_MEMORY_TYPE_TRACK */
+  if (new) {
+    size_t *s_ptr = (size_t *)new;
+    u_char *b_ptr = (u_char *)new;
+
+    *s_ptr = size;
+    if (p) {
+      size_t *o_ptr = (size_t *)p;
+
+      o_ptr--;
+      memcpy(b_ptr + sizeof(size_t), p, *o_ptr);
+    }
+    return b_ptr + sizeof(size_t);
+  }
+  return NULL;
+}
+
+void
+coap_free_type(coap_memory_tag_t type, void *p) {
+  u_char *ptr = (u_char *)p;
+
+  (void)type;
+#if COAP_MEMORY_TYPE_TRACK
+  assert(type < COAP_MEM_TAG_LAST);
+  if (p)
+    track_counts[type]--;
+#endif /* COAP_MEMORY_TYPE_TRACK */
+  if (ptr) {
+    mem_free(ptr - sizeof(size_t));
+  }
+}
+/* Enf of WITH_LWIP && ! MEMP_USE_CUSTOM_POOLS && | MEM_LIBC_MALLOC */
 
 #elif defined(HAVE_MALLOC) || defined(__MINGW32__)
 #include <stdlib.h>
@@ -604,9 +685,9 @@ coap_free_type(coap_memory_tag_t type, void *p) {
   free(p);
 }
 
-#else /* ! HAVE_MALLOC  && !__MINGW32__ && !__ZEPHYR__*/
+/* End of HAVE_MALLOC || __MINGW32__ */
 
-#ifdef WITH_CONTIKI
+#elif WITH_CONTIKI
 #include "lib/heapmem.h"
 
 void
@@ -660,11 +741,7 @@ coap_free_type(coap_memory_tag_t type, void *ptr) {
 
 #endif /* WITH_CONTIKI */
 
-#endif /* ! HAVE_MALLOC */
-
-#endif /* ! RIOT_VERSION */
-
-#ifndef WITH_LWIP
+#if ! (defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS)
 #define MAKE_CASE(n) case n: name = #n; break
 void
 coap_dump_memory_type_counts(coap_log_t level) {
@@ -717,4 +794,4 @@ coap_dump_memory_type_counts(coap_log_t level) {
   (void)level;
 #endif /* COAP_MEMORY_TYPE_TRACK */
 }
-#endif /* !WITH_LWIP */
+#endif /* ! (WITH_LWIP && MEMP_USE_CUSTOM_POOLS */

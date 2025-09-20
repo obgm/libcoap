@@ -189,9 +189,13 @@ server_coap_init(coap_lwip_input_wait_handler_t input_wait,
   coap_free_address_info(info_list);
   LWIP_ASSERT("Failed to initialize context", have_ep != 0);
 
+#if MEMP_USE_CUSTOM_POOLS
   /* Limit the number of idle sessions to save RAM (MEMP_NUM_COAPSESSION) */
   LWIP_ASSERT("Need a minimum of 2 for MEMP_NUM_COAPSESSION", MEMP_NUM_COAPSESSION > 1);
   coap_context_set_max_idle_sessions(main_coap_context, MEMP_NUM_COAPSESSION -1);
+#else /* ! MEMP_USE_CUSTOM_POOLS */
+  coap_context_set_max_idle_sessions(main_coap_context, 1);
+#endif /* ! MEMP_USE_CUSTOM_POOLS */
   clock_offset = 1; /* Need a non-zero value */
   init_coap_resources(main_coap_context);
   coap_lwip_set_input_wait_handler(main_coap_context, input_wait, input_arg);

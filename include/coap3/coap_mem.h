@@ -21,23 +21,9 @@
 #include "coap3/coap_proxy.h"
 #include <stdlib.h>
 
-#ifdef WITH_LWIP
-#include <lwip/memp.h>
-#endif /* WITH_LWIP */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#ifndef WITH_LWIP
-/**
- * Initializes libcoap's memory management.
- * This function must be called once before coap_malloc() can be used on
- * constrained devices.
- */
-void coap_memory_init(void);
-
-#endif /* WITH_LWIP */
 
 /**
  * Type specifiers for coap_malloc_type(). Memory objects can be typed to
@@ -77,7 +63,14 @@ typedef enum {
   COAP_MEM_TAG_LAST
 } coap_memory_tag_t;
 
-#ifndef WITH_LWIP
+#if ! defined(WITH_LWIP) || (defined(WITH_LWIP) && ! MEMP_USE_CUSTOM_POOLS)
+
+/**
+ * Initializes libcoap's memory management.
+ * This function must be called once before coap_malloc() can be used on
+ * constrained devices.
+ */
+void coap_memory_init(void);
 
 /**
  * Allocates a chunk of @p size bytes and returns a pointer to the newly
@@ -142,9 +135,9 @@ coap_free(void *object) {
   coap_free_type(COAP_STRING, object);
 }
 
-#endif /* not WITH_LWIP */
+#else /* WITH_LWIP && MEMP_USE_CUSTOM_POOLS */
 
-#ifdef WITH_LWIP
+#include <lwip/memp.h>
 
 /* no initialization needed with lwip (or, more precisely: lwip must be
  * completely initialized anyway by the time coap gets active)  */
@@ -194,7 +187,7 @@ coap_free(void *pointer) {
 
 #define coap_dump_memory_type_counts(l) coap_lwip_dump_memory_pools(l)
 
-#endif /* WITH_LWIP */
+#endif /* WITH_LWIP && MEMP_USE_CUSTOM_POOLS */
 
 #ifdef __cplusplus
 }
