@@ -20,11 +20,9 @@
 #include "net/gnrc.h"
 #include "net/gnrc/ipv6.h"
 #include "net/gnrc/netreg.h"
-#include "net/udp.h"
-#if COAP_DISABLE_TCP
-#include "net/tcp.h"
-#endif /* ! COAP_DISABLE_TCP */
+#include "net/sock/tcp.h"
 #include "net/sock/async.h"
+#include "net/sock/async/event.h"
 
 #include "coap3/coap_riot.h"
 
@@ -130,6 +128,8 @@ tcp_recv_session_cb(sock_tcp_t *sock, sock_async_flags_t flags, void *arg) {
 }
 #endif /* MODULE_LWIP_TCP */
 
+event_queue_t queue;
+
 #if COAP_CLIENT_SUPPORT
 
 int
@@ -226,6 +226,7 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
   memcpy(&remote_addr->riot, &remote, sizeof(remote_addr->riot));
 
 #ifdef MODULE_LWIP_TCP
+  sock_tcp_event_init(&sock->tcp, &queue, tcp_recv_session_cb, sock->session);
   sock_tcp_set_cb(&sock->tcp, tcp_recv_session_cb, sock->session);
 #endif /* MODULE_LWIP_TCP */
 
@@ -233,7 +234,7 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
   return 1;
 
 error:
-  coap_socket_close(sock);
+  coap_socket_strm_close(sock);
   return 0;
 }
 

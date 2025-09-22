@@ -10,23 +10,63 @@ RIOTBASE ?= $(CURDIR)/../../../..
 # Include packages that pull up and auto-init the link layer.
 # NOTE: 6LoWPAN will be included if IEEE802.15.4 devices are present
 USEMODULE += netdev_default
-USEMODULE += auto_init_gnrc_netif
 
-# Activate ICMPv6 error messages
-USEMODULE += gnrc_icmpv6_error
+# use GNRC by default
+LWIP_IPV4 ?= 0
+LWIP_IPV6 ?= 0
 
-# Specify the mandatory networking module for a IPv6 routing node
-USEMODULE += gnrc_ipv6_router_default
+# TCP needs one/both of LWIP_IPV4 or LWIP_IPV6
+LIBCOAP_TCP ?= 0
 
-# Add a routing protocol
-USEMODULE += gnrc_rpl
-USEMODULE += auto_init_gnrc_rpl
+ifeq (,$(filter 1, $(LWIP_IPV4) $(LWIP_IPV6)))
+  USEMODULE += auto_init_gnrc_netif
 
-# Additional networking modules that can be dropped if not needed
-USEMODULE += gnrc_icmpv6_echo
+  # Activate ICMPv6 error messages
+  USEMODULE += gnrc_icmpv6_error
 
-# Specify the mandatory networking modules for IPv6 and UDP
-USEMODULE += gnrc_ipv6_default
+  # Specify the mandatory networking module for a IPv6 routing node
+  USEMODULE += gnrc_ipv6_router_default
+
+  # Add a routing protocol
+  USEMODULE += gnrc_rpl
+  USEMODULE += auto_init_gnrc_rpl
+
+  # Additional networking modules that can be dropped if not needed
+  USEMODULE += gnrc_icmpv6_echo
+
+  # Specify the mandatory networking modules
+  USEMODULE += gnrc_ipv6_default
+
+  # Additional networking modules that can be dropped if not needed
+  USEMODULE += gnrc_icmpv6_echo
+  CFLAGS += -DCOAP_IPV6_SUPPORT=1
+else
+  ifeq (1,$(LWIP_IPV4))
+    USEMODULE += ipv4_addr
+
+    USEMODULE += lwip_arp
+    USEMODULE += lwip_ipv4
+    USEMODULE += lwip_dhcp_auto
+    CFLAGS += -DETHARP_SUPPORT_STATIC_ENTRIES=1
+    CFLAGS += -DCOAP_IPV4_SUPPORT=1
+    ifeq (0,$(LWIP_IPV6))
+      CFLAGS += -DCOAP_IPV6_SUPPORT=0
+    endif
+  endif
+
+  ifeq (1,$(LWIP_IPV6))
+    USEMODULE += ipv6_addr
+
+    USEMODULE += lwip_ipv6
+    USEMODULE += lwip_ipv6_autoconfig
+    CFLAGS += -DCOAP_IPV6_SUPPORT=1
+    ifeq (0,$(LWIP_IPV4))
+      CFLAGS += -DCOAP_IPV4_SUPPORT=0
+    endif
+  endif
+  USEMODULE += netutils
+endif
+
 USEMODULE += memarray
 USEMODULE += ipv4_addr
 
@@ -43,6 +83,14 @@ USEPKG += libcoap
 
 # Configure if DNS is required
 # USEMODULE += sock_dns
+
+ifeq (,$(filter 1, $(LWIP_IPV4) $(LWIP_IPV6)))
+  ifeq (1,$(LIBCOAP_TCP))
+    # Configure if TCP is required
+    CFLAGS += -DCOAP_DISABLE_TCP=0
+    USEMODULE += sock_tcp
+  endif
+endif
 
 # Support 64 bit ticks
 USEMODULE += ztimer64_xtimer_compat

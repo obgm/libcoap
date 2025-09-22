@@ -281,20 +281,23 @@ get_session_addr(const session_t *s, coap_address_t *a) {
   a->port = s->port;
 #endif /* ! LWIP_SOCKET */
 #elif defined(WITH_RIOT_SOCK)
+#ifdef SOCK_HAS_IPV6
   if (s->addr.family == AF_INET6) {
     a->riot.family = s->addr.family;
     memcpy(&a->riot.addr.ipv6, &s->addr.ipv6,
            sizeof(a->riot.addr.ipv6));
     a->riot.port = ntohs(s->addr.port);
     a->riot.netif = 0;
+  }
+#endif /* SOCK_HAS_IPV6 */
 #ifdef SOCK_HAS_IPV4
-  } else if (s->addr.family == AF_INET) {
+  if (s->addr.family == AF_INET) {
     a->riot.family = s->addr.family;
     memcpy(&a->riot.addr.ipv4, &s->addr.ipv4, sizeof(a->riot.addr.ipv4));
     a->riot.port = ntohs(s->addr.port);
     a->riot.netif = 0;
-#endif /* SOCK_HAS_IPV4 */
   }
+#endif /* SOCK_HAS_IPV4 */
 #else /* ! WITH_CONTIKI && ! WITH_LWIP && ! WITH_RIOT_SOCK */
   if (s->addr.sa.sa_family == AF_INET6) {
     a->size = (socklen_t)sizeof(a->addr.sin6);
@@ -350,20 +353,23 @@ put_session_addr(const coap_address_t *a, session_t *s) {
   s->port = a->port;
 #endif /* ! LWIP_SOCKET */
 #elif defined(WITH_RIOT_SOCK)
+#ifdef SOCK_HAS_IPV6
   if (a->riot.family == AF_INET6) {
     s->size = sizeof(s->addr.ipv6);
     s->addr.family = a->riot.family;
     memcpy(&s->addr.ipv6, &a->riot.addr.ipv6,
            sizeof(s->addr.ipv6));
     s->addr.port = htons(a->riot.port);
-#ifdef SOCK_HAS_IPV4
-  } else if (a->r.family == AF_INET) {
-    s->size = sizeof(s->addr.ipv4);
-    s->addr.family = a->r.family;
-    memcpy(&a->addr.ipv4, &s->r.addr.ipv4, sizeof(a->addr.ipv4));
-    s->addr.port = htons(a->r.port);
-#endif /* SOCK_HAS_IPV4 */
   }
+#endif /* SOCK_HAS_IPV6 */
+#ifdef SOCK_HAS_IPV4
+  if (a->riot.family == AF_INET) {
+    s->size = sizeof(s->addr.ipv4);
+    s->addr.family = a->riot.family;
+    memcpy(&s->addr.ipv4, &a->riot.addr.ipv4, sizeof(s->addr.ipv4));
+    s->addr.port = htons(a->riot.port);
+  }
+#endif /* SOCK_HAS_IPV4 */
 #else /* ! WITH_CONTIKI && ! WITH_LWIP && ! WITH_RIOT_SOCK */
   if (a->addr.sa.sa_family == AF_INET6) {
     s->size = (socklen_t)sizeof(s->addr.sin6);

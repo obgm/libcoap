@@ -21,9 +21,6 @@
 #include "net/gnrc/ipv6.h"
 #include "net/gnrc/netreg.h"
 #include "net/udp.h"
-#if COAP_DISABLE_TCP
-#include "net/tcp.h"
-#endif /* ! COAP_DISABLE_TCP */
 #include "net/sock/async.h"
 
 #include "coap3/coap_riot.h"
