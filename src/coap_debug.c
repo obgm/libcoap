@@ -1382,18 +1382,21 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
     va_end(ap);
     log_handler(level, message);
   } else {
-    char timebuf[32];
-    coap_tick_t now;
     va_list ap;
     FILE *log_fd;
-    size_t len;
 
     log_fd = level <= COAP_LOG_CRIT ? COAP_ERR_FD : COAP_DEBUG_FD;
+
+#ifndef RIOT_VERSION
+    char timebuf[32];
+    coap_tick_t now;
+    size_t len;
 
     coap_ticks(&now);
     len = print_timestamp(timebuf,sizeof(timebuf), now);
     if (len)
       fprintf(log_fd, "%.*s ", (int)len, timebuf);
+#endif /* ! RIOT_VERSION */
 
 #if COAP_THREAD_SAFE && COAP_THREAD_NUM_LOGGING
     if (thread_no == 0) {

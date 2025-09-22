@@ -119,8 +119,9 @@ struct coap_address_t {
   struct _sock_tl_ep riot;
 };
 
-#define _coap_address_isany_impl(A)  0
+#define _coap_address_isany_impl(A)  (0)
 
+#ifdef SOCK_HAS_IPV6
 #define _coap_address_equals_impl(A, B) \
   ((A)->riot.family == (B)->riot.family &&        \
    (A)->riot.port == (B)->riot.port &&        \
@@ -128,6 +129,14 @@ struct coap_address_t {
           sizeof((A)->riot.addr.ipv6) : sizeof((A)->riot.addr.ipv4)) == 0)
 
 #define _coap_is_mcast_impl(Address) ((Address)->riot.addr.ipv6[0] == 0xff)
+#else /* !SOCK_HAS_IPV6 */
+#define _coap_address_equals_impl(A, B) \
+  ((A)->riot.family == (B)->riot.family &&        \
+   (A)->riot.port == (B)->riot.port &&        \
+   memcmp(&(A)->riot, &(B)->riot, sizeof((A)->riot.addr.ipv4)) == 0)
+
+#define _coap_is_mcast_impl(Address) (0)
+#endif /* !SOCK_HAS_IPV6 */
 
 /**
  * Returns the port from @p addr in host byte order.

@@ -931,13 +931,13 @@ coap_resolve_address_info_lkd(const coap_str_const_t *address,
                               int ai_hints_flags,
                               int scheme_hint_bits,
                               coap_resolve_type_t type) {
-#if COAP_IPV6_SUPPORT
+#ifdef SOCK_HAS_IPV6
   ipv6_addr_t addr_ipv6;
-#endif /* COAP_IPV6_SUPPORT */
-#if COAP_IPV4_SUPPORT
-  ipv4_addr_t addr_ipv4;
-#endif /* COAP_IPV4_SUPPORT */
   netif_t *netif = NULL;
+#endif /* SOCK_HAS_IPV6 */
+#ifdef SOCK_HAS_IPV4
+  ipv4_addr_t addr_ipv4;
+#endif /* SOCK_HAS_IPV4 */
   coap_addr_info_t *info = NULL;
   coap_addr_info_t *info_prev = NULL;
   coap_addr_info_t *info_list = NULL;
@@ -948,24 +948,24 @@ coap_resolve_address_info_lkd(const coap_str_const_t *address,
   coap_lock_check_locked();
 
   if (address == NULL || address->length == 0) {
+#ifdef SOCK_HAS_IPV6
     memset(&addr_ipv6, 0, sizeof(addr_ipv6));
-#if COAP_IPV6_SUPPORT
     family = AF_INET6;
-#else /* ! COAP_IPV6_SUPPORT */
+#else /* ! SOCK_HAS_IPV6 */
     family = AF_INET;
-#endif /* ! COAP_IPV6_SUPPORT */
+#endif /* ! SOCK_HAS_IPV6 */
   } else {
-#if COAP_IPV6_SUPPORT
+#ifdef SOCK_HAS_IPV6
     if (netutils_get_ipv6(&addr_ipv6, &netif, (const char *)address->s) >= 0) {
       family = AF_INET6;
     }
-#endif /* COAP_IPV6_SUPPORT */
-#if COAP_IPV4_SUPPORT
+#endif /* SOCK_HAS_IPV6 */
+#ifdef SOCK_HAS_IPV4
     if (family == AF_UNSPEC &&
         netutils_get_ipv4(&addr_ipv4, (const char *)address->s) >= 0) {
       family = AF_INET;
     }
-#endif /* COAP_IPV4_SUPPORT */
+#endif /* SOCK_HAS_IPV4 */
     if (family == AF_UNSPEC) {
       coap_log_err("coap_resolve_address_info: Unable to parse '%s'\n", address->s);
       return NULL;
@@ -988,21 +988,21 @@ coap_resolve_address_info_lkd(const coap_str_const_t *address,
       }
 
       switch (family) {
-#if COAP_IPV6_SUPPORT
+#ifdef SOCK_HAS_IPV6
       case AF_INET6:
         info->addr.riot.family = AF_INET6;
         memcpy(&info->addr.riot.addr.ipv6, &addr_ipv6,
                sizeof(info->addr.riot.addr.ipv6));
         info->addr.riot.netif = netif ? (uint32_t)netif_get_id(netif) : 0;
         break;
-#endif /* ! COAP_IPV6_SUPPORT */
-#if COAP_IPV4_SUPPORT
+#endif /* ! SOCK_HAS_IPV6 */
+#ifdef SOCK_HAS_IPV4
       case AF_INET:
         info->addr.riot.family = AF_INET;
         memcpy(&info->addr.riot.addr.ipv4, &addr_ipv4,
                sizeof(info->addr.riot.addr.ipv4));
         break;
-#endif /* ! COAP_IPV4_SUPPORT */
+#endif /* ! SOCK_HAS_IPV4 */
       default:
         break;
       }

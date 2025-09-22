@@ -7,18 +7,18 @@ To build the examples, do
 
 This will
 
-* download RIOT from the upstream git sources
+* download RIOT from the upstream git sources.
 * update the RIOT environment with pkg/libcoap, examples/libcoap-client
   and examples/libcoap-server taken from pkg_libcoap/, examples_client/
-  and examples_server respectively/.
+  and examples_server/ respectively.
   (updates RIOT's libcoap code to the latest committed version in your
    environment, along with any modified files).
-* build the client application
-* build the server application
+* build the client application.
+* build the server application.
 
 To run (and/or rebuild) the server application
 
-* cd RIOT/examples/networking/libcoap/libcoap_server
+* cd RIOT/examples/networking/coap/libcoap_server
 * make RIOT_CI_BUILD=1
 * make term
 * (at the shell prompt) coaps start
@@ -30,7 +30,7 @@ not differ from regular libcoap usage.
 
 To run (and/or rebuild) the client application
 
-* cd RIOT/examples/networking/libcoap/libcoap_client/
+* cd RIOT/examples/networking/coap/libcoap_client
 * make RIOT_CI_BUILD=1
 * make term
 * (at the shell prompt) coapc coap://[ip-6-address]/some/path
@@ -45,6 +45,4 @@ Note to developers
 PKG_VERSION= in pkg_libcoap/Makefile needs updating if you need a different
 version of libcoap to get initially installed into RIOT/pkg/libcoap.
 
-Kconfig support is available. Running make in the libcoap distribution
-examples/riot directory will try to add in a 'rsource "libcoap/Kconfig"'
-entry into RIOT/pkg/Kconfig
+Kconfig support is available.

@@ -114,14 +114,16 @@ error:
 static int init_coap_context_endpoints(const char *use_psk)
 {
     coap_address_t listenaddress;
-    gnrc_netif_t *netif = gnrc_netif_iter(NULL);
-    ipv6_addr_t addr;
     char addr_str[INET6_ADDRSTRLEN + 8];
     int scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP;
     coap_addr_info_t *info = NULL;
     coap_addr_info_t *info_list = NULL;
     coap_str_const_t local;
     int have_ep = 0;
+
+#ifdef SOCK_HAS_IPV6
+    ipv6_addr_t addr;
+    gnrc_netif_t *netif = gnrc_netif_iter(NULL);
 
     /* Get the first address on the interface */
     if (gnrc_netif_ipv6_addrs_get(netif, &addr, sizeof(addr)) < 0) {
@@ -133,6 +135,10 @@ static int init_coap_context_endpoints(const char *use_psk)
     listenaddress.riot.family = AF_INET6;
     memcpy(&listenaddress.riot.addr.ipv6, &addr,
            sizeof(listenaddress.riot.addr.ipv6));
+#else
+    coap_address_init(&listenaddress);
+    listenaddress.riot.family = AF_INET;
+#endif
     coap_print_ip_addr(&listenaddress, addr_str, sizeof(addr_str));
     coap_log_info("Server IP [%s]\n", addr_str);
 
