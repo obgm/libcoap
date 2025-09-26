@@ -417,7 +417,7 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
     memcpy(loc + loc_size, h.s, min(h.length, LOCSIZE - loc_size - 1));
     loc_size += min(h.length, LOCSIZE - loc_size - 1);
 
-    if (ins.length && loc_size > 1) {
+    if (ins.length && min(ins.length, LOCSIZE - loc_size - 1) > 1) {
       loc[loc_size++] = '-';
       memcpy((char *)(loc + loc_size),
              ins.s, min(ins.length, LOCSIZE - loc_size - 1));
@@ -425,11 +425,11 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
     }
 
   } else {      /* generate node identifier */
-    loc_size +=
-        snprintf((char *)(loc + loc_size), LOCSIZE - loc_size - 1,
-                 "%x", coap_pdu_get_mid(request));
+    snprintf((char *)(loc + loc_size), LOCSIZE - loc_size - 1,
+             "%x", coap_pdu_get_mid(request));
+    loc_size = strlen((char *)loc);
 
-    if (loc_size > 1) {
+    if (min(ins.length, LOCSIZE - loc_size - 1) > 1) {
       if (ins.length) {
         loc[loc_size++] = '-';
         memcpy((char *)(loc + loc_size),
@@ -440,10 +440,11 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
         coap_tick_t now;
         coap_ticks(&now);
 
-        loc_size += snprintf((char *)(loc + loc_size),
-                             LOCSIZE - loc_size - 1,
-                             "-%x",
-                             (unsigned int)(now & (unsigned int)-1));
+        snprintf((char *)(loc + loc_size),
+                 LOCSIZE - loc_size - 1,
+                 "-%x",
+                 (unsigned int)(now & (unsigned int)-1));
+        loc_size = strlen((char *)loc);
       }
     }
   }
