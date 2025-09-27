@@ -228,6 +228,7 @@ struct coap_session_t {
   coap_tick_t doing_first_timeout; /**< If doing_first, when to timeout */
   coap_pdu_t *doing_first_pdu;    /**< If doing fist, PDU to retry sending */
 #endif /* COAP_CLIENT_SUPPORT */
+  uint8_t no_path_abbrev;         /**< Set is remote does not support Uri-Path-Abbrev */
   coap_mid_t remote_test_mid;     /**< mid used for checking remote
                                        support */
   uint32_t max_token_size;        /**< Largest token size supported RFC8974 */

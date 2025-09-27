@@ -90,7 +90,7 @@ coap_register_async_lkd(coap_session_t *session,
 
   /* Note that this generates a new MID */
   s->pdu = coap_pdu_duplicate_lkd(request, session, request->actual_token.length,
-                                  request->actual_token.s, NULL);
+                                  request->actual_token.s, NULL, COAP_BOOL_FALSE);
   if (s->pdu == NULL) {
     coap_free_async_lkd(session, s);
     coap_log_crit("coap_register_async: insufficient memory\n");

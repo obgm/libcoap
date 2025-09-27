@@ -128,6 +128,7 @@ typedef enum coap_request_t {
 #define COAP_OPTION_OSCORE          9 /* C_____U, *,       0-255 B, RFC8613 */
 #define COAP_OPTION_URI_PATH       11 /* CU-RE__, String,  0-255 B, RFC7252 */
 #define COAP_OPTION_CONTENT_FORMAT 12 /* ____E__, uint,      0-2 B, RFC7252 */
+#define COAP_OPTION_URI_PATH_ABB   13 /* C___E__, uint,      0-4 B, RFC TBD */
 #define COAP_OPTION_CONTENT_TYPE COAP_OPTION_CONTENT_FORMAT
 /* COAP_OPTION_MAXAGE default 60 seconds if not set */
 #define COAP_OPTION_MAXAGE         14 /* _U-_E_U, uint,      0-4 B, RFC7252 */
@@ -372,6 +373,11 @@ typedef enum coap_pdu_code_t {
   COAP_SIGNALING_CODE_RELEASE                   = COAP_SIGNALING_RELEASE,
   COAP_SIGNALING_CODE_ABORT                     = COAP_SIGNALING_ABORT
 } coap_pdu_code_t;
+
+typedef enum {
+  COAP_BOOL_FALSE,
+  COAP_BOOL_TRUE
+} coap_bool_t;
 
 /**
  * Creates a new CoAP PDU with at least enough storage space for the given

@@ -866,7 +866,7 @@ coap_add_observer(coap_resource_t *resource,
 
   coap_subscription_init(s);
   s->pdu = coap_pdu_duplicate_lkd(request, session, token->length,
-                                  token->s, NULL);
+                                  token->s, NULL, COAP_BOOL_FALSE);
   if (s->pdu == NULL) {
     coap_delete_cache_key(cache_key);
     coap_free_type(COAP_SUBSCRIPTION, s);

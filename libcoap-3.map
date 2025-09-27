@@ -212,6 +212,7 @@ global:
   coap_package_name;
   coap_package_version;
   coap_path_into_optlist;
+  coap_path_into_optlist_abbrev;
   coap_pdu_duplicate;
   coap_pdu_get_code;
   coap_pdu_get_mid;
@@ -356,8 +357,11 @@ global:
   coap_tls_engine_configure;
   coap_tls_engine_remove;
   coap_tls_is_supported;
+  coap_upa_client_fallback;
+  coap_upa_server_mapping;
   coap_uri_into_options;
   coap_uri_into_optlist;
+  coap_uri_into_optlist_abbrev;
   coap_verify_proxy_scheme_supported;
   coap_write_block_b_opt;
   coap_write_block_opt;

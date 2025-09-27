@@ -268,6 +268,16 @@ void coap_proxy_del_req(coap_proxy_entry_t *proxy_entry,  coap_proxy_req_t *prox
 void coap_delete_proxy_subscriber(coap_session_t *session, coap_bin_const_t *token,
                                   coap_mid_t mid, coap_proxy_subs_delete_t type);
 
+/**
+ * coap_proxy_log_entry() is used to log a proxy status
+ *
+ * @param incoming The incoming proxy session.
+ * @param pdu The request PDU.
+ * @param upstream_token The token used for the ongoing session.
+ * @param type The change update type.
+ */
+void coap_proxy_log_entry(coap_session_t *incoming, const coap_pdu_t *pdu,
+                          coap_bin_const_t *upstream_token, const char *type);
 /** @} */
 
 #define PROXY_CACHE_ADD(e, obj) \

@@ -17,7 +17,10 @@ coap_new_uri,
 coap_clone_uri,
 coap_delete_uri,
 coap_uri_into_optlist,
-coap_uri_into_options
+coap_uri_into_optlist_abbrev,
+coap_uri_into_options,
+coap_upa_client_fallback,
+coap_upa_server_mapping
 - Work with CoAP URIs
 
 SYNOPSIS
@@ -40,9 +43,17 @@ coap_uri_t *_uri_);*
 const coap_address_t *_dst_, coap_optlist_t **_optlist_chain_,
 int _create_port_host_opt_);*
 
+*int coap_uri_into_optlist_abbrev(const coap_uri_t *_uri_,
+const coap_address_t *_dst_, coap_optlist_t **_optlist_chain_,
+int _create_port_host_opt_, coap_upa_abbrev_t *_mapping_, uint32_t _count_);*
+
 *int coap_uri_into_options(const coap_uri_t *_uri_,
 const coap_address_t *_dst_, coap_optlist_t **_optlist_chain_,
 int _create_port_host_opt_, uint8_t *_buf_, size_t _buflen_);*
+
+*void coap_upa_client_fallback(coap_upa_abbrev_t *_mapping_, uint32_t _count_);*
+
+*void coap_upa_server_mapping(coap_upa_abbrev_t *_mapping_, uint32_t _count_);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -84,6 +95,15 @@ typedef struct {
                              or coap_uri_into_optlist(). */
   enum coap_uri_scheme_t scheme; /* The parsed scheme specifier. */
 } coap_uri_t;
+----
+
+[source, c]
+----
+typedef struct {
+  uint32_t upa_value;     /* The Uri-Path-Abbrev option value. */
+  const char *upa_path;   /* The Uri-Path-Abbrev option path representation
+                             (withouot the leading '/') */
+} coap_upa_abbrev_t;
 ----
 
 FUNCTIONS
@@ -144,18 +164,44 @@ then added to _optlist_chain_.
 *NOTE:* It is the responsibility of the application to free off the entries
 added to _optlist_chain_ using *coap_delete_optlist*(3).
 
+*Function: coap_uri_into_optlist_abbrev()*
+
+The *coap_uri_into_optlist_abbrev*() is the same as *coap_uri_into_optlist*()
+but supports mapping of the path component into a Uri-Path-Abbrev option based
+on the provided mapping of paths into values using the provided _mapping_
+table which has _count_ entries. If no _mapping_match_, then Uri-Path options
+are created as per *coap_uri_into_optlist*().
+
 *Function: coap_uri_into_options()*
 
 The *coap_uri_into_options*() function has the same functionality as
 *coap_uri_into_optlist*() except that _buf_ and _buflen_ are ignored, but the
 return values are different.
 
+*Function: coap_upa_client_fallback()*
+
+The *coap_upa_client_fallback*() function defines a _mapping_ of _count_ entries
+that are to be checked against if there is a Uri-Path-Abbrev option request
+failure, and if a upa_value match, then the upa_path  is to be converted into
+Uri-Path options replacing the Uri-Path-Abbrev option and the request retransmitted.
+Any existing mapping is overwritten.  If _mapping_ is NULL, then the previous
+mapping is cleared out.
+
+*Function: coap_upa_server_mapping()*
+
+The *coap_upa_server_mapping*() function defines a _mapping_ of _count_ entries
+that are to be checked against if there is a Uri-Path-Abbrev option request,
+and if a upa_value match, then the option is converted into a path using upa_path.
+Any existing mapping is overwritten.  If _mapping_ is NULL, then the previous
+mapping is cleared out.
+
 RETURN VALUES
 -------------
 *coap_split_uri*(), *coap_split_proxy_uri*(), and
 *coap_uri_into_options*() return 0 on success, else < 0 on failure.
 
-*coap_uri_into_optlist*() returns 1 on success, 0 on failure.
+*coap_uri_into_optlist*() and *coap_uri_into_optlist_abbrev*() return 1 on
+success, 0 on failure.
 
 *coap_new_uri*() and *coap_clone_uri*() return a newly allocated coap_uri_t
 structure or NULL on failure.

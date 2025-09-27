@@ -196,6 +196,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_type.3
 	@echo ".so man3/coap_pdu_access.3" > coap_get_uri_path.3
 	@echo ".so man3/coap_pdu_options.3" > coap_path_into_optlist.3
+	@echo ".so man3/coap_pdu_options.3" > coap_path_into_optlist_abbrev.3
 	@echo ".so man3/coap_pdu_options.3" > coap_split_path.3
 	@echo ".so man3/coap_pdu_options.3" > coap_query_into_optlist.3
 	@echo ".so man3/coap_pdu_options.3" > coap_split_query.3
@@ -255,6 +256,8 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_supported.3" > coap_tls_is_supported.3
 	@echo ".so man3/coap_supported.3" > coap_ws_is_supported.3
 	@echo ".so man3/coap_supported.3" > coap_wss_is_supported.3
+	@echo ".so man3/coap_uri.3" > coap_upa_client_fallback.3
+	@echo ".so man3/coap_uri.3" > coap_upa_server_mapping.3
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_3) "$(DESTDIR)$(man3dir)"
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_5) "$(DESTDIR)$(man5dir)"
 

@@ -837,7 +837,8 @@ oscore_new_association(coap_session_t *session,
     const uint8_t *data;
 
     association->sent_pdu = coap_pdu_duplicate_lkd(sent_pdu, session,
-                                                   token->length, token->s, NULL);
+                                                   token->length, token->s,
+                                                   NULL, COAP_BOOL_FALSE);
     if (association->sent_pdu == NULL)
       goto error;
     if (coap_get_data(sent_pdu, &size, &data)) {
