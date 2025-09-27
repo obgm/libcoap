@@ -84,7 +84,7 @@ extern "C" {
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE (UIP_APPDATA_SIZE)
 #elif (UINT_MAX < (8UL*1024*1024+256))
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE (1500UL)
-#elif defined(RIOT_VERSION) && defined(COAP_DISABLE_TCP)
+#elif defined(RIOT_VERSION) && COAP_DISABLE_TCP
 #define COAP_DEFAULT_MAX_PDU_RX_SIZE (1500UL)
 #else
 /* 8 MiB max-message-size plus some space for options */

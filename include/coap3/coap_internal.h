@@ -57,16 +57,16 @@
 #endif
 
 /* By default without either configured, these need to be set */
-#ifndef COAP_SERVER_SUPPORT
-#ifndef COAP_CLIENT_SUPPORT
+#if ! COAP_SERVER_SUPPORT
+#if ! COAP_CLIENT_SUPPORT
 #define COAP_SERVER_SUPPORT 1
 #define COAP_CLIENT_SUPPORT 1
 #endif /* ! COAP_CLIENT_SUPPORT */
 #endif /* ! COAP_SERVER_SUPPORT */
 
 /* By default without either configured, these need to be set */
-#ifndef COAP_IPV4_SUPPORT
-#ifndef COAP_IPV6_SUPPORT
+#if ! COAP_IPV4_SUPPORT
+#if ! COAP_IPV6_SUPPORT
 #define COAP_IPV4_SUPPORT 1
 #define COAP_IPV6_SUPPORT 1
 #endif /* ! COAP_IPV6_SUPPORT */
@@ -86,7 +86,7 @@
  * Include all the header files that are for internal use only.
  */
 
-#if defined(COAP_OSCORE_SUPPORT) || defined(COAP_WS_SUPPORT)
+#if COAP_OSCORE_SUPPORT
 /* Specific OSCORE general .h files */
 typedef struct oscore_ctx_t oscore_ctx_t;
 #include "oscore/oscore.h"
@@ -94,14 +94,14 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #include "oscore/oscore_cose.h"
 #include "oscore/oscore_context.h"
 #include "oscore/oscore_crypto.h"
-#endif /* COAP_OSCORE_SUPPORT || COAP_WS_SUPPORT */
+#endif /* COAP_OSCORE_SUPPORT */
 
 /* Specifically defined internal .h files */
 #include "coap_asn1_internal.h"
 #include "coap_async_internal.h"
 #include "coap_block_internal.h"
 #include "coap_cache_internal.h"
-#if defined(COAP_OSCORE_SUPPORT) || defined(COAP_WS_SUPPORT)
+#if COAP_OSCORE_SUPPORT || COAP_WS_SUPPORT
 #include "coap_crypto_internal.h"
 #endif /* COAP_OSCORE_SUPPORT || COAP_WS_SUPPORT */
 #include "coap_debug_internal.h"

@@ -15,6 +15,9 @@
  */
 
 #include "coap3/coap_libcoap_build.h"
+
+#if defined(WITH_CONTIKI)
+
 #include "contiki-net.h"
 
 static void prepare_io(coap_context_t *ctx);
@@ -125,3 +128,17 @@ coap_io_process_lkd(coap_context_t *ctx, uint32_t timeout_ms) {
   coap_ticks(&now);
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
+
+#else /* ! WITH_CONTIKI */
+
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+static inline void
+dummy(void) {
+}
+
+#endif /* ! WITH_CONTIKI */

@@ -34,7 +34,7 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#ifdef COAP_WITH_LIBMBEDTLS
+#if COAP_WITH_LIBMBEDTLS
 
 /*
  * This code can be conditionally compiled to remove some components if
@@ -3478,7 +3478,7 @@ error:
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !COAP_WITH_LIBMBEDTLS */
+#else /* ! COAP_WITH_LIBMBEDTLS */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -3490,4 +3490,4 @@ static inline void
 dummy(void) {
 }
 
-#endif /* COAP_WITH_LIBMBEDTLS */
+#endif /* ! COAP_WITH_LIBMBEDTLS */

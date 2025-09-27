@@ -15,6 +15,8 @@
 
 #include "coap3/coap_libcoap_build.h"
 
+#if defined(RIOT_VERSION)
+
 #include "net/gnrc.h"
 #include "net/gnrc/ipv6.h"
 #include "net/gnrc/netreg.h"
@@ -326,3 +328,17 @@ coap_socket_strm_close(coap_socket_t *sock) {
 }
 
 #endif /* ! COAP_DISABLE_TCP */
+
+#else /* ! RIOT_VERSION */
+
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+static inline void
+dummy(void) {
+}
+
+#endif /* ! RIOT_VERSION */

@@ -18,7 +18,7 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#ifdef COAP_WITH_LIBWOLFSSL
+#if COAP_WITH_LIBWOLFSSL
 
 /*
  * Implemented using wolfSSL's OpenSSL compatibility layer based on coap_openssl.c.
@@ -3263,7 +3263,7 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !COAP_WITH_LIBWOLFSSL */
+#else /* ! COAP_WITH_LIBWOLFSSL */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -3275,4 +3275,4 @@ static inline void
 dummy(void) {
 }
 
-#endif /* COAP_WITH_LIBWOLFSSL */
+#endif /* ! COAP_WITH_LIBWOLFSSL */
