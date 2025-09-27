@@ -82,6 +82,12 @@ typedef struct {
   enum coap_uri_scheme_t scheme;
 } coap_uri_t;
 
+typedef struct {
+  uint32_t upa_value;     /**< The Uri-Path-Abbrev option value */
+  const char *upa_path;   /**< The Uri-Path-Abbrev option path representation
+                               (withouot the leading '/') */
+} coap_upa_abbrev_t;
+
 static inline int
 coap_uri_scheme_is_secure(const coap_uri_t *uri) {
   return uri && ((uri->scheme & COAP_URI_SCHEME_SECURE_MASK) != 0);
@@ -230,6 +236,32 @@ int coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
 int coap_uri_into_optlist(const coap_uri_t *uri, const coap_address_t *dst,
                           coap_optlist_t **optlist_chain,
                           int create_port_host_opt);
+/**
+ * Takes a coap_uri_t and then adds CoAP options into the @p optlist_chain.
+ * If the port is not the default port and create_port_host_opt is not 0, then
+ * the Uri-Port option is added to the @p optlist_chain.
+ * If the dst defines an address that does not match the host in uri->host and
+ * is not 0, then the Uri-Host option is added to the @p optlist_chain.
+ * Any path or query are broken down into the individual segment Uri-Path
+ * or Uri-Path-Abbrev (if mapping match) or Uri-Query options and added to
+ * the @p optlist_chain.
+ *
+ * @param uri     The coap_uri_t object.
+ * @param dst     The destination, or NULL if URI_HOST not to be added.
+ * @param optlist_chain Where to store the chain of options.
+ * @param create_port_host_opt @c 1 if port/host option to be added
+ *                             (if non-default) else @c 0.
+ * @param mapping A path mapping to value for Uri-Path-Abbrev table or NULL.
+ *                (path does not have the leading '/').
+ * @param count   Number of Uri-Path-Abbrev table entries.
+ *
+ * @return        @c 1 on success, @c 0 if error.
+ *
+ */
+int coap_uri_into_optlist_abbrev(const coap_uri_t *uri, const coap_address_t *dst,
+                                 coap_optlist_t **optlist_chain,
+                                 int create_port_host_opt,
+                                 coap_upa_abbrev_t *mapping, uint32_t count);
 
 /**
  * Splits the given URI path into segments. Each segment is preceded
@@ -269,6 +301,28 @@ int coap_split_path(const uint8_t *path,
 int coap_path_into_optlist(const uint8_t *path, size_t length,
                            coap_option_num_t optnum,
                            coap_optlist_t **optlist_chain);
+/**
+ * Splits the given URI path into '/' separate segments, and then adds
+ * the Uri-Path / Location-Path option for each segment to the @p optlist_chain.
+ *
+ * Note: any segments that are just '.' or '..' are stripped out.
+ *
+ * @param path   The path string to split.
+ * @param length The actual length of @p path.
+ * @param optnum The CoAP option (COAP_OPTION_URI_PATH or
+ *               COAP_OPTION_LOCATION_PATH)
+ * @param optlist_chain The chain of optlists to add to. optlist_chain
+ *                      parent is to be NULL or a previous set of optlists.
+ * @param mapping A path mapping to value for Uri-Path-Abbrev table or NULL.
+ *                (path does not have the leading '/').
+ * @param count   Number of Uri-Path-Abbrev table entries.
+ *
+ * @return       @c 1 on success else @c 0 if error.
+ */
+int coap_path_into_optlist_abbrev(const uint8_t *path, size_t length,
+                                  coap_option_num_t optnum,
+                                  coap_optlist_t **optlist_chain,
+                                  coap_upa_abbrev_t *mapping, uint32_t count);
 
 /**
  * Splits the given URI query into segments. Each segment is preceded
@@ -326,6 +380,27 @@ coap_string_t *coap_get_query(const coap_pdu_t *request);
  *                released with coap_delete_string.
  */
 coap_string_t *coap_get_uri_path(const coap_pdu_t *request);
+
+/**
+ * Define a Path to use if an Uri-Path-Abbrev option fails and the client
+ * is to retry the request using Uri-Path instread of Uri-Path-Abbrev.
+ *
+ * @param mapping A path mapping to value for Uri-Path-Abbrev table or NULL
+                  if the previous mapping is to be cleared.
+ *                (path does not have the leading '/').
+ * @param count   Number of Uri-Path-Abbrev table entries.
+ */
+void coap_upa_client_fallback(coap_upa_abbrev_t *mapping, uint32_t count);
+
+/**
+ * Define a Path to use on receipt of an Uri-Path-Abbrev option value.
+ *
+ * @param mapping A path mapping to value for Uri-Path-Abbrev table or NULL
+                  if the previous mapping is to be cleared.
+ *                (path does not have the leading '/').
+ * @param count   Number of Uri-Path-Abbrev table entries.
+ */
+void coap_upa_server_mapping(coap_upa_abbrev_t *mapping, uint32_t count);
 
 /** @} */
 

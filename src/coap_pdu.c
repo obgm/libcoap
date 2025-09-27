@@ -221,7 +221,7 @@ coap_pdu_duplicate(const coap_pdu_t *old_pdu,
                                    session,
                                    token_length,
                                    token,
-                                   drop_options);
+                                   drop_options, COAP_BOOL_FALSE);
   coap_lock_unlock();
   return new_pdu;
 }
@@ -235,7 +235,8 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
                        coap_session_t *session,
                        size_t token_length,
                        const uint8_t *token,
-                       coap_opt_filter_t *drop_options) {
+                       coap_opt_filter_t *drop_options,
+                       coap_bool_t expand_opt_abb) {
 #if COAP_CLIENT_SUPPORT
   uint8_t doing_first = session->doing_first;
 #endif /* COAP_CLIENT_SUPPORT */
@@ -265,7 +266,7 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
   coap_add_token(pdu, token_length, token);
   pdu->lg_xmit = old_pdu->lg_xmit;
 
-  if (drop_options == NULL) {
+  if (drop_options == NULL && expand_opt_abb == COAP_BOOL_FALSE) {
     /* Drop COAP_PAYLOAD_START as well if data */
     size_t length = old_pdu->used_size - old_pdu->e_token_length -
                     (old_pdu->data ?
@@ -284,12 +285,41 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
 
     coap_option_iterator_init(old_pdu, &opt_iter, COAP_OPT_ALL);
     while ((option = coap_option_next(&opt_iter))) {
-      if (drop_options && coap_option_filter_get(drop_options, opt_iter.number))
-        continue;
-      if (!coap_add_option_internal(pdu, opt_iter.number,
-                                    coap_opt_length(option),
-                                    coap_opt_value(option)))
-        goto fail;
+      if (opt_iter.number == COAP_OPTION_URI_PATH_ABB && expand_opt_abb == COAP_BOOL_TRUE) {
+        uint32_t value;
+        const char *exp;
+
+        value = coap_decode_var_bytes(coap_opt_value(option),
+                                      coap_opt_length(option));
+        exp = coap_map_abbrev_uri_path(coap_upa_server_mapping_chain, value);
+        if (exp) {
+          while (exp) {
+            const char *next = strchr(exp, '/');
+
+            if (!coap_insert_option(pdu, COAP_OPTION_URI_PATH,
+                                    next ? (int)(next - exp) : (int)strlen(exp),
+                                    (const uint8_t *)exp))
+              goto fail;
+            if (next)
+              exp = next + 1;
+            else
+              exp = NULL;
+          }
+        } else {
+          coap_delete_pdu_lkd(pdu);
+          coap_log_info("coap_pdu_duplicate: Uri-Path-Abbrev value %u not known for fallback\n", value);
+          return NULL;
+        }
+      } else {
+        if (drop_options) {
+          if (coap_option_filter_get(drop_options, opt_iter.number))
+            continue;
+        }
+        if (!coap_insert_option(pdu, opt_iter.number,
+                                coap_opt_length(option),
+                                coap_opt_value(option)))
+          goto fail;
+      }
     }
   }
   return pdu;
@@ -622,6 +652,7 @@ coap_option_check_repeatable(coap_option_num_t number) {
   case COAP_OPTION_OBSERVE:
   case COAP_OPTION_URI_PORT:
   case COAP_OPTION_OSCORE:
+  case COAP_OPTION_URI_PATH_ABB:
   case COAP_OPTION_CONTENT_FORMAT:
   case COAP_OPTION_MAXAGE:
   case COAP_OPTION_HOP_LIMIT:

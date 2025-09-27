@@ -999,6 +999,7 @@ coap_option_check_critical(coap_session_t *session,
       case COAP_OPTION_IF_NONE_MATCH:
       case COAP_OPTION_URI_PORT:
       case COAP_OPTION_URI_PATH:
+      case COAP_OPTION_URI_PATH_ABB:
       case COAP_OPTION_URI_QUERY:
       case COAP_OPTION_ACCEPT:
       case COAP_OPTION_PROXY_URI:
@@ -1637,6 +1638,27 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
 
   if (!(session->block_mode & COAP_BLOCK_USE_LIBCOAP)) {
     return coap_send_internal(session, pdu, NULL);
+  }
+
+  if (session->no_path_abbrev) {
+    opt = coap_check_option(pdu, COAP_OPTION_URI_PATH_ABB, &opt_iter);
+    if (opt) {
+      /* Server cannot handle Uri-Path-Abbrev */
+      coap_pdu_t *new;
+      size_t data_len;
+      const uint8_t *data;
+
+      new = coap_pdu_duplicate_lkd(pdu, session, pdu->actual_token.length,
+                                   pdu->actual_token.s, NULL, COAP_BOOL_TRUE);
+      if (new) {
+        if (coap_get_data(pdu, &data_len, &data)) {
+          coap_add_data(pdu, data_len, data);
+        }
+        coap_log_debug("*  Retransmitting PDU with Uri-Path-Abbrev replaced (3)\n");
+        coap_delete_pdu_lkd(pdu);
+        pdu = new;
+      }
+    }
   }
 
   if (COAP_PDU_IS_REQUEST(pdu)) {
@@ -3761,8 +3783,10 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   }
 
   uri_path = coap_get_uri_path(pdu);
-  if (!uri_path)
-    return;
+  if (!uri_path) {
+    resp = 402;
+    goto fail_response;
+  }
 
   if (!is_proxy_uri && !is_proxy_scheme) {
     /* try to find the resource from the request URI */
@@ -5320,6 +5344,10 @@ coap_cleanup(void) {
 #endif /* WITH_LWIP */
   coap_dtls_shutdown();
 
+  coap_delete_upa_chain(coap_upa_client_fallback_chain);
+  coap_upa_client_fallback_chain = NULL;
+  coap_delete_upa_chain(coap_upa_server_mapping_chain);
+  coap_upa_server_mapping_chain = NULL;
 #if COAP_THREAD_SAFE
   coap_mutex_destroy(&m_show_pdu);
   coap_mutex_destroy(&m_log_impl);

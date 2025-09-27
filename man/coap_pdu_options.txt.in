@@ -20,6 +20,7 @@ coap_encode_var_safe8,
 coap_add_optlist_pdu,
 coap_add_option,
 coap_path_into_optlist,
+coap_path_into_optlist_abbrev,
 coap_split_path,
 coap_query_into_optlist,
 coap_split_query,
@@ -52,6 +53,10 @@ const uint8_t *_data_);*
 
 *int coap_path_into_optlist(const uint8_t *_path_, size_t _length_,
 coap_option_num_t _optnum_, coap_optlist_t **_optlist_chain_);*
+
+*int coap_path_into_optlist_abbrev(const uint8_t *_path_, size_t _length_,
+coap_option_num_t _optnum_, coap_optlist_t **_optlist_chain_,
+coap_upa_abbrev_t *_mapping_, uint32_t _count_);*
 
 *int coap_split_path(const uint8_t *_path_, size_t _length_, uint8_t *_buffer_,
 size_t *_buflen_);*
@@ -144,6 +149,7 @@ COAP_OPTION_LOCATION_PATH   8 /* ___RE__, String,  0-255 B, RFC7252 */
 COAP_OPTION_OSCORE          9 /* C_____U, *,       0-255 B, RFC8613 */
 COAP_OPTION_URI_PATH       11 /* CU-RE__, String,  0-255 B, RFC7252 */
 COAP_OPTION_CONTENT_FORMAT 12 /* ____E__, uint,      0-2 B, RFC7252 */
+COAP_OPTION_URI_PATH_ABB   13 /* C___E__, uint,      0-4 B, RFC TBD */
 /* COAP_OPTION_MAXAGE default 60 seconds if not set */
 COAP_OPTION_MAXAGE         14 /* _U-_E_U, uint,      0-4 B, RFC7252 */
 COAP_OPTION_URI_QUERY      15 /* CU-RE__, String,  1-255 B, RFC7252 */
@@ -245,6 +251,13 @@ just "." is not appended. Any segment that is just ".." causes the previous
 segment (if just added by *coap_path_into_optlist*()) to be removed from
 _optlist_chain_. Any %<hex><hex> definitions are replaced by the actual byte.
 _optnum_ should be one of COAP_OPTION_URI_PATH or COAP_OPTION_LOCATION_PATH.
+
+*Function: coap_path_into_optlist_abbrev()*
+
+The *coap_path_into_optlist_abbrev*() function is the same as
+*coap_path_into_optlist*() but supports mapping of _path_ into a
+Uri-Path-Abbrev option based on the provided mapping of paths into values
+using the provided _mapping_ table which has _count_ entries.
 
 *Function: coap_split_path()*
 
@@ -362,8 +375,8 @@ encoded (which can be 0 when encoding 0) or 0 on failure.
 *coap_add_option*() returns the size of option added, or 0 on
 failure.
 
-*coap_path_into_optlist*() and *coap_query_into_optlist*() return 1 on
-success or 0 on failure.
+*coap_path_into_optlist*(), *coap_path_into_optlist_abbrev*() and
+*coap_query_into_optlist*() return 1 on success or 0 on failure.
 
 *coap_split_path*() and *coap_split_query*() return the number
 of components found.

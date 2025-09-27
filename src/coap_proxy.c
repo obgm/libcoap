@@ -38,7 +38,7 @@ coap_proxy_is_supported(void) {
   return 1;
 }
 
-static void
+void
 coap_proxy_log_entry(coap_session_t *incoming, const coap_pdu_t *pdu,
                      coap_bin_const_t *upstream_token, const char *type) {
   if (coap_get_log_level() >= COAP_LOG_DEBUG) {
@@ -805,11 +805,11 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
     coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
     /* Correct the token */
     resp_pdu = coap_pdu_duplicate_lkd(rcvd, session, token->length, token->s,
-                                      &drop_options);
+                                      &drop_options, COAP_BOOL_FALSE);
   } else {
     /* Correct the token */
     resp_pdu = coap_pdu_duplicate_lkd(rcvd, session, token->length, token->s,
-                                      NULL);
+                                      NULL, COAP_BOOL_FALSE);
   }
   if (!resp_pdu)
     return COAP_RESPONSE_FAIL;
@@ -1153,7 +1153,8 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
     /*
      * Duplicate request PDU for onward transmission (with new token).
      */
-    pdu = coap_pdu_duplicate_lkd(request, proxy_entry->ongoing, token_len, token, NULL);
+    pdu = coap_pdu_duplicate_lkd(request, proxy_entry->ongoing, token_len,
+                                 token, NULL, COAP_BOOL_FALSE);
     if (!pdu) {
       coap_log_debug("proxy: PDU generation error\n");
       goto failed;
@@ -1479,7 +1480,7 @@ coap_proxy_process_incoming(coap_session_t *session,
                                                     session,
                                                     rcvd->actual_token.length,
                                                     rcvd->actual_token.s,
-                                                    NULL);
+                                                    NULL, COAP_BOOL_FALSE);
       if (proxy_cache->rsp_pdu) {
         if (coap_get_data(rcvd, &data_len, &data)) {
           coap_binary_t *copy;

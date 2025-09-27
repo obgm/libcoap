@@ -593,7 +593,8 @@ coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
                                                  session,
                                                  otoken->length,
                                                  otoken->s,
-                                                 NULL);
+                                                 NULL,
+                                                 COAP_BOOL_FALSE);
 
         lg_crcv->observe_set = 0;
         if (pdu == NULL)
@@ -705,7 +706,7 @@ coap_retransmit_oscore_pdu(coap_session_t *session,
     ltoken_len = coap_encode_var_safe8(ltoken, sizeof(token), token);
     /* There could be a Block option in pdu */
     resend_pdu = coap_pdu_duplicate_lkd(pdu, session, ltoken_len,
-                                        ltoken, NULL);
+                                        ltoken, NULL, COAP_BOOL_FALSE);
     if (!resend_pdu)
       goto error;
     if (echo) {
@@ -1586,7 +1587,7 @@ coap_build_missing_pdu(coap_session_t *session, coap_lg_crcv_t *lg_crcv) {
   coap_option_filter_set(&drop_options, COAP_OPTION_Q_BLOCK2);
   coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
   pdu = coap_pdu_duplicate_lkd(lg_crcv->sent_pdu, session, len, buf,
-                               &drop_options);
+                               &drop_options, COAP_BOOL_FALSE);
   if (!pdu)
     return NULL;
   pdu->type = lg_crcv->last_type;
@@ -2119,7 +2120,7 @@ coap_send_q_blocks(coap_session_t *session,
     coap_option_filter_set(&drop_options, lg_xmit->option);
     block_pdu = coap_pdu_duplicate_lkd(pdu, session,
                                        ltoken_length,
-                                       ptoken, &drop_options);
+                                       ptoken, &drop_options, COAP_BOOL_FALSE);
     if (block_pdu->type == COAP_MESSAGE_ACK)
       block_pdu->type = COAP_MESSAGE_CON;
   }
@@ -2162,7 +2163,8 @@ coap_send_q_blocks(coap_session_t *session,
         ptoken = ltoken;
       }
       t_pdu = coap_pdu_duplicate_lkd(block_pdu, session,
-                                     ltoken_length, ptoken, &drop_options);
+                                     ltoken_length, ptoken, &drop_options,
+                                     COAP_BOOL_FALSE);
     }
     if (!coap_update_option(block_pdu, lg_xmit->option,
                             coap_encode_var_safe(buf,
@@ -2942,10 +2944,13 @@ coap_handle_request_send_block(coap_session_t *session,
       if (out_blocks[i].is_continue) {
         out_pdu = coap_pdu_duplicate_lkd(lg_xmit->sent_pdu, session,
                                          lg_xmit->sent_pdu->actual_token.length,
-                                         lg_xmit->sent_pdu->actual_token.s, &drop_options);
+                                         lg_xmit->sent_pdu->actual_token.s,
+                                         &drop_options, COAP_BOOL_FALSE);
       } else {
-        out_pdu = coap_pdu_duplicate_lkd(lg_xmit->sent_pdu, session, pdu->actual_token.length,
-                                         pdu->actual_token.s, &drop_options);
+        out_pdu = coap_pdu_duplicate_lkd(lg_xmit->sent_pdu, session,
+                                         pdu->actual_token.length,
+                                         pdu->actual_token.s,
+                                         &drop_options, COAP_BOOL_FALSE);
       }
       if (!out_pdu) {
         goto internal_issue;
@@ -3504,7 +3509,7 @@ coap_handle_request_put_block(coap_context_t *context,
                                                      session,
                                                      response->actual_token.length,
                                                      response->actual_token.s,
-                                                     NULL);
+                                                     NULL, COAP_BOOL_FALSE);
         if (tmp_pdu) {
           tmp_pdu->code = COAP_RESPONSE_CODE(231);
           if (coap_send_internal(session, tmp_pdu, NULL) == COAP_INVALID_MID) {
@@ -3683,7 +3688,8 @@ check_freshness(coap_session_t *session, coap_pdu_t *rcvd, coap_pdu_t *sent,
                                  ++lg_crcv->retry_counter);
       }
       ltoken_len = coap_encode_var_safe8(ltoken, sizeof(token), token);
-      echo_pdu = coap_pdu_duplicate_lkd(sent, session, ltoken_len, ltoken, NULL);
+      echo_pdu = coap_pdu_duplicate_lkd(sent, session, ltoken_len, ltoken,
+                                        NULL, COAP_BOOL_FALSE);
       if (!echo_pdu)
         return 0;
       if (!coap_insert_option(echo_pdu, COAP_OPTION_ECHO,
@@ -3844,7 +3850,8 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
             }
           }
         }
-        pdu = coap_pdu_duplicate_lkd(lg_xmit->sent_pdu, session, len, buf, NULL);
+        pdu = coap_pdu_duplicate_lkd(lg_xmit->sent_pdu, session,
+                                     len, buf, NULL, COAP_BOOL_FALSE);
         if (!pdu)
           goto fail_body;
 
@@ -3999,7 +4006,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
           token = STATE_TOKEN_FULL(lg_xmit->b.b1.state_token,++lg_xmit->b.b1.count);
           ltoken_length = coap_encode_var_safe8(ltoken, sizeof(token), token);
           pdu = coap_pdu_duplicate_lkd(lg_xmit->sent_pdu, session, ltoken_length,
-                                       ltoken, NULL);
+                                       ltoken, NULL, COAP_BOOL_FALSE);
           if (!pdu)
             goto fail_body;
 
@@ -4158,6 +4165,7 @@ coap_handle_response_get_block(coap_context_t *context,
   uint16_t block_opt = 0;
   size_t offset;
   int ack_rst_sent = 0;
+  coap_opt_iterator_t opt_iter;
 
   coap_lock_check_locked();
   memset(&block, 0, sizeof(block));
@@ -4168,7 +4176,6 @@ coap_handle_response_get_block(coap_context_t *context,
   if (lg_crcv) {
     size_t chunk = 0;
     uint8_t buf[8];
-    coap_opt_iterator_t opt_iter;
 
     if (COAP_RESPONSE_CLASS(rcvd->code) == 2) {
       size_t length;
@@ -4322,7 +4329,8 @@ reinit:
             memset(&drop_options, 0, sizeof(coap_opt_filter_t));
             coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
             coap_option_filter_set(&drop_options, COAP_OPTION_BLOCK1);
-            pdu = coap_pdu_duplicate_lkd(lg_crcv->sent_pdu, session, len, buf, &drop_options);
+            pdu = coap_pdu_duplicate_lkd(lg_crcv->sent_pdu, session, len, buf,
+                                         &drop_options, COAP_BOOL_FALSE);
             if (!pdu)
               goto fail_resp;
 
@@ -4468,7 +4476,8 @@ reinit:
               len = coap_encode_var_safe8(buf, sizeof(token), token);
               memset(&drop_options, 0, sizeof(coap_opt_filter_t));
               coap_option_filter_set(&drop_options, COAP_OPTION_BLOCK1);
-              pdu = coap_pdu_duplicate_lkd(lg_crcv->sent_pdu, session, len, buf, &drop_options);
+              pdu = coap_pdu_duplicate_lkd(lg_crcv->sent_pdu, session, len, buf,
+                                           &drop_options, COAP_BOOL_FALSE);
               if (!pdu)
                 goto fail_resp;
 
@@ -4621,8 +4630,52 @@ give_to_app:
 #endif /* !COAP_OSCORE_SUPPORT */
         goto skip_app_handler;
       goto expire_lg_crcv;
+    } else if (rcvd->code == COAP_RESPONSE_CODE(402)) {
+      coap_opt_t *abb_opt = coap_check_option(sent,
+                                              COAP_OPTION_URI_PATH_ABB,
+                                              &opt_iter);
+      if (abb_opt) {
+        /* Send the request again with the Uri-Path-Abbrev expanded out */
+        coap_pdu_t *pdu;
+        size_t data_len;
+        const uint8_t *data;
+        uint64_t token;
+        uint8_t ltoken[8];
+        size_t ltoken_len;
+
+        session->no_path_abbrev = 1;
+        token = STATE_TOKEN_FULL(lg_crcv->state_token,
+                                 ++lg_crcv->retry_counter);
+        ltoken_len = coap_encode_var_safe8(ltoken, sizeof(token), token);
+        pdu = coap_pdu_duplicate_lkd(lg_crcv->sent_pdu, session, ltoken_len,
+                                     ltoken, NULL, COAP_BOOL_TRUE);
+        if (pdu) {
+          if (coap_get_data(lg_crcv->sent_pdu, &data_len, &data)) {
+            coap_add_data(pdu, data_len, data);
+          }
+#if COAP_PROXY_SUPPORT
+          coap_proxy_req_t *proxy_req = session->context->proxy_list_count ?
+                                        coap_proxy_map_outgoing_request(session, rcvd, NULL) : NULL;
+
+          if (proxy_req) {
+            coap_bin_const_t *new = coap_new_bin_const(ltoken, ltoken_len);
+            if (new) {
+              coap_delete_bin_const(proxy_req->token_used);
+              proxy_req->token_used = new;
+              coap_proxy_log_entry(proxy_req->incoming, proxy_req->pdu, proxy_req->token_used,  "upd");
+            }
+          }
+#endif /* COAP_PROXY_SUPPORT */
+          coap_log_debug("*  Retransmitting PDU with Uri-Path-Abbrev replaced (1)\n");
+          coap_delete_pdu_lkd(lg_crcv->sent_pdu);
+          lg_crcv->sent_pdu = coap_pdu_reference_lkd(pdu);
+          coap_send_internal(session, pdu, NULL);
+          goto skip_app_handler;
+        }
+      }
+      goto expire_lg_crcv;
     } else {
-      /* Not 2.xx or 4.01 - assume it is a failure of some sort */
+      /* Not 2.xx, 4.01 or 4.02 - assume it is a failure of some sort */
       goto expire_lg_crcv;
     }
     if (!block.m && !lg_crcv->observe_set) {
@@ -4710,6 +4763,23 @@ fail_resp:
         LL_PREPEND(session->lg_crcv, lg_crcv);
         return coap_handle_response_get_block(context, session, sent, rcvd,
                                               COAP_RECURSE_NO);
+      }
+    } else if (rcvd->code == COAP_RESPONSE_CODE(402)) {
+      coap_opt_t *abb_opt = coap_check_option(sent,
+                                              COAP_OPTION_URI_PATH_ABB,
+                                              &opt_iter);
+      if (abb_opt) {
+        /*
+         * Send the request again with the Uri-Path-Abbrev expanded out, but need
+           lg_crcv in place to handle the token update.
+        */
+        lg_crcv = coap_block_new_lg_crcv(session, sent, NULL);
+
+        if (lg_crcv) {
+          LL_PREPEND(session->lg_crcv, lg_crcv);
+          return coap_handle_response_get_block(context, session, sent, rcvd,
+                                                COAP_RECURSE_NO);
+        }
       }
     }
   }

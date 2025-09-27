@@ -788,7 +788,8 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
 
         association->sent_pdu = coap_pdu_duplicate_lkd(pdu, session,
                                                        pdu_token.length,
-                                                       pdu_token.s, NULL);
+                                                       pdu_token.s, NULL,
+                                                       COAP_BOOL_FALSE);
         if (association->sent_pdu == NULL)
           goto error;
         if (coap_get_data(pdu, &size, &data)) {

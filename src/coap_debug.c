@@ -628,6 +628,7 @@ msg_option_string(uint8_t code, uint16_t option_type) {
     { COAP_OPTION_OSCORE, "Oscore" },
     { COAP_OPTION_URI_PATH, "Uri-Path" },
     { COAP_OPTION_CONTENT_FORMAT, "Content-Format" },
+    { COAP_OPTION_URI_PATH_ABB, "Uri-Path-Abbrev" },
     { COAP_OPTION_MAXAGE, "Max-Age" },
     { COAP_OPTION_URI_QUERY, "Uri-Query" },
     { COAP_OPTION_HOP_LIMIT, "Hop-Limit" },
@@ -831,6 +832,8 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   const uint8_t *opt_val;
   size_t outbuflen = 0;
   int is_oscore_payload = 0;
+  const char *exp;
+  uint32_t value;
 
   /* Save time if not needed */
   if (level > coap_get_log_level())
@@ -1046,6 +1049,20 @@ no_more:
           buf_len = strlen((char *)buf);
           snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
                    "%02x", opt_val[i]);
+        }
+        buf_len = strlen((char *)buf);
+        break;
+      case COAP_OPTION_URI_PATH_ABB:
+        value = coap_decode_var_bytes(coap_opt_value(option),
+                                      coap_opt_length(option));
+        exp = coap_map_abbrev_uri_path(coap_upa_server_mapping_chain, value);
+        if (!exp) {
+          exp = coap_map_abbrev_uri_path(coap_upa_client_fallback_chain, value);
+        }
+        if (exp) {
+          snprintf((char *)&buf, sizeof(buf), "%s", exp);
+        } else {
+          snprintf((char *)&buf, sizeof(buf), "(%u)", value);
         }
         buf_len = strlen((char *)buf);
         break;

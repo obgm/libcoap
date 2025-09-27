@@ -428,6 +428,7 @@ coap_pdu_release_lkd(coap_pdu_t *pdu) {
  * @param token        The token to use in this duplicated PDU.
  * @param drop_options A list of options not to copy into the duplicated PDU.
  *                     If @c NULL, then all options are copied across.
+ * @param expand_opt_abb If COAP_BOOL_TRUE, try to expand out Uri-Path-Abbrev.
  *
  * @return The duplicated PDU or @c NULL if failure.
  */
@@ -435,7 +436,8 @@ coap_pdu_t *coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
                                    coap_session_t *session,
                                    size_t token_length,
                                    const uint8_t *token,
-                                   coap_opt_filter_t *drop_options);
+                                   coap_opt_filter_t *drop_options,
+                                   coap_bool_t expand_opt_abb);
 
 /**
  * Increment reference counter on a pdu to stop it prematurely getting freed off

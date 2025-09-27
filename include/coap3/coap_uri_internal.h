@@ -35,7 +35,16 @@ typedef struct {
   coap_uri_scheme_t scheme; /**< scheme */
 } coap_uri_info_t;
 
+typedef struct coap_upa_chain_t {
+  struct coap_upa_chain_t *next; /**< Next entry in the chain */
+  uint32_t upa_value;            /**< The Uri-Path-Abbrev option value */
+  char *upa_path;                /**< The Uri-Path-Abbrev option path representation
+                                     (withouot the leading '/') */
+} coap_upa_chain_t;
+
 extern coap_uri_info_t coap_uri_scheme[COAP_URI_SCHEME_LAST];
+extern coap_upa_chain_t *coap_upa_client_fallback_chain;
+extern coap_upa_chain_t *coap_upa_server_mapping_chain;
 
 /**
  * replace any % hex definitions with the actual character.
@@ -44,6 +53,36 @@ extern coap_uri_info_t coap_uri_scheme[COAP_URI_SCHEME_LAST];
  *
  */
 void coap_replace_percents(coap_optlist_t *optlist);
+
+/**
+ * Determine the expanded Uri-Path-Abbrev option value.
+ *
+ * @param chain Chain holding the information.
+ * @param value The Uri-Path-Abbrev numeric value
+ *
+ * @return The expanded textual path or @c NULL if not found.
+ */
+const char *coap_map_abbrev_uri_path(coap_upa_chain_t *chain, uint32_t value);
+
+/*
+ * See if the specifiec path with length is on the UPA chain.
+ *
+ * @param chain The UPA chain to check against.
+ * @param path  The URI path to match (without the leading /).
+ * @param length The length of the URI path.
+ * @param value The resoultant match value.
+ *
+ * @return 1 if a match, else 0.
+ */
+int coap_map_uri_path_abbrev(coap_upa_chain_t *chain, const char *path, size_t length,
+                             uint32_t *value);
+
+/**
+ * Clean up a UPA chain.
+ *
+ * @param chain The chain to delete.
+ */
+void coap_delete_upa_chain(coap_upa_chain_t *chain);
 
 /** @} */
 

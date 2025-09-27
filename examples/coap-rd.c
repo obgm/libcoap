@@ -72,6 +72,11 @@ static int enable_ws = 0;
 static int ws_port = 80;
 static int wss_port = 443;
 
+static coap_upa_abbrev_t abbrev_mappings[] = {
+  { 0, ".well-known/core" },
+  { 1, ".well-known/rd" }
+};
+
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -861,6 +866,7 @@ main(int argc, char **argv) {
   if (extended_token_size > COAP_TOKEN_DEFAULT_MAX)
     coap_context_set_max_token_size(ctx, extended_token_size);
 
+  coap_upa_server_mapping(abbrev_mappings, sizeof(abbrev_mappings)/sizeof(abbrev_mappings[0]));
 #ifdef _WIN32
   signal(SIGINT, handle_sigint);
 #else

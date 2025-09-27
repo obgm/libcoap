@@ -154,6 +154,12 @@ static unsigned char *user = NULL;
 static ssize_t user_length = -1;
 #endif /* COAP_CLIENT_SUPPORT || COAP_PROXY_SUPPORT */
 
+static coap_upa_abbrev_t abbrev_mappings[] = {
+  { 0, ".well-known/core" },
+  { 1000, "example_data" },
+  { 1001, "time" }
+};
+
 static coap_dtls_pki_t *setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
 
 typedef struct psk_sni_def_t {
@@ -2945,6 +2951,7 @@ main(int argc, char **argv) {
   coap_context_set_max_block_size(ctx, max_block_size);
   coap_context_set_session_reconnect_time2(ctx, reconnect_secs, 10);
   coap_context_set_keepalive(ctx, reconnect_secs ? reconnect_secs : ping_seconds);
+  coap_upa_server_mapping(abbrev_mappings, sizeof(abbrev_mappings)/sizeof(abbrev_mappings[0]));
   if (report_each_block)
     coap_register_block_data_handler(ctx, individual_blocks);
   if (csm_max_message_size)

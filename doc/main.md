@@ -48,6 +48,10 @@ The following RFCs are supported
 
 * [RFC9177: Constrained Application Protocol (CoAP) Block-Wise Transfer Options Supporting Robust Transmission](https://rfc-editor.org/rfc/rfc9177)
 
+The following Internet Draft is supported
+
+* [I-D URI-Path abbreviation in CoAP](https://datatracker.ietf.org/doc/html/draft-ietf-core-uri-path-abbrev-04)
+
 There is (D)TLS support for the following libraries
 
 * [OpenSSL](https://www.openssl.org) (Minimum version 1.1.0) [PKI, PSK and PKCS11]

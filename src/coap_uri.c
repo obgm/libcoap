@@ -29,6 +29,9 @@
 #define strncasecmp _strnicmp
 #endif
 
+coap_upa_chain_t *coap_upa_client_fallback_chain = NULL;
+coap_upa_chain_t *coap_upa_server_mapping_chain = NULL;
+
 /**
  * A length-safe version of strchr(). This function returns a pointer
  * to the first occurrence of @p c  in @p s, or @c NULL if not found.
@@ -370,6 +373,13 @@ coap_uri_into_options(const coap_uri_t *uri, const coap_address_t *dst,
 int
 coap_uri_into_optlist(const coap_uri_t *uri, const coap_address_t *dst,
                       coap_optlist_t **optlist_chain, int create_port_host_opt) {
+  return coap_uri_into_optlist_abbrev(uri, dst, optlist_chain, create_port_host_opt, NULL, 0);
+}
+
+int
+coap_uri_into_optlist_abbrev(const coap_uri_t *uri, const coap_address_t *dst,
+                             coap_optlist_t **optlist_chain, int create_port_host_opt,
+                             coap_upa_abbrev_t *mapping, uint32_t count) {
   if (create_port_host_opt && !coap_host_is_unix_domain(&uri->host)) {
     int add_option = 0;
 
@@ -439,8 +449,8 @@ coap_uri_into_optlist(const coap_uri_t *uri, const coap_address_t *dst,
   }
 
   if (uri->path.length) {
-    if (!coap_path_into_optlist(uri->path.s, uri->path.length, COAP_OPTION_URI_PATH,
-                                optlist_chain))
+    if (!coap_path_into_optlist_abbrev(uri->path.s, uri->path.length, COAP_OPTION_URI_PATH,
+                                       optlist_chain, mapping, count))
       return 0;
   }
 
@@ -854,6 +864,13 @@ backup_optlist(coap_optlist_t **optlist_begin) {
 int
 coap_path_into_optlist(const uint8_t *s, size_t length, coap_option_num_t optnum,
                        coap_optlist_t **optlist_chain) {
+  return coap_path_into_optlist_abbrev(s, length, optnum, optlist_chain, NULL, 0);
+}
+
+int
+coap_path_into_optlist_abbrev(const uint8_t *s, size_t length, coap_option_num_t optnum,
+                              coap_optlist_t **optlist_chain, coap_upa_abbrev_t *mapping,
+                              uint32_t count) {
   const uint8_t *p = s;
   coap_optlist_t *optlist;
   int num_dots;
@@ -866,6 +883,23 @@ coap_path_into_optlist(const uint8_t *s, size_t length, coap_option_num_t optnum
     optlist_start = optlist_chain;
   }
 
+  if (length > 0 && mapping) {
+    uint32_t i;
+    uint8_t buf[4];
+
+    for (i = 0; i < count; i++) {
+      if (strlen(mapping[i].upa_path) == length &&
+          memcmp(mapping[i].upa_path, s, length) == 0) {
+        /* add in as Uri_path-Abbrev */
+        optlist = coap_new_optlist(COAP_OPTION_URI_PATH_ABB,
+                                   coap_encode_var_safe(buf, sizeof(buf), mapping[i].upa_value), buf);
+        if (!coap_insert_optlist(optlist_chain, optlist)) {
+          return 0;
+        }
+        return 1;
+      }
+    }
+  }
   while (length > 0 && !strnchr((const uint8_t *)"?#", 2, *s)) {
     if (*s == '/') {                /* start of new path element */
       /* start new segment */
@@ -1116,6 +1150,34 @@ coap_get_query(const coap_pdu_t *request) {
   return query;
 }
 
+const char *
+coap_map_abbrev_uri_path(coap_upa_chain_t *chain, uint32_t value) {
+  while (chain) {
+    coap_upa_chain_t *next = chain->next;
+
+    if (chain->upa_value == value) {
+      return chain->upa_path;
+    }
+    chain = next;
+  }
+  return NULL;
+}
+
+int
+coap_map_uri_path_abbrev(coap_upa_chain_t *chain, const char *path, size_t length,
+                         uint32_t *value) {
+  while (chain) {
+    coap_upa_chain_t *next = chain->next;
+
+    if (strlen(chain->upa_path) == length && memcmp(chain->upa_path, path, length) == 0) {
+      *value = chain->upa_value;
+      return 1;
+    }
+    chain = next;
+  }
+  return 0;
+}
+
 coap_string_t *
 coap_get_uri_path(const coap_pdu_t *request) {
   coap_opt_iterator_t opt_iter;
@@ -1125,6 +1187,25 @@ coap_get_uri_path(const coap_pdu_t *request) {
   size_t length = 0;
   static const uint8_t hex[] = "0123456789ABCDEF";
 
+  q = coap_check_option(request, COAP_OPTION_URI_PATH_ABB, &opt_iter);
+  if (q) {
+    uint32_t value;
+    const char *exp;
+    if (coap_check_option(request, COAP_OPTION_PROXY_URI, &opt_iter) ||
+        coap_check_option(request, COAP_OPTION_URI_PATH, &opt_iter)) {
+      return NULL;
+    }
+    value = coap_decode_var_bytes(coap_opt_value(q), coap_opt_length(q));
+    exp = coap_map_abbrev_uri_path(coap_upa_server_mapping_chain, value);
+    if (exp) {
+      uri_path = coap_new_string(strlen(exp));
+      if (uri_path) {
+        memcpy(uri_path->s, exp, strlen(exp));
+      }
+      return uri_path;
+    }
+    return NULL;
+  }
   q = coap_check_option(request, COAP_OPTION_PROXY_URI, &opt_iter);
   if (q) {
     coap_uri_t uri;
@@ -1145,7 +1226,7 @@ coap_get_uri_path(const coap_pdu_t *request) {
   coap_option_iterator_init(request, &opt_iter, &f);
   while ((q = coap_option_next(&opt_iter))) {
     uint16_t seg_len = coap_opt_length(q), i;
-    const uint8_t *seg= coap_opt_value(q);
+    const uint8_t *seg = coap_opt_value(q);
     for (i = 0; i < seg_len; i++) {
       if (is_unescaped_in_path(seg[i]))
         length += 1;
@@ -1184,4 +1265,54 @@ coap_get_uri_path(const coap_pdu_t *request) {
     }
   }
   return uri_path;
+}
+
+void
+coap_delete_upa_chain(coap_upa_chain_t *chain) {
+  while (chain) {
+    coap_upa_chain_t *next = chain->next;
+
+    coap_free_type(COAP_STRING, chain);
+    chain = next;
+  }
+}
+
+static coap_upa_chain_t *
+coap_build_upa_chain(coap_upa_abbrev_t *list, uint32_t count) {
+  uint32_t i;
+  coap_upa_chain_t *chain = NULL;
+  coap_upa_chain_t *next;
+
+  for (i = 0; i < count; i++) {
+    next = coap_malloc_type(COAP_STRING, sizeof(coap_upa_chain_t) + strlen(list[i].upa_path) + 1);
+    if (next == NULL)
+      goto cleanup;
+
+    next->upa_value = list[i].upa_value;
+    next->upa_path = (char *)next + sizeof(coap_upa_chain_t);
+    strcpy(next->upa_path, list[i].upa_path);
+    next->next = chain;
+    chain = next;
+  }
+  return chain;
+
+cleanup:
+  coap_delete_upa_chain(chain);
+  return NULL;
+}
+
+void
+coap_upa_client_fallback(coap_upa_abbrev_t *list, uint32_t count) {
+  coap_lock_lock(return);
+  coap_delete_upa_chain(coap_upa_client_fallback_chain);
+  coap_upa_client_fallback_chain = coap_build_upa_chain(list, count);
+  coap_lock_unlock();
+}
+
+void
+coap_upa_server_mapping(coap_upa_abbrev_t *list, uint32_t count) {
+  coap_lock_lock(return);
+  coap_delete_upa_chain(coap_upa_server_mapping_chain);
+  coap_upa_server_mapping_chain = coap_build_upa_chain(list, count);
+  coap_lock_unlock();
 }

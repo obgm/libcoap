@@ -60,6 +60,11 @@ int flags = 0;
 static coap_session_t *global_session;
 static unsigned char _token_data[24]; /* With support for RFC8974 */
 static coap_binary_t the_token = { 0, _token_data };
+static coap_upa_abbrev_t abbrev_mappings[] = {
+  { 0, ".well-known/core" },
+  { 1, ".well-known/rd" }
+};
+
 
 typedef struct {
   coap_binary_t *token;
@@ -592,7 +597,7 @@ usage(const char *program, const char *version) {
           coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
-          "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-g file]\n"
+          "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-g file] [-i]\n"
           "\t\t[-l loss] [-m method] [-o file] [-p port] [-q tls_engine_conf_file]\n"
           "\t\t[-r] [-s duration] [-t type] [-v num] [-w] [-x] [-y rec_secs]\n"
           "\t\t[-z] [-A type] [-B seconds] [-E oscore_conf_file[,seq_file]]\n"
@@ -615,6 +620,7 @@ usage(const char *program, const char *version) {
           "\t-f file\t\tFile to send with PUT/POST (use '-' for STDIN)\n"
           "\t-g file\t\tFile to send with PUT/POST using individual block\n"
           "\t       \t\trequest call-back\n"
+          "\t-i     \t\tTest using Uri-Path-Abbrev path mapping\n"
           "\t-l list\t\tFail to send some datagrams specified by a comma\n"
           "\t       \t\tseparated list of numbers or number ranges\n"
           "\t       \t\t(for debugging only)\n"
@@ -665,14 +671,14 @@ usage(const char *program, const char *version) {
           "\t-O num,text\tAdd option num with contents text to request. If the\n"
           "\t       \t\ttext begins with 0x, then the hex text (two [0-9a-f] per\n"
           "\t       \t\tbyte) is converted to binary data\n"
+          ,program, wait_seconds);
+  fprintf(stderr,
           "\t-P scheme://address[:port]\n"
           "\t       \t\tScheme, address and optional port to define how to\n"
           "\t       \t\tconnect to a CoAP proxy (automatically adds Proxy-Uri\n"
           "\t       \t\toption to request) to forward the request to.\n"
           "\t       \t\tScheme is one of coap, coaps, coap+tcp, coaps+tcp,\n"
           "\t       \t\tcoap+ws, and coaps+ws\n"
-          ,program, wait_seconds);
-  fprintf(stderr,
           "\t-S     \t\tUse Proxy-Scheme instead of Proxy-Uri option if -P\n"
           "\t       \t\toption used\n"
           "\t-T token\tDefine the initial starting token (up to 24 characters)\n"
@@ -1951,6 +1957,7 @@ main(int argc, char **argv) {
   uint8_t cid_every = 0;
   int report_ind_blocks = 0;
   coap_pdu_t *resp_pdu;
+  int use_abbrev = 0;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1965,8 +1972,10 @@ main(int argc, char **argv) {
   /* Initialize libcoap library */
   coap_startup();
 
-  while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:g:h:j:k:l:m:no:p:q:rs:t:u:v:wxy:zA:B:C:E:G:H:I:J:K:L:M:NO:P:R:ST:UV:X:YZ:23")) != -1) {
+#define COAP_SUPPORTED_OPTIONS \
+  "a:b:c:d:e:f:g:h:ij:k:l:m:no:p:q:rs:t:u:v:wxy:zA:B:C:E:G:H:I:J:K:L:M:NO:P:R:ST:UV:X:YZ:23"
+
+  while ((opt = getopt(argc, argv, COAP_SUPPORTED_OPTIONS)) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -2006,6 +2015,9 @@ main(int argc, char **argv) {
     case 'g':
       if (!cmdline_input_from_file_f(optarg))
         payload.length = 0;
+      break;
+    case 'i' :
+      use_abbrev = 1;
       break;
     case 'j' :
       key_file = optarg;
@@ -2293,12 +2305,22 @@ main(int argc, char **argv) {
   coap_session_init_token(session, the_token.length, the_token.s);
 
   /* Convert provided uri into CoAP options */
-  if (!coap_uri_into_optlist((proxy.host.length && !use_proxy_scheme) ?
-                             &proxy : &uri, !uri_host_option ?
-                             &dst : NULL,
-                             &optlist, create_uri_opts)) {
-    coap_log_err("Failed to create options for URI\n");
-    goto failed;
+  if (use_abbrev) {
+    if (!coap_uri_into_optlist_abbrev((proxy.host.length && !use_proxy_scheme) ?
+                                      &proxy : &uri, !uri_host_option ?
+                                      &dst : NULL,
+                                      &optlist, create_uri_opts, abbrev_mappings, sizeof(abbrev_mappings)/sizeof(abbrev_mappings[0]))) {
+      coap_log_err("Failed to create options for URI\n");
+      goto failed;
+    }
+  } else {
+    if (!coap_uri_into_optlist((proxy.host.length && !use_proxy_scheme) ?
+                               &proxy : &uri, !uri_host_option ?
+                               &dst : NULL,
+                               &optlist, create_uri_opts)) {
+      coap_log_err("Failed to create options for URI\n");
+      goto failed;
+    }
   }
 
   /* set block option if requested at commandline */
