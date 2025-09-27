@@ -50,7 +50,7 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#ifdef COAP_WITH_LIBGNUTLS
+#if COAP_WITH_LIBGNUTLS
 
 #define MIN_GNUTLS_VERSION "3.3.0"
 
@@ -3340,7 +3340,7 @@ fail:
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !COAP_WITH_LIBGNUTLS */
+#else /* ! COAP_WITH_LIBGNUTLS */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -3352,4 +3352,4 @@ static inline void
 dummy(void) {
 }
 
-#endif /* !COAP_WITH_LIBGNUTLS */
+#endif /* ! COAP_WITH_LIBGNUTLS */

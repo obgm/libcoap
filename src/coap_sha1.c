@@ -70,7 +70,7 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#if COAP_WS_SUPPORT && !defined(COAP_WITH_LIBOPENSSL) && !defined(COAP_WITH_LIBGNUTLS) && !defined(COAP_WITH_LIBMBEDTLS) && !defined(COAP_WITH_LIBWOLFSSL)
+#if COAP_WS_SUPPORT && ! COAP_WITH_LIBOPENSSL && ! COAP_WITH_LIBGNUTLS && ! COAP_WITH_LIBMBEDTLS && ! COAP_WITH_LIBWOLFSSL
 /*
  *  Define the SHA1 circular left shift macro
  */
@@ -396,4 +396,4 @@ SHA1PadMessage(SHA1Context *context) {
 
   SHA1ProcessMessageBlock(context);
 }
-#endif /* COAP_WS_SUPPORT && !defined(COAP_WITH_LIBOPENSSL) && !defined(COAP_WITH_LIBGNUTLS) && !defined(COAP_WITH_LIBMBEDTLS) */
+#endif /* COAP_WS_SUPPORT && ! COAP_WITH_LIBOPENSSL && ! COAP_WITH_LIBGNUTLS && ! COAP_WITH_LIBMBEDTLS */

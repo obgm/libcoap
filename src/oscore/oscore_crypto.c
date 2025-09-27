@@ -45,6 +45,9 @@
  */
 
 #include "coap3/coap_libcoap_build.h"
+
+#if COAP_OSCORE_SUPPORT
+
 #include <string.h>
 
 #include <stdio.h>
@@ -171,3 +174,17 @@ oscore_hkdf(cose_hkdf_alg_t hkdf_alg,
   coap_delete_bin_const(hkdf_extract);
   return ret;
 }
+
+#else /* ! COAP_OSCORE_SUPPORT */
+
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+static inline void
+dummy(void) {
+}
+
+#endif /* ! COAP_OSCORE_SUPPORT */

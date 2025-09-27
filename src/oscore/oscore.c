@@ -46,6 +46,8 @@
 
 #include "coap3/coap_libcoap_build.h"
 
+#if COAP_OSCORE_SUPPORT
+
 /* oscore_cs_params
  * returns cbor array [[param_type], [paramtype, param]]
  */
@@ -455,3 +457,17 @@ oscore_roll_back_seq(oscore_recipient_ctx_t *ctx) {
     ctx->rollback_last_seq = 0;
   }
 }
+
+#else /* ! COAP_OSCORE_SUPPORT */
+
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+static inline void
+dummy(void) {
+}
+
+#endif /* ! COAP_OSCORE_SUPPORT */

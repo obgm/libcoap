@@ -45,6 +45,9 @@
  */
 
 #include "coap3/coap_libcoap_build.h"
+
+#if COAP_OSCORE_SUPPORT
+
 #include <string.h>
 
 static void
@@ -427,3 +430,17 @@ oscore_cbor_strip_value(const uint8_t **data, size_t *buf_len, uint8_t **result,
   *len = size;
   return 0;
 }
+
+#else /* ! COAP_OSCORE_SUPPORT */
+
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+static inline void
+dummy(void) {
+}
+
+#endif /* ! COAP_OSCORE_SUPPORT */

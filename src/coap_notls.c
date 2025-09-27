@@ -17,7 +17,7 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#if !defined(COAP_WITH_LIBOPENSSL)
+#if ! COAP_WITH_LIBOPENSSL
 int
 coap_tls_engine_configure(coap_str_const_t *conf_mem) {
   (void)conf_mem;
@@ -30,7 +30,7 @@ coap_tls_engine_remove(void) {
 }
 #endif /* ! COAP_WITH_LIBOPENSSL */
 
-#if !defined(COAP_WITH_LIBTINYDTLS) && !defined(COAP_WITH_LIBOPENSSL) && !defined(COAP_WITH_LIBWOLFSSL) && !defined(COAP_WITH_LIBGNUTLS) && !defined(COAP_WITH_LIBMBEDTLS)
+#if ! COAP_WITH_LIBTINYDTLS && ! COAP_WITH_LIBOPENSSL && ! COAP_WITH_LIBWOLFSSL && ! COAP_WITH_LIBGNUTLS && ! COAP_WITH_LIBMBEDTLS
 
 int
 coap_dtls_is_supported(void) {

@@ -587,7 +587,7 @@ coap_context_set_shutdown_no_observe(coap_context_t *context) {
 
 int
 coap_context_get_coap_fd(const coap_context_t *context) {
-#ifdef COAP_EPOLL_SUPPORT
+#if COAP_EPOLL_SUPPORT
   return context->epfd;
 #else /* ! COAP_EPOLL_SUPPORT */
   (void)context;
@@ -597,7 +597,7 @@ coap_context_get_coap_fd(const coap_context_t *context) {
 
 int
 coap_epoll_is_supported(void) {
-#ifdef COAP_EPOLL_SUPPORT
+#if COAP_EPOLL_SUPPORT
   return 1;
 #else /* ! COAP_EPOLL_SUPPORT */
   return 0;
@@ -606,7 +606,7 @@ coap_epoll_is_supported(void) {
 
 int
 coap_threadsafe_is_supported(void) {
-#ifdef COAP_THREAD_SAFE
+#if COAP_THREAD_SAFE
   return 1;
 #else /* ! COAP_THREAD_SAFE */
   return 0;
@@ -615,7 +615,7 @@ coap_threadsafe_is_supported(void) {
 
 int
 coap_ipv4_is_supported(void) {
-#ifdef COAP_IPV4_SUPPORT
+#if COAP_IPV4_SUPPORT
   return 1;
 #else /* ! COAP_IPV4_SUPPORT */
   return 0;
@@ -624,7 +624,7 @@ coap_ipv4_is_supported(void) {
 
 int
 coap_ipv6_is_supported(void) {
-#ifdef COAP_IPV6_SUPPORT
+#if COAP_IPV6_SUPPORT
   return 1;
 #else /* ! COAP_IPV6_SUPPORT */
   return 0;
@@ -633,7 +633,7 @@ coap_ipv6_is_supported(void) {
 
 int
 coap_client_is_supported(void) {
-#ifdef COAP_CLIENT_SUPPORT
+#if COAP_CLIENT_SUPPORT
   return 1;
 #else /* ! COAP_CLIENT_SUPPORT */
   return 0;
@@ -642,7 +642,7 @@ coap_client_is_supported(void) {
 
 int
 coap_server_is_supported(void) {
-#ifdef COAP_SERVER_SUPPORT
+#if COAP_SERVER_SUPPORT
   return 1;
 #else /* ! COAP_SERVER_SUPPORT */
   return 0;
@@ -651,7 +651,7 @@ coap_server_is_supported(void) {
 
 int
 coap_af_unix_is_supported(void) {
-#ifdef COAP_AF_UNIX_SUPPORT
+#if COAP_AF_UNIX_SUPPORT
   return 1;
 #else /* ! COAP_AF_UNIX_SUPPORT */
   return 0;

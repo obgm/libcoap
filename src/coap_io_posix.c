@@ -15,6 +15,8 @@
 
 #include "coap3/coap_libcoap_build.h"
 
+#if ! defined(WITH_LWIP) && ! defined(WITH_CONTIKI) && ! defined (RIOT_VERSION)
+
 #ifdef HAVE_STDIO_H
 #  include <stdio.h>
 #endif
@@ -41,7 +43,7 @@
 #ifdef _WIN32
 #include <stdio.h>
 #endif /* _WIN32 */
-#ifdef COAP_EPOLL_SUPPORT
+#if COAP_EPOLL_SUPPORT
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
 #ifdef HAVE_LIMITS_H
@@ -53,7 +55,7 @@
 #include <sys/select.h>
 #endif /* __ZEPHYR__ */
 
-#ifdef COAP_EPOLL_SUPPORT
+#if COAP_EPOLL_SUPPORT
 void
 coap_epoll_ctl_add(coap_socket_t *sock,
                    uint32_t events,
@@ -158,7 +160,7 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
   return ret;
 }
 
-#if !defined(COAP_EPOLL_SUPPORT) && COAP_THREAD_SAFE
+#if ! COAP_EPOLL_SUPPORT && COAP_THREAD_SAFE
 static unsigned int
 coap_io_prepare_fds(coap_context_t *ctx,
                     int enfds, fd_set *ereadfds, fd_set *ewritefds,
@@ -240,7 +242,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   coap_fd_t nfds = 0;
   coap_tick_t before, now;
   unsigned int timeout;
-#ifndef COAP_EPOLL_SUPPORT
+#if ! COAP_EPOLL_SUPPORT
   struct timeval tv;
   int result;
   unsigned int i;
@@ -249,7 +251,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   coap_lock_check_locked();
   coap_ticks(&before);
 
-#ifndef COAP_EPOLL_SUPPORT
+#if ! COAP_EPOLL_SUPPORT
 
   timeout = coap_io_prepare_io_lkd(ctx, ctx->sockets,
                                    (sizeof(ctx->sockets) / sizeof(ctx->sockets[0])),
@@ -476,7 +478,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   coap_check_async(ctx, now, NULL);
 #endif /* COAP_ASYNC_SUPPORT */
 
-#ifndef COAP_EPOLL_SUPPORT
+#if ! COAP_EPOLL_SUPPORT
 all_over:
 #endif /* COAP_EPOLL_SUPPORT */
   coap_ticks(&now);
@@ -594,3 +596,17 @@ coap_io_process_loop_lkd(coap_context_t *context,
   coap_thread_quit = 0;
   return ret;
 }
+
+#else /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
+
+#ifdef __clang__
+/* Make compilers happy that do not like empty modules. As this function is
+ * never used, we ignore -Wunused-function at the end of compiling this file
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+static inline void
+dummy(void) {
+}
+
+#endif /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */

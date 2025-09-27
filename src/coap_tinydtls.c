@@ -17,7 +17,7 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#ifdef COAP_WITH_LIBTINYDTLS
+#if COAP_WITH_LIBTINYDTLS
 
 /* We want TinyDTLS versions of these, not libcoap versions */
 #undef PACKAGE_BUGREPORT
@@ -1929,7 +1929,7 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg, coap_bin_const_t *key,
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !COAP_WITH_LIBTINYDTLS */
+#else /* ! COAP_WITH_LIBTINYDTLS */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -1941,4 +1941,4 @@ static inline void
 dummy(void) {
 }
 
-#endif /* COAP_WITH_LIBTINYDTLS */
+#endif /* ! COAP_WITH_LIBTINYDTLS */
