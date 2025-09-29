@@ -1379,7 +1379,38 @@ coap_proxy_process_incoming(coap_session_t *session,
       PROXY_CACHE_ADD(proxy_entry->rsp_cache, proxy_cache);
       proxy_cache->ref++;
     }
-    proxy_cache->rsp_pdu = coap_pdu_reference_lkd(rcvd);
+    if (rcvd->body_data) {
+      /* More data than that held in the PDU */
+      const uint8_t *data;
+      size_t data_len;
+
+      proxy_cache->rsp_pdu = coap_pdu_duplicate_lkd(rcvd,
+                                                    session,
+                                                    rcvd->actual_token.length,
+                                                    rcvd->actual_token.s,
+                                                    NULL);
+      if (proxy_cache->rsp_pdu) {
+        if (coap_get_data(rcvd, &data_len, &data)) {
+          coap_binary_t *copy;
+
+          copy = coap_new_binary(data_len);
+          if (copy) {
+            memcpy(copy->s, data, data_len);
+            proxy_cache->rsp_pdu->data_free = copy;
+            proxy_cache->rsp_pdu->body_data = copy->s;
+            proxy_cache->rsp_pdu->body_length = copy->length;
+            proxy_cache->rsp_pdu->body_total = copy->length;
+          } else {
+            proxy_cache->rsp_pdu->body_data = NULL;
+            proxy_cache->rsp_pdu->body_length = 0;
+            proxy_cache->rsp_pdu->body_total = 0;
+          }
+        }
+      }
+    } else {
+      /* The simple case */
+      proxy_cache->rsp_pdu = coap_pdu_reference_lkd(rcvd);
+    }
     option = coap_check_option(rcvd, COAP_OPTION_ETAG, &opt_iter);
     if (option) {
       proxy_cache->etag = coap_decode_var_bytes8(coap_opt_value(option),
