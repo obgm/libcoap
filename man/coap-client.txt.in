@@ -25,7 +25,7 @@ SYNOPSIS
               [*-y* rec_secs] [*-z*] [*-A* type] [*-B* seconds]
               [*-E* oscore_conf_file[,seq_file]] [*-G* count] [*-H* hoplimit]
               [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
-              [*-P* scheme://addr[:port]] [*-T* token] [*-U*] [*-V* num]
+              [*-P* scheme://addr[:port]] [*-S*] [*-T* token] [*-U*] [*-V* num]
               [*-X* size]
               [[*-d* value]]
               [[*-h* match_hint_file] [*-k* key] [*-u* user] [*-2*]]
@@ -194,6 +194,9 @@ OPTIONS - General
    Scheme, address and optional port to define how to connect to a CoAP proxy
    (automatically adds Proxy-Uri option to request) to forward the request to.
    Scheme is one of coap, coaps, coap+tcp, coaps+tcp, coap+ws, and coaps+ws.
+
+*-S* ::
+   Use Proxy-Scheme instead of Proxy-Uri option if -P option used.
 
 *-T* token::
    Define the initial starting 'token' for the request (up to 24 characters).

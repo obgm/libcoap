@@ -76,6 +76,7 @@ static coap_optlist_t *optlist = NULL;
 static coap_uri_t uri;
 static coap_uri_t proxy = { {0, NULL}, 0, {0, NULL}, {0, NULL}, 0 };
 static int proxy_scheme_option = 0;
+static int use_proxy_scheme = 0;
 static int uri_host_option = 0;
 static unsigned int ping_seconds = 0;
 static int setup_cid = 0;
@@ -535,7 +536,7 @@ usage(const char *program, const char *version) {
           "\t\t[-z] [-A type] [-B seconds]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
-          "\t\t[-T token] [-U] [-V num] [-X size]\n"
+          "\t\t[-S] [-T token] [-U] [-V num] [-X size]\n"
           "\t\t[[-d count]]\n"
           "\t\t[[h match_hint_file] [-k key] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
@@ -603,12 +604,14 @@ usage(const char *program, const char *version) {
           "\t       \t\toption to request) to forward the request to.\n"
           "\t       \t\tScheme is one of coap, coaps, coap+tcp, coaps+tcp,\n"
           "\t       \t\tcoap+ws, and coaps+ws\n"
+          "\t-S     \t\tUse Proxy-Scheme instead of Proxy-Uri option if -P\n"
+          "\t       \t\toption used\n"
           "\t-T token\tDefine the initial starting token (up to 24 characters)\n"
           "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
-          "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
-          "\t       \t\tlibrary logging\n"
           ,program, wait_seconds);
   fprintf(stderr,
+          "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
+          "\t       \t\tlibrary logging\n"
           "\t-X size\t\tMaximum message size to use for TCP based connections\n"
           "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
           "DTLS Options (if supported by underlying (D)TLS library)\n"
@@ -918,7 +921,7 @@ cmdline_uri(char *arg) {
     return -1;
   }
 
-  if (!proxy_scheme_option && proxy.host.length) {
+  if (!proxy_scheme_option && proxy.host.length && !use_proxy_scheme) {
     /* create Proxy-Uri from argument */
     size_t len = strlen(arg);
     if (len > 1034) {
@@ -932,6 +935,35 @@ cmdline_uri(char *arg) {
                                          (unsigned char *)arg));
 
   } else {      /* split arg into Uri-* options */
+#define GET_ASCII_SCHEME(n, v) case n: scheme = v; break;
+    if (use_proxy_scheme) {
+      const char *scheme;
+
+      switch (uri.scheme) {
+        GET_ASCII_SCHEME(COAP_URI_SCHEME_COAP, "coap");
+        GET_ASCII_SCHEME(COAP_URI_SCHEME_COAPS, "coaps");
+        GET_ASCII_SCHEME(COAP_URI_SCHEME_COAP_TCP, "coap+tcp");
+        GET_ASCII_SCHEME(COAP_URI_SCHEME_COAPS_TCP, "coaps+tcp");
+        GET_ASCII_SCHEME(COAP_URI_SCHEME_COAP_WS, "coap+ws");
+        GET_ASCII_SCHEME(COAP_URI_SCHEME_COAPS_WS, "coaps+ws");
+      case COAP_URI_SCHEME_HTTP:
+      case COAP_URI_SCHEME_HTTPS:
+      case COAP_URI_SCHEME_LAST:
+      default:
+        coap_log_emerg("URI proxy scheme %d not supported\n", uri.scheme);
+        return -1;
+      }
+      coap_insert_optlist(&optlist,
+                          coap_new_optlist(COAP_OPTION_PROXY_SCHEME,
+                                           strlen(scheme),
+                                           (const unsigned char *)scheme));
+      /* Make sure Uri-Host is defined */
+      coap_insert_optlist(&optlist,
+                          coap_new_optlist(COAP_OPTION_URI_HOST,
+                                           uri.host.length,
+                                           uri.host.s));
+      uri_host_option = 1;
+    }
     /* Need to special case use of reliable */
     if (uri.scheme == COAP_URI_SCHEME_COAPS && reliable) {
       if (!coap_tls_is_supported()) {
@@ -1828,7 +1860,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:T:UV:X:Y2")) != -1) {
+                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y2")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -2002,6 +2034,9 @@ main(int argc, char **argv) {
       tls_engine_conf = optarg;
       doing_tls_engine = 1;
       break;
+    case 'S':
+      use_proxy_scheme = 1;
+      break;
     case '2':
       ec_jpake = 1;
       break;
@@ -2125,7 +2160,8 @@ main(int argc, char **argv) {
   coap_session_init_token(session, the_token.length, the_token.s);
 
   /* Convert provided uri into CoAP options */
-  if (!coap_uri_into_optlist(proxy.host.length ? &proxy : &uri, !uri_host_option ?
+  if (!coap_uri_into_optlist((proxy.host.length && !use_proxy_scheme) ?
+                             &proxy : &uri, !uri_host_option ?
                              &dst : NULL,
                              &optlist, create_uri_opts)) {
     coap_log_err("Failed to create options for URI\n");
