@@ -15,18 +15,24 @@
 
 #include "coap3/coap_libcoap_build.h"
 
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)
+
 #ifdef HAVE_TIME_H
 #include <time.h>
+#endif /* HAVE_TIME_H */
+
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
-#endif
+#endif /* HAVE_SYS_TIME_H */
+
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>  /* _POSIX_TIMERS */
-#endif
+#endif /* HAVE_UNISTD_H */
+
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
 #include <stdint.h>
-#endif
+#endif /* HAVE_WINSOCK2_H */
 
 static coap_tick_t coap_clock_offset = 0;
 
@@ -132,7 +138,7 @@ coap_ticks_from_rt_us(uint64_t t) {
 #undef FRAC
 #undef SHR_FP
 
-#else /* HAVE_TIME_H */
+#else /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -144,4 +150,4 @@ COAP_STATIC_INLINE void
 dummy(void) {
 }
 
-#endif /* not HAVE_TIME_H */
+#endif /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */

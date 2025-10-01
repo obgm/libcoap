@@ -19,13 +19,18 @@
 
 #include <stdlib.h>
 #include <string.h>
-#ifndef _WIN32
+
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif /* HAVE_SYS_SELECT_H */
+
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
-#endif
+#endif /* HAVE_SYS_TIME_H */
+
+#ifdef HAVE_TIME_H
 #include <time.h>
+#endif /* HAVE_TIME_H */
 
 #ifdef WITH_LWIP
 #include <lwip/ip_addr.h>
