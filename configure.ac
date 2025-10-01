@@ -958,34 +958,34 @@ AM_CONDITIONAL(BUILD_LICENSE_INSTALL, [test "x$build_license_install" = "xyes"])
 # configure options
 # __ipv4__
 AC_ARG_ENABLE([ipv4],
-              [AS_HELP_STRING([--enable-ipv4-support],
+              [AS_HELP_STRING([--enable-ipv4],
                               [Enable building with support for IPv4 packets [default=yes]])],
-              [build_ipv4_support="$enableval"],
-              [build_ipv4_support="yes"])
+              [build_ipv4="$enableval"],
+              [build_ipv4="yes"])
 
-AS_IF([test "x$build_ipv4_support" = "xyes"],
+AS_IF([test "x$build_ipv4" = "xyes"],
       [AC_DEFINE(COAP_IPV4_SUPPORT, [1], [Define to build support for IPv4 packets.])])
 
 # configure options
 # __ipv6__
 AC_ARG_ENABLE([ipv6],
-              [AS_HELP_STRING([--enable-ipv6-support],
+              [AS_HELP_STRING([--enable-ipv6],
                               [Enable building with support for IPv6 packets [default=yes]])],
-              [build_ipv6_support="$enableval"],
-              [build_ipv6_support="yes"])
+              [build_ipv6="$enableval"],
+              [build_ipv6="yes"])
 
-AS_IF([test "x$build_ipv6_support" = "xyes"],
+AS_IF([test "x$build_ipv6" = "xyes"],
       [AC_DEFINE(COAP_IPV6_SUPPORT, [1], [Define to build support for IPv6 packets.])])
 
 # configure options
 # __af_unix__
 AC_ARG_ENABLE([af_unix],
-              [AS_HELP_STRING([--enable-af-unix-support],
+              [AS_HELP_STRING([--enable-af-unix],
                               [Enable building with support for Unix socket packets [default=yes]])],
-              [build_af_unix_support="$enableval"],
-              [build_af_unix_support="yes"])
+              [build_af_unix="$enableval"],
+              [build_af_unix="yes"])
 
-AS_IF([test "x$build_af_unix_support" = "xyes"],
+AS_IF([test "x$build_af_unix" = "xyes"],
       [AC_DEFINE(COAP_AF_UNIX_SUPPORT, [1], [Define to build support for Unix socket packets.])])
 
 # configure options
@@ -1193,11 +1193,16 @@ if test "x$enable_server_mode" != "xyes" -a "x$enable_client_mode" != "xyes" ; t
     AC_MSG_ERROR([==> One or both of '--enable-server-mode' and '--enable-client-mode' need to be set!])
 fi
 
+if test "x$enable_server_mode" = "xyes" -a "x$enable_client_mode" = "xyes" ; then
+    enable_proxy_code_test="yes"
+else
+    enable_proxy_code_test="no"
+fi
 AC_ARG_ENABLE([proxy-code],
         [AS_HELP_STRING([--enable-proxy-code],
                         [Enable CoAP proxy supporting code [default=yes]])],
         [enable_proxy_code="$enableval"],
-        [enable_proxy_code="yes"])
+        [enable_proxy_code="$enable_proxy_code_test"])
 
 if test "x$enable_proxy_code" = "xyes"; then
     if test "x$enable_server_mode" != "xyes" -o "x$enable_client_mode" != "xyes" ; then
@@ -1413,7 +1418,7 @@ if test "x$enable_client_mode" = "xyes"; then
 else
     AC_MSG_RESULT([      build with client support      : "no"])
 fi
-if test "x$enable_client_mode" = "xyes"; then
+if test "x$enable_proxy_code" = "xyes"; then
     AC_MSG_RESULT([      build with proxy support       : "yes"])
 else
     AC_MSG_RESULT([      build with proxy support       : "no"])
