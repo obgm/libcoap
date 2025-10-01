@@ -573,6 +573,8 @@ update_coap_addr_port(coap_uri_scheme_t scheme, coap_addr_info_t *info,
   }
 }
 
+#if defined(WITH_LWIP) && !(LWIP_DNS && LWIP_SOCKET && LWIP_COMPAT_SOCKETS)
+
 coap_addr_info_t *
 coap_resolve_address_info(const coap_str_const_t *address,
                           uint16_t port,
@@ -582,7 +584,58 @@ coap_resolve_address_info(const coap_str_const_t *address,
                           int ai_hints_flags,
                           int scheme_hint_bits,
                           coap_resolve_type_t type) {
-#if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
+  ip_addr_t addr_ip;
+  coap_addr_info_t *info = NULL;
+  coap_addr_info_t *info_prev = NULL;
+  coap_addr_info_t *info_list = NULL;
+  coap_uri_scheme_t scheme;
+
+  (void)ai_hints_flags;
+
+  if (address == NULL || address->length == 0) {
+    memset(&addr_ip, 0, sizeof(addr_ip));
+  } else {
+    if (ipaddr_aton((const char *)address->s, &addr_ip) <= 0) {
+      coap_log_err("coap_resolve_address_info: Unable to parse '%s'\n", address->s);
+      return NULL;
+    }
+  }
+  for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
+    if (scheme_hint_bits & (1 << scheme)) {
+      info = get_coap_addr_info(scheme);
+      if (info == NULL) {
+        continue;
+      }
+
+      /* Need to return in same order as getaddrinfo() */
+      if (!info_prev) {
+        info_list = info;
+        info_prev = info;
+      } else {
+        info_prev->next = info;
+        info_prev = info;
+      }
+
+      memcpy(&info->addr.addr, &addr_ip, sizeof(info->addr.addr));
+
+      update_coap_addr_port(scheme, info, port, secure_port, ws_port,
+                            ws_secure_port, type);
+    }
+  }
+  return info_list;
+}
+
+#elif !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
+
+coap_addr_info_t *
+coap_resolve_address_info(const coap_str_const_t *address,
+                          uint16_t port,
+                          uint16_t secure_port,
+                          uint16_t ws_port,
+                          uint16_t ws_secure_port,
+                          int ai_hints_flags,
+                          int scheme_hint_bits,
+                          coap_resolve_type_t type) {
 
   struct addrinfo *res, *ainfo;
   struct addrinfo hints;
@@ -643,7 +696,11 @@ coap_resolve_address_info(const coap_str_const_t *address,
   error = getaddrinfo(addrstr, NULL, &hints, &res);
 
   if (error != 0) {
+#if defined(WITH_LWIP)
+    coap_log_warn("getaddrinfo: %s: %d\n", addrstr, error);
+#else /* ! WITH_LWIP */
     coap_log_warn("getaddrinfo: %s: %s\n", addrstr, gai_strerror(error));
+#endif /* ! WITH_LWIP */
     return NULL;
   }
 
@@ -738,10 +795,21 @@ coap_resolve_address_info(const coap_str_const_t *address,
 
   freeaddrinfo(res);
   return info_list;
+}
 
 #elif defined(RIOT_VERSION)
 
 #include "net/utils.h"
+
+coap_addr_info_t *
+coap_resolve_address_info(const coap_str_const_t *address,
+                          uint16_t port,
+                          uint16_t secure_port,
+                          uint16_t ws_port,
+                          uint16_t ws_secure_port,
+                          int ai_hints_flags,
+                          int scheme_hint_bits,
+                          coap_resolve_type_t type) {
 #if COAP_IPV6_SUPPORT
   ipv6_addr_t addr_ipv6;
 #endif /* COAP_IPV6_SUPPORT */
@@ -821,10 +889,21 @@ coap_resolve_address_info(const coap_str_const_t *address,
     }
   }
   return info_list;
+}
 
 #elif defined(WITH_CONTIKI)
 
 #include <os/net/ipv6/uiplib.h>
+
+coap_addr_info_t *
+coap_resolve_address_info(const coap_str_const_t *address,
+                          uint16_t port,
+                          uint16_t secure_port,
+                          uint16_t ws_port,
+                          uint16_t ws_secure_port,
+                          int ai_hints_flags,
+                          int scheme_hint_bits,
+                          coap_resolve_type_t type) {
   uip_ipaddr_t addr_ip;
   coap_addr_info_t *info = NULL;
   coap_addr_info_t *info_prev = NULL;
@@ -843,7 +922,7 @@ coap_resolve_address_info(const coap_str_const_t *address,
     }
 #endif /* COAP_IPV6_SUPPORT */
 #if COAP_IPV4_SUPPORT
-    if (family == AF_UNSPEC &&
+    if (!parsed_ip &&
         uiplib_ip4addrconv((const char *)address->s, (uip_ip4addr_t *)&addr_ip) > 0) {
       parsed_ip = 1;
     }
@@ -876,11 +955,25 @@ coap_resolve_address_info(const coap_str_const_t *address,
     }
   }
   return info_list;
-#else
-#bad OS type not supported
-  return NULL;
-#endif
 }
+
+#else
+
+#error "OS type not supported"
+
+coap_addr_info_t *
+coap_resolve_address_info(const coap_str_const_t *address,
+                          uint16_t port,
+                          uint16_t secure_port,
+                          uint16_t ws_port,
+                          uint16_t ws_secure_port,
+                          int ai_hints_flags,
+                          int scheme_hint_bits,
+                          coap_resolve_type_t type) {
+  return NULL;
+}
+
+#endif
 
 void
 coap_free_address_info(coap_addr_info_t *info) {
