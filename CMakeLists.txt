@@ -973,7 +973,7 @@ if(ENABLE_DOCS)
     # application
     add_custom_target(
       doc_doxygen ALL
-      COMMAND ${DOXYGEN_EXECUTABLE} -u > /dev/null 2>&1
+      COMMAND ${DOXYGEN_EXECUTABLE} -u > $<IF:$<PLATFORM_ID:Windows>,NUL,/dev/null> 2>&1
       COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Generating API documentation with Doxygen"
