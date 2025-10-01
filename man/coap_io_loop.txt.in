@@ -105,6 +105,7 @@ EXAMPLES
 #include <inttypes.h>
 #include <stdio.h>
 #include <signal.h>
+#include <time.h>
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 #include <coap3/coap_defines.h>
 

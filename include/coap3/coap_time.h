@@ -25,7 +25,6 @@
  */
 
 #if defined(WITH_LWIP)
-
 #include <stdint.h>
 #include <lwip/sys.h>
 #elif defined(WITH_CONTIKI)
@@ -34,7 +33,7 @@
 #include <xtimer.h>
 #else /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
 #include <stdint.h>
-#endif
+#endif /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,10 +115,10 @@ typedef uint64_t coap_tick_t;
 typedef int64_t coap_tick_diff_t;
 typedef uint32_t coap_time_t;
 
-static inline void
+COAP_STATIC_INLINE void
 coap_clock_init(void) {}
 
-static inline void
+COAP_STATIC_INLINE void
 coap_ticks(coap_tick_t *t) {
 #ifdef MODULE_ZTIMER64_XTIMER_COMPAT
   *t = xtimer_now_usec64();
@@ -128,22 +127,22 @@ coap_ticks(coap_tick_t *t) {
 #endif /* MODULE_ZTIMER64_XTIMER_COMPAT */
 }
 
-static inline coap_time_t
+COAP_STATIC_INLINE coap_time_t
 coap_ticks_to_rt(coap_tick_t t) {
   return t / 1000000UL;
 }
 
-static inline uint64_t
+COAP_STATIC_INLINE uint64_t
 coap_ticks_to_rt_us(coap_tick_t t) {
   return t;
 }
 
-static inline coap_tick_t
+COAP_STATIC_INLINE coap_tick_t
 coap_ticks_from_rt_us(uint64_t t) {
   return t / 1000000UL;
 }
-#else /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
 
+#else /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
 
 /**
  * This data type represents internal timer ticks with COAP_TICKS_PER_SECOND
@@ -206,7 +205,8 @@ uint64_t coap_ticks_to_rt_us(coap_tick_t t);
 * @return  coap ticks
 */
 coap_tick_t coap_ticks_from_rt_us(uint64_t t);
-#endif
+
+#endif /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
 
 /**
  * Returns @c 1 if and only if @p a is less than @p b where less is defined on a

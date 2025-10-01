@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include <ctype.h>
 #include <inttypes.h>
 #include <sys/types.h>
