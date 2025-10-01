@@ -283,6 +283,8 @@ EXAMPLES
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <stdio.h>
+#include <time.h>
+#include <sys/time.h>
 
 coap_resource_t *time_resource = NULL;
 
