@@ -30,13 +30,9 @@ LDLIBS := $(shell if [ -f $(libcoap_dir)/config.log ] ; then \
 all: lwip \
      check-version \
      check-tinydtls \
-     lib-server \
      server \
-     lib-client \
      client \
-     lib-server-dtls \
      server-dtls \
-     lib-client-dtls \
      client-dtls
 
 lwip:
@@ -223,18 +219,18 @@ SD_OBJS = ${SD_APP_OBJ} ${SD_LWIP_OBJ} ${SD_COAP_OBJ} ${SD_DTLS_OBJ}
 
 ${SN_OBJS} ${SD_OBJS}: server-coap.h
 
-server: ${SN_OBJS}
+server: lib-server ${SN_OBJS}
 	$(CC) $(CFLAGS) ${SN_OBJS} -o server ${LDLIBS}
 
-server-dtls: ${SD_OBJS}
+server-dtls: lib-server-dtls ${SD_OBJS}
 	$(CC) $(CFLAGS) ${SD_OBJS} -o server-dtls ${LDLIBS}
 
 ${CN_OBJS} ${CD_OBJS}: client-coap.h
 
-client: ${CN_OBJS}
+client: lib-client ${CN_OBJS}
 	$(CC) $(CFLAGS) ${CN_OBJS} -o client ${LDLIBS}
 
-client-dtls: ${CD_OBJS}
+client-dtls:  lib-client-dtls ${CD_OBJS}
 	$(CC) $(CFLAGS) ${CD_OBJS} -o client-dtls ${LDLIBS}
 
 lib-server:

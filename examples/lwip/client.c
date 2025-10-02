@@ -112,14 +112,16 @@ main(int argc, char **argv) {
 
 #if LWIP_IPV4
   netif_add(&netif, &ipaddr, &netmask, &gw, NULL, tapif_init, ethernet_input);
-#endif /* LWIP_IPV4 */
+#else  /* ! LWIP_IPV4 */
+  netif_add(&netif, NULL, tapif_init, ethernet_input);
+#endif /* ! LWIP_IPV4 */
   netif.flags |= NETIF_FLAG_ETHARP;
   netif_set_default(&netif);
-  netif_set_up(&netif);
 #if LWIP_IPV6
   netif_create_ip6_linklocal_address(&netif, 1);
   netif_ip6_addr_set_state(&netif, 0, IP6_ADDR_PREFERRED);
 #endif
+  netif_set_up(&netif);
 
   /* start applications here */
 

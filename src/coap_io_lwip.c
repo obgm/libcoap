@@ -178,9 +178,9 @@ static uint32_t b_ipv4[COAP_BCST_CNT];
 
 int
 coap_is_bcast(const coap_address_t *a) {
+#if COAP_IPV4_SUPPORT
   int i;
   coap_tick_t now;
-#if COAP_IPV4_SUPPORT
   const ip4_addr_t *ipv4;
 #endif /* COAP_IPV4_SUPPORT */
 

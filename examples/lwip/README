@@ -77,3 +77,7 @@ The client supports an optional parameter which is the CoAP URI to connect to
 is "coap://libcoap.net/" for client and client-dtls.
 Using "coaps://libcoap.net" will establish a DTLS session if there is
 DTLS support compiled in (client-dtls).
+
+Note: PRECONFIGURED_TAPIF=tap0 environment variable may need to be set if building for IPv6 only.
+
+Note: Use of TinyDTLS requires both IPv4 and IPv6 to be set.
