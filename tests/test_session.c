@@ -155,11 +155,10 @@ t_session6(void) {
 
   laddr.size = sizeof(struct sockaddr_in6);
   laddr.addr.sin6.sin6_family = AF_INET6;
-  laddr.addr.sin6.sin6_addr = in6addr_any;
+  laddr.addr.sin6.sin6_addr = in6addr_loopback;
   laddr.addr.sin6.sin6_port = htons(COAP_DEFAULT_PORT);
 
   coap_address_copy(&saddr, &laddr);
-  saddr.addr.sin6.sin6_addr = in6addr_loopback;
   saddr.addr.sin6.sin6_port = htons(20000);
 
   session = coap_new_client_session(ctx, &saddr, &laddr, COAP_PROTO_UDP);
@@ -180,13 +179,12 @@ t_session_tests_create(void) {
 
   addr.size = sizeof(struct sockaddr_in6);
   addr.addr.sin6.sin6_family = AF_INET6;
-  addr.addr.sin6.sin6_addr = in6addr_any;
+  addr.addr.sin6.sin6_addr = in6addr_loopback;
   addr.addr.sin6.sin6_port = htons(COAP_DEFAULT_PORT);
 
   ctx = coap_new_context(&addr);
 
   if (ctx != NULL) {
-    addr.addr.sin6.sin6_addr = in6addr_loopback;
     session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
   }
 
