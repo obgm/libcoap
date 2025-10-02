@@ -35,6 +35,7 @@ EXTRA_DIST = \
   cmake_coap_config.h.in \
   cmake_coap_defines.h.in \
   cmake/Config.cmake.in \
+  cmake/FindCUnit.cmake \
   cmake/FindMbedTLS.cmake \
   cmake/FindTinyDTLS.cmake \
   cmake/FindwolfSSL.cmake \

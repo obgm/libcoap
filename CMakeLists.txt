@@ -910,8 +910,11 @@ if(ENABLE_TESTS)
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_wellknown.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_wellknown.h)
   # tests require libcunit (e.g. debian libcunit1-dev)
+  find_package(CUnit REQUIRED)
   target_link_libraries(testdriver PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
-                                          -lcunit)
+                                          cunit)
+  include(CTest)
+  add_test(NAME Tests COMMAND testdriver)
 endif()
 
 #
