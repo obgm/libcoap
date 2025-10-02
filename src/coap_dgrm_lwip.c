@@ -311,10 +311,10 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
     pbuf_free(pbuf);
     if (err < 0) {
       if (err == ERR_RTE) {
-        coap_log_warn("** %s: udp_send: Packet not routable\n",
+        coap_log_warn("** %s: udp_sendto: Packet not routable\n",
                       coap_session_str(session));
       } else {
-        coap_log_warn("** %s: udp_send: error %d\n",
+        coap_log_warn("** %s: udp_sendto: error %d\n",
                       coap_session_str(session), err);
       }
       return -1;
