@@ -152,7 +152,7 @@ main(int argc, char **argv) {
 #if LWIP_IPV4
   printf("IP6 [%s]\n", ip6addr_ntoa(&netif.ip6_addr[0].u_addr.ip6));
 #else /* ! LWIP_IPV4 */
-  printf("IP6 [%s]\n", ip6addr_ntoa(&netif.ip6_addr[0].addr));
+  printf("IP6 [%s]\n", ip6addr_ntoa(&netif.ip6_addr[0]));
 #endif /* ! LWIP_IPV4 */
 #if LWIP_IPV6_MLD
   if (mld6_joingroup_netif(&netif, &v6group) == ERR_OK) {
