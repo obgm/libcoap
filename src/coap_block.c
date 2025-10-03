@@ -1492,6 +1492,7 @@ coap_build_missing_pdu(coap_session_t *session, coap_lg_crcv_t *lg_crcv) {
   size_t len = coap_encode_var_safe8(buf, sizeof(token), token);
 
   memset(&drop_options, 0, sizeof(coap_opt_filter_t));
+  coap_option_filter_set(&drop_options, COAP_OPTION_Q_BLOCK1);
   coap_option_filter_set(&drop_options, COAP_OPTION_Q_BLOCK2);
   coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
   pdu = coap_pdu_duplicate_lkd(lg_crcv->sent_pdu, session, len, buf,
@@ -4117,7 +4118,8 @@ reinit:
         if (updated_block) {
           void *body_free;
 
-          if ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) {
+          if (!(session->block_mode & COAP_BLOCK_Q_BLOCK_EVERY) &&
+              ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert)) {
             if (size2 < saved_offset + length) {
               size2 = saved_offset + length;
             }
@@ -4151,17 +4153,23 @@ reinit:
                                                         &lg_crcv->rec_blocks)) {
                     /* Need to ask for them individually */
                     coap_request_missing_q_block2(session, lg_crcv);
+                    if (session->block_mode & COAP_BLOCK_Q_BLOCK_EVERY)
+                      goto give_pdu_to_app;
                     goto skip_app_handler;
                   }
                 } else {
                   /* The remote end will be sending the next one unless this
                      is a MAX_PAYLOADS and all previous have been received */
+                  if (session->block_mode & COAP_BLOCK_Q_BLOCK_EVERY)
+                    goto give_pdu_to_app;
                   goto skip_app_handler;
                 }
                 if (COAP_PROTO_RELIABLE(session->proto) ||
-                    rcvd->type != COAP_MESSAGE_NON)
+                    rcvd->type != COAP_MESSAGE_NON) {
+                  if (session->block_mode & COAP_BLOCK_Q_BLOCK_EVERY)
+                    goto give_pdu_to_app;
                   goto skip_app_handler;
-
+                }
               } else
 #endif /* COAP_Q_BLOCK_SUPPORT */
                 block.m = 0;
@@ -4195,7 +4203,8 @@ reinit:
                 /* Session could now be disconnected, so no lg_crcv */
                 goto skip_app_handler;
             }
-            if ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert)
+            if (!(session->block_mode & COAP_BLOCK_Q_BLOCK_EVERY) &&
+                ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert))
               goto skip_app_handler;
 
             /* need to put back original token into rcvd */
@@ -4222,7 +4231,8 @@ reinit:
 #if COAP_Q_BLOCK_SUPPORT
 give_to_app:
 #endif /* COAP_Q_BLOCK_SUPPORT */
-          if ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) {
+          if (!(session->block_mode & COAP_BLOCK_Q_BLOCK_EVERY) &&
+              ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert)) {
             /* Pretend that there is no block */
             coap_remove_option(rcvd, block_opt);
             if (lg_crcv->observe_set) {
@@ -4418,6 +4428,25 @@ skip_app_handler:
   if (!ack_rst_sent)
     coap_send_ack_lkd(session, rcvd);
   return 1;
+
+#if COAP_Q_BLOCK_SUPPORT
+give_pdu_to_app:
+  /* need to put back original token into rcvd */
+  if (!coap_binary_equal(&rcvd->actual_token, lg_crcv->app_token)) {
+    coap_update_token(rcvd, lg_crcv->app_token->length, lg_crcv->app_token->s);
+    coap_log_debug("Client app version of updated PDU (6)\n");
+    coap_show_pdu(COAP_LOG_DEBUG, rcvd);
+  }
+
+  if (sent) {
+    /* need to put back original token into sent */
+    if (lg_crcv->app_token)
+      coap_update_token(sent, lg_crcv->app_token->length,
+                        lg_crcv->app_token->s);
+  }
+  coap_call_response_handler(session, sent, rcvd, NULL);
+  return 1;
+#endif /* COAP_Q_BLOCK_SUPPORT */
 }
 #endif /* COAP_CLIENT_SUPPORT */
 

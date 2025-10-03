@@ -143,12 +143,12 @@ OPTIONS - General
    methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP). This vlue can be set as a
    hex value - e.g. 0x103.
 
-     COAP_BLOCK_USE_LIBCOAP         1
-     COAP_BLOCK_SINGLE_BODY         2
-     COAP_BLOCK_TRY_Q_BLOCK         4
-     COAP_BLOCK_STLESS_BLOCK2      64
-     COAP_BLOCK_NOT_RANDOM_BLOCK1 128
-     COAP_BLOCK_CACHE_RESPONSE    256
+     COAP_BLOCK_USE_LIBCOAP         1       0x001
+     COAP_BLOCK_SINGLE_BODY         2       0x002
+     COAP_BLOCK_TRY_Q_BLOCK         4       0x004
+     COAP_BLOCK_STLESS_BLOCK2      64       0x040
+     COAP_BLOCK_NOT_RANDOM_BLOCK1 128       0x080
+     COAP_BLOCK_CACHE_RESPONSE    256       0x100
 
 *-N* ::
    Send NON-confirmable message for "observe" responses. If option *-N* is

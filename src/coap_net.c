@@ -4009,7 +4009,7 @@ skip_handler:
       /* No delays to response */
 #if COAP_Q_BLOCK_SUPPORT
       if (session->block_mode & COAP_BLOCK_USE_LIBCOAP &&
-          !lg_xmit_ctrl && response->code == COAP_RESPONSE_CODE(205) &&
+          !lg_xmit_ctrl && COAP_RESPONSE_CLASS(response->code) == 2 &&
           coap_get_block_b(session, response, COAP_OPTION_Q_BLOCK2, &block) &&
           block.m) {
         if (coap_send_q_block2(session, resource, query, pdu->code, block,

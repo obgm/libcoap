@@ -72,6 +72,7 @@ typedef struct {
 #define COAP_BLOCK_NOT_RANDOM_BLOCK1 0x80 /* (svr)Disable server handling random order
                                              block1 */
 #define COAP_BLOCK_CACHE_RESPONSE 0x100 /* (svr)Cache CON request's response */
+#define COAP_BLOCK_Q_BLOCK_EVERY 0x200 /* (cl) Pass every Q-Block PDU to response handler */
 /* WARNING: Added defined values must not encroach into 0xff000000 which are defined elsewhere */
 
 /**

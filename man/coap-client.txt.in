@@ -28,7 +28,7 @@ SYNOPSIS
               [*-P* scheme://addr[:port]] [*-S*] [*-T* token] [*-U*] [*-V* num]
               [*-X* size]
               [[*-d* value]]
-              [[*-h* match_hint_file] [*-k* key] [*-u* user] [*-2*]]
+              [[*-h* match_hint_file] [*-k* key] [*-u* user] [*-2*] [*-3*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
               [*-J* pkcs11_pin] [*-M* rpk_file] [*-R* trust_casfile] [*-Y*]] URI
 
@@ -171,15 +171,16 @@ OPTIONS - General
 
 *-L* value::
    Sum of one or more COAP_BLOCK_* flag values for different block handling
-   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP). This vlue can be set as a
+   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP). This value can be set as a
    hex value - e.g. 0x13.
 
-     COAP_BLOCK_USE_LIBCOAP         1
-     COAP_BLOCK_SINGLE_BODY         2
-     COAP_BLOCK_TRY_Q_BLOCK         4
-     COAP_BLOCK_USE_M_Q_BLOCK       8
-     COAP_BLOCK_NO_PREEMPTIVE_RTAG 16
-     COAP_BLOCK_STLESS_FETCH       32
+     COAP_BLOCK_USE_LIBCOAP         1       0x001
+     COAP_BLOCK_SINGLE_BODY         2       0x003
+     COAP_BLOCK_TRY_Q_BLOCK         4       0x004
+     COAP_BLOCK_USE_M_Q_BLOCK       8       0x008
+     COAP_BLOCK_NO_PREEMPTIVE_RTAG 16       0x010
+     COAP_BLOCK_STLESS_FETCH       32       0x020
+     COAP_BLOCK_Q_BLOCK_EVERY     512       0x200
 
 *-N* ::
    Send NON-confirmable message. If option *-N* is not specified, a
@@ -245,6 +246,9 @@ OPTIONS - PSK
 
 *-2* ::
    Use EC-JPAKE negotiation (if supported).
+
+*-3* ::
+   Use coap_send() instead of coap_send_recv() for testing.
 
 OPTIONS - PKI
 -------------

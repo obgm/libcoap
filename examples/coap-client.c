@@ -485,6 +485,25 @@ response_handler(coap_session_t *session COAP_UNUSED,
       }
       return COAP_RESPONSE_OK;
     }
+    /* Check if Q-Block2 option is set */
+    block_opt = coap_check_option(received, COAP_OPTION_Q_BLOCK2, &opt_iter);
+    if (!single_block_requested && block_opt) { /* handle Q-Block2 */
+
+      /* TODO: check if we are looking at the correct block number */
+      if (coap_opt_block_num(block_opt) == 0) {
+        /* See if observe is set in first response */
+        ready = doing_observe ? coap_check_option(received,
+                                                  COAP_OPTION_OBSERVE, &opt_iter) == NULL : 1;
+      }
+      if (COAP_OPT_BLOCK_MORE(block_opt)) {
+        doing_getting_block = 1;
+      } else {
+        doing_getting_block = 0;
+        if (!is_mcast)
+          track_flush_token(&token, 0);
+      }
+      return COAP_RESPONSE_OK;
+    }
   } else {      /* no 2.05 */
     /* check if an error was signaled and output payload if so */
     if (COAP_RESPONSE_CLASS(rcv_code) >= 4) {
@@ -538,7 +557,7 @@ usage(const char *program, const char *version) {
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
           "\t\t[-S] [-T token] [-U] [-V num] [-X size]\n"
           "\t\t[[-d count]]\n"
-          "\t\t[[h match_hint_file] [-k key] [-u user] [-2]]\n"
+          "\t\t[[h match_hint_file] [-k key] [-u user] [-2] [-3]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
           "\t\t[-J pkcs11_pin] [-M raw_pk] [-R trust_casfile] [-Y]] URI\n"
           "\tURI can be an absolute URI or a URI prefixed with scheme and host\n\n"
@@ -593,7 +612,7 @@ usage(const char *program, const char *version) {
           "\t-K interval\tSend a ping after interval seconds of inactivity\n"
           "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
-          "\t       \t\t(Sum of one or more of 1,2,4,8,16 and 32)\n"
+          "\t       \t\t(Sum of one or more of 1,2,4,8,16,32, and 512)\n"
           "\t-N     \t\tSend NON-confirmable message\n"
           "\t-O num,text\tAdd option num with contents text to request. If the\n"
           "\t       \t\ttext begins with 0x, then the hex text (two [0-9a-f] per\n"
@@ -636,6 +655,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tbyte) is converted to binary data\n"
           "\t-u user\t\tUser identity to send for pre-shared key mode\n"
           "\t-2     \t\tUse EC-JPAKE negotiation (if supported)\n"
+          "\t-3     \t\tUse coap_send() instead of coap_send_recv()\n"
           "PKI Options (if supported by underlying (D)TLS library)\n"
           "\tNote: If any one of '-c certfile', '-j keyfile' or '-C cafile' is in\n"
           "\tPKCS11 URI naming format (pkcs11: prefix), then any remaining non\n"
@@ -1844,7 +1864,7 @@ main(int argc, char **argv) {
   size_t data_len = 0;
   coap_addr_info_t *info_list = NULL;
   uint8_t cid_every = 0;
-  coap_pdu_t *resp_pdu;
+  int use_coap_send = 0;
 #ifndef _WIN32
   struct sigaction sa;
 #endif
@@ -1860,7 +1880,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y2")) != -1) {
+                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y23")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -2040,6 +2060,9 @@ main(int argc, char **argv) {
     case '2':
       ec_jpake = 1;
       break;
+    case '3':
+      use_coap_send = 1;
+      break;
     default:
       usage(argv[0], LIBCOAP_PACKAGE_VERSION);
       goto failed;
@@ -2211,53 +2234,62 @@ main(int argc, char **argv) {
   if (coap_get_log_level() < COAP_LOG_DEBUG)
     coap_show_pdu(COAP_LOG_INFO, pdu);
 
-  resp_pdu = NULL;
-  result = coap_send_recv(session, pdu, &resp_pdu, wait_ms);
-  if (result >= 0) {
-    if (response_handler(session, pdu, resp_pdu, coap_pdu_get_mid(resp_pdu))
-        != COAP_RESPONSE_OK) {
-      coap_log_err("Response PDU issue\n");
-    }
-    if (result < (int)wait_ms) {
-      wait_ms -= result;
-    } else {
-      wait_ms = 0;
+  if (use_coap_send) {
+    if (coap_send(session, pdu) == COAP_INVALID_MID) {
+      coap_log_err("cannot send CoAP pdu\n");
       quit = 1;
     }
   } else {
-    switch (result) {
-    case -1:
-      coap_log_info("coap_send_recv: Invalid timeout value %u\n", wait_ms);
-      break;
-    case -2:
-      coap_log_info("coap_send_recv: Failed to transmit PDU\n");
-      break;
-    case -3:
-      /* Nack / Event handler already reported issue */
-      break;
-    case -4:
-      coap_log_info("coap_send_recv: Internal coap_io_process() failed\n");
-      break;
-    case -5:
-      coap_log_info("coap_send_recv: No response received within the timeout\n");
-      break;
-    case -6:
-      coap_log_info("coap_send_recv: Terminated by user\n");
-      break;
-    case -7:
-      coap_log_info("coap_send_recv: Client Mode code not enabled\n");
-      break;
-    default:
-      coap_log_info("coap_send_recv: Invalid return value %d\n", result);
-      break;
-    }
-    quit = 1;
-  }
-  coap_delete_pdu(pdu);
-  coap_delete_pdu(resp_pdu);
+    coap_pdu_t *resp_pdu;
 
-  if (!is_mcast && !doing_observe && repeat_count == 1) {
-    quit = 1;
+    resp_pdu = NULL;
+    result = coap_send_recv(session, pdu, &resp_pdu, wait_ms);
+    if (result >= 0) {
+      if (response_handler(session, pdu, resp_pdu, coap_pdu_get_mid(resp_pdu))
+          != COAP_RESPONSE_OK) {
+        coap_log_err("Response PDU issue\n");
+      }
+      if (result < (int)wait_ms) {
+        wait_ms -= result;
+      } else {
+        wait_ms = 0;
+        quit = 1;
+      }
+    } else {
+      switch (result) {
+      case -1:
+        coap_log_info("coap_send_recv: Invalid timeout value %u\n", wait_ms);
+        break;
+      case -2:
+        coap_log_info("coap_send_recv: Failed to transmit PDU\n");
+        break;
+      case -3:
+        /* Nack / Event handler already reported issue */
+        break;
+      case -4:
+        coap_log_info("coap_send_recv: Internal coap_io_process() failed\n");
+        break;
+      case -5:
+        coap_log_info("coap_send_recv: No response received within the timeout\n");
+        break;
+      case -6:
+        coap_log_info("coap_send_recv: Terminated by user\n");
+        break;
+      case -7:
+        coap_log_info("coap_send_recv: Client Mode code not enabled\n");
+        break;
+      default:
+        coap_log_info("coap_send_recv: Invalid return value %d\n", result);
+        break;
+      }
+      quit = 1;
+    }
+    coap_delete_pdu(pdu);
+    coap_delete_pdu(resp_pdu);
+
+    if (!is_mcast && !doing_observe && repeat_count == 1) {
+      quit = 1;
+    }
   }
   repeat_count--;
 

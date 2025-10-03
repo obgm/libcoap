@@ -160,6 +160,7 @@ session _block_mode_.
 #define COAP_BLOCK_STLESS_BLOCK2 0x40 /* (Server) Server is stateless for Block2 transfers */
 #define COAP_BLOCK_NOT_RANDOM_BLOCK1 0x80 /* (Server) Disable server handling random order block1 */
 #define COAP_BLOCK_CACHE_RESPONSE 0x100 /* (Server) Cache CON request's response */
+#define COAP_BLOCK_Q_BLOCK_EVERY 0x200 /* (Client) Pass every Q-Block PDU to response handler */
 ----
 _block_mode_ is an or'd set of zero or more COAP_BLOCK_* definitions.
 
@@ -185,7 +186,10 @@ is not for the final block, otherwise a COAP_RESPONSE_CODE_CREATED 2.01
 
 To indicate support for Q-Block-1 and Q-Block2, *COAP_BLOCK_TRY_Q_BLOCK* needs
 to be set on both the client and server.  *COAP_BLOCK_SINGLE_BODY* is assumed to
-be set if using Q-Block as the data will always be presented as a single body.
+be set if using Q-Block in the server as the data will always be presented as a
+single body. For the client, *COAP_BLOCK_Q_BLOCK_EVERY* needs to be explicitely
+set to receive the data for each packet, otherwise *COAP_BLOCK_SINGLE_BODY*
+is assumed to be set.
 If *COAP_BLOCK_USE_M_Q_BLOCK* is defined, then the 'M' bit version of recovery
 will be used if possible.
 
@@ -229,6 +233,10 @@ If *COAP_BLOCK_CACHE_RESPONSE* is set, then the server will cache the response
 for the latest unreliable CON request so that if the CON request is repeated,
 the cached response gets re-transmitted. If it is not set, then the response is
 sent as a separate response (empty ACK sent first) using CON.
+
+If *COAP_BLOCK_Q_BLOCK_EVERY* is set, Q-Block is in use and *COAP_BLOCK_SINGLE_BODY*
+is not set, then the client response handler will receive each Q-Block PDU
+instead of a single body with all the data.
 
 *Function: coap_context_set_max_block_size()*
 

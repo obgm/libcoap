@@ -49,7 +49,8 @@ extern "C" {
                              COAP_BLOCK_STLESS_FETCH | \
                              COAP_BLOCK_STLESS_BLOCK2 | \
                              COAP_BLOCK_NOT_RANDOM_BLOCK1 | \
-                             COAP_BLOCK_CACHE_RESPONSE)
+                             COAP_BLOCK_CACHE_RESPONSE | \
+                             COAP_BLOCK_Q_BLOCK_EVERY)
 #else /* ! COAP_Q_BLOCK_SUPPORT */
 #define COAP_BLOCK_SET_MASK (COAP_BLOCK_USE_LIBCOAP | \
                              COAP_BLOCK_SINGLE_BODY | \
