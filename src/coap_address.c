@@ -54,6 +54,13 @@
 #define IN_MULTICAST(Address) (0)
 #endif /* RIOT_VERSION */
 
+#if defined(_WIN32)
+#include <iphlpapi.h>
+#if !defined(__MINGW32__)
+#pragma comment(lib, "iphlpapi.lib")
+#endif /* ! __MINGW32__ */
+#endif /* _WIN32 */
+
 uint16_t
 coap_address_get_port(const coap_address_t *addr) {
   assert(addr != NULL);
@@ -264,11 +271,6 @@ coap_is_bcast(const coap_address_t *a) {
 #endif /* HAVE_IFADDRS_H && !defined(__ZEPHYR__) && !defined(_WIN32) */
 
 #if defined(_WIN32)
-
-#include <iphlpapi.h>
-#if !defined(__MINGW32__)
-#pragma comment(lib, "iphlpapi.lib")
-#endif /* ! __MINGW32__ */
 
   int i;
   coap_tick_t now;

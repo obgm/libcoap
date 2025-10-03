@@ -20,17 +20,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef HAVE_SYS_SELECT_H
+#if HAVE_SYS_SELECT_H || (!defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION) && !defined(_WIN32))
 #include <sys/select.h>
-#endif /* HAVE_SYS_SELECT_H */
-
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif /* HAVE_SYS_TIME_H */
-
-#ifdef HAVE_TIME_H
-#include <time.h>
-#endif /* HAVE_TIME_H */
+#endif
 
 #ifdef WITH_LWIP
 #include <lwip/ip_addr.h>
@@ -799,7 +791,7 @@ void *coap_context_get_app_data(const coap_context_t *context);
  */
 COAP_API int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms);
 
-#if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
+#if !defined(WITH_LWIP) && !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
 /**
  * The main message processing loop with additional fds for internal select.
  *
@@ -830,7 +822,7 @@ COAP_API int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms);
 COAP_API int coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
                                       int nfds, fd_set *readfds, fd_set *writefds,
                                       fd_set *exceptfds);
-#endif /* ! RIOT_VERSION && ! WITH_CONTIKI */
+#endif /* ! WITH_LWIP && ! RIOT_VERSION && ! WITH_CONTIKI */
 
 /**
  * Check to see if there is any i/o pending for the @p context.
