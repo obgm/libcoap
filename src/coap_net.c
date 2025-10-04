@@ -991,6 +991,11 @@ coap_option_check_critical(coap_session_t *session,
               pdu->crit_opt = 1;
               break;
             }
+            if (COAP_PDU_IS_REQUEST(pdu) && ctx->unknown_resource &&
+                ctx->unknown_resource->is_reverse_proxy) {
+              pdu->crit_opt = 1;
+              break;
+            }
           }
 #endif /* COAP_SERVER_SUPPORT */
           coap_log_debug("unknown critical option %d\n", opt_iter.number);
