@@ -1715,7 +1715,7 @@ do_call_home(coap_context_t *ctx) {
   coap_str_const_t server;
   uint16_t port;
   coap_addr_info_t *info_list = NULL;
-  coap_session_t *session;
+  coap_session_t *session = NULL;
 
   server = call_home_uri.host;
   port = call_home_uri.port;
