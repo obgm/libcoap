@@ -68,7 +68,7 @@ add_compile_options(
   $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Werror>)
 endif()
 
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
+if(MSVC)
   option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols when compiling to a .dll" ON)
   # add_compile_options(/Wall /wd4100 /wd4820 /wd4668 /wd4061)
   if(${WARNING_TO_ERROR})
