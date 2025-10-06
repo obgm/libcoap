@@ -108,21 +108,21 @@ set(DTLS_BACKEND
       STRING
       "\
 Name of the dtls backend, only relevant if `ENABLE_DTLS` is ON which is default. \
-Possible values: default, gnutls, openssl, wolfssl, tinydtls and mbedtls. \
+Possible values: default, gnutls, openssl, wolfssl, mbedtls and tinydtls. \
 If specified then this library will be searched and if found also used. \
 If not found then the cmake configuration will stop with an error. \
 If not specified, then cmake will try to use the first one found in the following order: \
-gnutls, openssl, wolfssl, tinydtls, mbedtls \
+gnutls, openssl, wolfssl, mbedtls, tinydtls \
     ")
 set_property(
   CACHE DTLS_BACKEND
   PROPERTY STRINGS
            default
+           gnutls
            openssl
            wolfssl
-           gnutls
-           tinydtls
-           mbedtls)
+           mbedtls
+           tinydtls)
 option(
   USE_VENDORED_TINYDTLS
   "compile with the tinydtls project in the submodule if on, otherwise try to find the compiled lib with find_package"
@@ -460,213 +460,95 @@ set(WITH_TINYDTLS OFF)
 set(WITH_MBEDTLS OFF)
 set(WITH_WOLFSSL OFF)
 
-function(compile_tinydtls)
-  set(TINYDTLS_SOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/tinydtls)
-  set(TINYDTLS_SOURCES_GENERATED ${TINYDTLS_SOURCES_DIR}/dtls_config.h)
-
-  message(STATUS "compiling the tinydtls lib")
-
-  include(ExternalProject)
-
-  externalproject_add(
-    external_tinydtls
-    SOURCE_DIR "${TINYDTLS_SOURCES_DIR}"
-    BUILD_IN_SOURCE 1
-    DOWNLOAD_COMMAND ""
-    UPDATE_COMMAND ""
-    CONFIGURE_COMMAND
-      ${TINYDTLS_SOURCES_DIR}/configure
-      --disable-manpages
-      --prefix=${CMAKE_BINARY_DIR}
-    BUILD_COMMAND make install
-    INSTALL_COMMAND ""
-    LOG_DOWNLOAD 1
-    LOG_CONFIGURE 1)
-
-  externalproject_add_step(
-    external_tinydtls autoreconf
-    COMMAND ./autogen.sh
-    ALWAYS 1
-    WORKING_DIRECTORY "${TINYDTLS_SOURCES_DIR}"
-    DEPENDERS configure
-    DEPENDEES download)
-
-  # Let cmake know that it needs to execute the external_tinydtls target to generate those files.
-  add_custom_command(
-    OUTPUT ${TINYDTLS_SOURCES_GENERATED}
-    WORKING_DIRECTORY "${TINYDTLS_SOURCES_DIR}"
-    COMMAND "make install"
-    DEPENDS external_tinydtls)
-
-  add_dependencies(${COAP_LIBRARY_NAME} external_tinydtls)
-
-  if(BUILD_SHARED_LIBS)
-    set(LIBTINYDTLS_PATH "${CMAKE_CURRENT_BINARY_DIR}/lib/libtinydtls.so")
-  else()
-    set(LIBTINYDTLS_PATH "${CMAKE_CURRENT_BINARY_DIR}/lib/libtinydtls.a")
-  endif()
-
-  add_library(
-    tinydtls
-    UNKNOWN
-    IMPORTED)
-  set_target_properties(
-    tinydtls
-    PROPERTIES "${CMAKE_CURRENT_BINARY_DIR}/include"
-               INTERFACE_INCLUDE_DIRECTORIES
-               IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-               IMPORTED_LOCATION "${LIBTINYDTLS_PATH}")
-
-endfunction()
-
 if(ENABLE_DTLS)
   message(STATUS "compiling with DTLS support")
   message(STATUS "DTLS_BACKEND: ${DTLS_BACKEND}")
 
-  if(DTLS_BACKEND
-     STREQUAL
-     "default")
+  set(DTLS_FOUND OFF)
+  if(DTLS_BACKEND STREQUAL "default")
     # try to find a crypto lib and use it, use the first one found
+    set(DTLS_REQUIRED "")
+  else()
+    set(DTLS_REQUIRED REQUIRED)
+  endif()
 
+  if((DTLS_BACKEND STREQUAL "gnutls") OR ((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND)))
     # libgnutls (e.g. debian libgnutls28-dev)
-    find_package(GnuTLS)
+    find_package(GnuTLS ${DTLS_REQUIRED})
     if(GnuTLS_FOUND)
       set(WITH_GNUTLS ON)
       message(STATUS "compiling with gnutls support")
       set(COAP_WITH_LIBGNUTLS 1)
-    else()
-      # gnutls not found
-      find_package(OpenSSL)
-      if(OpenSSL_FOUND)
-        set(WITH_OPENSSL ON)
-        message(STATUS "compiling with openssl support")
-        set(COAP_WITH_LIBOPENSSL 1)
-      else()
-        # openssl not found
-        # wolfSSL
-        find_package(wolfSSL)
-        if(wolfSSL_FOUND)
-          set(WITH_WOLFSSL ON)
-          message(STATUS "compiling with wolfssl support")
-          set(COAP_WITH_LIBWOLFSSL 1)
-        else()
-          # wolfssl not found
-          # libmbedtls (e.g. debian libmbedtls-dev)
-          find_package(MbedTLS)
-          if(MbedTLS_FOUND)
-            set(WITH_MBEDTLS ON)
-            message(STATUS "compiling with mbedtls support")
-            set(COAP_WITH_LIBMBEDTLS 1)
-          else()
-            # mbedtls not found
-            if(USE_VENDORED_TINYDTLS)
-              compile_tinydtls()
-            else()
-              find_package(TinyDTLS)
-              if(TINYDTLS_FOUND)
-
-              else()
-                # no cryto lib found
-                message(
-                  FATAL_ERROR
-                    "cannot find any cryto lib, either install one or compile without DTLS support"
-                )
-              endif()
-
-            endif()
-
-            set(WITH_TINYDTLS ON)
-            message(STATUS "compiling with tinydtls support")
-            set(COAP_WITH_LIBTINYDTLS 1)
-
-          endif()
-
-        endif()
-
-      endif()
-
+      set(DTLS_FOUND ON)
     endif()
+  endif()
 
-  else()
-    # DTLS_BACKEND variable is not empty, so set all to false and set the only right to true
-    set(WITH_GNUTLS OFF)
-    set(WITH_TINYDTLS OFF)
-    set(WITH_MBEDTLS OFF)
-    set(WITH_OPENSSL OFF)
-    set(WITH_WOLFSSL OFF)
-
-    if(DTLS_BACKEND
-       STREQUAL
-       "gnutls")
-      # libgnutls (e.g. debian libgnutls28-dev)
-      find_package(GnuTLS REQUIRED)
-      set(WITH_GNUTLS ON)
-      message(STATUS "compiling with gnutls support")
-      set(COAP_WITH_LIBGNUTLS 1)
-    endif()
-
-    if(DTLS_BACKEND
-       STREQUAL
-       "openssl")
-      # libssl (e.g. debian libssl1.0-dev)
-      find_package(OpenSSL REQUIRED)
+  if((DTLS_BACKEND STREQUAL "openssl") OR ((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND)))
+    # libssl (e.g. debian libssl1.0-dev)
+    find_package(OpenSSL ${DTLS_REQUIRED})
+    if(OpenSSL_FOUND)
       set(WITH_OPENSSL ON)
       message(STATUS "compiling with openssl support")
       set(COAP_WITH_LIBOPENSSL 1)
+      set(DTLS_FOUND ON)
     endif()
+  endif()
 
-    if(DTLS_BACKEND
-        STREQUAL
-        "wolfssl")
-      find_package(wolfSSL REQUIRED)
+  if((DTLS_BACKEND STREQUAL "wolfssl") OR ((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND)))
+    # wolfSSL
+    find_package(wolfssl ${DTLS_REQUIRED})
+    if(wolfssl_FOUND)
       set(WITH_WOLFSSL ON)
       message(STATUS "compiling with wolfssl support")
       set(COAP_WITH_LIBWOLFSSL 1)
+      set(DTLS_FOUND ON)
     endif()
+  endif()
 
-    if(DTLS_BACKEND
-       STREQUAL
-       "mbedtls")
-      # libmbedtls (e.g. debian libmbedtls-dev)
-      find_package(MbedTLS REQUIRED)
+  if((DTLS_BACKEND STREQUAL "mbedtls") OR ((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND)))
+    # libmbedtls (e.g. debian libmbedtls-dev)
+    find_package(MbedTLS ${DTLS_REQUIRED})
+    if(MbedTLS_FOUND)
       set(WITH_MBEDTLS ON)
       message(STATUS "compiling with mbedtls support")
       set(COAP_WITH_LIBMBEDTLS 1)
+      set(DTLS_FOUND ON)
     endif()
-
-    if(DTLS_BACKEND
-       STREQUAL
-       "tinydtls")
-
-      if(USE_VENDORED_TINYDTLS)
-        compile_tinydtls()
-      else(USE_VENDORED_TINYDTLS)
-        find_package(TinyDTLS REQUIRED)
-      endif(USE_VENDORED_TINYDTLS)
-
-      message(STATUS "compiling with tinydtls support")
-      set(WITH_TINYDTLS ON)
-      set(COAP_WITH_LIBTINYDTLS 1)
-
-    endif()
-
   endif()
 
-endif()
-
-if(WITH_WOLFSSL)
-  if(NOT ZEPHYR_BASE)
-    find_library(WOLFSSL_LIBRARY wolfssl HINTS /usr/local/lib)
-    find_path(WOLFSSL_INCLUDE_DIR wolfssl/wolfcrypt/settings.h HINTS /usr/local/include)
-    if(WOLFSSL_LIBRARY AND WOLFSSL_INCLUDE_DIR)
-      message(STATUS "compiling with wolfssl support")
+  if((DTLS_BACKEND STREQUAL "tinydtls") OR ((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND)))
+    if(USE_VENDORED_TINYDTLS)
+      message(STATUS "compiling the tinydtls lib")
+      add_subdirectory("ext/tinydtls")
+      set_target_properties(
+        tinydtls
+        PROPERTIES
+          # for #include <tinydtls/tinydtls.h>; #include "dtls_config.h"; #include "tinydtls.h"
+          INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/ext;${tinydtls_BINARY_DIR};${tinydtls_SOURCE_DIR}"
+          IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+          IMPORTED_LOCATION "${tinydtls_BINARY_DIR}")
+      add_library(TinyDTLS::tinydtls ALIAS tinydtls)
+      set(TinyDTLS_FOUND TRUE)
+      get_target_property(TinyDTLS_VERSION tinydtls VERSION)
     else()
-      message(FATAL_ERROR "WolfSSL not found")
+      find_package(TinyDTLS ${DTLS_REQUIRED})
     endif()
-  else()
-    # Zephyr handles wolfSSL configuration via zephyr/CMakeLists.txt
-    message(STATUS "compiling with wolfssl support (Zephyr)")
+    if(TinyDTLS_FOUND)
+      set(WITH_TINYDTLS ON)
+      message(STATUS "compiling with tinydtls support")
+      set(COAP_WITH_LIBTINYDTLS 1)
+      set(DTLS_FOUND ON)
+    endif()
   endif()
+
+  if((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND))
+    # no cryto lib found
+    message(
+      FATAL_ERROR
+      "cannot find any cryto lib, either install one or compile without DTLS support"
+    )
+  endif()
+
 endif()
 
 execute_process(COMMAND git describe --tags --dirty --always
@@ -847,23 +729,16 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
-         $<INSTALL_INTERFACE:include/>
-         $<BUILD_INTERFACE:$<$<AND:$<BOOL:${COAP_WITH_LIBTINYDTLS}>,$<BOOL:${USE_VENDORED_TINYDTLS}>>:${CMAKE_BINARY_DIR}/include/tinydtls>>
-         $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${GNUTLS_INCLUDE_DIR}>
-         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDTLS_INCLUDE_DIRS}>
-         $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:${WOLFSSL_INCLUDE_DIR}>)
+         $<INSTALL_INTERFACE:include/>)
 target_link_libraries(
   ${COAP_LIBRARY_NAME}
   PUBLIC $<$<BOOL:${COAP_WITH_LIBOPENSSL}>:OpenSSL::SSL>
-         $<$<BOOL:${COAP_WITH_LIBOPENSSL}>:OpenSSL::Crypto>
-         $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${GNUTLS_LIBRARIES}>
-         $<$<BOOL:${COAP_WITH_LIBTINYDTLS}>:tinydtls>
-         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDTLS_LIBRARY}>
-         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDX509_LIBRARY}>
-         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${MBEDCRYPTO_LIBRARY}>
-         $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:${WOLFSSL_LIBRARY}>
-         $<$<BOOL:${MINGW}>:ws2_32>
-         $<$<BOOL:${MINGW}>:iphlpapi>)
+         $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:GnuTLS::GnuTLS>
+         $<$<BOOL:${COAP_WITH_LIBTINYDTLS}>:TinyDTLS::tinydtls>
+         $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:MbedTLS::mbedtls>
+         $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:wolfssl::wolfssl>
+         $<$<BOOL:${WIN32}>:ws2_32>
+         $<$<BOOL:${WIN32}>:iphlpapi>)
 
 target_compile_options(
   ${COAP_LIBRARY_NAME}
@@ -912,7 +787,7 @@ if(ENABLE_TESTS)
   # tests require libcunit (e.g. debian libcunit1-dev)
   find_package(CUnit REQUIRED)
   target_link_libraries(testdriver PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME}
-                                          cunit)
+                                          CUnit::cunit)
   include(CTest)
   add_test(NAME Tests COMMAND testdriver)
 endif()

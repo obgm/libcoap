@@ -38,7 +38,7 @@ EXTRA_DIST = \
   cmake/FindCUnit.cmake \
   cmake/FindMbedTLS.cmake \
   cmake/FindTinyDTLS.cmake \
-  cmake/FindwolfSSL.cmake \
+  cmake/Findwolfssl.cmake \
   coap_config.h.contiki \
   coap_config.h.riot \
   coap_config.h.windows \

@@ -107,24 +107,21 @@ if(CONFIG_LIBCOAP)
   if(CONFIG_MBEDTLS)
     if(TARGET mbedTLS)
       target_include_directories(mbedTLS INTERFACE ${ZEPHYR_LIBCOAP_MODULE_DIR}/include)
+      add_library(MbedTLS::mbedtls ALIAS mbedTLS)
     else()
       message(WARNING "mbedTLS target not found.")
     endif()
+  endif()
+
+  if(CONFIG_WOLFSSL)
+    target_compile_definitions(wolfSSL INTERFACE WOLFSSL_USER_SETTINGS)
+    add_library(wolfssl::wolfssl ALIAS wolfSSL)
   endif()
 
   add_subdirectory(.. build)
   target_compile_definitions(coap-3 PUBLIC WITH_ZEPHYR)
   target_compile_definitions(coap-3 PUBLIC COAP_MEMORY_TYPE_TRACK=1)
   target_link_libraries(coap-3 PUBLIC zephyr_interface)
-
-  if(CONFIG_MBEDTLS AND TARGET mbedTLS)
-    target_link_libraries(coap-3 PUBLIC mbedTLS)
-  endif()
-
-  if(CONFIG_WOLFSSL)
-    target_compile_definitions(coap-3 PRIVATE WOLFSSL_USER_SETTINGS)
-    target_link_libraries(coap-3 PUBLIC wolfSSL)
-  endif()
 
   set_property(GLOBAL APPEND PROPERTY ZEPHYR_INTERFACE_LIBS coap-3)
 
