@@ -117,6 +117,31 @@ typedef void (*coap_pong_handler_t)(coap_session_t *session,
  */
 typedef coap_resource_t *(*coap_resource_dynamic_create_t)(coap_session_t *session,
                                                            const coap_pdu_t *request);
+
+/**
+ * Definition of the block data handler function
+ *
+ * @param session The CoAP session.
+ * @param pdu The received PDU.
+ * @param resource The resource that receives the data (is NULL for clients)
+ * @param body_data The libcoap internal pointer to the complete data.
+ * @param length    The length of @p data.
+ * @param data      The payload data of the current block.
+ * @param offset    The offset of the @p data block.
+ * @param total     The estimated total size of all blocks.
+ *
+ * @return COAP_RESPONSE_OK to continue transmission or COAP_RESPONSE_FAIL to
+ *         abort.
+ */
+typedef coap_response_t (*coap_block_data_handler_t)(coap_session_t *session,
+                                                     coap_pdu_t *pdu,
+                                                     coap_resource_t *resource,
+                                                     coap_binary_t **body_data,
+                                                     size_t length,
+                                                     const uint8_t *data,
+                                                     size_t offset,
+                                                     size_t total);
+
 /**
  * Registers a new message handler that is called whenever a response is
  * received.
@@ -176,6 +201,20 @@ void coap_register_pong_handler(coap_context_t *context,
 void coap_register_dynamic_resource_handler(coap_context_t *context,
                                             coap_resource_dynamic_create_t create_handler,
                                             uint32_t dynamic_max);
+
+/**
+ * Sets up a handler that is called for each received block during a block-wise
+ * transfer when COAP_BLOCK_SINGLE_BODY is enabled.
+ *
+ * For clients, this is invoked for each block.  For servers, it is only invoked
+ * for resources that have COAP_RESOURCE_USE_BLOCK_DATA_HANDLER set in flags in
+ * coap_resource_init(). For proxy sessions, this is not invoked.
+ *
+ * @param context The context to add this handler to.
+ * @param handler The handler function that will be called.
+ */
+void coap_register_block_data_handler(coap_context_t *context,
+                                      coap_block_data_handler_t handler);
 
 /**
  * Registers the option number @p number with the given context object @p context.

@@ -222,6 +222,7 @@ coap_q_block_is_supported
 coap_query_into_optlist
 coap_realloc_type
 coap_register_async
+coap_register_block_data_handler
 coap_register_dynamic_resource_handler
 coap_register_event_handler
 coap_register_handler

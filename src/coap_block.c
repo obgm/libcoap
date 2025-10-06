@@ -3244,13 +3244,27 @@ coap_handle_request_put_block(coap_context_t *context,
     if (lg_srcv->total_len < saved_offset + length) {
       lg_srcv->total_len = saved_offset + length;
     }
-    lg_srcv->body_data = coap_block_build_body(lg_srcv->body_data, length, data,
-                                               saved_offset, lg_srcv->total_len);
-    if (!lg_srcv->body_data) {
-      coap_add_data(response, sizeof("Memory issue")-1,
-                    (const uint8_t *)"Memory issue");
-      response->code = COAP_RESPONSE_CODE(500);
-      goto skip_app_handler;
+    if (context && context->block_data_handler && !resource->is_proxy_uri &&
+        !resource->is_reverse_proxy &&
+        ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) &&
+        (resource->flags & COAP_RESOURCE_USE_BLOCK_DATA_HANDLER)) {
+      coap_response_t resp;
+      resp = context->block_data_handler(session, pdu, resource, &lg_srcv->body_data,
+                                         length, data, saved_offset,
+                                         lg_srcv->total_len);
+      if (resp != COAP_RESPONSE_OK) {
+        response->code = COAP_RESPONSE_CODE(500);
+        goto skip_app_handler;
+      }
+    } else {
+      lg_srcv->body_data = coap_block_build_body(lg_srcv->body_data, length, data,
+                                                 saved_offset, lg_srcv->total_len);
+      if (!lg_srcv->body_data) {
+        coap_add_data(response, sizeof("Memory issue")-1,
+                      (const uint8_t *)"Memory issue");
+        response->code = COAP_RESPONSE_CODE(500);
+        goto skip_app_handler;
+      }
     }
   }
 
@@ -3370,6 +3384,16 @@ give_app_data:
   }
   pdu->body_offset = 0;
   pdu->body_total = lg_srcv->total_len;
+  if (context && context->block_data_handler && !resource->is_proxy_uri &&
+      !resource->is_reverse_proxy &&
+      ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) &&
+      (resource->flags & COAP_RESOURCE_USE_BLOCK_DATA_HANDLER)) {
+    /* Data has already been provided - do not duplicate */
+    if (pdu->data) {
+      pdu->used_size = pdu->data - pdu->token - 1;
+      pdu->data = NULL;
+    }
+  }
   coap_log_debug("Server app version of updated PDU\n");
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
   *pfree_lg_srcv = lg_srcv;
@@ -3834,6 +3858,12 @@ lg_xmit_finished:
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
+void
+coap_register_block_data_handler(coap_context_t *context,
+                                 coap_block_data_handler_t block_data_handler) {
+  context->block_data_handler = block_data_handler;
+}
+
 /*
  * Re-assemble payloads into a body
  */
@@ -4121,10 +4151,20 @@ reinit:
             if (size2 < saved_offset + length) {
               size2 = saved_offset + length;
             }
-            lg_crcv->body_data = coap_block_build_body(lg_crcv->body_data, length, data,
-                                                       saved_offset, size2);
-            if (lg_crcv->body_data == NULL) {
-              goto fail_resp;
+            if (context && context->block_data_handler) {
+              coap_response_t resp;
+              resp = context->block_data_handler(session, rcvd, 0,
+                                                 &lg_crcv->body_data, length,
+                                                 data, saved_offset, size2);
+              if (resp != COAP_RESPONSE_OK) {
+                goto fail_resp;
+              }
+            } else {
+              lg_crcv->body_data = coap_block_build_body(lg_crcv->body_data, length, data,
+                                                         saved_offset, size2);
+              if (lg_crcv->body_data == NULL) {
+                goto fail_resp;
+              }
             }
           }
           if (block.m || !check_all_blocks_in(&lg_crcv->rec_blocks)) {
@@ -4229,8 +4269,15 @@ give_to_app:
               coap_update_option(rcvd, COAP_OPTION_OBSERVE,
                                  lg_crcv->observe_length, lg_crcv->observe);
             }
-            rcvd->body_data = lg_crcv->body_data->s;
+            rcvd->body_data = lg_crcv->body_data ? lg_crcv->body_data->s : NULL;
 #if COAP_Q_BLOCK_SUPPORT
+            if (context && context->block_data_handler) {
+              /* Data has already been provided - do not duplicate */
+              if (rcvd->data) {
+                rcvd->used_size = rcvd->data - rcvd->token - 1;
+                rcvd->data = NULL;
+              }
+            }
             rcvd->body_length = block_opt == COAP_OPTION_Q_BLOCK2 ?
                                 lg_crcv->total_len : saved_offset + length;
 #else /* ! COAP_Q_BLOCK_SUPPORT */

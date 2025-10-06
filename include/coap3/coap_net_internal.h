@@ -118,6 +118,8 @@ struct coap_context_t {
   coap_ping_handler_t ping_handler; /**< Called when a CoAP ping is received */
   coap_pong_handler_t pong_handler; /**< Called when a ping response
                                          is received */
+  coap_block_data_handler_t block_data_handler; /**< Called with each block data
+                                                     during block transfers */
 
 #if COAP_SERVER_SUPPORT
   coap_observe_added_t observe_added; /**< Called when there is a new observe

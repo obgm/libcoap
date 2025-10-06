@@ -512,6 +512,22 @@ response_handler(coap_session_t *session COAP_UNUSED,
   return COAP_RESPONSE_OK;
 }
 
+static coap_response_t
+individual_data(coap_session_t *session COAP_UNUSED,
+                coap_pdu_t *pdu COAP_UNUSED,
+                coap_resource_t *resource COAP_UNUSED,
+                coap_binary_t **body_data COAP_UNUSED,
+                size_t length,
+                const uint8_t *data,
+                size_t offset COAP_UNUSED,
+                size_t total COAP_UNUSED) {
+
+  append_to_output(data, length);
+  if (add_nl)
+    append_to_output((const uint8_t *)"\n", 1);
+  return COAP_RESPONSE_OK;
+}
+
 static void
 usage(const char *program, const char *version) {
   const char *p;
@@ -536,7 +552,7 @@ usage(const char *program, const char *version) {
           "\t\t[-z] [-A type] [-B seconds]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
-          "\t\t[-S] [-T token] [-U] [-V num] [-X size]\n"
+          "\t\t[-S] [-T token] [-U] [-V num] [-X size] [-3]\n"
           "\t\t[[-d count]]\n"
           "\t\t[[h match_hint_file] [-k key] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
@@ -614,6 +630,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tlibrary logging\n"
           "\t-X size\t\tMaximum message size to use for TCP based connections\n"
           "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
+          "\t-3     \t\tIntercept all received data and write it out (test\n"
+          "\t       \t\tenvironment\n"
           "DTLS Options (if supported by underlying (D)TLS library)\n"
           "\t-d count\n"
           "\t       \t\tFor DTLS, enable use of Connection-ID. If count\n"
@@ -1844,6 +1862,7 @@ main(int argc, char **argv) {
   size_t data_len = 0;
   coap_addr_info_t *info_list = NULL;
   uint8_t cid_every = 0;
+  int report_ind_blocks = 0;
   coap_pdu_t *resp_pdu;
 #ifndef _WIN32
   struct sigaction sa;
@@ -1860,7 +1879,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y2")) != -1) {
+                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y23")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -2040,6 +2059,9 @@ main(int argc, char **argv) {
     case '2':
       ec_jpake = 1;
       break;
+    case '3':
+      report_ind_blocks = 1;
+      break;
     default:
       usage(argv[0], LIBCOAP_PACKAGE_VERSION);
       goto failed;
@@ -2125,6 +2147,8 @@ main(int argc, char **argv) {
   coap_register_response_handler(ctx, response_handler);
   coap_register_event_handler(ctx, event_handler);
   coap_register_nack_handler(ctx, nack_handler);
+  if (report_ind_blocks)
+    coap_register_block_data_handler(ctx, individual_data);
   if (the_token.length > COAP_TOKEN_DEFAULT_MAX)
     coap_context_set_max_token_size(ctx, the_token.length);
   if (cid_every) {

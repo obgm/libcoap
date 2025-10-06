@@ -93,6 +93,7 @@ coap_resource_t *time_resource = NULL;
 
 static int resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_CON;
 static int track_observes = 0;
+static int report_each_block = 0;
 
 /*
  * For PKI, if one or more of cert_file, key_file and ca_file is in PKCS11 URI
@@ -949,6 +950,28 @@ fail:
   return;
 }
 
+static coap_response_t
+individual_blocks(coap_session_t *session COAP_UNUSED,
+                  coap_pdu_t *pdu COAP_UNUSED,
+                  coap_resource_t *resource COAP_UNUSED,
+                  coap_binary_t **body_data,
+                  size_t length,
+                  const uint8_t *data,
+                  size_t offset,
+                  size_t total) {
+
+  fwrite(data, length, 1, stderr);
+  /* Keep all hte data, so that hnd_put_example_data() can also update things */
+  *body_data = coap_block_build_body(*body_data, length, data,
+                                     offset, total);
+  if (!(*body_data)) {
+    coap_log_info("Memory Issue\n");
+    return COAP_RESPONSE_FAIL;
+  }
+
+  return COAP_RESPONSE_OK;
+}
+
 /*
  * Dynamic Resource PUT / POST handler
  * Create the appropriate resource and pass it back.
@@ -1121,7 +1144,11 @@ init_resources(coap_context_t *ctx) {
       coap_add_resource(ctx, r);
     }
 
-    r = coap_resource_init(coap_make_str_const("example_data"), resource_flags);
+    if (report_each_block)
+      r = coap_resource_init(coap_make_str_const("example_data"),
+                             resource_flags | COAP_RESOURCE_USE_BLOCK_DATA_HANDLER);
+    else
+      r = coap_resource_init(coap_make_str_const("example_data"), resource_flags);
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
     coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);
     coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get_example_data);
@@ -1492,7 +1519,6 @@ proxy_dtls_setup(coap_context_t *ctx, coap_proxy_server_list_t *proxy_info) {
 }
 #endif /* COAP_PROXY_SUPPORT */
 
-
 static void
 usage(const char *program, const char *version) {
   const char *p;
@@ -1517,7 +1543,7 @@ usage(const char *program, const char *version) {
           "\t\t[-x] [-y rec_secs] [-z scheme://addr[:port]] [-A address]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G group_if]\n"
           "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
-          "\t\t[-T max_token_size] [-U type] [-V num] [-X size]\n"
+          "\t\t[-T max_token_size] [-U type] [-V num] [-X size] [-3]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
           "\t\t[-s match_psk_sni_file] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
@@ -1612,6 +1638,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tlibrary logging\n"
           "\t-X size\t\tMaximum message size to use for TCP based connections\n"
           "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
+          "\t-3     \t\tIntercept all received data sent to /example_data with\n"
+          "\t       \t\tsingle body enabled and write it out (test environment)\n"
           "PSK Options (if supported by underlying (D)TLS library)\n"
           "\t-h hint\t\tIdentity Hint to send. Default is CoAP. Zero length is\n"
           "\t       \t\tno hint\n"
@@ -2385,7 +2413,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:y:z:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y2")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:y:z:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y23")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2594,6 +2622,9 @@ main(int argc, char **argv) {
     case '2':
       ec_jpake = 1;
       break;
+    case '3':
+      report_each_block = 1;
+      break;
     default:
       usage(argv[0], LIBCOAP_PACKAGE_VERSION);
       goto failed;
@@ -2639,6 +2670,8 @@ main(int argc, char **argv) {
   coap_context_set_max_block_size(ctx, max_block_size);
   coap_context_set_session_reconnect_time(ctx, reconnect_secs);
   coap_context_set_keepalive(ctx, 30);
+  if (report_each_block)
+    coap_register_block_data_handler(ctx, individual_blocks);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
   if (doing_tls_engine) {
