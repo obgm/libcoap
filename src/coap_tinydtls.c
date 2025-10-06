@@ -673,11 +673,16 @@ verify_ecdsa_key(struct dtls_context_t *dtls_context COAP_UNUSED,
   int ret;
 
   if (t_context && t_context->setup_data.validate_cn_call_back) {
+    coap_address_t remote_addr;
+    get_session_addr(dtls_session, &remote_addr);
+    coap_session_t *c_session = coap_session_get_by_peer(t_context->coap_context,
+                                                         &remote_addr, dtls_session->ifindex);
+    if (!c_session)
+      return -3;
+
     /* Need to build asn.1 certificate - code taken from tinydtls */
     uint8 *p;
-    uint8 buf[DTLS_CE_LENGTH];
-    coap_session_t *c_session;
-    coap_address_t remote_addr;
+    uint8 *buf = coap_malloc_type(COAP_STRING, DTLS_CE_LENGTH);
 
     /* Certificate
      *
@@ -693,16 +698,10 @@ verify_ecdsa_key(struct dtls_context_t *dtls_context COAP_UNUSED,
     memcpy(p, other_pub_y, key_size);
     p += key_size;
 
-    assert(p <= (buf + sizeof(buf)));
-
-    get_session_addr(dtls_session, &remote_addr);
-    c_session = coap_session_get_by_peer(t_context->coap_context,
-                                         &remote_addr, dtls_session->ifindex);
-    if (!c_session)
-      return -3;
     coap_lock_callback_ret(ret,
                            t_context->setup_data.validate_cn_call_back(COAP_DTLS_RPK_CERT_CN,
                                buf, p-buf, c_session, 0, 1, t_context->setup_data.cn_call_back_arg));
+    coap_free_type(COAP_STRING, buf);
     if (!ret) {
       return -1;
     }
