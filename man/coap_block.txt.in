@@ -17,7 +17,8 @@ coap_add_data_large_request,
 coap_add_data_large_response,
 coap_get_data_large,
 coap_block_build_body,
-coap_q_block_is_supported
+coap_q_block_is_supported,
+coap_register_block_data_handler
 - Work with CoAP Blocks
 
 SYNOPSIS
@@ -47,6 +48,9 @@ const uint8_t **_data_, size_t *_offset_, size_t *_total_);*
 size_t _length_, const uint8_t *_data_, size_t _offset_, size_t _total_);*
 
 *int coap_q_block_is_supported(void);*
+
+*void coap_register_block_data_handler(coap_context_t *context,
+ coap_block_data_handler_t handler);*
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -135,6 +139,35 @@ CALLBACK HANDLER
  */
 typedef void (*coap_release_large_data_t)(coap_session_t *session,
                                           void *app_ptr);
+----
+
+*Callback Type: coap_block_data_handler_t*
+
+[source, c]
+----
+/**
+ * Definition of the block data handler function
+ *
+ * @param session The CoAP session.
+ * @param pdu The received PDU.
+ * @param resource The resource that receives the data (is NULL for clients)
+ * @param body_data The libcoap internal pointer to the complete data.
+ * @param length    The length of @p data.
+ * @param data      The payload data of the current block.
+ * @param offset    The offset of the @p data block.
+ * @param total     The estimated total size of all blocks.
+ *
+ * @return COAP_RESPONSE_OK to continue transmission or COAP_RESPONSE_FAIL to
+ *         abort.
+ */
+typedef coap_response_t (*coap_block_data_handler_t)(coap_session_t *session,
+                                                     coap_pdu_t *pdu,
+                                                     coap_resource_t *resource,
+                                                     coap_binary_t **body_data,
+                                                     size_t length,
+                                                     const uint8_t *data,
+                                                     size_t offset,
+                                                     size_t total);
 ----
 
 FUNCTIONS
@@ -343,6 +376,36 @@ body dropped.
 
 The *coap_q_block_is_supported*() function is used to determine whether
 libcoap has been build with Q-Block support or not.
+
+*Function: coap_register_block_data_handler()*
+
+The *coap_register_block_data_handler*() function is used to register a handler
+function that may be called with each received data block if
+COAP_BLOCK_SINGLE_BODY is enabled. This is especially relevant for cases where
+COAP_BLOCK_SINGLE_BODY is enabled implicitly, e.g., when COAP_BLOCK_TRY_Q_BLOCK
+is enabled, and the application wants to process the single data blocks
+individually but without handling the complicated protocol signaling itself.
+
+This handler is called for every received block for a client with
+COAP_BLOCK_SINGLE_BODY set, and for every server's resource that has
+COAP_RESOURCE_USE_BLOCK_DATA_HANDLER set in the flags when
+*coap_resource_init*(3) is called.
+
+*NOTE*: The block data handler will be not be called for (forward | reverse)
+proxy resources and the ongoing proxy-client session.
+
+The handler parameter _resource_ is only set for server-side reception of data
+and it is NULL for client-side reception. _body_data_ can be used to call
+*coap_block_build_body*() in the handler and let libcoap gather all data, e.g.,
+if the single blocks are only of interest in specific cases. It can also be
+used to store a pointer to memory allocated by the application that will later
+be presented to the method or response handler after the complete data body has
+been transferred.
+
+When the corresponding method or response handler is called, if _body_data_
+was not updated, an empty PDU with no data is presented (as all the data has
+already been absorbed), or the PDU is presented with all the data contained
+in the updated _body_data_.
 
 RETURN VALUES
 -------------
@@ -587,6 +650,83 @@ main(int argc, char *argv[]) {
   coap_free_context(context);
   coap_cleanup();
 
+}
+----
+
+*Block data handler with Q-Block transmission method*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <stdio.h>
+
+FILE *f = NULL;
+
+static coap_response_t
+block_data_handler(coap_session_t *session, coap_pdu_t *pdu,
+                   coap_resource_t *resource, coap_binary_t **body_data,
+                   size_t length, const uint8_t *data, size_t offset,
+                   size_t total) {
+  /* let libcoap gather all data blocks for client-side reception as example */
+  if (!resource) {
+    *body_data = coap_block_build_body(*body_data, length, data, offset, total);
+    return COAP_RESPONSE_OK;
+  }
+
+  (void)session;
+  (void)pdu;
+
+  if (!f) {
+    f = fopen("/tmp/received_data", "w");
+    if (!f) {
+      /* abort transmission */
+      return COAP_RESPONSE_FAIL;
+    }
+
+    /*
+     * As data blocks might be received in random order, we cannot close the
+     * file unconditionally in this handler after the block at the end is
+     * received. An application can either track the received blocks itself and
+     * close the file in this handler if all blocks were received or set
+     * *body_data so the resource's method handler will be eventually called by
+     * libcoap. In this example, we set a placeholder in *body_data as we do not
+     * keep the data in RAM but still want the resource's method handler to be
+     * called to close the file.
+     */
+    *body_data = coap_new_binary(0);
+  }
+
+  /* store block data that might get received in random order to disk */
+  fseek(f, offset, SEEK_SET);
+  fwrite(data, length, 1, f);
+
+  return COAP_RESPONSE_OK;
+}
+
+int
+main(int argc, char *argv[]) {
+  coap_context_t *context = NULL;
+
+  (void)argc;
+  (void)argv;
+
+  /* Initialize libcoap library */
+  coap_startup();
+
+  /* ... Set up context, session etc. ... */
+
+  /* Set up using libcoap to do the block work and try to use Q-Block method */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_TRY_Q_BLOCK);
+
+  /* register the handler function that will be called for each data block */
+  coap_register_block_data_handler(context, &block_data_handler);
+
+  /* ... Other code etc. ... */
+
+  coap_cleanup();
+  return 0;
 }
 ----
 

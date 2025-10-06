@@ -209,6 +209,9 @@ Disable libcoap library suppressing 5.xx multicast responses (overridden by
 https://rfc-editor.org/rfc/rfc7967[RFC7967] No-Response option) for multicast
 requests.
 
+*COAP_RESOURCE_USE_BLOCK_DATA_HANDLER*::
+Call the block data handler for this resource if one is registered for the context
+
 *NOTE:* _uri_path_, if not 7 bit readable ASCII, binary bytes must be hex
 encoded according to the rules defined in
 "https://rfc-editor.org/rfc/rfc3986#section-2.1[RFC3986 2.1. Percent-Encoding]".

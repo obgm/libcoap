@@ -26,7 +26,7 @@ SYNOPSIS
               [*-E* oscore_conf_file[,seq_file]] [*-G* count] [*-H* hoplimit]
               [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-S*] [*-T* token] [*-U*] [*-V* num]
-              [*-X* size]
+              [*-X* size] [*-3*]
               [[*-d* value]]
               [[*-h* match_hint_file] [*-k* key] [*-u* user] [*-2*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
@@ -212,6 +212,9 @@ OPTIONS - General
 *-X* size::
    Maximum message size to use for TCP based connections (default is 8388864).
    Maximum value of 2^32 -1.
+
+*-3* ::
+   Intercept all received data and write it out (test environment).
 
 OPTIONS - DTLS
 --------------
