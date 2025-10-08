@@ -1492,6 +1492,7 @@ coap_build_missing_pdu(coap_session_t *session, coap_lg_crcv_t *lg_crcv) {
   size_t len = coap_encode_var_safe8(buf, sizeof(token), token);
 
   memset(&drop_options, 0, sizeof(coap_opt_filter_t));
+  coap_option_filter_set(&drop_options, COAP_OPTION_Q_BLOCK1);
   coap_option_filter_set(&drop_options, COAP_OPTION_Q_BLOCK2);
   coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
   pdu = coap_pdu_duplicate_lkd(lg_crcv->sent_pdu, session, len, buf,

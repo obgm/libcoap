@@ -4014,7 +4014,7 @@ skip_handler:
       /* No delays to response */
 #if COAP_Q_BLOCK_SUPPORT
       if (session->block_mode & COAP_BLOCK_USE_LIBCOAP &&
-          !lg_xmit_ctrl && response->code == COAP_RESPONSE_CODE(205) &&
+          !lg_xmit_ctrl && COAP_RESPONSE_CLASS(response->code) == 2 &&
           coap_get_block_b(session, response, COAP_OPTION_Q_BLOCK2, &block) &&
           block.m) {
         if (coap_send_q_block2(session, resource, query, pdu->code, block,
@@ -4216,8 +4216,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
   }
 #if COAP_Q_BLOCK_SUPPORT
   /* Check to see if checking out Q-Block support */
-  if (session->block_mode & COAP_BLOCK_PROBE_Q_BLOCK &&
-      session->remote_test_mid == rcvd->mid) {
+  if (session->block_mode & COAP_BLOCK_PROBE_Q_BLOCK) {
     if (rcvd->code == COAP_RESPONSE_CODE(402)) {
       coap_log_debug("Q-Block support not available\n");
       set_block_mode_drop_q(session->block_mode);
@@ -4233,6 +4232,8 @@ handle_response(coap_context_t *context, coap_session_t *session,
       }
     }
     session->doing_first = 0;
+    if (rcvd->type == COAP_MESSAGE_CON)
+      coap_send_ack_lkd(session, rcvd);
     return;
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
