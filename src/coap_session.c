@@ -475,6 +475,11 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
 #endif /* COAP_SERVER_SUPPORT */
     coap_session_set_mtu(session, COAP_DEFAULT_MTU);
   session->block_mode = context->block_mode;
+#if COAP_Q_BLOCK_SUPPORT
+  if (session->block_mode & COAP_BLOCK_FORCE_Q_BLOCK) {
+    set_block_mode_has_q(session->block_mode);
+  }
+#endif
   if (proto == COAP_PROTO_DTLS) {
     session->tls_overhead = 29;
     if (session->tls_overhead >= session->mtu) {

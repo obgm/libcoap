@@ -1585,7 +1585,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tif the -A option is used\n"
           "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
-          "\t       \t\t(Sum of one or more of 1,2,4 64, 128 and 256)\n"
+          "\t       \t\t(Sum of one or more of 1,2,4 64, 128, 256 and 512)\n"
           , program);
   fprintf(stderr,
           "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
