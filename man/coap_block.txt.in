@@ -160,6 +160,7 @@ session _block_mode_.
 #define COAP_BLOCK_STLESS_BLOCK2 0x40 /* (Server) Server is stateless for Block2 transfers */
 #define COAP_BLOCK_NOT_RANDOM_BLOCK1 0x80 /* (Server) Disable server handling random order block1 */
 #define COAP_BLOCK_CACHE_RESPONSE 0x100 /* (Server) Cache CON request's response */
+#define COAP_BLOCK_FORCE_Q_BLOCK  0x200 /* force Q-Block method without support check */
 ----
 _block_mode_ is an or'd set of zero or more COAP_BLOCK_* definitions.
 
@@ -229,6 +230,12 @@ If *COAP_BLOCK_CACHE_RESPONSE* is set, then the server will cache the response
 for the latest unreliable CON request so that if the CON request is repeated,
 the cached response gets re-transmitted. If it is not set, then the response is
 sent as a separate response (empty ACK sent first) using CON.
+
+If *COAP_BLOCK_FORCE_Q_BLOCK* is set, libcoap will not initiate a probe request
+to check if the peer does support Q-Block method as it does if
+*COAP_BLOCK_TRY_Q_BLOCK* is set and will assume the peer supports Q-Block
+method. If unsure or minimum latency is not required, use
+*COAP_BLOCK_TRY_Q_BLOCK* instead of *COAP_BLOCK_FORCE_Q_BLOCK*.
 
 *Function: coap_context_set_max_block_size()*
 

@@ -49,7 +49,8 @@ extern "C" {
                              COAP_BLOCK_STLESS_FETCH | \
                              COAP_BLOCK_STLESS_BLOCK2 | \
                              COAP_BLOCK_NOT_RANDOM_BLOCK1 | \
-                             COAP_BLOCK_CACHE_RESPONSE)
+                             COAP_BLOCK_CACHE_RESPONSE | \
+                             COAP_BLOCK_FORCE_Q_BLOCK)
 #else /* ! COAP_Q_BLOCK_SUPPORT */
 #define COAP_BLOCK_SET_MASK (COAP_BLOCK_USE_LIBCOAP | \
                              COAP_BLOCK_SINGLE_BODY | \
@@ -87,7 +88,8 @@ extern "C" {
     block_mode &= ~(COAP_BLOCK_TRY_Q_BLOCK |\
                     COAP_BLOCK_PROBE_Q_BLOCK |\
                     COAP_BLOCK_HAS_Q_BLOCK | \
-                    COAP_BLOCK_USE_M_Q_BLOCK); \
+                    COAP_BLOCK_USE_M_Q_BLOCK | \
+                    COAP_BLOCK_FORCE_Q_BLOCK); \
   } while (0)
 
 #define COAP_SINGLE_BLOCK_OR_Q (COAP_BLOCK_SINGLE_BODY|COAP_BLOCK_HAS_Q_BLOCK)

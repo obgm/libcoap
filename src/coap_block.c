@@ -422,7 +422,7 @@ coap_context_set_block_mode_lkd(coap_context_t *context,
   context->block_mode &= ~COAP_BLOCK_SET_MASK;
   context->block_mode |= block_mode & COAP_BLOCK_SET_MASK;
 #if ! COAP_Q_BLOCK_SUPPORT
-  if (block_mode & (COAP_BLOCK_TRY_Q_BLOCK|COAP_BLOCK_USE_M_Q_BLOCK))
+  if (block_mode & (COAP_BLOCK_TRY_Q_BLOCK|COAP_BLOCK_USE_M_Q_BLOCK|COAP_BLOCK_FORCE_Q_BLOCK))
     coap_log_debug("Q-Block support not compiled in - ignored\n");
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
 }
