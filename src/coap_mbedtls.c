@@ -80,6 +80,20 @@
 #include <psa/crypto.h>
 #endif /* MBEDTLS_PSA_CRYPTO_C */
 
+#ifdef _WIN32
+#include <stdlib.h>
+#include <string.h>
+static char *
+strndup(const char *s1, size_t n) {
+  char *copy = (char *)malloc(n + 1);
+  if (copy) {
+    memcpy(copy, s1, n);
+    copy[n] = 0;
+  }
+  return copy;
+}
+#endif /* _WIN32 */
+
 #define mbedtls_malloc(a) malloc(a)
 #define mbedtls_realloc(a,b) realloc(a,b)
 #define mbedtls_strdup(a) strdup(a)
