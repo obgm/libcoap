@@ -3142,7 +3142,7 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
   if (ret != 0)
     goto error;
 
-  authTag = (byte *)malloc(ccm->tag_len * sizeof(byte));
+  authTag = (byte *)wolfssl_malloc(ccm->tag_len);
   if (!authTag) {
     goto error;
   }
@@ -3151,18 +3151,18 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
                          aad->s, aad->length);
 
   if (ret != 0) {
-    wolfssl_free(authTag);
     goto error;
   }
 
   memcpy(result + result_len, authTag, ccm->tag_len);
-  result_len += sizeof(authTag);
+  result_len += ccm->tag_len;
   *max_result_len = result_len;
   wolfssl_free(authTag);
 
   return 1;
 error:
   coap_crypto_output_errors("coap_crypto_aead_encrypt");
+  wolfssl_free(authTag);
   return 0;
 }
 
@@ -3177,6 +3177,7 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
   Aes aes;
   int ret;
   int len;
+  byte *authTag = NULL;
   const coap_crypto_aes_ccm_t *ccm;
 
   if (data == NULL)
@@ -3190,14 +3191,16 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
     return 0;
 
   ccm = &params->params.aes;
-  byte authTag[ccm->tag_len];
-
-  if (data->length < ccm->tag_len) {
+  if (data->length < ccm->tag_len)
     return 0;
-  } else {
-    memcpy(authTag, data->s + data->length - ccm->tag_len, sizeof(authTag));
-    data->length -= ccm->tag_len;
+
+  authTag = (byte *)wolfssl_malloc(ccm->tag_len);
+  if (!authTag) {
+    goto error;
   }
+
+  memcpy(authTag, data->s + data->length - ccm->tag_len, ccm->tag_len);
+  data->length -= ccm->tag_len;
 
   if (ccm->key.s == NULL || ccm->nonce == NULL)
     goto error;
@@ -3210,17 +3213,19 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
   len = data->length;
 
   ret = wc_AesCcmDecrypt(&aes, result, data->s, len, ccm->nonce,
-                         15 - ccm->l, authTag, sizeof(authTag),
+                         15 - ccm->l, authTag, ccm->tag_len,
                          aad->s, aad->length);
 
   if (ret != 0)
     goto error;
 
   *max_result_len = len;
+  wolfssl_free(authTag);
 
   return 1;
 error:
   coap_crypto_output_errors("coap_crypto_aead_decrypt");
+  wolfssl_free(authTag);
   return 0;
 }
 
