@@ -309,7 +309,7 @@ int coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
 /** @} */
 
 #ifdef __cplusplus
-extern "C" {
+}
 #endif
 
 #endif /* COAP_SUBSCRIBE_INTERNAL_H_ */
