@@ -234,15 +234,16 @@ struct coap_lg_srcv_t {
   uint16_t content_format; /**< Content format for the set of blocks */
   uint8_t last_type;     /**< Last request type (CON/NON) */
   uint8_t szx;           /**< size of individual blocks */
+  uint16_t block_option; /**< Block option in use */
+  uint8_t dont_timeout;  /**< Set if app handler in use */
+  coap_mid_t last_mid;   /**< Last received mid for this set of packets */
+  coap_tick_t last_used; /**< Last time data sent or 0 */
   size_t total_len;      /**< Length as indicated by SIZE1 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
   coap_resource_t *resource; /**< associated resource */
   coap_str_const_t *uri_path; /** set to uri_path if unknown resource */
   coap_rblock_t rec_blocks; /** < list of received blocks */
   coap_bin_const_t *last_token; /**< last used token */
-  coap_mid_t last_mid;   /**< Last received mid for this set of packets */
-  coap_tick_t last_used; /**< Last time data sent or 0 */
-  uint16_t block_option; /**< Block option in use */
 };
 #endif /* COAP_SERVER_SUPPORT */
 

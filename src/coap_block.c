@@ -1829,6 +1829,10 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now,
     partial_timeout = COAP_MAX_TRANSMIT_WAIT_TICKS(session);
 
   LL_FOREACH_SAFE(session->lg_srcv, lg_srcv, q) {
+    if (lg_srcv->dont_timeout) {
+      /* Not safe to timeout at present */
+      continue;
+    }
     if (COAP_PROTO_RELIABLE(session->proto) || lg_srcv->last_type != COAP_MESSAGE_NON)
       goto check_expire;
 
@@ -3397,6 +3401,7 @@ give_app_data:
   }
   coap_log_debug("Server app version of updated PDU\n");
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
+  lg_srcv->dont_timeout = 1;
   *pfree_lg_srcv = lg_srcv;
 
 call_app_handler:
