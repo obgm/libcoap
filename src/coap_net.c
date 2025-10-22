@@ -4558,30 +4558,39 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     }
 #endif /* COAP_SERVER_SUPPORT */
 
-    if (pdu->code == 0) {
 #if COAP_Q_BLOCK_SUPPORT
-      if (sent) {
-        coap_block_b_t block;
+    if (session->lg_xmit && sent && sent->pdu && sent->pdu->type == COAP_MESSAGE_CON) {
+      int doing_q_block = 0;
+      coap_lg_xmit_t *lg_xmit = NULL;
 
-        if (sent->pdu->type == COAP_MESSAGE_CON &&
-            COAP_PROTO_NOT_RELIABLE(session->proto) &&
-            coap_get_block_b(session, sent->pdu,
-                             COAP_PDU_IS_REQUEST(sent->pdu) ?
-                             COAP_OPTION_Q_BLOCK1 : COAP_OPTION_Q_BLOCK2,
-                             &block)) {
-          if (block.m) {
-#if COAP_CLIENT_SUPPORT
-            if (COAP_PDU_IS_REQUEST(sent->pdu))
-              coap_send_q_block1(session, block, sent->pdu,
-                                 COAP_SEND_SKIP_PDU);
-#endif /* COAP_CLIENT_SUPPORT */
-            if (COAP_PDU_IS_RESPONSE(sent->pdu))
-              coap_send_q_blocks(session, sent->pdu->lg_xmit, block,
-                                 sent->pdu, COAP_SEND_SKIP_PDU);
-          }
+      LL_FOREACH(session->lg_xmit, lg_xmit) {
+        if ((lg_xmit->option == COAP_OPTION_Q_BLOCK1 || lg_xmit->option == COAP_OPTION_Q_BLOCK2) &&
+            lg_xmit->last_all_sent == 0) {
+          doing_q_block = 1;
+          break;
         }
       }
+      if (doing_q_block && lg_xmit) {
+        coap_block_b_t block;
+
+        memset(&block, 0, sizeof(block));
+        if (lg_xmit->option == COAP_OPTION_Q_BLOCK1) {
+          block.num = lg_xmit->last_block + lg_xmit->b.b1.count;
+        } else {
+          block.num = lg_xmit->last_block;
+        }
+        block.m = 1;
+        block.szx = block.aszx = lg_xmit->blk_size;
+        block.defined = 1;
+        block.bert = 0;
+        block.chunk_size = 1024;
+
+        coap_send_q_blocks(session, lg_xmit, block,
+                           lg_xmit->sent_pdu, COAP_SEND_SKIP_PDU);
+      }
+    }
 #endif /* COAP_Q_BLOCK_SUPPORT */
+    if (pdu->code == 0) {
 #if COAP_CLIENT_SUPPORT
       /*
        * In coap_send(), lg_crcv was not set up if type is CON and protocol is not
