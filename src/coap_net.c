@@ -1920,10 +1920,12 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
 
         if (pdu->used_size + 1 > pdu->max_size) {
           /* No space */
+          coap_delete_pdu_lkd(pdu);
           return (coap_mid_t)COAP_DROPPED_RESPONSE;
         }
         if (!coap_pdu_resize(pdu, pdu->used_size + 1)) {
           /* Internal error */
+          coap_delete_pdu_lkd(pdu);
           return (coap_mid_t)COAP_DROPPED_RESPONSE;
         }
         data_len = pdu->used_size - (pdu->data - pdu->token);
