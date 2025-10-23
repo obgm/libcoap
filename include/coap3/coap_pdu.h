@@ -312,8 +312,9 @@ coap_pdu_t *coap_pdu_from_pbuf(struct pbuf *pbuf);
 #endif
 
 /**
-* CoAP protocol types
-*/
+ * CoAP protocol types
+ * Note: coap_layers_coap[] needs updating if extended.
+ */
 typedef enum coap_proto_t {
   COAP_PROTO_NONE = 0,
   COAP_PROTO_UDP,
