@@ -2472,7 +2472,13 @@ coap_new_endpoint_lkd(coap_context_t *context, const coap_address_t *listen_addr
   ep->context = context;
   ep->proto = proto;
   ep->sock.endpoint = ep;
-  memcpy(&ep->sock.lfunc, coap_layers_coap[proto], sizeof(ep->sock.lfunc));
+  if (proto < COAP_PROTO_LAST) {
+    /*
+     * Should be caught above, but come compilers realize that proto
+     * includes COAP_PROTO_LAST, but there is no table entry for that
+     */
+    memcpy(&ep->sock.lfunc, coap_layers_coap[proto], sizeof(ep->sock.lfunc));
+  }
 
   if (COAP_PROTO_NOT_RELIABLE(proto)) {
     if (!coap_netif_dgrm_listen(ep, listen_addr))
