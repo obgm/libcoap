@@ -4567,7 +4567,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
       LL_FOREACH(session->lg_xmit, lg_xmit) {
         if ((lg_xmit->option == COAP_OPTION_Q_BLOCK1 || lg_xmit->option == COAP_OPTION_Q_BLOCK2) &&
-            lg_xmit->last_all_sent == 0) {
+            lg_xmit->last_all_sent == 0 && lg_xmit->sent_pdu->type == COAP_MESSAGE_CON) {
           doing_q_block = 1;
           break;
         }
