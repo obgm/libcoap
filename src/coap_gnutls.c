@@ -504,7 +504,7 @@ coap_dtls_get_log_level(void) {
  */
 void *
 coap_dtls_new_context(coap_context_t *c_context COAP_UNUSED) {
-  const char *err;
+  const char *err = "Unknown Error";
   int ret;
   coap_gnutls_context_t *g_context =
       (coap_gnutls_context_t *)
@@ -514,8 +514,8 @@ coap_dtls_new_context(coap_context_t *c_context COAP_UNUSED) {
     coap_tls_version_t *tls_version = coap_get_tls_library_version();
     const char *priority;
 
-    G_CHECK(gnutls_global_init(), "gnutls_global_init");
     memset(g_context, 0, sizeof(coap_gnutls_context_t));
+    G_CHECK(gnutls_global_init(), "gnutls_global_init");
     g_context->alpn_proto.data = gnutls_malloc(4);
     if (g_context->alpn_proto.data) {
       memcpy(g_context->alpn_proto.data, "coap", 4);
@@ -831,8 +831,12 @@ cert_verify_gnutls(gnutls_session_t g_session) {
   }
 #endif /* >= 3.6.6 */
 
-  if (cert_info.cert_list_size == 0 && !g_context->setup_data.verify_peer_cert)
-    goto ok;
+  if (cert_info.cert_list_size == 0) {
+    if (!g_context->setup_data.verify_peer_cert)
+      goto ok;
+    else
+      goto fail;
+  }
 
   G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
           "gnutls_certificate_verify_peers");
