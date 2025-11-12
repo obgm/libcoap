@@ -315,6 +315,10 @@ coap_add_data_blocked_response(const coap_pdu_t *request,
     dctx =  coap_digest_setup();
     if (!dctx)
       goto error;
+    if (request && request->session &&
+        coap_is_mcast(&request->session->addr_info.local)) {
+      coap_digest_update(dctx, coap_unique_id, sizeof(coap_unique_id));
+    }
     if (!coap_digest_update(dctx, data, length))
       goto error;
     if (!coap_digest_final(dctx, &digest))
@@ -849,6 +853,9 @@ coap_add_data_large_internal(coap_session_t *session,
         coap_digest_ctx_t *dctx =  coap_digest_setup();
 
         if (dctx) {
+          if (coap_is_mcast(&session->addr_info.local)) {
+            coap_digest_update(dctx, coap_unique_id, sizeof(coap_unique_id));
+          }
           if (coap_digest_update(dctx, data, length)) {
             if (coap_digest_final(dctx, &digest)) {
               memcpy(&etag, digest.key, sizeof(etag));

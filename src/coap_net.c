@@ -5065,6 +5065,7 @@ coap_check_async(coap_context_t *context, coap_tick_t now, coap_tick_t *tim_rem)
 #endif /* COAP_SERVER_SUPPORT */
 
 int coap_started = 0;
+uint8_t coap_unique_id[8] = { 0 };
 
 #if COAP_THREAD_SAFE
 /*
@@ -5127,6 +5128,7 @@ coap_startup(void) {
   resource_uri_wellknown.uri_path = &well_known;
 #endif /* COAP_SERVER_SUPPORT */
   send_recv_terminate = 0;
+  coap_prng_lkd(&coap_unique_id, sizeof(coap_unique_id));
 }
 
 void

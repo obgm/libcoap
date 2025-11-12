@@ -1000,6 +1000,7 @@ void coap_call_response_handler(coap_session_t *session, coap_pdu_t *sent,
 /**@}*/
 
 extern int coap_started;
+extern uint8_t coap_unique_id[8];
 
 #ifdef __cplusplus
 }

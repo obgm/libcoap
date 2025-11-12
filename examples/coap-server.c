@@ -673,8 +673,14 @@ static ssize_t user_length = -1;
 
 static size_t proxy_host_name_count = 0;
 static const char **proxy_host_name_list = NULL;
-static coap_proxy_server_list_t forward_proxy = { NULL, 0, 0, COAP_PROXY_FORWARD_STATIC, 0, 300};
-static coap_proxy_server_list_t reverse_proxy = { NULL, 0, 0, COAP_PROXY_REVERSE_STRIP, 0, 10};
+static coap_proxy_server_list_t forward_proxy = { NULL, 0, 0,
+                                                  COAP_PROXY_FWD_STATIC,
+                                                  0, 300
+                                                };
+static coap_proxy_server_list_t reverse_proxy = { NULL, 0, 0,
+                                                  COAP_PROXY_REV | COAP_PROXY_BIT_STRIP,
+                                                  0, 10
+                                                };
 
 static coap_dtls_cpsk_t *
 setup_cpsk(char *client_sni) {
@@ -1493,8 +1499,7 @@ proxy_dtls_setup(coap_context_t *ctx, coap_proxy_server_list_t *proxy_info) {
   for (i = 0; i < proxy_info->entry_count; i++) {
     coap_proxy_server_t *proxy_server = &proxy_info->entry[i];
 
-    if (proxy_info->type == COAP_PROXY_FORWARD_DYNAMIC ||
-        proxy_info->type == COAP_PROXY_FORWARD_DYNAMIC_STRIP) {
+    if ((proxy_info->type & COAP_PROXY_NEW_MASK) == COAP_PROXY_FWD_DYNAMIC) {
       /* This will get filled in by the libcoap proxy logic */
       memset(client_sni, 0, sizeof(client_sni));
     } else {
@@ -1617,7 +1622,7 @@ usage(const char *program, const char *version) {
           "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
           "\t       \t\tevery fifth response will still be sent as a confirmable\n"
           "\t       \t\tresponse (RFC 7641 requirement)\n"
-          "\t-P scheme://address[:port],[name1[,name2[,name3..]]]\n"
+          "\t-P scheme://address[:port] | allow-mcast,[name1[,name2[,name3..]]]\n"
           "\t       \t\tScheme, address, optional port of how to connect to the\n"
           "\t       \t\tnext proxy server and zero or more names (comma\n"
           "\t       \t\tseparated) that this proxy server is known by. The\n"
@@ -1626,6 +1631,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tthese names, then this server is considered to be the\n"
           "\t       \t\tfinal endpoint. If scheme://address[:port] is not\n"
           "\t       \t\tdefined before the leading , (comma) of the first name,\n"
+          "\t       \t\tor is allow-mcast which allows direct mcast requests,\n"
           "\t       \t\tthen the ongoing connection will be a direct connection.\n"
           "\t       \t\tScheme is one of coap, coaps, coap+tcp, coaps+tcp,\n"
           "\t       \t\tcoap+ws, and coaps+ws. http(s) is not currently supported.\n"
@@ -1876,7 +1882,7 @@ cmdline_proxy(char *arg) {
   }
   *host_start = '\000';
 
-  if (host_start != arg) {
+  if (host_start != arg && strcmp("allow-mcast", arg) != 0) {
     /* Next upstream proxy is defined */
     if (coap_split_uri((unsigned char *)arg, strlen(arg), &uri) < 0 ||
         uri.path.length != 0 || uri.query.length != 0) {
@@ -1887,11 +1893,15 @@ cmdline_proxy(char *arg) {
       coap_log_err("Unsupported CoAP Proxy protocol\n");
       return 0;
     }
-    forward_proxy.type = COAP_PROXY_FORWARD_STATIC;
+    forward_proxy.type = COAP_PROXY_FWD_STATIC;
     forward_proxy.idle_timeout_secs = 300;
+  } else if (strcmp("allow-mcast", arg) == 0) {
+    memset(&uri, 0, sizeof(uri));
+    forward_proxy.type = COAP_PROXY_FWD_DYNAMIC | COAP_PROXY_BIT_STRIP | COAP_PROXY_BIT_MCAST;
+    forward_proxy.idle_timeout_secs = 10;
   } else {
     memset(&uri, 0, sizeof(uri));
-    forward_proxy.type = COAP_PROXY_FORWARD_DYNAMIC_STRIP;
+    forward_proxy.type = COAP_PROXY_FWD_DYNAMIC | COAP_PROXY_BIT_STRIP;
     forward_proxy.idle_timeout_secs = 10;
   }
 

@@ -28,25 +28,62 @@ extern "C" {
  * @{
  */
 
+/**
+ * coap_proxy_type_t Proxy definitions.
+ *
+ * Three types of proxy.
+ *  reverse         Traffic forward to internal set of servers.
+ *  forward-static  Traffic forwarded to defined set of servers.
+ *  forward-dynamic Traffic forwarded to host defined by
+ *                  Proxy-Uri / Proxy-Scheme options.
+ * Operations for each proxy type.
+ *  strip           Remove Proxy-Uri and/or Proxy-Scheme options.
+ *  mcast           Support forward-dynamic traffic to multicast addresses.
+ */
+
 typedef enum {
-  COAP_PROXY_REVERSE,               /**< Act as a reverse proxy */
-  COAP_PROXY_REVERSE_STRIP,         /**< Act as a reverse proxy,
-                                         strip out proxy options */
-  COAP_PROXY_FORWARD_STATIC,        /**< Act as a forward-static proxy */
-  COAP_PROXY_FORWARD_STATIC_STRIP,  /**< Act as a forward-static proxy,
-                                         strip out proxy options */
-  COAP_PROXY_FORWARD_DYNAMIC,       /**< Act as a forward-dynamic proxy
-                                         using the request's Proxy-Uri or
-                                         Proxy-Scheme options to determine
-                                         server */
-  COAP_PROXY_FORWARD_DYNAMIC_STRIP, /**< Act as a forward-dynamic proxy,
-                                         strip out proxy options */
-  /* For backward compatability */
-  COAP_PROXY_FORWARD = COAP_PROXY_FORWARD_STATIC,
-  COAP_PROXY_FORWARD_STRIP = COAP_PROXY_FORWARD_STATIC_STRIP,
-  COAP_PROXY_DIRECT = COAP_PROXY_FORWARD_DYNAMIC,
-  COAP_PROXY_DIRECT_STRIP = COAP_PROXY_FORWARD_DYNAMIC_STRIP,
-} coap_proxy_t;
+  /* Missing initial 'hole' is for the old style proxy mappings */
+  COAP_PROXY_REV = (1 << 3),         /**< reverse proxy. */
+  COAP_PROXY_FWD_STATIC = (2 << 3),  /**< forward-static proxy. */
+  COAP_PROXY_FWD_DYNAMIC = (3 << 3), /**< forward-dynamic proxy. */
+
+  /* Start of bit mask mapping */
+  COAP_PROXY_BIT_STRIP = (1 << 6),
+  /**<
+   * If COAP_PROXY_BIT_STRIP set, then remove any Proxy-Uri or Proxy-Scheme,
+   * else leave them.
+   */
+  COAP_PROXY_BIT_MCAST = (1 << 7),
+  /**<
+   * If COAP_PROXY_BIT_MCAST set, then upstream servers can be multicast,
+   * else only unicast.
+   * [ Ignored if not COAP_PROXY_FWD_DYNAMIC ]
+   */
+} coap_proxy_type_t;
+
+#define COAP_PROXY_OLD_MASK 0x07 /**< Space used in coap_proxy_type_t for old types */
+#define COAP_PROXY_NEW_MASK 0x38 /**< Space used in coap_proxy_type_t for new types */
+
+/**
+ * Old Mappings (4.3.5) that map into the first 3 bits of coap_proxy_type_t
+ */
+typedef enum {
+  COAP_PROXY_REVERSE,       /**< Act as a reverse proxy */
+  COAP_PROXY_REVERSE_STRIP, /**< Act as a reverse proxy,
+                                     strip out proxy options */
+  COAP_PROXY_FORWARD,       /**< Act as a forward-static proxy */
+  COAP_PROXY_FORWARD_STRIP, /**< Act as a forward-static proxy,
+                                     strip out proxy options */
+  COAP_PROXY_DIRECT,        /**< Act as a forward-dynamic proxy */
+  COAP_PROXY_DIRECT_STRIP,  /**< Act as a forward-dynamic proxy,
+                                    strip out proxy options */
+  COAP_PROXY_FORWARD_DYNAMIC = COAP_PROXY_DIRECT,
+  /**< Act as a forward-dynamic proxy */
+  COAP_PROXY_FORWARD_DYNAMIC_STRIP = COAP_PROXY_DIRECT_STRIP,
+  /**< Act as a forward-dynamic proxy, strip out proxy options */
+} coap_proxy_old_t;
+
+typedef coap_proxy_old_t coap_proxy_t;
 
 typedef struct coap_proxy_server_t {
   coap_uri_t uri;         /**< host and port define the server, scheme method */
@@ -59,7 +96,7 @@ typedef struct coap_proxy_server_list_t {
   coap_proxy_server_t *entry; /**< Set of servers to connect to */
   size_t entry_count;         /**< The number of servers in entry list */
   size_t next_entry;          /**< Next server to use (% entry_count) */
-  coap_proxy_t type;          /**< The proxy type */
+  coap_proxy_type_t type;     /**< The proxy type */
   int track_client_session;   /**< If 1, track individual connections to upstream
                                    server, else 0 for all clients to be multiplexed
                                    over the same upstream session */
@@ -74,7 +111,7 @@ typedef struct coap_proxy_server_list_t {
  *
  * @param session CoAP session.
  * @param sent The PDU that was transmitted.
- * @param received The respose PDU that was received, or returned from cache.
+ * @param received The response PDU that was received, or returned from cache.
  * @param cache_key Updated with the cache key pointer provided to
  *                  coap_proxy_forward_request().  The caller should
  *                  delete this cache key (unless the client request set up an
@@ -124,7 +161,9 @@ int coap_verify_proxy_scheme_supported(coap_uri_scheme_t scheme);
  *  Acting as a forward-static proxy - connect to defined upstream server
  *   (possibly round robin load balancing over multiple servers).
  *
- * A request that should go direct to this server is not supported here.
+ * A request that should go direct to this next proxy/server is not
+ * supported using this function - set up a new session using
+ * coap_new_client_session_proxy().
  *
  * @param req_session The client session.
  * @param request The client's request PDU.

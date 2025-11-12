@@ -26,7 +26,7 @@ SYNOPSIS
               [*-y* rec_secs] [*-z* scheme://addr[:port]]
               [*-A* address] [*-E* oscore_conf_file[,seq_file]]
               [*-G* group_if] [*-L* value] [*-N*]
-              [*-P* scheme://addr[:port],[name1[,name2..]]]
+              [*-P* scheme://addr[:port] | allow-mcast,[name1[,name2..]]]
               [*-T* max_token_size] [*-U* type] [*-V* num] [*-X* size]
               [*-3*]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
@@ -165,7 +165,8 @@ OPTIONS - General
    if the hostname of the incoming proxy request matches one of these names,
    then this server is considered to be the final endpoint. If
    scheme://address[:port] is not defined before the leading , (comma) of the
-   first name, then the ongoing connection will be a direct connection.
+   first name, or is allow-mcast which allows direct mcast requests, then the
+   ongoing connection will be a direct connection.
    Scheme is one of coap, coaps, coap+tcp, coaps+tcp, coap+ws, and coaps+ws.
    http and https not currently supported.
    This option can be repeated to provide multiple upstream
