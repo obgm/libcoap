@@ -317,6 +317,40 @@ coap_verify_proxy_scheme_supported(coap_uri_scheme_t scheme) {
   return 1;
 }
 
+static coap_proxy_type_t
+coap_proxy_map_type(coap_proxy_type_t proxy_type) {
+  if ((proxy_type & COAP_PROXY_NEW_MASK) == 0) {
+    /* Old version - update to bitwise version */
+    switch ((coap_proxy_old_t)proxy_type) {
+    case COAP_PROXY_REVERSE:
+      proxy_type = COAP_PROXY_REV;
+      break;
+    case COAP_PROXY_REVERSE_STRIP:
+      proxy_type = COAP_PROXY_REV | COAP_PROXY_BIT_STRIP;
+      break;
+    case COAP_PROXY_FORWARD:
+      proxy_type = COAP_PROXY_FWD_STATIC;
+      break;
+    case COAP_PROXY_FORWARD_STRIP:
+      proxy_type = COAP_PROXY_FWD_STATIC | COAP_PROXY_BIT_STRIP;
+      break;
+    case COAP_PROXY_DIRECT:
+      /* Mcast was always let through */
+      proxy_type = COAP_PROXY_FWD_DYNAMIC | COAP_PROXY_BIT_MCAST;
+      break;
+    case COAP_PROXY_DIRECT_STRIP:
+      /* Mcast was always let through */
+      proxy_type = COAP_PROXY_FWD_DYNAMIC | COAP_PROXY_BIT_MCAST | COAP_PROXY_BIT_STRIP;
+      break;
+    default:
+      coap_log_warn("Proxy old proxy_type 0x%u unknow\n", proxy_type);
+      proxy_type = COAP_PROXY_FWD_DYNAMIC;
+      break;
+    }
+  }
+  return proxy_type;
+}
+
 static coap_proxy_list_t *
 coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
                        coap_pdu_t *response,
@@ -329,6 +363,7 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
   coap_opt_iterator_t opt_iter;
   coap_opt_t *proxy_scheme;
   coap_opt_t *proxy_uri;
+  coap_proxy_type_t proxy_type;
 
   *proxy_entry_created = 0;
 
@@ -358,15 +393,9 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
     memset(server_use, 0, sizeof(*server_use));
   }
 
-  switch (server_list->type) {
-  case COAP_PROXY_REVERSE:
-  case COAP_PROXY_REVERSE_STRIP:
-  case COAP_PROXY_FORWARD_STATIC:
-  case COAP_PROXY_FORWARD_STATIC_STRIP:
-    /* Nothing else needs to be done here */
-    break;
-  case COAP_PROXY_FORWARD_DYNAMIC:
-  case COAP_PROXY_FORWARD_DYNAMIC_STRIP:
+  proxy_type = coap_proxy_map_type(server_list->type);
+
+  if ((proxy_type & COAP_PROXY_NEW_MASK) == COAP_PROXY_FWD_DYNAMIC) {
     /* Need to get actual server from CoAP Proxy-Uri or Proxy-Scheme options */
     /*
      * See if Proxy-Scheme
@@ -400,10 +429,6 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
       response->code = COAP_RESPONSE_CODE(404);
       return NULL;
     }
-    break;
-  default:
-    assert(0);
-    return NULL;
   }
 
   if (server_use->uri.host.length == 0) {
@@ -567,6 +592,25 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
     proto = info_list->proto;
     memcpy(&dst, &info_list->addr, sizeof(dst));
     coap_free_address_info(info_list);
+    if (coap_is_mcast(&dst)) {
+      coap_proxy_type_t proxy_type = coap_proxy_map_type(server_list->type);
+
+      if ((proxy_type & COAP_PROXY_NEW_MASK) == COAP_PROXY_FWD_DYNAMIC &&
+          (proxy_type & COAP_PROXY_BIT_MCAST) == 0) {
+        response->code = COAP_RESPONSE_CODE(501);
+        coap_proxy_remove_association(session, 0);
+        coap_log_debug("*  %s: mcast proxy forwarding not enabled\n",
+                       coap_session_str(session));
+        return NULL;
+      }
+      if (server_use.uri.scheme != COAP_URI_SCHEME_COAP) {
+        response->code = COAP_RESPONSE_CODE(501);
+        coap_proxy_remove_association(session, 0);
+        coap_log_debug("*  %s: mcast proxy forwarding only supported for 'coap'\n",
+                       coap_session_str(session));
+        return NULL;
+      }
+    }
 
 #if COAP_AF_UNIX_SUPPORT
     coap_address_t bind_addr;
@@ -732,6 +776,10 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
   if (!resp_pdu)
     return COAP_RESPONSE_FAIL;
 
+  /* Incase change in type of request over the proxy */
+  if (proxy_req && proxy_req->pdu)
+    resp_pdu->type = proxy_req->pdu->type;
+
   if (COAP_PROTO_NOT_RELIABLE(session->proto))
     resp_pdu->max_size = coap_session_max_pdu_size_lkd(session);
 
@@ -869,6 +917,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
                                           COAP_OPTION_OBSERVE,
                                           &opt_iter);
   coap_proxy_cache_t *proxy_cache = NULL;
+  coap_proxy_type_t proxy_type;
 
   /* Set up ongoing session (if not already done) */
   proxy_entry = coap_proxy_get_ongoing_session(session, request, response,
@@ -995,10 +1044,8 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   proxy_req->pdu = coap_const_pdu_reference_lkd(request);
 
   /* Need to create the ongoing request pdu entry */
-  switch (server_list->type) {
-  case COAP_PROXY_REVERSE_STRIP:
-  case COAP_PROXY_FORWARD_STATIC_STRIP:
-  case COAP_PROXY_FORWARD_DYNAMIC_STRIP:
+  proxy_type = coap_proxy_map_type(server_list->type);
+  if (proxy_type & COAP_PROXY_BIT_STRIP) {
     /*
      * Need to replace Proxy-Uri with Uri-Host (and Uri-Port)
      * and strip out Proxy-Scheme.
@@ -1012,6 +1059,10 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
                         coap_session_max_pdu_size_lkd(proxy_entry->ongoing));
     if (!pdu) {
       goto failed;
+    }
+
+    if (coap_is_mcast(&proxy_entry->ongoing->addr_info.remote)) {
+      pdu->type = COAP_MESSAGE_NON;
     }
 
     if (!coap_add_token(pdu, token_len, token)) {
@@ -1059,11 +1110,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
     /* Update pdu with options */
     coap_add_optlist_pdu(pdu, &optlist);
     coap_delete_optlist(optlist);
-    break;
-  case COAP_PROXY_REVERSE:
-  case COAP_PROXY_FORWARD_STATIC:
-  case COAP_PROXY_FORWARD_DYNAMIC:
-  default:
+  } else {
     /*
      * Duplicate request PDU for onward transmission (with new token).
      */
@@ -1074,7 +1121,6 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
     }
     if (COAP_PROTO_NOT_RELIABLE(session->proto))
       pdu->max_size = coap_session_max_pdu_size_lkd(proxy_entry->ongoing);
-    break;
   }
 
   if (coap_get_data_large(request, &size, &data, &offset, &total)) {
