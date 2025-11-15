@@ -23,6 +23,13 @@
 #include <lwip/timeouts.h>
 #include <lwip/tcpip.h>
 
+#if NO_SYS == 0
+sys_sem_t coap_io_timeout_sem;
+uint32_t coap_lwip_in_call_back_ref = 0; /* Used if in LwIP call back, under
+                                            protection of global lock if
+                                            thread safe libcoap code */
+#endif /* NO_SYS == 0 */
+
 void
 coap_lwip_dump_memory_pools(coap_log_t log_level) {
 #if MEMP_STATS && LWIP_STATS_DISPLAY && MEMP_USE_CUSTOM_POOLS
@@ -56,10 +63,6 @@ coap_lwip_set_input_wait_handler(coap_context_t *context,
   context->input_wait = handler;
   context->input_arg = input_arg;
 }
-
-#if NO_SYS == 0
-sys_sem_t coap_io_timeout_sem;
-#endif /* NO_SYS == 0 */
 
 void
 coap_io_lwip_init(void) {

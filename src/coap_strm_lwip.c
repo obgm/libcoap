@@ -30,6 +30,17 @@ coap_tcp_is_supported(void) {
 
 #include <lwip/tcp.h>
 
+#if NO_SYS == 0
+extern uint32_t coap_lwip_in_call_back_ref;
+#endif /* NO_SYS == 0 */
+
+typedef struct {
+  coap_session_t *session;
+  struct tcp_pcb *tcp_pcb;
+  struct pbuf *pbuf;
+} coap_lwip_tcp_t;
+
+
 static void
 do_tcp_err(void *arg, err_t err) {
   coap_session_t *session = (coap_session_t *)arg;
@@ -41,7 +52,7 @@ do_tcp_err(void *arg, err_t err) {
   /*
    * as per tcp_err() documentation, the corresponding pcb is already freed
    * when this callback is called.  So, stop a double free when
-   * coap_session_disconnected_lkd() eventually coap_socket_close() is called.
+   * coap_session_disconnected_lkd() eventually calls coap_socket_close().
    */
   session->sock.tcp_pcb = NULL;
   coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
@@ -81,7 +92,13 @@ coap_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
   sock->p = p;
   coap_lock_lock(return ERR_ARG);
   coap_ticks(&now);
+#if NO_SYS == 0
+  coap_lwip_in_call_back_ref++;
+#endif /* NO_SYS == 0 */
   coap_read_session(session->context, session, now);
+#if NO_SYS == 0
+  coap_lwip_in_call_back_ref--;
+#endif /* NO_SYS == 0 */
   coap_lock_unlock();
   return ERR_OK;
 }
@@ -258,6 +275,24 @@ coap_socket_accept_tcp(coap_socket_t *server,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+#if NO_SYS == 0
+static void
+coap_lwip_tcp_write(void *ctx) {
+  coap_lwip_tcp_t *cb_ctx = (coap_lwip_tcp_t *)ctx;
+  int err;
+
+  if (cb_ctx && cb_ctx->pbuf) {
+    err = tcp_write(cb_ctx->tcp_pcb, cb_ctx->pbuf->payload, cb_ctx->pbuf->len, 1);
+    if (err < 0) {
+      coap_log_warn("** %s: tcp_write: error %d\n",
+                    coap_session_str(cb_ctx->session), err);
+    }
+    pbuf_free(cb_ctx->pbuf);
+    coap_free_type(COAP_STRING, cb_ctx);
+  }
+}
+#endif /* NO_SYS == 0 */
+
 /*
  * strm
  * return +ve Number of bytes written.
@@ -273,16 +308,41 @@ coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len) {
     return -1;
   memcpy(pbuf->payload, data, data_len);
 
-  coap_lock_invert(LOCK_TCPIP_CORE(),
-                   UNLOCK_TCPIP_CORE(); return 0);
+#if NO_SYS == 0
+  if (coap_lwip_in_call_back_ref == 0) {
+    coap_lwip_tcp_t *cb_ctx = coap_malloc_type(COAP_STRING, sizeof(coap_lwip_tcp_t));
 
-  err = tcp_write(sock->tcp_pcb, pbuf->payload, pbuf->len, 1);
+    if (!cb_ctx) {
+      coap_log_warn("** %s: coap_socket_write: error\n",
+                    coap_session_str(sock->session));
+      pbuf_free(pbuf);
+      errno = ENOMEM;
+      return -1;
+    }
+    cb_ctx->session = sock->session;
+    cb_ctx->pbuf = pbuf;
+    cb_ctx->tcp_pcb = sock->tcp_pcb;
+    err = tcpip_try_callback(coap_lwip_tcp_write, cb_ctx);
 
-  UNLOCK_TCPIP_CORE();
+    if (err < 0) {
+      coap_log_warn("** %s: tcpip_try_callback: error %d\n",
+                    coap_session_str(sock->session), err);
+      errno = EAGAIN;
+      return -1;
+    }
+  } else {
+#endif /* NO_SYS == 0 */
+    err = tcp_write(sock->tcp_pcb, pbuf->payload, pbuf->len, 1);
 
-  pbuf_free(pbuf);
-  if (err < 0)
-    return -1;
+    pbuf_free(pbuf);
+    if (err < 0) {
+      coap_log_warn("** %s: tcp_write: error %d\n",
+                    coap_session_str(sock->session), err);
+      return -1;
+    }
+#if NO_SYS == 0
+  }
+#endif /* NO_SYS == 0 */
   return data_len;
 }
 
@@ -313,23 +373,60 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
   return 0;
 }
 
+#if NO_SYS == 0
+static void
+coap_lwip_tcp_close(void *ctx) {
+  struct tcp_pcb *tcp_pcb = (struct tcp_pcb *)ctx;
+
+  if (tcp_pcb) {
+    tcp_recv(tcp_pcb, NULL);
+    tcp_close(tcp_pcb);
+  }
+}
+#if COAP_SERVER_SUPPORT
+static void
+coap_lwip_endpoint_tcp_close(void *ctx) {
+  struct tcp_pcb *tcp_pcb = (struct tcp_pcb *)ctx;
+
+  if (tcp_pcb) {
+    tcp_close(tcp_pcb);
+  }
+}
+#endif /* COAP_SERVER_SUPPORT */
+#endif /* NO_SYS == 0 */
+
 void
 coap_socket_strm_close(coap_socket_t *sock) {
-  if (sock->tcp_pcb) {
-    tcp_arg(sock->tcp_pcb, NULL);
+  struct tcp_pcb *tcp_pcb = sock->tcp_pcb;
+  err_t err;
+
+  sock->tcp_pcb = NULL;
+  if (tcp_pcb) {
+    tcp_arg(tcp_pcb, NULL);
+#if NO_SYS == 0
+    if (coap_lwip_in_call_back_ref == 0) {
 #if COAP_SERVER_SUPPORT
-    if (!sock->endpoint)
+      if (sock->endpoint)
+        err = tcpip_try_callback(coap_lwip_endpoint_tcp_close, tcp_pcb);
+      else
 #endif /* COAP_SERVER_SUPPORT */
-      tcp_recv(sock->tcp_pcb, NULL);
-    if (sock->session) {
-      coap_lock_invert(LOCK_TCPIP_CORE(),
-                       UNLOCK_TCPIP_CORE(); return);
+        err = tcpip_try_callback(coap_lwip_tcp_close, tcp_pcb);
+      if (err < 0) {
+        coap_log_warn("** %s: tcpip_try_callback: error %d\n",
+                      sock->session ? coap_session_str(sock->session) : "", err);
+        errno = EAGAIN;
+        return;
+      }
     } else {
-      LOCK_TCPIP_CORE();
+#endif /* NO_SYS == 0 */
+#if COAP_SERVER_SUPPORT
+      if (!sock->endpoint)
+#endif /* COAP_SERVER_SUPPORT */
+        tcp_recv(tcp_pcb, NULL);
+      tcp_close(tcp_pcb);
+#if NO_SYS == 0
     }
-    tcp_close(sock->tcp_pcb);
-    UNLOCK_TCPIP_CORE();
-    sock->tcp_pcb = NULL;
+#endif /* NO_SYS == 0 */
   }
   return;
 }

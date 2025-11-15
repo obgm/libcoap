@@ -15,7 +15,14 @@ LIBCOAP_API_VERSION = $(shell if [ -f $(libcoap_dir)/configure.ac ];  then \
 
 coap_include_dir = $(libcoap_dir)/include/coap$(LIBCOAP_API_VERSION)
 
-WITH_LWIP_BRANCH=STABLE-2_2_1_RELEASE
+WITH_LWIP_BRANCH?=STABLE-2_2_1_RELEASE
+
+USE_LWIP_CONTRIB := $(shell if [ $(WITH_LWIP_BRANCH) = "STABLE-2_1_3_RELEASE" ] ; then \
+		echo -n lwip-contrib ; \
+	else \
+		echo -n lwip/contrib ; \
+	fi)
+
 # Update to latest TinyDTLS submodule as defined for libcoap
 WITH_TINYDTLS_BRANCH=4a6a78236043da7f8af9ad7be8488aeed6884eda
 
@@ -111,16 +118,16 @@ CFLAGS += -DWITH_LWIP -iquote./config $(EXTRA_CFLAGS)
 # lwip library
 
 CFLAGS += -Ilwip/src/include/ -Ilwip/src/include/ipv4/ \
-	  -Ilwip/contrib/ports/unix/port/include/ \
-	  -Ilwip/contrib/ports/unix/proj/minimal/
+	  -I$(USE_LWIP_CONTRIB)/ports/unix/port/include/ \
+	  -I$(USE_LWIP_CONTRIB)/ports/unix/proj/minimal/
 
 LWIP_SRC = def.c init.c tapif.c etharp.c netif.c timeouts.c stats.c udp.c \
 	   tcp.c pbuf.c ip4_addr.c ip4.c inet_chksum.c tcp_in.c tcp_out.c \
 	   icmp.c raw.c ip4_frag.c sys_arch.c ethernet.c ip.c mem.c memp.c \
 	   igmp.c tcpip.c
 vpath %.c lwip/src/core/ lwip/contrib/ports/unix/proj/minimal/ \
-	  lwip/src/netif/ lwip/src/core/ipv4/ lwip/contrib/ports/unix/port/ \
-	  lwip/contrib/ports/unix/port/netif/ lwip/src/api/
+	  lwip/src/netif/ lwip/src/core/ipv4/ $(USE_LWIP_CONTRIB)/ports/unix/port/ \
+	  $(USE_LWIP_CONTRIB)/ports/unix/port/netif/ lwip/src/api/
 # CFLAGS += -DLWIP_UNIX_LINUX
 
 # if ipv6 is used
