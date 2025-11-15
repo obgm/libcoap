@@ -75,11 +75,6 @@ int coap_socket_bind_udp(coap_socket_t *sock,
                          coap_address_t *bound_addr);
 #endif /* COAP_SERVER_SUPPORT */
 
-#ifdef WITH_LWIP
-ssize_t coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
-                             coap_pdu_t *pdu);
-#endif
-
 /**
  * Function interface for data transmission. This function returns the number of
  * bytes that have been transmitted, or a value less than zero on error.

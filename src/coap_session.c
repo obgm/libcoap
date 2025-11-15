@@ -2097,8 +2097,8 @@ coap_new_server_session(coap_context_t *ctx, coap_endpoint_t *ep, void *extra) {
 
   coap_make_addr_hash(&session->addr_hash, session->proto, &session->addr_info);
 
-#ifdef COAP_EPOLL_SUPPORT
   session->sock.session = session;
+#ifdef COAP_EPOLL_SUPPORT
   coap_epoll_ctl_add(&session->sock,
                      EPOLLIN,
                      __func__);

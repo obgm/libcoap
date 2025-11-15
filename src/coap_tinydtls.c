@@ -321,6 +321,16 @@ put_session_addr(const coap_address_t *a, session_t *s) {
     memcpy(&s->addr.sin.sin_addr, &a->addr, sizeof(s->addr.sin.sin_addr));
     s->addr.sin.sin_port = a->port;
   }
+#elif LWIP_IPV4
+  s->addr.sa.sa_family = AF_INET;
+  s->size = (socklen_t)sizeof(s->addr.sin);
+  memcpy(&s->addr.sin.sin_addr, &a->addr, sizeof(s->addr.sin.sin_addr));
+  s->addr.sin.sin_port = a->port;
+#elif LWIP_IPV6
+  s->addr.sa.sa_family = AF_INET6;
+  s->size = (socklen_t)sizeof(s->addr.sin6);
+  memcpy(&s->addr.sin6.sin6_addr, &a->addr, sizeof(s->addr.sin6.sin6_addr));
+  s->addr.sin6.sin6_port = a->port;
 #else /* ! LWIP_IPV6 || ! LWIP_IPV4 */
 #endif /* ! LWIP_IPV6 || ! LWIP_IPV4 */
 #else /* ! LWIP_SOCKET */

@@ -28,7 +28,15 @@
 
 #if NO_SYS == 0
 extern sys_sem_t coap_io_timeout_sem;
+extern uint32_t coap_lwip_in_call_back_ref;
 #endif /* NO_SYS == 0 */
+
+typedef struct {
+  coap_session_t *session;
+  struct udp_pcb *udp_pcb;
+  struct pbuf *pbuf;
+  coap_address_t addr;
+} coap_lwip_udp_t;
 
 /*
  * Not used for LwIP (done with coap_recvc()), but need dummy function.
@@ -44,7 +52,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
 #if COAP_CLIENT_SUPPORT
 /** Callback from lwIP when a package was received for a client.
  *
- * The current implementation deals this to coap_dispatch immediately, but
+ * The current implementation passes this to coap_dispatch() immediately, but
  * other mechanisms (as storing the package in a queue and later fetching it
  * when coap_io_do_io is called) can be envisioned.
  *
@@ -109,7 +117,13 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
         goto error;
       }
     }
+#if NO_SYS == 0
+    coap_lwip_in_call_back_ref++;
+#endif /* NO_SYS == 0 */
     coap_dispatch(session->context, session, pdu);
+#if NO_SYS == 0
+    coap_lwip_in_call_back_ref--;
+#endif /* NO_SYS == 0 */
   }
 #if NO_SYS == 0
   sys_sem_signal(&coap_io_timeout_sem);
@@ -143,7 +157,7 @@ coap_free_packet(coap_packet_t *packet) {
 
 /** Callback from lwIP when a UDP packet was received for a server.
  *
- * The current implementation deals this to coap_dispatch immediately, but
+ * The current implementation passes this to coap_dispatch() immediately, but
  * other mechanisms (as storing the package in a queue and later fetching it
  * when coap_io_do_io is called) can be envisioned.
  *
@@ -224,7 +238,13 @@ coap_udp_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
         goto error;
       }
     }
+#if NO_SYS == 0
+    coap_lwip_in_call_back_ref++;
+#endif /* NO_SYS == 0 */
     coap_dispatch(ep->context, session, pdu);
+#if NO_SYS == 0
+    coap_lwip_in_call_back_ref--;
+#endif /* NO_SYS == 0 */
   }
 
   coap_delete_pdu_lkd(pdu);
@@ -257,31 +277,29 @@ cleanup:
 
 #endif /* ! COAP_SERVER_SUPPORT */
 
-ssize_t
-coap_socket_send_pdu(coap_socket_t *sock, coap_session_t *session,
-                     coap_pdu_t *pdu) {
-  /* FIXME: we can't check this here with the existing infrastructure, but we
-  * should actually check that the pdu is not held by anyone but us. the
-  * respective pbuf is already exclusively owned by the pdu. */
-  struct pbuf *pbuf;
+#if NO_SYS == 0
+static void
+coap_lwip_udp_sendto(void *ctx) {
+  coap_lwip_udp_t *cb_ctx = (coap_lwip_udp_t *)ctx;
   int err;
 
-  pbuf_realloc(pdu->pbuf, pdu->used_size + coap_pdu_parse_header_size(session->proto,
-               pdu->pbuf->payload));
-
-  if (coap_debug_send_packet()) {
-    /* Need to take a copy as we may be re-using the origin in a retransmit */
-    pbuf = pbuf_clone(PBUF_TRANSPORT, PBUF_RAM, pdu->pbuf);
-    if (pbuf == NULL)
-      return -1;
-    err = udp_sendto(sock->udp_pcb, pbuf, &session->addr_info.remote.addr,
-                     session->addr_info.remote.port);
-    pbuf_free(pbuf);
-    if (err < 0)
-      return -1;
+  if (cb_ctx) {
+    err = udp_sendto(cb_ctx->udp_pcb, cb_ctx->pbuf, &cb_ctx->addr.addr,
+                     cb_ctx->addr.port);
+    if (err < 0) {
+      if (err == ERR_RTE) {
+        coap_log_warn("** %s: udp_sendto: Packet not routable\n",
+                      coap_session_str(cb_ctx->session));
+      } else {
+        coap_log_warn("** %s: udp_sendto: error %d\n",
+                      coap_session_str(cb_ctx->session), err);
+      }
+    }
+    pbuf_free(cb_ctx->pbuf);
+    coap_free_type(COAP_STRING, cb_ctx);
   }
-  return pdu->used_size;
 }
+#endif /* NO_SYS == 0 */
 
 /*
  * dgram
@@ -296,29 +314,53 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
 
   if (coap_debug_send_packet()) {
     pbuf = pbuf_alloc(PBUF_TRANSPORT, data_len, PBUF_RAM);
-    if (pbuf == NULL)
-      return -1;
-    memcpy(pbuf->payload, data, data_len);
-
-    coap_lock_invert(LOCK_TCPIP_CORE(),
-                     UNLOCK_TCPIP_CORE(); return -1);
-
-    err = udp_sendto(sock->udp_pcb, pbuf, &session->addr_info.remote.addr,
-                     session->addr_info.remote.port);
-
-    UNLOCK_TCPIP_CORE();
-
-    pbuf_free(pbuf);
-    if (err < 0) {
-      if (err == ERR_RTE) {
-        coap_log_warn("** %s: udp_sendto: Packet not routable\n",
-                      coap_session_str(session));
-      } else {
-        coap_log_warn("** %s: udp_sendto: error %d\n",
-                      coap_session_str(session), err);
-      }
+    if (pbuf == NULL) {
+      errno = ENOMEM;
       return -1;
     }
+    memcpy(pbuf->payload, data, data_len);
+
+#if NO_SYS == 0
+    if (coap_lwip_in_call_back_ref == 0) {
+      coap_lwip_udp_t *cb_ctx = coap_malloc_type(COAP_STRING, sizeof(coap_lwip_udp_t));
+
+      if (!cb_ctx) {
+        coap_log_warn("** %s: coap_socket_send: error\n",
+                      coap_session_str(session));
+        pbuf_free(pbuf);
+        errno = ENOMEM;
+        return -1;
+      }
+      cb_ctx->session = session;
+      cb_ctx->pbuf = pbuf;
+      cb_ctx->udp_pcb = sock->udp_pcb;
+      cb_ctx->addr = session->addr_info.remote;
+      err = tcpip_try_callback(coap_lwip_udp_sendto, cb_ctx);
+
+      if (err < 0) {
+        coap_log_warn("** %s: tcpip_try_callback: error %d\n",
+                      coap_session_str(session), err);
+        errno = EAGAIN;
+        return -1;
+      }
+    } else {
+#endif /* NO_SYS == 0 */
+      err = udp_sendto(sock->udp_pcb, pbuf, &session->addr_info.remote.addr,
+                       session->addr_info.remote.port);
+      pbuf_free(pbuf);
+      if (err < 0) {
+        if (err == ERR_RTE) {
+          coap_log_warn("** %s: udp_sendto: Packet not routable\n",
+                        coap_session_str(session));
+        } else {
+          coap_log_warn("** %s: udp_sendto: error %d\n",
+                        coap_session_str(session), err);
+        }
+        return -1;
+      }
+#if NO_SYS == 0
+    }
+#endif /* NO_SYS == 0 */
   }
   return data_len;
 }
@@ -427,18 +469,41 @@ err_unlock:
   return 0;
 }
 #endif /* ! COAP_CLIENT_SUPPORT */
+
+#if NO_SYS == 0
+static void
+coap_lwip_udp_remove(void *ctx) {
+  struct udp_pcb *udp_pcb = (struct udp_pcb *)ctx;
+
+  if (udp_pcb) {
+    udp_remove(udp_pcb);
+  }
+}
+#endif /* NO_SYS == 0 */
+
 void
 coap_socket_dgrm_close(coap_socket_t *sock) {
-  if (sock->udp_pcb) {
-    if (sock->session) {
-      coap_lock_invert(LOCK_TCPIP_CORE(),
-                       UNLOCK_TCPIP_CORE(); return);
+  struct udp_pcb *udp_pcb = sock->udp_pcb;
+  err_t err;
+
+  sock->udp_pcb = NULL;
+  if (udp_pcb) {
+#if NO_SYS == 0
+    if (coap_lwip_in_call_back_ref == 0) {
+      err = tcpip_try_callback(coap_lwip_udp_remove, udp_pcb);
+
+      if (err < 0) {
+        coap_log_warn("** %s: tcpip_try_callback: error %d\n",
+                      sock->session ? coap_session_str(sock->session) : "", err);
+        errno = EAGAIN;
+        return;
+      }
     } else {
-      LOCK_TCPIP_CORE();
+#endif /* NO_SYS == 0 */
+      udp_remove(udp_pcb);
+#if NO_SYS == 0
     }
-    udp_remove(sock->udp_pcb);
-    UNLOCK_TCPIP_CORE();
-    sock->udp_pcb = NULL;
+#endif /* NO_SYS == 0 */
   }
   return;
 }

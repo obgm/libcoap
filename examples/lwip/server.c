@@ -187,6 +187,4 @@ main(int argc, char **argv) {
   server_coap_finished();
   printf("Server Application finished.\n");
   exit(0);
-
-  return 0;
 }

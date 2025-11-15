@@ -63,6 +63,10 @@ hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
     if (query != NULL
         && coap_string_equal(query, coap_make_str_const("ticks"))) {
       /* output ticks */
+      len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)t);
+      coap_add_data(response, len, buf);
+    } else {
+      /* Output secs for now */
       len = snprintf((char *)buf, sizeof(buf), "%u", (unsigned int)now);
       coap_add_data(response, len, buf);
     }
@@ -165,8 +169,13 @@ server_coap_init(coap_lwip_input_wait_handler_t input_wait,
     coap_context_set_psk2(main_coap_context, &setup_data);
   }
 
+#if LWIP_IPV6
   node.s = (const uint8_t *)"::";
   node.length = 2;
+#else /* ! LWIP_IPV6 */
+  node.s = (const uint8_t *)"0.0.0.0";
+  node.length = 7;
+#endif /* LWIP_IPV6 */
   scheme_hint_bits =
       coap_get_available_scheme_hint_bits(use_psk[0],
                                           0, COAP_PROTO_NONE);
