@@ -131,10 +131,10 @@ FUNCTIONS
 [source, c]
 ----
 /*
- * coap_proxy_type_t Proxy definitions.
- *  0x0007  Old 4.3.5 mappings for backward compatability.
- *  0x0038  New type mappings.
- *  0xffc0  Bitwise actions.
+ * coap_proxy_t Proxy definitions.
+ *  0x00000007  Old 4.3.5 mappings for backward compatability.
+ *  0x00000038  New type mappings.
+ *  0xffffffc0  Bitwise optional actions.
  *
  * Three types of proxy.
  *  reverse         Traffic forward to internal set of servers.
@@ -147,12 +147,14 @@ FUNCTIONS
  */
 
 typedef enum {
-  /* Missing initial 'hole' is for the old style proxy mappings */
-  COAP_PROXY_REV = (1 << 3),         /**< reverse proxy. */
-  COAP_PROXY_FWD_STATIC = (2 << 3),  /**< forward-static proxy. */
-  COAP_PROXY_FWD_DYNAMIC = (3 << 3), /**< forward-dynamic proxy. */
+  /* Reserved space for Old style Proxy types */
 
-  /* Start of bit mask mapping */
+  /* New style Proxy types */
+  COAP_PROXY_REV = (1 << 3),         /* reverse proxy. */
+  COAP_PROXY_FWD_STATIC = (2 << 3),  /* forward-static proxy. */
+  COAP_PROXY_FWD_DYNAMIC = (3 << 3), /* forward-dynamic proxy. */
+
+  /* Start of additional optional bit mask mapping */
   COAP_PROXY_BIT_STRIP = (1 << 6),
   /**<
    * If COAP_PROXY_BIT_STRIP set, then remove any Proxy-Uri or Proxy-Scheme,
@@ -164,7 +166,7 @@ typedef enum {
    * else only unicast.
    * [ Ignored if not COAP_PROXY_FWD_DYNAMIC ]
    */
-} coap_proxy_type_t;
+} coap_proxy_t;
 
 typedef struct coap_proxy_server_t {
   coap_uri_t uri;          /* host and port define the server, scheme method */
@@ -177,7 +179,8 @@ typedef struct coap_proxy_server_list_t {
   coap_proxy_server_t *entry; /* Set of servers to connect to */
   size_t entry_count;         /* The number of servers in entry list */
   size_t next_entry;          /* Next server to use (% entry_count) */
-  coap_proxy_type_t type;     /* The proxy type - COAP_PROXY_* definitions */
+  coap_proxy_t type;          /* The proxy type and option controlling bits
+                                 (if old type used, will get mapped into new + bits */
   int track_client_session;   /* If 1, track individual connections to upstream
                                  server, else 0 for all clients to be multiplexed
                                  over the same upstream session */
