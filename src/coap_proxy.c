@@ -317,11 +317,11 @@ coap_verify_proxy_scheme_supported(coap_uri_scheme_t scheme) {
   return 1;
 }
 
-static coap_proxy_type_t
-coap_proxy_map_type(coap_proxy_type_t proxy_type) {
+static coap_proxy_t
+coap_proxy_map_type(coap_proxy_t proxy_type) {
   if ((proxy_type & COAP_PROXY_NEW_MASK) == 0) {
     /* Old version - update to bitwise version */
-    switch ((coap_proxy_old_t)proxy_type) {
+    switch ((int)proxy_type) {
     case COAP_PROXY_REVERSE:
       proxy_type = COAP_PROXY_REV;
       break;
@@ -363,7 +363,7 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
   coap_opt_iterator_t opt_iter;
   coap_opt_t *proxy_scheme;
   coap_opt_t *proxy_uri;
-  coap_proxy_type_t proxy_type;
+  coap_proxy_t proxy_type;
 
   *proxy_entry_created = 0;
 
@@ -593,7 +593,7 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
     memcpy(&dst, &info_list->addr, sizeof(dst));
     coap_free_address_info(info_list);
     if (coap_is_mcast(&dst)) {
-      coap_proxy_type_t proxy_type = coap_proxy_map_type(server_list->type);
+      coap_proxy_t proxy_type = coap_proxy_map_type(server_list->type);
 
       if ((proxy_type & COAP_PROXY_NEW_MASK) == COAP_PROXY_FWD_DYNAMIC &&
           (proxy_type & COAP_PROXY_BIT_MCAST) == 0) {
@@ -917,7 +917,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
                                           COAP_OPTION_OBSERVE,
                                           &opt_iter);
   coap_proxy_cache_t *proxy_cache = NULL;
-  coap_proxy_type_t proxy_type;
+  coap_proxy_t proxy_type;
 
   /* Set up ongoing session (if not already done) */
   proxy_entry = coap_proxy_get_ongoing_session(session, request, response,

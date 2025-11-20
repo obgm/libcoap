@@ -29,25 +29,45 @@ extern "C" {
  */
 
 /**
- * coap_proxy_type_t Proxy definitions.
+ * coap_proxy_t Proxy definitions.
+ *
+ *  0x00000007  Old 4.3.5 mappings for backward compatability.
+ *  0x00000038  New type mappings.
+ *  0xffffffc0  Bitwise optional actions.
  *
  * Three types of proxy.
  *  reverse         Traffic forward to internal set of servers.
  *  forward-static  Traffic forwarded to defined set of servers.
  *  forward-dynamic Traffic forwarded to host defined by
  *                  Proxy-Uri / Proxy-Scheme options.
- * Operations for each proxy type.
+ * Additional options for each proxy type.
  *  strip           Remove Proxy-Uri and/or Proxy-Scheme options.
  *  mcast           Support forward-dynamic traffic to multicast addresses.
  */
 
 typedef enum {
-  /* Missing initial 'hole' is for the old style proxy mappings */
+  /* Old entries, now updated for flexibility */
+  COAP_PROXY_REVERSE,       /**< Old - do not use - Act as a reverse proxy */
+  COAP_PROXY_REVERSE_STRIP, /**< Old - do not use - Act as a reverse proxy,
+                                     strip out proxy options */
+  COAP_PROXY_FORWARD,       /**< Old - do not use - Act as a forward-static proxy */
+  COAP_PROXY_FORWARD_STRIP, /**< Old - do not use - Act as a forward-static proxy,
+                                     strip out proxy options */
+  COAP_PROXY_DIRECT,        /**< Old - do not use - Act as a forward-dynamic proxy */
+  COAP_PROXY_DIRECT_STRIP,  /**< Old - do not use - Act as a forward-dynamic proxy,
+                                    strip out proxy options */
+  COAP_PROXY_FORWARD_DYNAMIC = COAP_PROXY_DIRECT,
+  /**< Old - do not use - Act as a forward-dynamic proxy */
+  COAP_PROXY_FORWARD_DYNAMIC_STRIP = COAP_PROXY_DIRECT_STRIP,
+  /**< Old - do not use - Act as a forward-dynamic proxy, strip out proxy options */
+
+
+  /* New style Proxy types */
   COAP_PROXY_REV = (1 << 3),         /**< reverse proxy. */
   COAP_PROXY_FWD_STATIC = (2 << 3),  /**< forward-static proxy. */
   COAP_PROXY_FWD_DYNAMIC = (3 << 3), /**< forward-dynamic proxy. */
 
-  /* Start of bit mask mapping */
+  /* Start of additional optional bit mask mapping */
   COAP_PROXY_BIT_STRIP = (1 << 6),
   /**<
    * If COAP_PROXY_BIT_STRIP set, then remove any Proxy-Uri or Proxy-Scheme,
@@ -59,31 +79,10 @@ typedef enum {
    * else only unicast.
    * [ Ignored if not COAP_PROXY_FWD_DYNAMIC ]
    */
-} coap_proxy_type_t;
+} coap_proxy_t;
 
-#define COAP_PROXY_OLD_MASK 0x07 /**< Space used in coap_proxy_type_t for old types */
-#define COAP_PROXY_NEW_MASK 0x38 /**< Space used in coap_proxy_type_t for new types */
-
-/**
- * Old Mappings (4.3.5) that map into the first 3 bits of coap_proxy_type_t
- */
-typedef enum {
-  COAP_PROXY_REVERSE,       /**< Act as a reverse proxy */
-  COAP_PROXY_REVERSE_STRIP, /**< Act as a reverse proxy,
-                                     strip out proxy options */
-  COAP_PROXY_FORWARD,       /**< Act as a forward-static proxy */
-  COAP_PROXY_FORWARD_STRIP, /**< Act as a forward-static proxy,
-                                     strip out proxy options */
-  COAP_PROXY_DIRECT,        /**< Act as a forward-dynamic proxy */
-  COAP_PROXY_DIRECT_STRIP,  /**< Act as a forward-dynamic proxy,
-                                    strip out proxy options */
-  COAP_PROXY_FORWARD_DYNAMIC = COAP_PROXY_DIRECT,
-  /**< Act as a forward-dynamic proxy */
-  COAP_PROXY_FORWARD_DYNAMIC_STRIP = COAP_PROXY_DIRECT_STRIP,
-  /**< Act as a forward-dynamic proxy, strip out proxy options */
-} coap_proxy_old_t;
-
-typedef coap_proxy_old_t coap_proxy_t;
+#define COAP_PROXY_OLD_MASK 0x07 /**< Space used in coap_proxy_t for old types */
+#define COAP_PROXY_NEW_MASK 0x38 /**< Space used in coap_proxy_t for new types */
 
 typedef struct coap_proxy_server_t {
   coap_uri_t uri;         /**< host and port define the server, scheme method */
@@ -96,7 +95,8 @@ typedef struct coap_proxy_server_list_t {
   coap_proxy_server_t *entry; /**< Set of servers to connect to */
   size_t entry_count;         /**< The number of servers in entry list */
   size_t next_entry;          /**< Next server to use (% entry_count) */
-  coap_proxy_type_t type;     /**< The proxy type */
+  coap_proxy_t type;          /**< The proxy type and option controlling bits
+                                   (if old type used, will get mapped into new + bits */
   int track_client_session;   /**< If 1, track individual connections to upstream
                                    server, else 0 for all clients to be multiplexed
                                    over the same upstream session */
