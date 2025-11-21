@@ -5,5 +5,3 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(coap_client)
 
 target_sources(app PRIVATE src/main.c)
-
-include(${ZEPHYR_BASE}/samples/net/common/common.cmake)

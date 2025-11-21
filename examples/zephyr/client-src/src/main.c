@@ -196,11 +196,11 @@ int main(void)
 	coap_context_set_block_mode(coap_context, COAP_BLOCK_USE_LIBCOAP);
 
 	/* Set up and initiate client logic */
-	coap_client_init(coap_context);
+	int rc = coap_client_init(coap_context);
 	coap_log_info("libcoap test client started\n");
 
 	/* Keep on processing until response is back in ... */
-	while (quit == 0) {
+	while (rc && quit == 0) {
 		coap_io_process(coap_context, 1000);
 	}
 fail:
@@ -208,5 +208,5 @@ fail:
 	coap_free_context(coap_context);
 
 	coap_cleanup();
-	exit(0);
+	return 1;
 }
