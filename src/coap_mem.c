@@ -483,6 +483,7 @@ coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
 #elif defined(__ZEPHYR__)
 
 #include <zephyr/kernel.h>
+#include <zephyr/version.h>
 
 void
 coap_memory_init(void) {
