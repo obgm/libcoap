@@ -544,8 +544,7 @@ coap_dgram_write(WOLFSSL *ssl, char *in, int inl, void *ctx) {
   coap_tick_t now;
 
   (void)ssl;
-  assert(data);
-  if (data->session) {
+  if (data && data->session) {
     if (!coap_netif_available(data->session)
 #if COAP_SERVER_SUPPORT
         && data->session->endpoint == NULL
@@ -587,7 +586,7 @@ coap_dtls_psk_client_callback(WOLFSSL *ssl,
   const coap_bin_const_t *psk_identity;
 
   c_session = (coap_session_t *)wolfSSL_get_app_data(ssl);
-  if (c_session == NULL)
+  if (c_session == NULL || c_session->context == NULL)
     return 0;
   w_context = (coap_wolfssl_context_t *)c_session->context->dtls_context;
   if (w_context == NULL)
@@ -688,7 +687,7 @@ coap_dtls_psk_server_callback(
   const coap_bin_const_t *psk_key;
 
   c_session = (coap_session_t *)wolfSSL_get_app_data(ssl);
-  if (c_session == NULL)
+  if (c_session == NULL || c_session->context == NULL)
     return 0;
 
   setup_data = &c_session->context->spsk_setup_data;
@@ -740,6 +739,12 @@ coap_dtls_info_callback(const WOLFSSL *ssl, int where, int ret) {
   coap_session_t *session = (coap_session_t *)wolfSSL_get_app_data(ssl);
   const char *pstr;
   int w = where &~SSL_ST_MASK;
+
+  if (!session) {
+    coap_dtls_log(COAP_LOG_WARN,
+                  "coap_dtls_info_callback: session not determined, where 0x%0x and ret 0x%0x\n", where, ret);
+    return;
+  }
 
   if (w & SSL_ST_CONNECT)
     pstr = "wolfSSL_connect";
@@ -823,7 +828,6 @@ coap_sock_read(WOLFSSL *ssl, char *out, int outl, void *ctx) {
   coap_session_t *session = w_env ? w_env->data.session : NULL;
 
   (void)ssl;
-  assert(session);
   if (w_env && !w_env->done_psk_check && w_env->ssl &&
       w_env->role == COAP_DTLS_ROLE_SERVER) {
     if (wolfSSL_SSL_in_init(w_env->ssl)) {
@@ -839,7 +843,7 @@ coap_sock_read(WOLFSSL *ssl, char *out, int outl, void *ctx) {
       }
     }
   }
-  if (out != NULL) {
+  if (session && out != NULL) {
     ret =(int)session->sock.lfunc[COAP_LAYER_TLS].l_read(session, (uint8_t *)out,
                                                          outl);
     if (ret == 0) {
@@ -862,10 +866,14 @@ coap_sock_write(WOLFSSL *ssl, char *in, int inl, void *ctx) {
   coap_session_t *session = w_env ? w_env->data.session : NULL;
 
   (void)ssl;
-  assert(session);
-  ret = (int)session->sock.lfunc[COAP_LAYER_TLS].l_write(session,
-                                                         (const uint8_t *)in,
-                                                         inl);
+  if (!session) {
+    errno = ENOMEM;
+    ret = -1;
+  } else {
+    ret = (int)session->sock.lfunc[COAP_LAYER_TLS].l_write(session,
+                                                           (const uint8_t *)in,
+                                                           inl);
+  }
   /* Translate layer what returns into what wolfSSL expects */
   if (ret == 0) {
     ret = -1;
@@ -1370,7 +1378,7 @@ setup_pki_ssl(WOLFSSL *ssl,
   /*
    * Configure the CA
    */
-  if (key.key.define.ca.u_byte &&
+  if (ctx && key.key.define.ca.u_byte &&
       key.key.define.ca.u_byte[0]) {
     switch (key.key.define.ca_def) {
     case COAP_PKI_KEY_DEF_PEM:
@@ -1452,7 +1460,7 @@ get_san_or_cn_from_cert(WOLFSSL_X509 *x509) {
       for (n = 0; n < san_count; n++) {
         const WOLFSSL_GENERAL_NAME *name = wolfSSL_sk_GENERAL_NAME_value(san_list, n);
 
-        if (name->type == GEN_DNS) {
+        if (name && name->type == GEN_DNS) {
           const char *dns_name = (const char *)wolfSSL_ASN1_STRING_get0_data(name->d.dNSName);
 
           /* Make sure that there is not an embedded NUL in the dns_name */
@@ -1496,23 +1504,30 @@ get_san_or_cn_from_cert(WOLFSSL_X509 *x509) {
 
 static int
 tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
-  WOLFSSL *ssl = wolfSSL_X509_STORE_CTX_get_ex_data(ctx,
-                                                    wolfSSL_get_ex_data_X509_STORE_CTX_idx());
-  coap_session_t *session = wolfSSL_get_app_data(ssl);
-  coap_wolfssl_context_t *w_context =
-      ((coap_wolfssl_context_t *)session->context->dtls_context);
-  coap_dtls_pki_t *setup_data = &w_context->setup_data;
+  int index = wolfSSL_get_ex_data_X509_STORE_CTX_idx();
+  WOLFSSL *ssl =  index >= 0 ? wolfSSL_X509_STORE_CTX_get_ex_data(ctx, index) : NULL;
+  coap_session_t *session = ssl ? wolfSSL_get_app_data(ssl) : NULL;
+  coap_wolfssl_context_t *w_context = (session && session->context) ?
+                                      ((coap_wolfssl_context_t *)session->context->dtls_context) : NULL;
+  coap_dtls_pki_t *setup_data = w_context ? &w_context->setup_data : NULL;
   int depth = wolfSSL_X509_STORE_CTX_get_error_depth(ctx);
   int err = wolfSSL_X509_STORE_CTX_get_error(ctx);
   WOLFSSL_X509 *x509 = wolfSSL_X509_STORE_CTX_get_current_cert(ctx);
   char *cn = NULL;
   int keep_preverify_ok = preverify_ok;
 
+  if (!setup_data) {
+    wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
+    return 0;
+  }
+
   if (setup_data->is_rpk_not_cert) {
     cn = wolfssl_strdup("RPK");
   } else {
-    cn = get_san_or_cn_from_cert(x509);
+    cn = x509 ? get_san_or_cn_from_cert(x509) : NULL;
   }
+  coap_dtls_log(COAP_LOG_DEBUG, "depth %d error %x preverify %d cert '%s'\n",
+                depth, err, preverify_ok, cn ? cn : "");
   if (!preverify_ok) {
     switch (err) {
     case X509_V_ERR_CERT_NOT_YET_VALID:
@@ -1579,21 +1594,26 @@ tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
       uint8_t *base_buf2 = base_buf = wolfssl_malloc(length);
       int ret;
 
-      /* base_buf2 gets moved to the end */
-      wolfSSL_i2d_X509(x509, &base_buf2);
-      coap_lock_callback_ret(ret,
-                             setup_data->validate_cn_call_back(cn, base_buf, length, session,
-                                                               depth, preverify_ok,
-                                                               setup_data->cn_call_back_arg));
-      if (!ret) {
-        if (depth == 0) {
-          wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
-        } else {
-          wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_CA);
+      if (base_buf) {
+        /* base_buf2 gets moved to the end */
+        wolfSSL_i2d_X509(x509, &base_buf2);
+        coap_lock_callback_ret(ret,
+                               setup_data->validate_cn_call_back(cn, base_buf, length, session,
+                                                                 depth, preverify_ok,
+                                                                 setup_data->cn_call_back_arg));
+        if (!ret) {
+          if (depth == 0) {
+            wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
+          } else {
+            wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_CA);
+          }
+          preverify_ok = 0;
         }
+        wolfssl_free(base_buf);
+      } else {
+        wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
         preverify_ok = 0;
       }
-      wolfssl_free(base_buf);
     }
   }
   wolfssl_free(cn);
@@ -1616,10 +1636,10 @@ tls_server_name_call_back(WOLFSSL *ssl,
                           void *arg) {
   coap_dtls_pki_t *setup_data = (coap_dtls_pki_t *)arg;
   coap_session_t *session = (coap_session_t *)wolfSSL_get_app_data(ssl);
-  coap_wolfssl_context_t *w_context =
-      ((coap_wolfssl_context_t *)session->context->dtls_context);
+  coap_wolfssl_context_t *w_context = (session && session->context) ?
+                                      ((coap_wolfssl_context_t *)session->context->dtls_context) : NULL;
 
-  if (!ssl) {
+  if (!w_context) {
     return noack_return;
   }
 
@@ -1663,10 +1683,10 @@ psk_tls_server_name_call_back(WOLFSSL *ssl,
                              ) {
   coap_dtls_spsk_t *setup_data = (coap_dtls_spsk_t *)arg;
   coap_session_t *c_session = (coap_session_t *)wolfSSL_get_app_data(ssl);
-  coap_wolfssl_context_t *w_context =
-      ((coap_wolfssl_context_t *)c_session->context->dtls_context);
+  coap_wolfssl_context_t *w_context = (c_session && c_session->context) ?
+                                      ((coap_wolfssl_context_t *)c_session->context->dtls_context) : NULL;
 
-  if (!ssl) {
+  if (!w_context) {
     return noack_return;
   }
 
@@ -1916,16 +1936,16 @@ coap_dtls_free_context(void *handle) {
 #if COAP_SERVER_SUPPORT
 void *
 coap_dtls_new_server_session(coap_session_t *session) {
-  coap_wolfssl_context_t *w_context =
-      ((coap_wolfssl_context_t *)session->context->dtls_context);
+  coap_wolfssl_context_t *w_context = session && session->context ?
+                                      ((coap_wolfssl_context_t *)session->context->dtls_context) : NULL;
   coap_dtls_context_t *dtls;
   WOLFSSL *ssl = NULL;
   int r;
   const coap_bin_const_t *psk_hint;
-  coap_wolfssl_env_t *w_env = (coap_wolfssl_env_t *)session->tls;
+  coap_wolfssl_env_t *w_env = session ? (coap_wolfssl_env_t *)session->tls : NULL;
   coap_tick_t now;
 
-  if (!w_env)
+  if (!w_env || !w_context)
     goto error;
 
   if (!setup_dtls_context(w_context))
@@ -2074,9 +2094,28 @@ setup_client_ssl_session(coap_session_t *session, WOLFSSL *ssl) {
     }
 #endif /* WOLFSSL_DTLS_CID && WOLFSSL_DTLS13 */
   }
-  if (w_context->psk_pki_enabled & IS_PKI) {
+  if ((w_context->psk_pki_enabled & IS_PKI) ||
+      (w_context->psk_pki_enabled & (IS_PSK | IS_PKI)) == 0) {
+    /*
+     * If neither PSK or PKI have been set up, use PKI basics.
+     * This works providing COAP_PKI_KEY_PEM has a value of 0.
+     */
     coap_dtls_pki_t *setup_data = &w_context->setup_data;
 
+    if (!(w_context->psk_pki_enabled & IS_PKI)) {
+      /* PKI not defined - set up some defaults */
+      setup_data->verify_peer_cert        = 1;
+      setup_data->check_common_ca         = 0;
+      setup_data->allow_self_signed       = 1;
+      setup_data->allow_expired_certs     = 1;
+      setup_data->cert_chain_validation   = 1;
+      setup_data->cert_chain_verify_depth = 2;
+      setup_data->check_cert_revocation   = 1;
+      setup_data->allow_no_crl            = 1;
+      setup_data->allow_expired_crl       = 1;
+      setup_data->is_rpk_not_cert         = 0;
+      setup_data->use_cid                 = 0;
+    }
     set_ciphersuites(ssl, COAP_ENC_PKI);
     if (!setup_pki_ssl(ssl, setup_data, COAP_DTLS_ROLE_CLIENT))
       return 0;
@@ -2137,14 +2176,14 @@ void *
 coap_dtls_new_client_session(coap_session_t *session) {
   WOLFSSL *ssl = NULL;
   int r;
-  coap_wolfssl_context_t *w_context =
-      ((coap_wolfssl_context_t *)session->context->dtls_context);
+  coap_wolfssl_context_t *w_context = session && session->context ?
+                                      ((coap_wolfssl_context_t *)session->context->dtls_context) : NULL;
   coap_dtls_context_t *dtls;
-  coap_wolfssl_env_t *w_env =
-      coap_dtls_new_wolfssl_env(session, COAP_DTLS_ROLE_CLIENT);
+  coap_wolfssl_env_t *w_env = session ?
+                              coap_dtls_new_wolfssl_env(session, COAP_DTLS_ROLE_CLIENT) : NULL;
   coap_tick_t now;
 
-  if (!w_env)
+  if (!w_env || !w_context)
     goto error;
 
   if (!setup_dtls_context(w_context))
@@ -2153,6 +2192,7 @@ coap_dtls_new_client_session(coap_session_t *session) {
 
   ssl = wolfSSL_new(dtls->ctx);
   if (!ssl) {
+    session->dtls_event = COAP_EVENT_DTLS_CLOSED;
     goto error;
   }
   w_env->data.session = session;
@@ -2343,7 +2383,10 @@ coap_dtls_hello(coap_session_t *session,
 
   ssl_data = w_env ? &w_env->data : NULL;
   assert(ssl_data != NULL);
-
+  if (!ssl_data) {
+    errno = ENOMEM;
+    return -1;
+  }
   if (ssl_data->pdu_len) {
     coap_log_err("** %s: Previous data not read %u bytes\n",
                  coap_session_str(session), ssl_data->pdu_len);
