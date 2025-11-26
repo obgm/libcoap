@@ -34,7 +34,7 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#ifdef COAP_WITH_LIBMBEDTLS
+#if COAP_WITH_LIBMBEDTLS
 
 /*
  * This code can be conditionally compiled to remove some components if
@@ -137,6 +137,7 @@ typedef struct coap_mbedtls_env_t {
   coap_tick_t last_timeout;
   unsigned int retry_scalar;
   coap_ssl_t coap_ssl_data;
+  uint32_t server_hello_cnt;
 } coap_mbedtls_env_t;
 
 typedef struct pki_sni_entry {
@@ -247,6 +248,8 @@ coap_dgram_write(void *ctx, const unsigned char *send_buffer,
                     result, send_buffer_length);
       errno = keep_errno;
       if (result < 0) {
+        if (errno == ENOTCONN || errno == ECONNREFUSED)
+          c_session->dtls_event = COAP_EVENT_DTLS_ERROR;
         return -1;
       } else {
         result = 0;
@@ -833,7 +836,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
   }
   if (m_context->root_ca_path) {
-    ret = mbedtls_x509_crt_parse_file(cacert, m_context->root_ca_path);
+    ret = mbedtls_x509_crt_parse_path(cacert, m_context->root_ca_path);
     if (ret < 0) {
       key.key.define.ca_def = COAP_PKI_KEY_DEF_PEM;
       return coap_dtls_define_issue(COAP_DEFINE_KEY_ROOT_CA,
@@ -1493,6 +1496,16 @@ do_mbedtls_handshake(coap_session_t *c_session,
     break;
   case MBEDTLS_ERR_SSL_WANT_READ:
   case MBEDTLS_ERR_SSL_WANT_WRITE:
+    if (m_env->ssl.state == MBEDTLS_SSL_SERVER_HELLO
+#if MBEDTLS_VERSION_NUMBER >= 0x03030000
+        || m_env->ssl.state == MBEDTLS_SSL_NEW_SESSION_TICKET
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03030000 */
+       ) {
+      if (++m_env->server_hello_cnt > 10) {
+        /* retried this too many times */
+        goto fail;
+      }
+    }
     errno = EAGAIN;
     ret = 0;
     break;
@@ -1731,9 +1744,13 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
 #endif /* ESPIDF_VERSION && CONFIG_MBEDTLS_DEBUG */
   if ((ret = mbedtls_ctr_drbg_seed(&m_env->ctr_drbg,
                                    mbedtls_entropy_func, &m_env->entropy, NULL, 0)) != 0) {
+    if (ret != MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED) {
+      coap_log_info("mbedtls_ctr_drbg_seed returned -0x%x: '%s'\n",
+                    -ret, get_error_string(ret));
+      goto fail;
+    }
     coap_log_err("mbedtls_ctr_drbg_seed returned -0x%x: '%s'\n",
                  -ret, get_error_string(ret));
-    goto fail;
   }
 
   if (role == COAP_DTLS_ROLE_CLIENT) {
@@ -2377,6 +2394,8 @@ coap_dtls_receive(coap_session_t *c_session,
 
     ret = mbedtls_ssl_read(&m_env->ssl, pdu, sizeof(pdu));
     if (ret > 0) {
+      coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
+                     coap_session_str(c_session), ret);
       ret = coap_handle_dgram(c_session->context, c_session, pdu, (size_t)ret);
       goto finish;
     }
@@ -2429,10 +2448,6 @@ finish:
     coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
     ssl_data->pdu_len = 0;
     ssl_data->pdu = NULL;
-  }
-  if (ret > 0) {
-    coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
-                   coap_session_str(c_session), ret);
   }
   return ret;
 }
@@ -3329,7 +3344,7 @@ error:
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !COAP_WITH_LIBMBEDTLS */
+#else /* ! COAP_WITH_LIBMBEDTLS */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -3341,4 +3356,4 @@ static inline void
 dummy(void) {
 }
 
-#endif /* COAP_WITH_LIBMBEDTLS */
+#endif /* ! COAP_WITH_LIBMBEDTLS */
