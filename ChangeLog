@@ -2,7 +2,16 @@
 
 	Change summary for version 4.3.5a:
 
-        * Fixes CVE-2025-59391.
+        * Fixes the following CVEs
+          CVE-2025-59391
+          CVE-2025-65494
+          CVE-2025-65495
+          CVE-2025-65496
+          CVE-2025-65497
+          CVE-2025-65498
+          CVE-2025-65499
+          CVE-2025-65500
+          CVE-2025-65501
         * CVE-2025-50518 not fixed as user application error.
         * Support for Mbed TLS 3.6.3.
         * Support for RIOT update changes.
