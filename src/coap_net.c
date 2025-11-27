@@ -1344,6 +1344,10 @@ coap_send_test_extended_token(coap_session_t *session) {
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
+/*
+ * Return:  0  Something failed
+ *          1  Success
+ */
 int
 coap_client_delay_first(coap_session_t *session) {
 #if COAP_CLIENT_SUPPORT
@@ -1365,7 +1369,7 @@ coap_client_delay_first(coap_session_t *session) {
       int result = coap_io_process_lkd(session->context, 1000);
 
       if (result < 0) {
-        session->doing_first = 0;
+        coap_reset_doing_first(session);
         session->delay_recursive = 0;
         coap_session_release_lkd(session);
         return 0;
@@ -1385,16 +1389,16 @@ coap_client_delay_first(coap_session_t *session) {
       } else {
         if (session->doing_first == 1) {
           /* Timeout failure of some sort with first request */
-          session->doing_first = 0;
           if (session->state == COAP_SESSION_STATE_CSM) {
             coap_log_debug("** %s: timeout waiting for CSM response\n",
                            coap_session_str(session));
             session->csm_not_seen = 1;
-            coap_session_connected(session);
           } else {
             coap_log_debug("** %s: timeout waiting for first response\n",
                            coap_session_str(session));
           }
+          coap_reset_doing_first(session);
+          coap_session_connected(session);
         }
       }
     }
@@ -1506,13 +1510,13 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
     coap_log_debug("coap_send: Socket closed\n");
     goto error;
   }
-  /*
-   * If this is not the first client request and are waiting for a response
-   * to the first client request, then drop sending out this next request
-   * until all is properly established.
-   */
-  if (!coap_client_delay_first(session)) {
-    goto error;
+
+  if (session->doing_first) {
+    LL_APPEND(session->doing_first_pdu, pdu);
+    coap_show_pdu(COAP_LOG_DEBUG, pdu);
+    coap_log_debug("** %s: mid=0x%04x: queued\n",
+                   coap_session_str(session), pdu->mid);
+    return  pdu->mid;
   }
 
   /* Indicate support for Extended Tokens if appropriate */
@@ -1531,13 +1535,49 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
     }
     /*
      * For reliable protocols, this will get cleared after CSM exchanged
-     * in coap_session_connected()
+     * in coap_session_connected() where Token size support is indicated in the CSM.
      */
     session->doing_first = 1;
-    if (!coap_client_delay_first(session)) {
+    coap_ticks(&session->doing_first_timeout);
+    LL_PREPEND(session->doing_first_pdu, pdu);
+    if (session->proto != COAP_PROTO_UDP) {
+      /* In case the next handshake / CSM is already in */
+      coap_io_process_lkd(session->context, COAP_IO_NO_WAIT);
+    }
+    /*
+     * Once Extended Token support size is determined, coap_send_lkd(session, pdu)
+     * will get called again.
+     */
+    coap_show_pdu(COAP_LOG_DEBUG, pdu);
+    coap_log_debug("** %s: mid=0x%04x: queued\n",
+                   coap_session_str(session), pdu->mid);
+    return pdu->mid;
+  }
+#if COAP_Q_BLOCK_SUPPORT
+  /* Indicate support for Q-Block if appropriate */
+  if (session->block_mode & COAP_BLOCK_TRY_Q_BLOCK &&
+      session->type == COAP_SESSION_TYPE_CLIENT &&
+      COAP_PDU_IS_REQUEST(pdu)) {
+    if (coap_block_test_q_block(session, pdu) == COAP_INVALID_MID) {
       goto error;
     }
+    session->doing_first = 1;
+    coap_ticks(&session->doing_first_timeout);
+    LL_PREPEND(session->doing_first_pdu, pdu);
+    if (session->proto != COAP_PROTO_UDP) {
+      /* In case the next handshake / CSM is already in */
+      coap_io_process_lkd(session->context, COAP_IO_NO_WAIT);
+    }
+    /*
+     * Once Extended Token support size is determined, coap_send_lkd(session, pdu)
+     * will get called again.
+     */
+    coap_show_pdu(COAP_LOG_DEBUG, pdu);
+    coap_log_debug("** %s: mid=0x%04x: queued\n",
+                   coap_session_str(session), pdu->mid);
+    return pdu->mid;
   }
+#endif /* COAP_Q_BLOCK_SUPPORT */
 
   /*
    * Check validity of token length
@@ -1648,23 +1688,6 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
   } else {
     memset(&block, 0, sizeof(block));
   }
-
-#if COAP_Q_BLOCK_SUPPORT
-  /* Indicate support for Q-Block if appropriate */
-  if (session->block_mode & COAP_BLOCK_TRY_Q_BLOCK &&
-      session->type == COAP_SESSION_TYPE_CLIENT &&
-      COAP_PDU_IS_REQUEST(pdu)) {
-    if (coap_block_test_q_block(session, pdu) == COAP_INVALID_MID) {
-      goto error;
-    }
-    session->doing_first = 1;
-    if (!coap_client_delay_first(session)) {
-      /* Q-Block test Session has failed for some reason */
-      set_block_mode_drop_q(session->block_mode);
-      goto error;
-    }
-  }
-#endif /* COAP_Q_BLOCK_SUPPORT */
 
 #if COAP_Q_BLOCK_SUPPORT
   if (!(session->block_mode & COAP_BLOCK_HAS_Q_BLOCK))
@@ -2973,8 +2996,10 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t
                        coap_queue_t **node) {
   coap_queue_t *p, *q;
 
-  if (!queue || !*queue)
+  if (!queue || !*queue) {
+    *node = NULL;
     return 0;
+  }
 
   /* replace queue head if PDU's time is less than head's time */
 
@@ -3009,6 +3034,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t
     return 1;
   }
 
+  *node = NULL;
   return 0;
 
 }
@@ -4249,7 +4275,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
       coap_block_delete_lg_crcv(session, lg_crcv);
     }
     coap_send_ack_lkd(session, rcvd);
-    session->doing_first = 0;
+    coap_reset_doing_first(session);
     return;
   }
 #if COAP_Q_BLOCK_SUPPORT
@@ -4272,9 +4298,8 @@ handle_response(coap_context_t *context, coap_session_t *session,
         set_block_mode_drop_q(session->block_mode);
       }
     }
-    session->doing_first = 0;
-    if (rcvd->type == COAP_MESSAGE_CON)
-      coap_send_ack_lkd(session, rcvd);
+    coap_send_ack_lkd(session, rcvd);
+    coap_reset_doing_first(session);
     return;
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
@@ -4294,8 +4319,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
       return;
     }
   }
-  if (session->doing_first)
-    session->doing_first = 0;
+  coap_reset_doing_first(session);
 
   /* Call application-specific response handler when available. */
   coap_call_response_handler(session, sent, rcvd, NULL);
@@ -4426,7 +4450,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   coap_opt_iterator_t opt_iter;
   coap_pdu_t *dec_pdu = NULL;
 #endif /* COAP_OSCORE_SUPPORT */
-  int is_ext_token_rst;
+  int is_ext_token_rst = 0;
   int oscore_invalid = 0;
 
   pdu->session = session;
@@ -4699,25 +4723,27 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         session->last_ping > 0)
       is_ping_rst = 1;
 
+#if COAP_CLIENT_SUPPORT
 #if COAP_Q_BLOCK_SUPPORT
     /* Check to see if checking out Q-Block support */
     if (session->block_mode & COAP_BLOCK_PROBE_Q_BLOCK &&
         session->remote_test_mid == pdu->mid) {
       coap_log_debug("Q-Block support not available\n");
       set_block_mode_drop_q(session->block_mode);
+      coap_reset_doing_first(session);
     }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
     /* Check to see if checking out extended token support */
-    is_ext_token_rst = 0;
     if (session->max_token_checked == COAP_EXT_T_CHECKING &&
         session->remote_test_mid == pdu->mid) {
       coap_log_debug("Extended Token support not available\n");
       session->max_token_size = COAP_TOKEN_DEFAULT_MAX;
       session->max_token_checked = COAP_EXT_T_CHECKED;
-      session->doing_first = 0;
+      coap_reset_doing_first(session);
       is_ext_token_rst = 1;
     }
+#endif /* COAP_CLIENT_SUPPORT */
 
     if (!is_ping_rst && !is_ext_token_rst)
       coap_log_alert("got RST for mid=0x%04x\n", pdu->mid);
@@ -4914,6 +4940,8 @@ coap_event_name(coap_event_t event) {
     return "COAP_EVENT_BAD_PACKET";
   case COAP_EVENT_MSG_RETRANSMITTED:
     return "COAP_EVENT_MSG_RETRANSMITTED";
+  case COAP_EVENT_FIRST_PDU_FAIL:
+    return "COAP_EVENT_FIRST_PDU_FAIL";
   case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
     return "COAP_EVENT_OSCORE_DECRYPTION_FAILURE";
   case COAP_EVENT_OSCORE_NOT_ENABLED:
@@ -4986,6 +5014,7 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
     case COAP_EVENT_WS_PACKET_SIZE:
     case COAP_EVENT_WS_CLOSED:
     case COAP_EVENT_BAD_PACKET:
+    case COAP_EVENT_FIRST_PDU_FAIL:
     case COAP_EVENT_RECONNECT_NO_MORE:
       /* Those that are deemed fatal to end sending a request */
       session->doing_send_recv = 0;

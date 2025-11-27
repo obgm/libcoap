@@ -128,6 +128,7 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_WS_PACKET_SIZE:
   case COAP_EVENT_WS_CLOSED:
   case COAP_EVENT_BAD_PACKET:
+  case COAP_EVENT_FIRST_PDU_FAIL:
   case COAP_EVENT_RECONNECT_NO_MORE:
     quit = 1;
     break;

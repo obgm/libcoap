@@ -110,6 +110,8 @@ typedef enum {
   COAP_EVENT_BAD_PACKET         = 0x5001,
   /** Triggered when a message is retransmitted */
   COAP_EVENT_MSG_RETRANSMITTED  = 0x5002,
+  /** Triggered when the initial app PDU cannot be transmitted */
+  COAP_EVENT_FIRST_PDU_FAIL     = 0x5003,
 
   /*
    * OSCORE events

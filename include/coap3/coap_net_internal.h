@@ -1001,6 +1001,14 @@ coap_mid_t coap_send_rst_lkd(coap_session_t *session, const coap_pdu_t *request)
 void coap_call_response_handler(coap_session_t *session, coap_pdu_t *sent,
                                 coap_pdu_t *rcvd, void *body_free);
 
+/**
+ * Reset doing the first packet state when testing for optional functionality.
+ * This causes any pending PDU to be transmitted.
+ *
+ * @param session         The CoAP session.
+ */
+void coap_reset_doing_first(coap_session_t *session);
+
 /**@}*/
 
 extern int coap_started;

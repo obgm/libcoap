@@ -191,7 +191,9 @@ struct coap_session_t {
   uint32_t block_mode;           /**< Zero or more COAP_BLOCK_ or'd options */
   uint8_t csm_bert_rem_support;  /**< CSM TCP BERT blocks supported (remote) */
   uint8_t csm_bert_loc_support;  /**< CSM TCP BERT blocks supported (local) */
+#if COAP_CLIENT_SUPPORT
   uint8_t doing_first;            /**< Set if doing client's first request */
+#endif /* COAP_CLIENT_SUPPORT */
   uint8_t proxy_session;        /**< Set if this is an ongoing proxy session */
   uint8_t delay_recursive;        /**< Set if in coap_client_delay_first() */
   uint8_t no_observe_cancel;      /**< Set if do not cancel observe on session
@@ -222,6 +224,8 @@ struct coap_session_t {
   uint8_t session_failed;         /**< Set if session failed and can try re-connect */
   uint8_t client_initiated;       /**< Session initially started as a client */
   uint8_t retry_count;           /**< Number of retries trying to re-connect */
+  coap_tick_t doing_first_timeout; /**< If doing_first, when to timeout */
+  coap_pdu_t *doing_first_pdu;    /**< If doing fist, PDU to retry sending */
 #endif /* COAP_CLIENT_SUPPORT */
   coap_mid_t remote_test_mid;     /**< mid used for checking remote
                                        support */

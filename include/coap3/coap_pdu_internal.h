@@ -142,6 +142,7 @@ extern "C" {
  */
 
 struct coap_pdu_t {
+  struct coap_pdu_t *next;  /**< Next PDU in a delay chain */
   coap_pdu_type_t type;     /**< message type */
   coap_pdu_code_t code;     /**< request method (value 1--31) or response code
                                  (value 64-255) */

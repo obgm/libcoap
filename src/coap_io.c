@@ -304,6 +304,23 @@ coap_check_need_reconnect(coap_context_t *ctx, coap_session_t *s, coap_tick_t no
   }
   return timeout;
 }
+
+void
+coap_reset_doing_first(coap_session_t *session) {
+  if (session->doing_first) {
+    session->doing_first = 0;
+    while (!session->doing_first && session->doing_first_pdu) {
+      coap_pdu_t *k_pdu = session->doing_first_pdu;
+
+      LL_DELETE(session->doing_first_pdu, session->doing_first_pdu);
+      coap_log_debug("** %s: mid=0x%04x: released\n",
+                     coap_session_str(session), k_pdu->mid);
+      if (coap_send_lkd(session, k_pdu) == COAP_INVALID_MID) {
+        coap_handle_event_lkd(session->context, COAP_EVENT_FIRST_PDU_FAIL, session);
+      }
+    }
+  }
+}
 #endif /* COAP_CLIENT_SUPPORT */
 
 /*
@@ -607,6 +624,77 @@ release_1:
           timeout = s_timeout;
       }
     }
+    if (s->doing_first && s->doing_first_timeout) {
+      if ((s->doing_first_timeout + 5 * COAP_TICKS_PER_SECOND) > now) {
+        s_timeout = s->doing_first_timeout + 5 * COAP_TICKS_PER_SECOND - now;
+        if (s_timeout < timeout)
+          timeout = s_timeout;
+      } else {
+        /* Session set up has failed */
+        coap_queue_t *sent;
+        coap_queue_t *p = NULL;
+        coap_queue_t *q;
+        coap_queue_t *tmp;
+
+        if (s->state == COAP_SESSION_STATE_CSM) {
+          coap_log_debug("** %s: timeout waiting for CSM response\n",
+                         coap_session_str(s));
+          s->csm_not_seen = 1;
+        } else {
+          coap_log_debug("** %s: timeout waiting for first response\n",
+                         coap_session_str(s));
+        }
+#if COAP_Q_BLOCK_SUPPORT
+        /* Check if testing for Q-Block */
+        if (s->block_mode & COAP_BLOCK_PROBE_Q_BLOCK) {
+          coap_log_debug("Q-Block support assumed not available\n");
+          set_block_mode_drop_q(s->block_mode);
+        }
+#endif /* COAP_Q_BLOCK_SUPPORT */
+        /* Check if testing for Extended Token */
+        if (s->max_token_checked == COAP_EXT_T_CHECKING) {
+          s->max_token_size = COAP_TOKEN_DEFAULT_MAX;
+          s->max_token_checked = COAP_EXT_T_CHECKED;
+          coap_log_debug("Extended Token support assumed not available\n");
+        }
+        /*
+         * Remove the test packet to stop re-transmission.
+         * The test packet may be in the delayqueue ((D)TLS has not been set up),
+         * or in the sendqueue if sent and is pending re-transmission.
+         */
+        LL_FOREACH_SAFE(s->delayqueue, q, tmp) {
+          if (q->pdu->mid == s->remote_test_mid) {
+            if (q->pdu->type==COAP_MESSAGE_CON) {
+              coap_handle_nack(s, q->pdu,
+                               s->proto == COAP_PROTO_DTLS ?
+                               COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE,
+                               q->id);
+            }
+            coap_log_debug("** %s: mid=0x%04x: removed\n",
+                           coap_session_str(s), q->pdu->mid);
+            if (p) {
+              p->next = q->next;
+            } else {
+              s->delayqueue = q->next;
+            }
+            coap_delete_node_lkd(q);
+            break;
+          }
+          p = q;
+        }
+        coap_remove_from_queue(&ctx->sendqueue, s, s->remote_test_mid, &sent);
+        if (sent && sent->pdu && sent->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(s->proto)) {
+          if (s->con_active)
+            s->con_active--;
+        }
+        coap_reset_doing_first(s);
+        if (s->state == COAP_SESSION_STATE_ESTABLISHED) {
+          /* Flush out any entries on session->delayqueue */
+          coap_session_connected(s);
+        }
+      }
+    }
+
 #if COAP_Q_BLOCK_SUPPORT
     /*
      * Check if any client large transmits have hit MAX_PAYLOAD and need
