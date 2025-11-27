@@ -373,6 +373,10 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_BAD_PACKET:
     quit = 1;
     break;
+  case COAP_EVENT_FIRST_PDU_FAIL:
+    quit = 1;
+    coap_log_err("cannot send CoAP pdu\n");
+    break;
   case COAP_EVENT_SERVER_SESSION_CONNECTED:
 #if COAP_SERVER_SUPPORT
     call_home_session = session;

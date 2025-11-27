@@ -236,7 +236,9 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
                        size_t token_length,
                        const uint8_t *token,
                        coap_opt_filter_t *drop_options) {
+#if COAP_CLIENT_SUPPORT
   uint8_t doing_first = session->doing_first;
+#endif /* COAP_CLIENT_SUPPORT */
   coap_pdu_t *pdu;
 
   coap_lock_check_locked();
@@ -246,13 +248,17 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
    * that indicates BERT size (TCP/TLS only) as this may be called early
    * the OSCORE logic.
    */
+#if COAP_CLIENT_SUPPORT
   session->doing_first = 0;
+#endif /* COAP_CLIENT_SUPPORT */
   pdu = coap_pdu_init(old_pdu->type, old_pdu->code,
                       coap_new_message_id_lkd(session),
                       max(old_pdu->max_size,
                           coap_session_max_pdu_size_lkd(session)));
+#if COAP_CLIENT_SUPPORT
   /* Restore any pending waits */
   session->doing_first = doing_first;
+#endif /* COAP_CLIENT_SUPPORT */
   if (pdu == NULL)
     return NULL;
 

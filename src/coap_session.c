@@ -572,6 +572,21 @@ coap_session_mfree(coap_session_t *session) {
     }
     coap_delete_node_lkd(q);
   }
+
+#if COAP_CLIENT_SUPPORT
+  coap_pdu_t *p, *ptmp;
+
+  LL_FOREACH_SAFE(session->doing_first_pdu, p, ptmp) {
+    if (p->type==COAP_MESSAGE_CON) {
+      coap_handle_nack(session, p,
+                       session->proto == COAP_PROTO_DTLS ?
+                       COAP_NACK_TLS_FAILED : COAP_NACK_NOT_DELIVERABLE,
+                       p->mid);
+    }
+    coap_delete_pdu_lkd(p);
+  }
+#endif /* COAP_CLIENT_SUPPORT */
+
   if (session->partial_pdu)
     coap_delete_pdu_lkd(session->partial_pdu);
   if (session->sock.lfunc[COAP_LAYER_SESSION].l_close)
@@ -755,20 +770,24 @@ coap_session_max_pdu_size_lkd(const coap_session_t *session) {
 
   coap_lock_check_locked();
 #if COAP_CLIENT_SUPPORT
-  /*
-   * Delay if session->doing_first is set.
-   * E.g. Reliable and CSM not in yet for checking block support
-   */
-  coap_session_t *session_rw;
+  if (COAP_PROTO_RELIABLE(session->proto) &&
+      session->type == COAP_SESSION_TYPE_CLIENT &&
+      session->doing_first) {
+    /*
+     * Delay if session->doing_first is set.
+     * E.g. Reliable and CSM not in yet for checking block support
+     */
+    coap_session_t *session_rw;
 
-  /*
-   * Need to do this to not get a compiler warning about const parameters
-   * but need to maintain source code backward compatibility
-   */
-  memcpy(&session_rw, &session, sizeof(session_rw));
-  if (coap_client_delay_first(session_rw) == 0) {
-    coap_log_debug("coap_client_delay_first: timeout\n");
-    /* Have to go with the defaults */
+    /*
+     * Need to do this to not get a compiler warning about const parameters
+     * but need to maintain source code backward compatibility
+     */
+    memcpy(&session_rw, &session, sizeof(session_rw));
+    if (coap_client_delay_first(session_rw) == 0) {
+      coap_log_debug("coap_client_delay_first: timeout\n");
+      /* Have to go with the defaults */
+    }
   }
 #endif /* COAP_CLIENT_SUPPORT */
 
@@ -829,6 +848,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     coap_address_copy(&node->remote, &session->addr_info.remote);
   }
   LL_APPEND(session->delayqueue, node);
+  coap_show_pdu(COAP_LOG_DEBUG, node->pdu);
   coap_log_debug("** %s: mid=0x%04x: delayed\n",
                  coap_session_str(session), node->id);
   return COAP_PDU_DELAYED;
@@ -931,9 +951,8 @@ coap_session_connected(coap_session_t *session) {
       coap_handle_event_lkd(session->context, COAP_EVENT_SESSION_CONNECTED, session);
 #if COAP_CLIENT_SUPPORT
       coap_session_reestablished(session);
+      coap_reset_doing_first(session);
 #endif /* COAP_CLIENT_SUPPORT */
-      if (session->doing_first)
-        session->doing_first = 0;
     }
   }
 
@@ -1024,7 +1043,11 @@ coap_handle_nack(coap_session_t *session,
                  coap_pdu_t *sent,
                  const coap_nack_reason_t reason,
                  const coap_mid_t mid) {
-  if (session->context->nack_handler) {
+  if (session->context->nack_handler
+#if COAP_CLIENT_SUPPORT
+      && !session->doing_first_pdu
+#endif /* COAP_CLIENT_SUPPORT */
+     ) {
     coap_bin_const_t token = {0, NULL};
 
     if (sent) {
@@ -1186,9 +1209,8 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
                             state == COAP_SESSION_STATE_ESTABLISHED ?
                             COAP_EVENT_SESSION_CLOSED : COAP_EVENT_SESSION_FAILED, session);
     }
+    coap_reset_doing_first(session);
 #endif /* COAP_CLIENT_SUPPORT */
-    if (session->doing_first)
-      session->doing_first = 0;
   }
 #endif /* !COAP_DISABLE_TCP */
   if (session->sock.lfunc[COAP_LAYER_SESSION].l_close)
