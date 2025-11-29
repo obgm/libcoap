@@ -37,6 +37,7 @@ global:
   coap_cache_ignore_options;
   coap_cache_set_app_data2;
   coap_cache_set_app_data;
+  coap_call_home_stop_reconnecting;
   coap_can_exit;
   coap_cancel_observe;
   coap_check_notify;
@@ -72,6 +73,7 @@ global:
   coap_context_set_pki_root_cas;
   coap_context_set_psk2;
   coap_context_set_psk;
+  coap_context_set_session_reconnect_time2;
   coap_context_set_session_reconnect_time;
   coap_context_set_session_timeout;
   coap_context_set_shutdown_no_observe;

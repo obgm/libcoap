@@ -27,6 +27,7 @@ coap_context_get_app_data,
 coap_context_set_cid_tuple_change,
 coap_context_set_shutdown_no_observe,
 coap_context_set_session_reconnect_time,
+coap_context_set_session_reconnect_time2,
 coap_register_option
 - Work with CoAP contexts
 
@@ -75,6 +76,9 @@ coap_app_data_free_callback_t _app_cb_);*
 
 *void coap_context_set_session_reconnect_time(coap_context_t *_context_,
 unsigned int _reconnect_time_);*
+
+*void coap_context_set_session_reconnect_time2(coap_context_t *_context_,
+unsigned int _reconnect_time_, uint8_t _retry_count_);*
 
 *void coap_register_option(coap_context_t *_context_, coap_option_num_t _number_);*
 
@@ -228,19 +232,27 @@ so that no unsolicited observe responses are sent out by the server when
 is not called, then 5.03 responses are sent out indicating that the observed
 resource is temporarily unavailable.
 
-*Function: coap_context_set_session_reconnect_time()*
+*Function: coap_context_set_session_reconnect_time2()*
 
-The *coap_context_set_session_reconnect_time*() function is used to set the
+The *coap_context_set_session_reconnect_time2*() function is used to set the
 _reconnect_time_ time (in seconds) for a failed client session to retry a
-reconnection. A value of 0 (the default) disables a reconnection attempt.
+reconnection for up to _retry_count_ attempts. A value of 0 (the default)
+for _reconnect_time_ disables a reconnection attempt. A value of 0 for
+_retry_count_ indicates that retrying to connect is unlimited.
 
 If a session is reconnected, then any active observe subscriptions are
-automatically restarted.
+automatically restarted, and the session retry count is set back to 0.
 
 However, if the session failure was caused by a server restart, a restart
 observe subscription attempt for a previously dynamically created resource
 will not cause the resource to be recreated.  This can be done by using
 *coap_persist*(3) in the server.
+
+*Function: coap_context_set_session_reconnect_time()*
+
+The *coap_context_set_session_reconnect_time*() is the same as
+*coap_context_set_session_reconnect_time2*(), but with _retry_count_ set
+to 0.
 
 *Function: coap_register_option()*
 

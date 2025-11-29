@@ -1,0 +1,332 @@
+// -*- mode:doc; -*-
+// vim: set syntax=asciidoc tw=0
+
+coap_call_home(3)
+=================
+:doctype: manpage
+:man source:   coap_call_home
+:man version:  @PACKAGE_VERSION@
+:man manual:   libcoap Manual
+
+NAME
+----
+coap_call_home,
+coap_session_set_type_client,
+coap_session_set_type_server,
+coap_call_home_stop_reconnecting
+- Work with CoAP Call-Home
+
+SYNOPSIS
+--------
+*#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*int coap_session_set_type_client(coap_session_t *_session_);*
+
+*int coap_session_set_type_server(coap_session_t *_session_);*
+
+*void coap_call_home_stop_reconnecting(coap_session_t *_session_);*
+
+For specific (D)TLS library support, link with
+*-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
+*-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*,
+*-lcoap-@LIBCOAP_API_VERSION@-wolfssl*
+or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
+
+DESCRIPTION
+-----------
+This man page focuses on the CoAP Call-Home support where a CoAP-Server initiates
+a session connection to a CoAP-Client, and the CoAP-Client on receipt of a new
+connection then starts issuing requests to the CoAP-Server.
+
+The CoAP-Client sets up an new listening endpoint using *coap_new_endpoint*(3) and
+waits for a new incoming connection. Once the session is established (i.e. (D)TLS
+has completed the handshakes) then the session needs to be converted from type
+Server to type Client (using *coap_session_set_type_client*()) before making any
+CoAP requests.
+
+The Coap-Server initiates a new client connection to the CoAP-Client, on success
+the session needs to be converted from type Client to type Server (using
+*coap_session_set_type_server*()) to handle the incoming requests from CoAP-Client.
+
+If *coap_context_set_session_reconnect_time2*(3) has been called, then the CoAP-Server
+will continue trying to reconnect to the CoAP-Client at the specified intervals
+if there is a session failure for the defined retry count.
+
+FUNCTIONS
+---------
+
+*Function: coap_session_set_type_client()*
+
+The *coap_session_set_type_client*() function is used to convert the _session_
+from a session endpoint type of Server to Client.  This typically is used in a
+Call-Home type environment where the roles have to change following the
+establishment of a session on an listening endpoint.  The reference count is
+incremented by 1 so that the now type Client _session_ does not expire until
+a *coap_session_release*() is done.
+
+*NOTE:* This function will fail for a DTLS server type session if done
+before the ClientHello is seen. It should be called on receipt of event
+COAP_EVENT_SERVER_SESSION_CONNECTED in the event handler.
+
+*Function: coap_session_set_type_server()*
+
+The *coap_session_set_type_server*() function is used to convert the _session_
+from a session endpoint (as initiated by CoAP-Server) type of Client to Server.
+This typically is used in a Call-Home type environment where the roles have to
+change following the establishment of a session.  The reference count is
+decremented by 1 so that the now type Server _session acts as a normal server,
+timing out when idle etc.  This function should be immediately called after
+a successful *coap_new_client_session*(3) type of function.
+
+*NOTE:* Although the now server session may have timed out, this does not mean
+that the CoAP-Server will exit even all Call-Homes have completed and it is
+not listening on any endpoint.
+
+*NOTE:* If *coap_context_set_session_reconnect_time2*(3) has been used, then the
+Call-Home session will get re-used for trying a new connection and so will not
+time out like a normal server session until the retry count is reached (or
+for ever if retry count is 0)..
+
+*Function: coap_call_home_stop_reconnecting()*
+
+The *coap_call_home_stop_reconnecting*() function is used to stop a CoAP-Server
+trying to reconnect to a CoAP-Client if *coap_context_set_session_reconnect_time2*(3)
+is in use for _session_. This _session_ will then time out when idle.
+
+RETURN VALUES
+-------------
+
+*coap_session_set_type_client*() and *coap_session_set_type_server*() return
+1 on success, otherwise 0.
+
+EXAMPLES
+--------
+CoAP-Client Set Up*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+static coap_session_t *call_home_session = NULL;
+static int quit = 0;
+
+static int
+event_handler(coap_session_t *session COAP_UNUSED,
+              const coap_event_t event) {
+
+  switch (event) {
+  case COAP_EVENT_TCP_CLOSED:
+  case COAP_EVENT_DTLS_CLOSED:
+  case COAP_EVENT_SESSION_CLOSED:
+  case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
+  case COAP_EVENT_OSCORE_NOT_ENABLED:
+  case COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD:
+  case COAP_EVENT_OSCORE_NO_SECURITY:
+  case COAP_EVENT_OSCORE_INTERNAL_ERROR:
+  case COAP_EVENT_OSCORE_DECODE_ERROR:
+  case COAP_EVENT_WS_PACKET_SIZE:
+  case COAP_EVENT_WS_CLOSED:
+  case COAP_EVENT_BAD_PACKET:
+  case COAP_EVENT_RECONNECT_NO_MORE:
+    quit = 1;
+    break;
+  case COAP_EVENT_SERVER_SESSION_CONNECTED:
+    call_home_session = session;
+    coap_session_set_type_client(session);
+    break;
+  case COAP_EVENT_DTLS_CONNECTED:
+  case COAP_EVENT_DTLS_RENEGOTIATE:
+  case COAP_EVENT_DTLS_ERROR:
+  case COAP_EVENT_TCP_CONNECTED:
+  case COAP_EVENT_TCP_FAILED:
+  case COAP_EVENT_SESSION_CONNECTED:
+  case COAP_EVENT_SESSION_FAILED:
+  case COAP_EVENT_PARTIAL_BLOCK:
+  case COAP_EVENT_XMIT_BLOCK_FAIL:
+  case COAP_EVENT_SERVER_SESSION_NEW:
+  case COAP_EVENT_SERVER_SESSION_DEL:
+  case COAP_EVENT_MSG_RETRANSMITTED:
+  case COAP_EVENT_WS_CONNECTED:
+  case COAP_EVENT_KEEPALIVE_FAILURE:
+  case COAP_EVENT_RECONNECT_FAILED:
+  case COAP_EVENT_RECONNECT_SUCCESS:
+  case COAP_EVENT_RECONNECT_STARTED:
+  default:
+    break;
+  }
+  return 0;
+}
+
+static coap_session_t *
+get_call_home_session(coap_context_t *context) {
+  coap_endpoint_t *endpoint;
+  coap_address_t listen_addr;
+
+  /* See coap_address(3) */
+  coap_address_init(&listen_addr);
+  listen_addr.addr.sa.sa_family = AF_INET;
+  listen_addr.addr.sin.sin_port = htons(5683);
+
+  endpoint = coap_new_endpoint(context, &listen_addr, COAP_PROTO_UDP);
+  if (!endpoint) {
+    return NULL;
+  }
+
+  /* Need to wait for a session to come in */
+  while (!quit && !call_home_session) {
+    coap_io_process(context, 1000);
+  }
+
+  return call_home_session;
+}
+
+int
+main(int argc, char **argv) {
+  coap_context_t *context;
+  coap_session_t *session;
+
+  (void)argc;
+  (void)argv;
+
+  coap_startup();
+
+  /* Other initialization code */
+
+  context = coap_new_context(NULL);
+
+  /* Other initialization code */
+
+  coap_register_event_handler(context, event_handler);
+
+  session = get_call_home_session(context);
+  if (!session)
+    return 1;
+
+  /* Other stuff - e.g. create PDUs and send them */
+
+  /* Clean up library usage */
+  coap_session_release(session);
+  coap_free_context(context);
+  coap_cleanup();
+  return 0;
+
+}
+----
+
+CoAP-Server Set Up*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <stdio.h>
+
+static int
+do_call_home(coap_context_t *ctx, coap_str_const_t host, uint16_t port, coap_uri_scheme_t scheme) {
+  coap_address_t dst;
+  coap_addr_info_t *info_list = NULL;
+  coap_session_t *session = NULL;
+  coap_proto_t proto;
+
+  /* resolve destination address where call-home should be sent */
+  info_list = coap_resolve_address_info(&host, port, port, port, port,
+                                        0,
+                                        1 << scheme,
+                                        COAP_RESOLVE_TYPE_REMOTE);
+  if (info_list == NULL) {
+    return 0;
+  }
+  proto = info_list->proto;
+  memcpy(&dst, &info_list->addr, sizeof(dst));
+  coap_free_address_info(info_list);
+
+  switch (scheme) {
+  case COAP_URI_SCHEME_COAP:
+  case COAP_URI_SCHEME_COAP_TCP:
+  case COAP_URI_SCHEME_COAP_WS:
+    session = coap_new_client_session(ctx, NULL, &dst, proto);
+    break;
+  case COAP_URI_SCHEME_COAPS:
+  case COAP_URI_SCHEME_COAPS_TCP:
+  case COAP_URI_SCHEME_COAPS_WS:
+
+    /* Do the (D)TLS PKI/PSK setup */
+
+    break;
+  case COAP_URI_SCHEME_HTTP:
+  case COAP_URI_SCHEME_HTTPS:
+  case COAP_URI_SCHEME_LAST:
+  default:
+    assert(0);
+    break;
+  }
+  if (!session) {
+    return 0;
+  }
+  coap_session_set_type_server(session);
+  return 1;
+}
+
+int
+main(int argc, char **argv) {
+  coap_context_t *context;
+  coap_uri_t call_home_uri;
+
+  (void)argc;
+  (void)argv;
+
+  coap_startup();
+
+  /* Other initialization code */
+
+  context = coap_new_context(NULL);
+
+  /* Initialize resources - See coap_resource(3) init_resources() example */
+
+  if (coap_split_uri((uint8_t *)argv[1], strlen(argv[1]), &call_home_uri) < 0 ||
+      call_home_uri.path.length != 0 || call_home_uri.query.length != 0) {
+    fprintf(stderr, "invalid CoAP URI '%s'\n", argv[1]);
+    exit(1);
+  }
+
+  /*
+   * Use coap_context_set_session_reconnect_time2(3) if you want this session to retry
+   * connecting if the CoAP-Client stops working.
+   */
+
+  do_call_home(context, call_home_uri.host, call_home_uri.port, call_home_uri.scheme);
+
+  /* Other initialization code */
+
+  /* coap_io_process(3) loop */
+
+  /* Clean up library usage */
+  coap_free_context(context);
+  coap_cleanup();
+}
+----
+
+SEE ALSO
+--------
+*coap_context*(3), *coap_session*(3), *coap_endpoint_client*(3) and *coap_endpoint_server*(3)
+
+FURTHER INFORMATION
+-------------------
+See
+
+"https://rfc-editor.org/rfc/rfc7252[RFC7252: The Constrained Application Protocol (CoAP)]"
+
+for further information.
+
+BUGS
+----
+Please raise an issue on GitHub at
+https://github.com/obgm/libcoap/issues to report any bugs.
+
+Please raise a Pull Request at https://github.com/obgm/libcoap/pulls
+for any fixes.
+
+AUTHORS
+-------
+The libcoap project <libcoap-developers@lists.sourceforge.net>

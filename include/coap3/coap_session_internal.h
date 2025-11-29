@@ -215,12 +215,14 @@ struct coap_session_t {
 #endif /* COAP_OSCORE_SUPPORT */
   volatile uint8_t max_token_checked; /**< Check for max token size
                                            coap_ext_token_check_t */
+  uint8_t is_dtls13;              /**< Set if session is DTLS1.3 */
 #if COAP_CLIENT_SUPPORT
   uint8_t negotiated_cid;         /**< Set for a client if CID negotiated */
   uint8_t doing_send_recv;        /**< Set if coap_send_recv() active */
   uint8_t session_failed;         /**< Set if session failed and can try re-connect */
+  uint8_t client_initiated;       /**< Session initially started as a client */
+  uint8_t retry_count;           /**< Number of retries trying to re-connect */
 #endif /* COAP_CLIENT_SUPPORT */
-  uint8_t is_dtls13;              /**< Set if session is DTLS1.3 */
   coap_mid_t remote_test_mid;     /**< mid used for checking remote
                                        support */
   uint32_t max_token_size;        /**< Largest token size supported RFC8974 */

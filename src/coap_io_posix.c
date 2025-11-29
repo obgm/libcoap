@@ -307,7 +307,9 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   }
 
   /* on Windows select will return an error if called without FDs */
+#ifdef _WIN32
   if (nfds > 0) {
+#endif /* _WIN32 */
     /* Unlock so that other threads can lock/update ctx */
     coap_lock_unlock();
 
@@ -315,9 +317,22 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
                     timeout > 0 ? &tv : NULL);
 
     coap_lock_lock(return -1);
+#ifdef _WIN32
   } else {
+    if (timeout > 0) {
+      DWORD milliseconds = tv.tv_sec * 1000 + tv.tv_usec / 1000;
+
+      if (milliseconds > 2000) {
+        /* Wait at most 2 seconds */
+        milliseconds = 2000;
+      }
+      if (milliseconds) {
+        Sleep(milliseconds);
+      }
+    }
     goto all_over;
   }
+#endif /* _WIN32 */
 
   if (result < 0) {   /* error */
 #ifdef _WIN32

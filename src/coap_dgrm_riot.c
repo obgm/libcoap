@@ -322,10 +322,12 @@ error:
 
 void
 coap_socket_dgrm_close(coap_socket_t *sock) {
-  if (sock->flags != COAP_SOCKET_EMPTY) {
-    sock_udp_close(&sock->udp);
+  if (!(sock->flags & COAP_SOCKET_SLAVE)) {
+    if (sock->flags != COAP_SOCKET_EMPTY) {
+      sock_udp_close(&sock->udp);
+    }
+    sock->flags = COAP_SOCKET_EMPTY;
   }
-  sock->flags = COAP_SOCKET_EMPTY;
 }
 
 #else /* ! RIOT_VERSION */

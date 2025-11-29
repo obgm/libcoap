@@ -90,9 +90,11 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
 
 void
 coap_socket_dgrm_close(coap_socket_t *sock) {
-  uip_udp_remove(sock->udp_conn);
-  sock->udp_conn = NULL;
-  sock->flags = COAP_SOCKET_EMPTY;
+  if (!(sock->flags & COAP_SOCKET_SLAVE)) {
+    uip_udp_remove(sock->udp_conn);
+    sock->udp_conn = NULL;
+    sock->flags = COAP_SOCKET_EMPTY;
+  }
 }
 
 /*

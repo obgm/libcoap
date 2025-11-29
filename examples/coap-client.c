@@ -356,9 +356,11 @@ event_handler(coap_session_t *session COAP_UNUSED,
   switch (event) {
   case COAP_EVENT_TCP_CLOSED:
   case COAP_EVENT_DTLS_CLOSED:
-    if (!reconnect_secs)
-      quit = 1;
-    break;
+  case COAP_EVENT_RECONNECT_FAILED:
+  case COAP_EVENT_RECONNECT_NO_MORE:
+    if (reconnect_secs)
+      break;
+  /* Fall through */
   case COAP_EVENT_SESSION_CLOSED:
   case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
   case COAP_EVENT_OSCORE_NOT_ENABLED:
@@ -391,6 +393,8 @@ event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_MSG_RETRANSMITTED:
   case COAP_EVENT_WS_CONNECTED:
   case COAP_EVENT_KEEPALIVE_FAILURE:
+  case COAP_EVENT_RECONNECT_SUCCESS:
+  case COAP_EVENT_RECONNECT_STARTED:
   default:
     break;
   }

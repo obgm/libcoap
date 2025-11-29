@@ -52,6 +52,9 @@ do_tcp_err(void *arg, err_t err) {
     return;
 
   coap_lock_lock(return);
+#if NO_SYS == 0
+  coap_lwip_in_call_back_ref++;
+#endif /* NO_SYS == 0 */
   coap_handle_event_lkd(session->context, COAP_EVENT_TCP_FAILED, session);
   /*
    * as per tcp_err() documentation, the corresponding pcb is already freed
@@ -60,6 +63,9 @@ do_tcp_err(void *arg, err_t err) {
    */
   session->sock.tcp_pcb = NULL;
   coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
+#if NO_SYS == 0
+  coap_lwip_in_call_back_ref--;
+#endif /* NO_SYS == 0 */
   coap_lock_unlock();
 #if NO_SYS == 0
   sys_sem_signal(&coap_io_timeout_sem);
@@ -133,12 +139,18 @@ do_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
   if (err)
     return err;
   coap_lock_lock(return ERR_ARG);
+#if NO_SYS == 0
+  coap_lwip_in_call_back_ref++;
+#endif /* NO_SYS == 0 */
   session->sock.flags |= COAP_SOCKET_CONNECTED;
   session->addr_info.local.addr = tpcb->local_ip;
   session->addr_info.local.port = tpcb->local_port;
   tcp_recv(tpcb, coap_tcp_recv);
   coap_ticks(&now);
   coap_connect_session(session, now);
+#if NO_SYS == 0
+  coap_lwip_in_call_back_ref--;
+#endif /* NO_SYS == 0 */
   coap_lock_unlock();
 #if NO_SYS == 0
   sys_sem_signal(&coap_io_timeout_sem);
@@ -161,9 +173,13 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
 
   sock->flags &= ~(COAP_SOCKET_WANT_CONNECT | COAP_SOCKET_CONNECTED);
 
+  coap_lock_invert(LOCK_TCPIP_CORE(),
+                   goto err_unlock);
+
   sock->tcp_pcb = tcp_new_ip_type(IPADDR_TYPE_ANY);
-  if (sock->tcp_pcb == NULL)
-    return 0;
+  if (sock->tcp_pcb == NULL) {
+    goto err_unlock;
+  }
 
   tcp_arg(sock->tcp_pcb, sock->session);
   tcp_recv(sock->tcp_pcb, coap_tcp_recv);
@@ -180,7 +196,7 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
       tcp_recv(sock->tcp_pcb, NULL);
       tcp_close(sock->tcp_pcb);
       sock->tcp_pcb = NULL;
-      return 0;
+      goto err_unlock;
     }
   }
   coap_address_copy(&connect_addr, server);
@@ -191,7 +207,12 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
                     do_tcp_connected);
   if (err == ERR_OK)
     sock->flags |= COAP_SOCKET_WANT_CONNECT | COAP_SOCKET_CONNECTED;
+  UNLOCK_TCPIP_CORE();
   return err ? 0 : 1;
+
+err_unlock:
+  UNLOCK_TCPIP_CORE();
+  return 0;
 }
 
 int
@@ -222,6 +243,9 @@ do_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
   coap_ticks(&now);
 
   coap_lock_lock(return ERR_MEM);
+#if NO_SYS == 0
+  coap_lwip_in_call_back_ref++;
+#endif /* NO_SYS == 0 */
   session = coap_new_server_session(endpoint->context, endpoint, newpcb);
 
   if (session) {
@@ -234,6 +258,9 @@ do_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
   } else {
     ret_err = ERR_MEM;
   }
+#if NO_SYS == 0
+  coap_lwip_in_call_back_ref--;
+#endif /* NO_SYS == 0 */
   coap_lock_unlock();
 #if NO_SYS == 0
   sys_sem_signal(&coap_io_timeout_sem);

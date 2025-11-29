@@ -172,6 +172,8 @@ coap_session_set_ack_random_factor(coap_session_t *session,
 
 void
 coap_session_set_max_retransmit(coap_session_t *session, uint16_t value) {
+  if (value > 0xff)
+    value = 0xff;
   if (value > 0) {
     session->max_retransmit = value;
     coap_log_debug("***%s: session max_retransmit set to %u\n",
@@ -467,6 +469,11 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
     coap_address_init(&session->addr_info.remote);
   session->ifindex = ifindex;
   session->context = context;
+#if COAP_CLIENT_SUPPORT
+  if (type == COAP_SESSION_TYPE_CLIENT) {
+    session->client_initiated = 1;
+  }
+#endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT
   session->endpoint = endpoint;
   if (endpoint)
@@ -1074,7 +1081,11 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
     q = q->next;
   }
 
-  if (reason != COAP_NACK_ICMP_ISSUE) {
+  if (reason != COAP_NACK_ICMP_ISSUE
+#if COAP_CLIENT_SUPPORT
+      || session->session_failed
+#endif /* COAP_CLIENT_SUPPORT */
+     ) {
     while (session->delayqueue) {
       q = session->delayqueue;
       session->delayqueue = q->next;
@@ -1187,12 +1198,19 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
 #if COAP_CLIENT_SUPPORT
 void
 coap_session_failed(coap_session_t *session) {
-  if (session->context->reconnect_time &&
-      session->state == COAP_SESSION_STATE_ESTABLISHED &&
-      session->type == COAP_SESSION_TYPE_CLIENT) {
+  if (session->context->reconnect_time && session->client_initiated) {
     if (session->sock.lfunc[COAP_LAYER_SESSION].l_close)
       session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
     session->session_failed = 1;
+    coap_handle_event_lkd(session->context, COAP_EVENT_RECONNECT_FAILED, session);
+    session->retry_count++;
+    if (session->context->retry_count && session->retry_count >= session->context->retry_count) {
+      coap_handle_event_lkd(session->context, COAP_EVENT_RECONNECT_NO_MORE, session);
+      if (session->type != COAP_SESSION_TYPE_CLIENT) {
+        coap_session_set_type_client_lkd(session, 0);
+        coap_session_release_lkd(session);
+      }
+    }
     coap_ticks(&session->last_rx_tx);
   }
 }
@@ -1253,7 +1271,11 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
 #endif /* COAP_CLIENT_SUPPORT */
   SESSIONS_ITER(endpoint->sessions, session, rtmp) {
     if (session->ref == 0 && session->delayqueue == NULL) {
-      if (session->type == COAP_SESSION_TYPE_SERVER) {
+      if (
+#if COAP_CLIENT_SUPPORT
+          !(session->client_initiated && endpoint->context->reconnect_time) &&
+#endif /* COAP_CLIENT_SUPPORT */
+          session->type == COAP_SESSION_TYPE_SERVER) {
         ++num_idle;
         if (oldest==NULL || session->last_rx_tx < oldest->last_rx_tx)
           oldest = session;
@@ -1542,7 +1564,7 @@ coap_session_check_connect(coap_session_t *session) {
   if (COAP_PROTO_RELIABLE(session->proto)) {
     if (session->sock.flags & COAP_SOCKET_WANT_CONNECT) {
       session->state = COAP_SESSION_STATE_CONNECTING;
-      if (session->type == COAP_SESSION_TYPE_CLIENT) {
+      if (session->client_initiated) {
         session->doing_first = 1;
       }
     } else {
@@ -1600,6 +1622,7 @@ coap_session_reconnect(coap_session_t *session) {
   }
   session->sock.session = session;
   coap_log_debug("***%s: trying to reconnect\n", coap_session_str(session));
+  coap_handle_event_lkd(session->context, COAP_EVENT_RECONNECT_STARTED, session);
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
     session->state = COAP_SESSION_STATE_NONE;
     if (!coap_netif_dgrm_connect(session, &session->local_reconnect, &session->addr_info.remote,
@@ -1645,6 +1668,8 @@ coap_session_reestablished(coap_session_t *session) {
   coap_log_debug("***%s: session re-established\n",
                  coap_session_str(session));
   session->session_failed = 0;
+  session->retry_count = 0;
+  coap_handle_event_lkd(session->context, COAP_EVENT_RECONNECT_SUCCESS, session);
   LL_FOREACH_SAFE(session->lg_crcv, lg_crcv, etmp) {
     coap_pdu_reference_lkd(lg_crcv->sent_pdu);
     coap_send_internal(session, lg_crcv->sent_pdu, NULL);
@@ -2238,6 +2263,8 @@ coap_session_set_type_client_lkd(coap_session_t *session, int report_changed) {
         session->sock.flags |= COAP_SOCKET_SLAVE;
         session->sock.flags &= ~COAP_SOCKET_CAN_READ;
         session->sock.flags &= ~COAP_SOCKET_WANT_READ;
+      } else {
+        session->sock.endpoint = NULL;
       }
       session->endpoint = NULL;
     }
@@ -2553,6 +2580,14 @@ coap_free_endpoint_lkd(coap_endpoint_t *ep) {
       /* If fully allocated and inserted */
       coap_lock_check_locked();
       SESSIONS_ITER_SAFE(ep->sessions, session, rtmp) {
+        if (session->ref > 0) {
+          coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
+#if COAP_CLIENT_SUPPORT
+          if (session->client_initiated) {
+            coap_session_release_lkd(session);
+          }
+#endif /* COAP_CLIENT_SUPPORT */
+        }
         assert(session->ref == 0);
         if (session->ref == 0) {
           coap_handle_event_lkd(ep->context, COAP_EVENT_SERVER_SESSION_DEL, session);
@@ -2706,6 +2741,16 @@ coap_endpoint_str(const coap_endpoint_t *endpoint) {
 void
 coap_session_set_no_observe_cancel(coap_session_t *session) {
   session->no_observe_cancel = 1;
+}
+
+void
+coap_call_home_stop_reconnecting(coap_session_t *session) {
+  if (session->type != COAP_SESSION_TYPE_CLIENT) {
+    coap_lock_lock(return);
+    coap_session_set_type_client_lkd(session, 0);
+    coap_session_release_lkd(session);
+    coap_lock_unlock();
+  }
 }
 #endif /* COAP_CLIENT_SUPPORT */
 #endif  /* COAP_SESSION_C_ */

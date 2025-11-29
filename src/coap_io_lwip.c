@@ -147,12 +147,9 @@ coap_io_process_lkd(coap_context_t *context, uint32_t timeout_ms) {
 #endif /* NO_SYS == 0 */
   }
 
-  coap_lock_invert(LOCK_TCPIP_CORE(),
-                   UNLOCK_TCPIP_CORE(); return 0);
-
+#if NO_SYS != 0
   sys_check_timeouts();
-
-  UNLOCK_TCPIP_CORE();
+#endif /* NO_SYS != 0 */
 
   coap_ticks(&now);
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
