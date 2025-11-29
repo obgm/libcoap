@@ -908,6 +908,13 @@ COAP_API coap_mid_t coap_session_send_ping(coap_session_t *session);
  */
 void coap_session_set_no_observe_cancel(coap_session_t *session);
 
+/**
+ * Disable CoAP Server repeating Call-Home reconnect to CoAP Client.
+ *
+ * @param session The CoAP session.
+ */
+void coap_call_home_stop_reconnecting(coap_session_t *session);
+
 #ifdef __cplusplus
 }
 #endif

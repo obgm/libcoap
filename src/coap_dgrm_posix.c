@@ -941,8 +941,8 @@ coap_socket_dgrm_close(coap_socket_t *sock) {
     sock->session = NULL;
     coap_closesocket(sock->fd);
     sock->fd = COAP_INVALID_SOCKET;
+    sock->flags = COAP_SOCKET_EMPTY;
   }
-  sock->flags = COAP_SOCKET_EMPTY;
 }
 
 #else /* WITH_LWIP || WITH_CONTIKI || RIOT_VERSION */

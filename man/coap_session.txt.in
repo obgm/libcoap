@@ -14,8 +14,6 @@ coap_session,
 coap_session_reference,
 coap_session_release,
 coap_session_disconnected,
-coap_session_set_type_client,
-coap_session_set_type_server,
 coap_session_set_app_data2,
 coap_session_get_app_data,
 coap_session_get_addr_local,
@@ -43,10 +41,6 @@ SYNOPSIS
 *void coap_session_release(coap_session_t *_session_);*
 
 *void coap_session_disconnected(coap_session_t *_session_, coap_nack_reason_t _reason_);*
-
-*int coap_session_set_type_client(coap_session_t *_session_);*
-
-*int coap_session_set_type_server(coap_session_t *_session_);*
 
 *void *coap_session_set_app_data2(coap_session_t *_session_, void *_app_data_,
 coap_app_data_free_callback_t _app_cb_);*
@@ -137,27 +131,6 @@ with a reference count of 0.
 The *coap_session_disconnected*() function is used to force the closure of a
 _session_ for the reason _reason_. It will cause any outstanding traffic to
 get dropped.
-
-*Function: coap_session_set_type_client()*
-
-The *coap_session_set_type_client*() function is used to convert the _session_
-from a session endpoint type of Server to Client.  This typically is used in a
-Call-Home type environment where the roles have to change following the
-establishment of a session.  The reference count is incremented by 1 so that
-the now type Client _session_ does not expire until a *coap_session_release*()
-is done. *NOTE:* This function will fail for a DTLS server type session if done
-before the ClientHello is seen. It should be called on receipt of event
-COAP_EVENT_SERVER_SESSION_CONNECTED in the event handler.
-
-*Function: coap_session_set_type_server()*
-
-The *coap_session_set_type_server*() function is used to convert the _session_
-from a session endpoint type of Client to Server.  This typically is used in a
-Call-Home type environment where the roles have to change following the
-establishment of a session.  The reference count is decremented by 1 so that
-the now type Server _session acts as a normal server, timing out when idle etc.
-This function should be immediately called after a successful
-*coap_new_client_session*(3) type of function.
 
 *Function: coap_session_set_app_data2()*
 
@@ -286,9 +259,6 @@ RETURN VALUES
 -------------
 
 *coap_session_reference*() returns a pointer to the session.
-
-*coap_session_set_type_client*() and *coap_session_set_type_server*() return
-1 on success, otherwise 0.
 
 *coap_session_set_app_data2*() returns a previously defined pointer or NULL.
 

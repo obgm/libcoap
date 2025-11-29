@@ -23,6 +23,7 @@ TXT3 = coap_address.txt \
 	coap_attribute.txt \
 	coap_block.txt \
 	coap_cache.txt \
+	coap_call_home.txt \
 	coap_context.txt \
 	coap_deprecated.txt \
 	coap_endpoint_server.txt \
@@ -129,6 +130,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_set_cid_tuple_change.3
 	@echo ".so man3/coap_context.3" > coap_context_set_shutdown_no_observe.3
 	@echo ".so man3/coap_context.3" > coap_context_set_session_reconnect_time.3
+	@echo ".so man3/coap_context.3" > coap_context_set_session_reconnect_time2.3
 	@echo ".so man3/coap_context.3" > coap_register_option.3
 	@echo ".so man3/coap_deprecated.3" > coap_set_app_data.3
 	@echo ".so man3/coap_deprecated.3" > coap_get_app_data.3

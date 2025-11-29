@@ -109,7 +109,9 @@
  * Set to 1 for debugging TCP traffic and LWIP_DBG_ON where appropriate
  */
 #if 0
+#ifndef LWIP_DEBUG
 #define LWIP_DEBUG 1
+#endif
 #define TCP_DEBUG            LWIP_DBG_ON
 #define TCP_INPUT_DEBUG      LWIP_DBG_ON
 #define TCP_OUTPUT_DEBUG     LWIP_DBG_ON

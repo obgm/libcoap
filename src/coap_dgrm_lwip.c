@@ -483,27 +483,30 @@ coap_lwip_udp_remove(void *ctx) {
 
 void
 coap_socket_dgrm_close(coap_socket_t *sock) {
-  struct udp_pcb *udp_pcb = sock->udp_pcb;
+  if (!(sock->flags & COAP_SOCKET_SLAVE)) {
+    struct udp_pcb *udp_pcb = sock->udp_pcb;
 
-  sock->udp_pcb = NULL;
-  if (udp_pcb) {
+    sock->udp_pcb = NULL;
+    if (udp_pcb) {
 #if NO_SYS == 0
-    err_t err;
-    if (coap_lwip_in_call_back_ref == 0) {
-      err = tcpip_try_callback(coap_lwip_udp_remove, udp_pcb);
+      err_t err;
+      if (coap_lwip_in_call_back_ref == 0) {
+        err = tcpip_try_callback(coap_lwip_udp_remove, udp_pcb);
 
-      if (err < 0) {
-        coap_log_warn("** %s: tcpip_try_callback: error %d\n",
-                      sock->session ? coap_session_str(sock->session) : "", err);
-        errno = EAGAIN;
-        return;
+        if (err < 0) {
+          coap_log_warn("** %s: tcpip_try_callback: error %d\n",
+                        sock->session ? coap_session_str(sock->session) : "", err);
+          errno = EAGAIN;
+          return;
+        }
+      } else {
+#endif /* NO_SYS == 0 */
+        udp_remove(udp_pcb);
+#if NO_SYS == 0
       }
-    } else {
 #endif /* NO_SYS == 0 */
-      udp_remove(udp_pcb);
-#if NO_SYS == 0
     }
-#endif /* NO_SYS == 0 */
+    sock->flags = COAP_SOCKET_EMPTY;
   }
   return;
 }

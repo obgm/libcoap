@@ -280,6 +280,32 @@ coap_io_prepare_io(coap_context_t *ctx,
   return ret;
 }
 
+#if COAP_CLIENT_SUPPORT
+static coap_tick_t
+coap_check_need_reconnect(coap_context_t *ctx, coap_session_t *s, coap_tick_t now,
+                          coap_tick_t timeout) {
+  coap_tick_t s_timeout;
+
+  if (s->client_initiated && s->session_failed && ctx->reconnect_time) {
+    if (s->last_rx_tx + ctx->reconnect_time * COAP_TICKS_PER_SECOND <= now) {
+      if (!coap_session_reconnect(s)) {
+        /* server is not back up yet - delay retry a while */
+        s->last_rx_tx = now;
+        s_timeout = ctx->reconnect_time * COAP_TICKS_PER_SECOND;
+        if (timeout == 0 || s_timeout < timeout)
+          timeout = s_timeout;
+      }
+    } else {
+      /* Always positive due to if() above */
+      s_timeout = (s->last_rx_tx + ctx->reconnect_time * COAP_TICKS_PER_SECOND) - now;
+      if (s_timeout < timeout)
+        timeout = s_timeout;
+    }
+  }
+  return timeout;
+}
+#endif /* COAP_CLIENT_SUPPORT */
+
 /*
  * return  0 No i/o pending
  *       +ve millisecs to next i/o activity
@@ -373,6 +399,9 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
       /* Check whether any idle server sessions should be released */
       if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
           s->delayqueue == NULL &&
+#if COAP_CLIENT_SUPPORT
+          !(s->client_initiated && ctx->reconnect_time) &&
+#endif /* COAP_CLIENT_SUPPORT */
           (s->last_rx_tx + session_timeout <= now ||
            s->state == COAP_SESSION_STATE_NONE)) {
         coap_handle_event_lkd(ctx, COAP_EVENT_SERVER_SESSION_DEL, s);
@@ -380,7 +409,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
         continue;
       } else {
         if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
-            s->delayqueue == NULL) {
+            s->delayqueue == NULL && s->last_rx_tx + session_timeout <= now) {
           /* Has to be positive based on if() above */
           s_timeout = (s->last_rx_tx + session_timeout) - now;
           if (s_timeout < timeout)
@@ -445,9 +474,13 @@ release_1:
       }
       if (s->type == COAP_SESSION_TYPE_SERVER &&
           s->state == COAP_SESSION_STATE_ESTABLISHED &&
-          (s->ref_subscriptions || s->ref_proxy_subs) && !s->con_active &&
-          ctx->ping_timeout > 0) {
-        /* Only do this if this session is observing */
+          (s->ref_subscriptions || s->ref_proxy_subs
+#if COAP_CLIENT_SUPPORT
+           || (s->client_initiated && ctx->reconnect_time)
+#endif /* COAP_CLIENT_SUPPORT */
+          ) &&
+          !s->con_active && ctx->ping_timeout > 0) {
+        /* Only do this if this session is observing or reconnecting */
         if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
           /* Time to send a ping */
           coap_mid_t mid;
@@ -455,11 +488,24 @@ release_1:
           if ((mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
             /* Some issue - not safe to continue processing */
             s->last_rx_tx = now;
+#if COAP_CLIENT_SUPPORT
+            if (s->client_initiated && ctx->reconnect_time) {
+              coap_session_failed(s);
+            }
+#endif /* COAP_CLIENT_SUPPORT */
             continue;
           }
           s->last_ping_mid = mid;
           if (s->last_ping > 0 && s->last_pong < s->last_ping) {
-            coap_session_server_keepalive_failed(s);
+#if COAP_CLIENT_SUPPORT
+            if (s->client_initiated && ctx->reconnect_time) {
+              coap_session_failed(s);
+            } else {
+#endif /* COAP_CLIENT_SUPPORT */
+              coap_session_server_keepalive_failed(s);
+#if COAP_CLIENT_SUPPORT
+            }
+#endif /* COAP_CLIENT_SUPPORT */
             /* check the next session */
             continue;
           }
@@ -472,6 +518,9 @@ release_1:
             timeout = s_timeout;
         }
       }
+#if COAP_CLIENT_SUPPORT
+      timeout = coap_check_need_reconnect(ctx, s, now, timeout);
+#endif /* COAP_CLIENT_SUPPORT */
     }
   }
 #endif /* COAP_SERVER_SUPPORT */
@@ -503,23 +552,7 @@ release_1:
           timeout = s_timeout;
       }
     }
-    if (s->type == COAP_SESSION_TYPE_CLIENT &&
-        s->session_failed && ctx->reconnect_time) {
-      if (s->last_rx_tx + ctx->reconnect_time * COAP_TICKS_PER_SECOND <= now) {
-        if (!coap_session_reconnect(s)) {
-          /* server is not back up yet - delay retry a while */
-          s->last_rx_tx = now;
-          s_timeout = ctx->reconnect_time * COAP_TICKS_PER_SECOND;
-          if (timeout == 0 || s_timeout < timeout)
-            timeout = s_timeout;
-        }
-      } else {
-        /* Always positive due to if() above */
-        s_timeout = (s->last_rx_tx + ctx->reconnect_time * COAP_TICKS_PER_SECOND) - now;
-        if (s_timeout < timeout)
-          timeout = s_timeout;
-      }
-    }
+    timeout = coap_check_need_reconnect(ctx, s, now, timeout);
 
 #if !COAP_DISABLE_TCP
     if (s->type == COAP_SESSION_TYPE_CLIENT && COAP_PROTO_RELIABLE(s->proto) &&

@@ -140,6 +140,17 @@ typedef enum {
    */
   /** Triggered when no response to a keep alive (ping) packet */
   COAP_EVENT_KEEPALIVE_FAILURE = 0x8001,
+  /*
+   * Reconnect events
+   */
+  /** Triggered when a session failed, and a reconnect is going to be attempted */
+  COAP_EVENT_RECONNECT_FAILED = 0x9001,
+  /** Triggered when a session failed, and a reconnect is successful */
+  COAP_EVENT_RECONNECT_SUCCESS = 0x9002,
+  /** Triggered when a session failed, and retry reconnect attempts failed */
+  COAP_EVENT_RECONNECT_NO_MORE = 0x9003,
+  /** Triggered when a session starts to reconnect */
+  COAP_EVENT_RECONNECT_STARTED = 0x9004,
 } coap_event_t;
 
 /**

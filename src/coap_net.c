@@ -563,11 +563,20 @@ coap_context_set_session_timeout(coap_context_t *context,
 void
 coap_context_set_session_reconnect_time(coap_context_t *context,
                                         unsigned int reconnect_time) {
+  coap_context_set_session_reconnect_time2(context, reconnect_time, 0);
+}
+
+void
+coap_context_set_session_reconnect_time2(coap_context_t *context,
+                                         unsigned int reconnect_time,
+                                         uint8_t retry_count) {
 #if COAP_CLIENT_SUPPORT
   context->reconnect_time = reconnect_time;
+  context->retry_count = retry_count;
 #else /* ! COAP_CLIENT_SUPPORT */
   (void)context;
   (void)reconnect_time;
+  (void)retry_count;
 #endif /* ! COAP_CLIENT_SUPPORT */
 }
 
@@ -820,6 +829,10 @@ coap_free_context_lkd(coap_context_t *context) {
     context->observe_no_clear = 1;
   coap_delete_all_resources(context);
 #endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+  /* Stop any attempts at reconnection */
+  context->reconnect_time = 0;
+#endif /* COAP_CLIENT_SUPPORT */
 
   coap_delete_all(context->sendqueue);
   context->sendqueue = NULL;
@@ -2247,6 +2260,13 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
   if (!context || !node || !node->session)
     return COAP_INVALID_MID;
 
+#if COAP_CLIENT_SUPPORT
+  if (node->session->session_failed) {
+    /* Force failure */
+    node->retransmit_cnt = (unsigned char)node->session->max_retransmit;
+  }
+#endif /* COAP_CLIENT_SUPPORT */
+
   /* re-initialize timeout when maximum number of retransmissions are not reached yet */
   if (node->retransmit_cnt < node->session->max_retransmit) {
     ssize_t bytes_written;
@@ -2312,9 +2332,18 @@ coap_retransmit(coap_context_t *context, coap_queue_t *node) {
     return node->id;
   }
 
-  /* no more retransmissions, remove node from system */
-  coap_log_warn("** %s: mid=0x%04x: give up after %d attempts\n",
-                coap_session_str(node->session), node->id, node->retransmit_cnt);
+#if COAP_CLIENT_SUPPORT
+  if (node->session->session_failed) {
+    coap_log_info("** %s: mid=0x%04x: deleted due to reconnection issue\n",
+                  coap_session_str(node->session), node->id);
+  } else {
+#endif /* COAP_CLIENT_SUPPORT */
+    /* no more retransmissions, remove node from system */
+    coap_log_warn("** %s: mid=0x%04x: give up after %d attempts\n",
+                  coap_session_str(node->session), node->id, node->retransmit_cnt);
+#if COAP_CLIENT_SUPPORT
+  }
+#endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
   /* Check if subscriptions exist that should be canceled after
@@ -2469,8 +2498,10 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
     } else if (bytes_read > 0) {
       session->last_rx_tx = now;
 #if COAP_CLIENT_SUPPORT
-      if (session->session_failed)
+      if (session->session_failed) {
         session->session_failed = 0;
+        coap_handle_event_lkd(session->context, COAP_EVENT_RECONNECT_SUCCESS, session);
+      }
 #endif /* COAP_CLIENT_SUPPORT */
       /* coap_netif_dgrm_read() updates session->addr_info from packet->addr_info */
       coap_handle_dgram_for_proto(ctx, session, packet);
@@ -2725,6 +2756,11 @@ coap_io_do_io_lkd(coap_context_t *ctx, coap_tick_t now) {
     SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
       /* Make sure the session object is not deleted in one of the callbacks  */
       coap_session_reference_lkd(s);
+#if COAP_CLIENT_SUPPORT
+      if (s->client_initiated && (s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0) {
+        coap_connect_session(s, now);
+      }
+#endif /* COAP_CLIENT_SUPPORT */
       if ((s->sock.flags & COAP_SOCKET_CAN_READ) != 0) {
         coap_read_session(ctx, s, now);
       }
@@ -4898,6 +4934,14 @@ coap_event_name(coap_event_t event) {
     return "COAP_EVENT_WS_CLOSED";
   case COAP_EVENT_KEEPALIVE_FAILURE:
     return "COAP_EVENT_KEEPALIVE_FAILURE";
+  case COAP_EVENT_RECONNECT_FAILED:
+    return "COAP_EVENT_RECONNECT_FAILED";
+  case COAP_EVENT_RECONNECT_SUCCESS:
+    return "COAP_EVENT_RECONNECT_SUCCESS";
+  case COAP_EVENT_RECONNECT_NO_MORE:
+    return "COAP_EVENT_RECONNECT_NO_MORE";
+  case COAP_EVENT_RECONNECT_STARTED:
+    return "COAP_EVENT_RECONNECT_STARTED";
   default:
     return "???";
   }
@@ -4942,6 +4986,7 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
     case COAP_EVENT_WS_PACKET_SIZE:
     case COAP_EVENT_WS_CLOSED:
     case COAP_EVENT_BAD_PACKET:
+    case COAP_EVENT_RECONNECT_NO_MORE:
       /* Those that are deemed fatal to end sending a request */
       session->doing_send_recv = 0;
       break;
@@ -4956,6 +5001,7 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
     case COAP_EVENT_DTLS_ERROR:
     case COAP_EVENT_TCP_CONNECTED:
     case COAP_EVENT_TCP_FAILED:
+    case COAP_EVENT_RECONNECT_FAILED:
       break;
     case COAP_EVENT_SESSION_CONNECTED:
       /* Session will now be available as well - for call-home if not (D)TLS */
@@ -4981,6 +5027,8 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
     case COAP_EVENT_MSG_RETRANSMITTED:
     case COAP_EVENT_WS_CONNECTED:
     case COAP_EVENT_KEEPALIVE_FAILURE:
+    case COAP_EVENT_RECONNECT_SUCCESS:
+    case COAP_EVENT_RECONNECT_STARTED:
     default:
       break;
     }

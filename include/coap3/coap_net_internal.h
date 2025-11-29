@@ -179,6 +179,8 @@ struct coap_context_t {
 #if COAP_CLIENT_SUPPORT
   unsigned int reconnect_time;     /**< Time to wait before reconnecting a failed
                                         client session. 0 means disabled */
+  uint8_t retry_count;             /**< Number of times to retry reconnecting a.
+                                        failed client session. 0 means disabled */
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT
   coap_cache_entry_t *cache;       /**< CoAP cache-entry cache */

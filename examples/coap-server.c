@@ -62,6 +62,7 @@ strndup(const char *s1, size_t n) {
 #include <coap3/coap.h>
 #include <coap3/coap_defines.h>
 
+static coap_context_t *global_context;
 #if COAP_THREAD_SAFE
 /* Define the number of coap_io_process() threads required */
 #ifndef NUM_SERVER_THREADS
@@ -1048,6 +1049,10 @@ proxy_event_handler(coap_session_t *session COAP_UNUSED,
   case COAP_EVENT_MSG_RETRANSMITTED:
   case COAP_EVENT_WS_CONNECTED:
   case COAP_EVENT_KEEPALIVE_FAILURE:
+  case COAP_EVENT_RECONNECT_FAILED:
+  case COAP_EVENT_RECONNECT_SUCCESS:
+  case COAP_EVENT_RECONNECT_NO_MORE:
+  case COAP_EVENT_RECONNECT_STARTED:
   default:
     break;
   }
@@ -2667,7 +2672,7 @@ main(int argc, char **argv) {
   coap_set_log_level(log_level);
   coap_dtls_set_log_level(dtls_log_level);
 
-  ctx = get_context(addr_str, port_str);
+  global_context = ctx = get_context(addr_str, port_str);
   if (!ctx)
     return -1;
 
@@ -2678,8 +2683,8 @@ main(int argc, char **argv) {
     coap_context_set_shutdown_no_observe(ctx);
   coap_context_set_block_mode(ctx, block_mode);
   coap_context_set_max_block_size(ctx, max_block_size);
-  coap_context_set_session_reconnect_time(ctx, reconnect_secs);
-  coap_context_set_keepalive(ctx, 30);
+  coap_context_set_session_reconnect_time2(ctx, reconnect_secs, 10);
+  coap_context_set_keepalive(ctx, reconnect_secs ? reconnect_secs : 30);
   if (report_each_block)
     coap_register_block_data_handler(ctx, individual_blocks);
   if (csm_max_message_size)
