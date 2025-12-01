@@ -1093,6 +1093,12 @@ COAP_API coap_socket_flags_t coap_socket_get_flags(coap_socket_t *socket);
  */
 COAP_API void coap_socket_set_flags(coap_socket_t *socket, coap_socket_flags_t flags);
 
+
+typedef int (*coap_payload_transmit_callback_t)(coap_context_t *ctx, coap_session_t *session, coap_pdu_t *pdu, void *payload, size_t index, size_t size, void *app_data);
+
+void coap_context_register_payload_transmit_callback(coap_context_t *ctx, coap_payload_transmit_callback_t callback, void *app_data);
+
+
 /**@}*/
 
 #if defined(WITH_LWIP) || defined(WITH_LWIP_MAN_CHECK) || defined(__DOXYGEN__)

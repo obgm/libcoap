@@ -1065,6 +1065,7 @@ coap_add_data_large_internal(coap_session_t *session,
     coap_show_pdu(COAP_LOG_DEBUG, pdu);
     pdu->body_data = NULL;
     pdu->body_length = 0;
+    pdu->session = session;
 
     coap_log_debug("** %s: lg_xmit %p initialized\n",
                    coap_session_str(session), (void *)lg_xmit);
@@ -2086,6 +2087,7 @@ coap_send_q_blocks(coap_session_t *session,
       break;
     }
 
+    block_pdu->session = session;
     if (!coap_add_block(block_pdu,
                         lg_xmit->data_info->length,
                         lg_xmit->data_info->data,
@@ -3687,6 +3689,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                                                 block.aszx),
                            buf);
 
+        pdu->session = session;
         if (!coap_add_block_b_data(pdu,
                                    lg_xmit->data_info->length,
                                    lg_xmit->data_info->data,

@@ -850,8 +850,16 @@ coap_add_data(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
     return 1;
   } else {
     uint8_t *payload = coap_add_data_after(pdu, len);
-    if (payload != NULL)
-      memcpy(payload, data, len);
+    if (payload != NULL) {
+      coap_context_t *ctx;
+      
+      ctx = coap_session_get_context(pdu->session);
+      if (ctx->payload_transmit_cb) {
+        return ctx->payload_transmit_cb(ctx, pdu->session, pdu, payload, (data - pdu->lg_xmit->data_info->data), len, ctx->payload_transmit_cb_app_data);
+      } else {
+        memcpy(payload, data, len);
+      }
+    }
     return payload != NULL;
   }
 }

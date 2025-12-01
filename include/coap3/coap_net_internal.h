@@ -224,6 +224,8 @@ struct coap_context_t {
   coap_resource_dynamic_create_t dyn_create_handler; /**< Dynamc resource create handler */
   uint32_t dynamic_cur;            /* Current number of dynamic resources */
   uint32_t dynamic_max;            /* Max number of dynamic resources or 0 is unlimited */
+  void *payload_transmit_cb_app_data;                  /**< application-specific data */
+  coap_payload_transmit_callback_t payload_transmit_cb; /**< call-back to retrieve required blocks of the transmit payload */
 };
 
 /**

@@ -5214,6 +5214,13 @@ coap_register_option_lkd(coap_context_t *ctx, uint16_t type) {
   coap_option_filter_set(&ctx->known_options, type);
 }
 
+void
+coap_context_register_payload_transmit_callback(coap_context_t *ctx, coap_payload_transmit_callback_t callback, void *app_data) {
+  ctx->payload_transmit_cb = callback;
+  ctx->payload_transmit_cb_app_data = app_data;
+}
+
+
 #if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION && !defined(__ZEPHYR__)
 #if COAP_SERVER_SUPPORT
 COAP_API int
