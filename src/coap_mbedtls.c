@@ -600,6 +600,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
   int ret;
   int done_private_key = 0;
   int done_public_cert = 0;
+  int done_ca_cert_buf = 0;
   uint8_t *buffer;
   size_t length;
 
@@ -860,6 +861,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
                                       &key, role, ret);
       }
       mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
+      done_ca_cert_buf = 1;
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define ca */
       return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
@@ -876,6 +878,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
                                       &key, role, ret);
       }
       mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
+      done_ca_cert_buf = 1;
       break;
     case COAP_PKI_KEY_DEF_PKCS11: /* define ca */
     case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define ca */
@@ -889,6 +892,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
 
   /* Add in any root CA definitons */
 
+if (done_ca_cert_buf == 0) {
 #if defined(MBEDTLS_FS_IO)
   if (m_context->root_ca_file) {
     ret = mbedtls_x509_crt_parse_file(cacert, m_context->root_ca_file);
@@ -952,6 +956,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
                                 COAP_DEFINE_FAIL_NOT_SUPPORTED,
                                 &key, role, -1);
 #endif /* ! MBEDTLS_FS_IO */
+}
 
 #if defined(MBEDTLS_SSL_SRV_C)
   mbedtls_ssl_conf_cert_req_ca_list(&m_env->conf,
