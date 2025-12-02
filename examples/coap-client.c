@@ -123,6 +123,9 @@ static size_t key_mem_len = 0;
 static size_t ca_mem_len = 0;
 static int verify_peer_cert = 1; /* PKI granularity - by default set */
 
+static FILE *file_block = NULL;
+static size_t file_size = 0;
+
 typedef struct ih_def_t {
   char *hint_match;
   coap_bin_const_t *new_identity;
@@ -269,6 +272,32 @@ track_flush_token(coap_bin_const_t *token, int force) {
   }
 }
 
+static void
+release_file_block(coap_session_t *session COAP_UNUSED, void *app_ptr) {
+  FILE *fp = (FILE *)app_ptr;
+
+  if (fp)
+    fclose(fp);
+  return;
+}
+
+static int
+get_file_block(coap_session_t *session, size_t max, size_t offset,
+               uint8_t *data, size_t *length, void *app_ptr) {
+  FILE *fp = (FILE *)app_ptr;
+
+  (void)session;
+
+  if (!fp)
+    return 0;
+
+  if (fseek(fp, (long)offset, SEEK_SET) != 0) {
+    return 0;
+  }
+  *length = fread(data, 1, max, fp);
+
+  return 1;
+}
 
 static coap_pdu_t *
 coap_new_request(coap_context_t *ctx,
@@ -311,6 +340,10 @@ coap_new_request(coap_context_t *ctx,
     /* Let the underlying libcoap decide how this data should be sent */
     coap_add_data_large_request(session, pdu, length, data,
                                 free_xmit_data, data);
+  } else if (file_size) {
+    coap_add_data_large_request_app(session, pdu, file_size,
+                                    release_file_block, get_file_block,
+                                    file_block);
   }
 
   return pdu;
@@ -546,9 +579,9 @@ usage(const char *program, const char *version) {
           coap_string_tls_version(buffer, sizeof(buffer)));
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
-          "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-l loss]\n"
-          "\t\t[-m method] [-o file] [-p port] [-q tls_engine_conf_file] [-r]\n"
-          "\t\t[-s duration] [-t type] [-v num] [-w] [-x] [-y rec_secs]\n"
+          "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-g file]\n"
+          "\t\t[-l loss] [-m method] [-o file] [-p port] [-q tls_engine_conf_file]\n"
+          "\t\t[-r] [-s duration] [-t type] [-v num] [-w] [-x] [-y rec_secs]\n"
           "\t\t[-z] [-A type] [-B seconds]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
@@ -567,6 +600,8 @@ usage(const char *program, const char *version) {
           "\t-e text\t\tInclude text as payload (use percent-encoding for\n"
           "\t       \t\tnon-ASCII characters)\n"
           "\t-f file\t\tFile to send with PUT/POST (use '-' for STDIN)\n"
+          "\t-g file\t\tFile to send with PUT/POST using individual block\n"
+          "\t       \t\trequest call-back\n"
           "\t-l list\t\tFail to send some datagrams specified by a comma\n"
           "\t       \t\tseparated list of numbers or number ranges\n"
           "\t       \t\t(for debugging only)\n"
@@ -623,9 +658,9 @@ usage(const char *program, const char *version) {
           "\t-S     \t\tUse Proxy-Scheme instead of Proxy-Uri option if -P\n"
           "\t       \t\toption used\n"
           "\t-T token\tDefine the initial starting token (up to 24 characters)\n"
-          "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
           ,program, wait_seconds);
   fprintf(stderr,
+          "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
           "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
           "\t       \t\tlibrary logging\n"
           "\t-X size\t\tMaximum message size to use for TCP based connections\n"
@@ -1338,6 +1373,32 @@ cmdline_input_from_file(char *filename, coap_string_t *buf) {
   return result;
 }
 
+static int
+cmdline_input_from_file_f(char *filename) {
+  struct stat statbuf;
+
+  if (!filename)
+    return 0;
+
+  /* open specified input file */
+  file_block = fopen(filename, "r");
+  if (!file_block) {
+    perror("cmdline_input_from_file_f: fopen");
+    return 0;
+  }
+
+  if (fstat(fileno(file_block), &statbuf) < 0) {
+    perror("cmdline_input_from_file_f: stat");
+    fclose(file_block);
+    file_block = NULL;
+    return 0;
+  }
+  file_size = statbuf.st_size;
+
+  return 1;
+}
+
+
 static method_t
 cmdline_method(char *arg) {
   static const char *methods[] =
@@ -1879,7 +1940,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y23")) != -1) {
+                       "a:b:c:d:e:f:g:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y23")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -1914,6 +1975,10 @@ main(int argc, char **argv) {
       break;
     case 'f':
       if (!cmdline_input_from_file(optarg, &payload))
+        payload.length = 0;
+      break;
+    case 'g':
+      if (!cmdline_input_from_file_f(optarg))
         payload.length = 0;
       break;
     case 'j' :

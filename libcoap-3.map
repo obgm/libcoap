@@ -7,6 +7,7 @@ global:
   coap_add_data_after;
   coap_add_data_blocked_response;
   coap_add_data_large_request;
+  coap_add_data_large_request_app;
   coap_add_data_large_response;
   coap_add_option;
   coap_add_optlist_pdu;

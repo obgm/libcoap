@@ -19,7 +19,8 @@ coap-client-notls
 
 SYNOPSIS
 --------
-*coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-l* loss]
+*coap-client* [*-a* addr] [*-b* [num,]size] [*-e* text] [*-f* file] [*-g* file]
+              [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-q* tls_engine_conf_file]
               [*-r*] [*-s duration*] [*-t* type] [*-v* num] [*-w*] [*-x*]
               [*-y* rec_secs] [*-z*] [*-A* type] [*-B* seconds]
@@ -77,6 +78,9 @@ OPTIONS - General
 
 *-f* file::
    File to send with PUT/POST (use '-' for STDIN).
+
+*-g* file::
+   File to send with PUT/POST using individual block request call-back.
 
 *-l* list::
    Fail to send some datagrams specified by a comma separated list of
