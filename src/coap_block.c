@@ -778,6 +778,7 @@ coap_add_data_large_internal(coap_session_t *session,
                              size_t length,
                              const uint8_t *data,
                              coap_release_large_data_t release_func,
+                             coap_get_large_data_t get_func,
                              void *app_ptr,
                              int single_request, coap_pdu_code_t request_method) {
 
@@ -1066,12 +1067,17 @@ coap_add_data_large_internal(coap_session_t *session,
       goto fail;
 
     /* Set up for displaying all the data in the pdu */
-    pdu->body_data = data;
-    pdu->body_length = length;
-    coap_log_debug("PDU presented by app.\n");
-    coap_show_pdu(COAP_LOG_DEBUG, pdu);
-    pdu->body_data = NULL;
-    pdu->body_length = 0;
+    if (!get_func) {
+      pdu->body_data = data;
+      pdu->body_length = length;
+      coap_log_debug("PDU presented by app.\n");
+      coap_show_pdu(COAP_LOG_DEBUG, pdu);
+      pdu->body_data = NULL;
+      pdu->body_length = 0;
+    } else {
+      coap_log_debug("PDU presented by app without data.\n");
+      coap_show_pdu(COAP_LOG_DEBUG, pdu);
+    }
 
     coap_log_debug("** %s: lg_xmit %p initialized\n",
                    coap_session_str(session), (void *)lg_xmit);
@@ -1089,6 +1095,7 @@ coap_add_data_large_internal(coap_session_t *session,
     lg_xmit->non_timeout_random_ticks =
         coap_get_non_timeout_random_ticks(session);
 #endif /* COAP_Q_BLOCK_SUPPORT */
+    lg_xmit->data_info->get_func = get_func;
     lg_xmit->data_info->release_func = release_func;
     lg_xmit->data_info->app_ptr = app_ptr;
     pdu->lg_xmit = lg_xmit;
@@ -1210,8 +1217,25 @@ coap_add_data_large_internal(coap_session_t *session,
     rem = block.chunk_size;
     if (rem > lg_xmit->data_info->length - block.num * chunk)
       rem = lg_xmit->data_info->length - block.num * chunk;
-    if (!coap_add_data(pdu, rem, &data[block.num * chunk]))
-      goto fail;
+    if (get_func) {
+#if COAP_CONSTRAINED_STACK
+      /* Protected by global_lock if needed */
+      static uint8_t l_data[1024];
+#else /* ! COAP_CONSTRAINED_STACK */
+      uint8_t l_data[1024];
+#endif /* ! COAP_CONSTRAINED_STACK */
+      size_t l_length;
+
+      assert(rem <= 1024);
+      if (get_func(session, rem, block.num * chunk, l_data, &l_length, lg_xmit->data_info->app_ptr)) {
+        if (!coap_add_data(pdu, l_length, l_data)) {
+          goto fail;
+        }
+      }
+    } else {
+      if (!coap_add_data(pdu, rem, &data[block.num * chunk]))
+        goto fail;
+    }
 
     if (COAP_PDU_IS_REQUEST(pdu))
       lg_xmit->b.b1.bert_size = rem;
@@ -1229,8 +1253,21 @@ coap_add_data_large_internal(coap_session_t *session,
                                               (0 << 4) | (0 << 3) | blk_size), buf);
     }
 add_data:
-    if (!coap_add_data(pdu, length, data))
-      goto fail;
+    if (get_func) {
+      uint8_t *l_data = coap_malloc_type(COAP_STRING, length);
+      size_t l_length;
+
+      if (get_func(session, length, 0, l_data, &l_length, app_ptr)) {
+        if (!coap_add_data(pdu, l_length, l_data)) {
+          coap_free_type(COAP_STRING, l_data);
+          goto fail;
+        }
+        coap_free_type(COAP_STRING, l_data);
+      }
+    } else {
+      if (!coap_add_data(pdu, length, data))
+        goto fail;
+    }
 
     if (release_func) {
       coap_lock_callback(release_func(session, app_ptr));
@@ -1283,7 +1320,42 @@ coap_add_data_large_request_lkd(coap_session_t *session,
     return 0;
   }
   return coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0,
-                                      length, data, release_func, app_ptr, 0, 0);
+                                      length, data, release_func, NULL, app_ptr, 0, 0);
+}
+
+COAP_API int
+coap_add_data_large_request_app(coap_session_t *session,
+                                coap_pdu_t *pdu,
+                                size_t length,
+                                coap_release_large_data_t release_func,
+                                coap_get_large_data_t get_func,
+                                void *app_ptr) {
+  int ret;
+
+  coap_lock_lock(return 0);
+  ret = coap_add_data_large_request_app_lkd(session, pdu, length,
+                                            release_func, get_func, app_ptr);
+  coap_lock_unlock();
+  return ret;
+}
+
+int
+coap_add_data_large_request_app_lkd(coap_session_t *session,
+                                    coap_pdu_t *pdu,
+                                    size_t length,
+                                    coap_release_large_data_t release_func,
+                                    coap_get_large_data_t get_func,
+                                    void *app_ptr) {
+  /*
+   * Delay if session->doing_first is set.
+   * E.g. Reliable and CSM not in yet for checking block support
+   */
+  if (coap_client_delay_first(session) == 0) {
+    return 0;
+  }
+  return coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0,
+                                      length, NULL, release_func, get_func,
+                                      app_ptr, 0, 0);
 }
 #endif /* ! COAP_CLIENT_SUPPORT */
 
@@ -1300,8 +1372,7 @@ coap_add_data_large_response(coap_resource_t *resource,
                              size_t length,
                              const uint8_t *data,
                              coap_release_large_data_t release_func,
-                             void *app_ptr
-                            ) {
+                             void *app_ptr) {
   int ret;
 
   coap_lock_lock(return 0);
@@ -1409,7 +1480,7 @@ coap_add_data_large_response_lkd(coap_resource_t *resource,
   if (request &&
       !coap_add_data_large_internal(session, request, response, resource,
                                     query, maxage, etag, length, data,
-                                    release_func, app_ptr, single_request,
+                                    release_func, NULL, app_ptr, single_request,
                                     request->code)) {
     response->code = COAP_RESPONSE_CODE(500);
     goto error_released;
@@ -2093,15 +2164,37 @@ coap_send_q_blocks(coap_session_t *session,
       break;
     }
 
-    if (!coap_add_block(block_pdu,
-                        lg_xmit->data_info->length,
-                        lg_xmit->data_info->data,
-                        block.num,
-                        block.szx)) {
-      coap_log_warn("Internal update issue data\n");
-      coap_delete_pdu_lkd(block_pdu);
-      coap_delete_pdu_lkd(t_pdu);
-      break;
+    if (lg_xmit->data_info->get_func) {
+#if COAP_CONSTRAINED_STACK
+      /* Protected by global_lock if needed */
+      static uint8_t l_data[1024];
+#else /* ! COAP_CONSTRAINED_STACK */
+      uint8_t l_data[1024];
+#endif /* ! COAP_CONSTRAINED_STACK */
+      size_t l_length;
+
+      assert(chunk <= 1024);
+      if (lg_xmit->data_info->get_func(session, chunk,
+                                       block.num * chunk, l_data, &l_length,
+                                       lg_xmit->data_info->app_ptr)) {
+        if (!coap_add_data(block_pdu, l_length, l_data)) {
+          coap_log_warn("Internal update issue data (1)\n");
+          coap_delete_pdu_lkd(block_pdu);
+          coap_delete_pdu_lkd(t_pdu);
+          break;
+        }
+      }
+    } else {
+      if (!coap_add_block(block_pdu,
+                          lg_xmit->data_info->length,
+                          lg_xmit->data_info->data,
+                          block.num,
+                          block.szx)) {
+        coap_log_warn("Internal update issue data (2)\n");
+        coap_delete_pdu_lkd(block_pdu);
+        coap_delete_pdu_lkd(t_pdu);
+        break;
+      }
     }
     if (COAP_PDU_IS_RESPONSE(block_pdu)) {
       lg_xmit->last_block = block.num;
@@ -2371,6 +2464,7 @@ coap_block_release_lg_xmit_data(coap_session_t *session,
   if (data_info->release_func) {
     coap_lock_callback(data_info->release_func(session,
                                                data_info->app_ptr));
+    data_info->release_func = NULL;
   }
   coap_free_type(COAP_STRING, data_info);
 }
@@ -3694,11 +3788,30 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                                                 block.aszx),
                            buf);
 
-        if (!coap_add_block_b_data(pdu,
-                                   lg_xmit->data_info->length,
-                                   lg_xmit->data_info->data,
-                                   &block))
-          goto fail_body;
+        if (lg_xmit->data_info->get_func) {
+#if COAP_CONSTRAINED_STACK
+          /* Protected by global_lock if needed */
+          static uint8_t l_data[1024];
+#else /* ! COAP_CONSTRAINED_STACK */
+          uint8_t l_data[1024];
+#endif /* ! COAP_CONSTRAINED_STACK */
+          size_t l_length;
+
+          assert(chunk <= 1024);
+          if (lg_xmit->data_info->get_func(session, chunk,
+                                           block.num * chunk, l_data, &l_length,
+                                           lg_xmit->data_info->app_ptr)) {
+            if (!coap_add_data(pdu, l_length, l_data)) {
+              goto fail_body;
+            }
+          }
+        } else {
+          if (!coap_add_block_b_data(pdu,
+                                     lg_xmit->data_info->length,
+                                     lg_xmit->data_info->data,
+                                     &block))
+            goto fail_body;
+        }
         lg_xmit->b.b1.bert_size = block.chunk_size;
         coap_ticks(&lg_xmit->last_sent);
 #if COAP_Q_BLOCK_SUPPORT
@@ -4242,7 +4355,8 @@ reinit:
 
               if (session->block_mode & COAP_BLOCK_STLESS_FETCH && pdu->code == COAP_REQUEST_CODE_FETCH) {
                 (void)coap_get_data(lg_crcv->sent_pdu, &length, &data);
-                coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0, length, data, NULL, NULL, 0, 0);
+                coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0, length, data, NULL, NULL, NULL,
+                                             0, 0);
               }
               if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
                 /* Session could now be disconnected, so no lg_crcv */

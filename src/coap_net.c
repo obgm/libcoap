@@ -4228,6 +4228,9 @@ handle_response(coap_context_t *context, coap_session_t *session,
       if (coap_get_block_b(session, rcvd, COAP_OPTION_Q_BLOCK2, &qblock)) {
         coap_log_debug("Q-Block support available\n");
         set_block_mode_has_q(session->block_mode);
+        if (session->state == COAP_SESSION_STATE_ESTABLISHED)
+          /* Flush out any entries on session->delayqueue */
+          coap_session_connected(session);
       } else {
         coap_log_debug("Q-Block support not available\n");
         set_block_mode_drop_q(session->block_mode);
@@ -4561,7 +4564,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_Q_BLOCK_SUPPORT
-    if (session->lg_xmit && sent && sent->pdu && sent->pdu->type == COAP_MESSAGE_CON) {
+    if (session->lg_xmit && sent && sent->pdu && sent->pdu->type == COAP_MESSAGE_CON &&
+        !(session->block_mode & COAP_BLOCK_PROBE_Q_BLOCK)) {
       int doing_q_block = 0;
       coap_lg_xmit_t *lg_xmit = NULL;
 

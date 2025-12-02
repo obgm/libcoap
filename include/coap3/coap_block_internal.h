@@ -153,6 +153,7 @@ typedef struct coap_l_block2_t {
 typedef struct coap_lg_xmit_data_t {
   const uint8_t *data;   /**< large data ptr */
   size_t length;         /**< large data length */
+  coap_get_large_data_t get_func; /**< Where to get data id needed */
   coap_release_large_data_t release_func; /**< large data de-alloc function */
   void *app_ptr;         /**< applicaton provided ptr for de-alloc function */
   uint32_t ref;          /**< Reference count */
@@ -562,7 +563,7 @@ int coap_context_set_max_block_size_lkd(coap_context_t *context, size_t max_bloc
  * @param pdu      The PDU to associate the data with.
  * @param length   The length of data to transmit.
  * @param data     The data to transmit.
- * @param release_func The function to call to de-allocate @p data or @c NULL
+ * @param release_func The function to call to de-allocate @p app_ptr or @c NULL
  *                 if the function is not required.
  * @param app_ptr  A Pointer that the application can provide for when
  *                 release_func() is called.
@@ -575,6 +576,52 @@ int coap_add_data_large_request_lkd(coap_session_t *session,
                                     const uint8_t *data,
                                     coap_release_large_data_t release_func,
                                     void *app_ptr);
+
+/**
+ * Associates given data callback with the @p pdu that is passed as second parameter.
+ *
+ * This function will fail if data has already been added to the @p pdu.
+ *
+ * Used for a client request.
+ *
+ * If the data spans multiple PDUs, then the data will get transmitted using
+ * (Q-)Block1 option with the addition of the Size1 and Request-Tag options.
+ * The underlying library will handle the transmission of the individual blocks.
+ *
+ * Each individual block of data will get requested by the use of a call-back
+ * function @p get_func before transmission.
+ *
+ * There is no need for the application to include the (Q-)Block1 option in the
+ * @p pdu.
+ *
+ * coap_add_data_large_request_app() (or the alternative coap_add_data_large_*()
+ * functions) must be called only once per PDU and must be the last PDU update
+ * before the PDU is transmitted. The (potentially) initial data will get
+ * transmitted when coap_send() is invoked.
+ *
+ * Note: COAP_BLOCK_USE_LIBCOAP must be set by coap_context_set_block_mode()
+ * for libcoap to work correctly when using this function.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session  The session to associate the data with.
+ * @param pdu      The PDU to associate the data with.
+ * @param length   The length of data to transmit.
+ * @param release_func The function to call to de-allocate @p app_ptr or @c NULL
+ *                 if the function is not required.
+ * @param get_func The function to call to get the next block of data
+ *                 for transmission.
+ * @param app_ptr  A Pointer that the application can provide for when
+ *                 @p get_func is called.
+ *
+ * @return @c 1 if addition is successful, else @c 0.
+ */
+int coap_add_data_large_request_app_lkd(coap_session_t *session,
+                                        coap_pdu_t *pdu,
+                                        size_t length,
+                                        coap_release_large_data_t release_func,
+                                        coap_get_large_data_t get_func,
+                                        void *app_ptr);
 
 /**
  * The function checks if the token needs to be updated before PDU is

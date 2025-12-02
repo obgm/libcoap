@@ -286,7 +286,7 @@ void coap_add_data_blocked_response(const coap_pdu_t *request,
  * coap_add_data_large_*() functions following transmission of the supplied
  * data.
  *
- * @param session The session that this data is associated with
+ * @param session The session that this data is associated with.
  * @param app_ptr The application provided pointer provided to the
  *                coap_add_data_large_* functions.
  */
@@ -328,7 +328,7 @@ typedef void (*coap_release_large_data_t)(coap_session_t *session,
  * @param pdu      The PDU to associate the data with.
  * @param length   The length of data to transmit.
  * @param data     The data to transmit.
- * @param release_func The function to call to de-allocate @p data or @c NULL
+ * @param release_func The function to call to de-allocate @p app_ptr or @c NULL
  *                 if the function is not required.
  * @param app_ptr  A Pointer that the application can provide for when
  *                 release_func() is called.
@@ -341,6 +341,71 @@ COAP_API int coap_add_data_large_request(coap_session_t *session,
                                          const uint8_t *data,
                                          coap_release_large_data_t release_func,
                                          void *app_ptr);
+
+/**
+ * Callback handler for getting the data based on @p app_ptr provided to
+ * coap_add_data_large_request_app() function for then sending the next block
+ * of data.
+ *
+ * @param session The session that this data is associated with.
+ * @param max     The maximum size of the data to be returned.
+ * @param offset  The starting offset of the requested data.
+ * @param data    Where to copy the data into.
+ * @param length  Updated with the provided data length. This cannot be
+ *                larger than @p max. This must be the same as @p max
+ *                apart from the final block.
+ * @param app_ptr The application provided pointer provided to the
+ *                coap_add_data_large_request_app function.
+ *
+ * @return 1 if data provided, else 0.
+ */
+typedef int (*coap_get_large_data_t)(coap_session_t *session, size_t max,
+                                     size_t offset,
+                                     uint8_t *data, size_t *length,
+                                     void *app_ptr);
+/**
+ * Associates given data callback with the @p pdu that is passed as second parameter.
+ *
+ * This function will fail if data has already been added to the @p pdu.
+ *
+ * Used for a client request.
+ *
+ * If the data spans multiple PDUs, then the data will get transmitted using
+ * (Q-)Block1 option with the addition of the Size1 and Request-Tag options.
+ * The underlying library will handle the transmission of the individual blocks.
+ *
+ * Each individual block of data will get requested by the use of a call-back
+ * function @p get_func before transmission.
+ *
+ * There is no need for the application to include the (Q-)Block1 option in the
+ * @p pdu.
+ *
+ * coap_add_data_large_request_app() (or the alternative coap_add_data_large_*()
+ * functions) must be called only once per PDU and must be the last PDU update
+ * before the PDU is transmitted. The (potentially) initial data will get
+ * transmitted when coap_send() is invoked.
+ *
+ * Note: COAP_BLOCK_USE_LIBCOAP must be set by coap_context_set_block_mode()
+ * for libcoap to work correctly when using this function.
+ *
+ * @param session  The session to associate the data with.
+ * @param pdu      The PDU to associate the data with.
+ * @param length   The length of data to transmit.
+ * @param release_func The function to call to de-allocate @p app_ptr or @c NULL
+ *                 if the function is not required.
+ * @param get_func The function to call to get the next block of data
+ *                 for transmission.
+ * @param app_ptr  A Pointer that the application can provide for when
+ *                 @p get_func is called.
+ *
+ * @return @c 1 if addition is successful, else @c 0.
+ */
+COAP_API int coap_add_data_large_request_app(coap_session_t *session,
+                                             coap_pdu_t *pdu,
+                                             size_t length,
+                                             coap_release_large_data_t release_func,
+                                             coap_get_large_data_t get_func,
+                                             void *app_ptr);
 
 /**
  * Associates given data with the @p response pdu that is passed as fourth
@@ -385,7 +450,7 @@ COAP_API int coap_add_data_large_request(coap_session_t *session,
  * @param etag       ETag to use if not 0.
  * @param length     The total length of the data.
  * @param data       The entire data block to transmit.
- * @param release_func The function to call to de-allocate @p data or NULL if
+ * @param release_func The function to call to de-allocate @p app_ptr or NULL if
  *                   the function is not required.
  * @param app_ptr    A Pointer that the application can provide for when
  *                   release_func() is called.

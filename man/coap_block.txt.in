@@ -14,6 +14,7 @@ coap_block,
 coap_context_set_block_mode,
 coap_context_set_max_block_size,
 coap_add_data_large_request,
+coap_add_data_large_request_app,
 coap_add_data_large_response,
 coap_get_data_large,
 coap_block_build_body,
@@ -34,6 +35,11 @@ size_t _max_block_size_);*
 *int coap_add_data_large_request(coap_session_t *_session_,
 coap_pdu_t *_pdu_, size_t _length_, const uint8_t *_data_,
 coap_release_large_data_t _release_func_, void *_app_ptr_);*
+
+*int coap_add_data_large_request_app(coap_session_t *_session_,
+coap_pdu_t *_pdu_, size_t _length_,
+coap_release_large_data_t _release_func_, coap_get_large_data_t _get_func_,
+void *_app_ptr_);
 
 *int coap_add_data_large_response(coap_resource_t *_resource_,
 coap_session_t *_session_, const coap_pdu_t *_request_, coap_pdu_t *_response_,
@@ -303,6 +309,33 @@ _release_func_ (if set) is always called.
 *NOTE:* Options cannot be added to the _pdu_ after
 coap_add_data_large_request() is called.
 
+*Function: coap_add_data_large_request_app()*
+
+The *coap_add_data_large_request_app*() function is similar to *coap_add_data*(),
+but supports the transmission of data that has a body size that is potentially
+larger than can be fitted into a single client request PDU. Data of the specified
+overall length _length_ is requested in individual blocks using the call back
+function _get_func_ associated with the _session_ with the
+first block of data added to the PDU _pdu_ along with the appropriate CoAP
+options such as (Q-)Block1, Size1 and Request-Tag if the data does not fit in
+a single PDU.
+
+When the block receipt has been acknowledged by the peer, the library
+will then send the next block of data until all the data has been transmitted.
+
+The _app_ptr_ passed to the function *coap_add_data_large_request_app*() must
+exist until all blocks have been transmitted. The callback function
+_release_func_ can be used to release information associated with _app_ptr_. If not
+NULL, the _release_func_ callback function is called once the final block of data
+has been transmitted. The user-defined parameter _app_ptr_ is the same value that was
+passed to *coap_add_data_large_request_app*(). Even if there is an error return,
+_release_func_ (if set) is always called.
+
+*NOTE:* This function must only be called once per _pdu_.
+
+*NOTE:* Options cannot be added to the _pdu_ after
+coap_add_data_large_request() is called.
+
 *Function: coap_add_data_large_response()*
 
 The *coap_add_data_large_response*() function is responsible for handling
@@ -341,7 +374,7 @@ potentially multiple times, unless if COAP_BLOCK_STLESS_BLOCK2 is set.
 *NOTE:* This function must only be called once per _pdu_.
 
 *NOTE:* Options cannot be added to the _pdu_ after
-coap_add_data_large_request() is called.
+coap_add_data_large_response() is called.
 
 *Function: coap_get_data_large()*
 
@@ -409,8 +442,9 @@ in the updated _body_data_.
 
 RETURN VALUES
 -------------
-*coap_add_data_large_request*(), *coap_add_data_large_response*(), and
-*coap_get_data_large*() return 0 on failure, 1 on success.
+*coap_add_data_large_request*(), *coap_add_data_large_request_app*(),
+*coap_add_data_large_response*(), and *coap_get_data_large*() return 0
+on failure, 1 on success.
 
 *coap_block_build_body*() returns the current state of the body's data
 (which may have some missing gaps) or NULL on error.
@@ -532,6 +566,167 @@ main(int argc, char *argv[]) {
                  "/example/uri", NULL, data, data_length, 0);
 
   /* ... Other code etc. ... */
+
+  coap_cleanup();
+  return 0;
+}
+----
+
+*Setup PDU and Transmit - Constrained devices*
+
+[source, c]
+----
+#include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#define __USE_POSIX
+#include <stdio.h>
+#include <sys/stat.h>
+
+static FILE *file_block = NULL;
+static size_t file_size = 0;
+
+static void
+release_file_block(coap_session_t *session COAP_UNUSED, void *app_ptr) {
+  FILE *fp = (FILE *)app_ptr;
+
+  if (fp)
+    fclose(fp);
+  return;
+}
+
+static int
+get_file_block(coap_session_t *session, size_t max, size_t offset,
+               uint8_t *data, size_t *length, void *app_ptr) {
+  FILE *fp = (FILE *)app_ptr;
+
+  (void)session;
+
+  if (!fp)
+    return 0;
+
+  if (fseek(fp, (long)offset, SEEK_SET) != 0) {
+    return 0;
+  }
+  *length = fread(data, 1, max, fp);
+
+  return 1;
+}
+
+static int
+build_send_pdu(coap_context_t *context, coap_session_t *session,
+               uint8_t msgtype, uint8_t request_code, const char *path,
+               const char *query, int observe) {
+  coap_pdu_t *pdu;
+  uint8_t buf[8];
+  size_t buflen;
+  coap_optlist_t *optlist_chain = NULL;
+  /* Remove (void) definition if variable is used */
+  (void)context;
+
+  /* Create the pdu with the appropriate options */
+  pdu = coap_pdu_init(msgtype, request_code, coap_new_message_id(session),
+                      coap_session_max_pdu_size(session));
+  if (!pdu)
+    return 0;
+
+  /*
+   * Create unique token for this request for handling unsolicited /
+   * delayed responses
+   */
+  coap_session_new_token(session, &buflen, buf);
+  if (!coap_add_token(pdu, buflen, buf)) {
+    coap_log_debug("cannot add token to request\n");
+    goto error;
+  }
+
+  if (path) {
+    /* Add in the Uri-Path options */
+    if (!coap_path_into_optlist((const uint8_t *)path, strlen(path),
+                                COAP_OPTION_URI_PATH, &optlist_chain))
+      goto error;
+  }
+
+  if (query) {
+    /* Add in the Uri-Query options */
+    if (!coap_query_into_optlist((const uint8_t *)query, strlen(query),
+                                 COAP_OPTION_URI_QUERY, &optlist_chain))
+      goto error;
+  }
+
+  if (request_code == COAP_REQUEST_GET && observe) {
+    /* Indicate that we want to observe this resource */
+    if (!coap_insert_optlist(&optlist_chain,
+                             coap_new_optlist(COAP_OPTION_OBSERVE,
+                                              coap_encode_var_safe(buf, sizeof(buf),
+                                                  COAP_OBSERVE_ESTABLISH), buf)
+                            ))
+      goto error;
+  }
+
+  /* ... Other code / options etc. ... */
+
+  /* Add in all the options (after internal sorting) to the pdu */
+  if (!coap_add_optlist_pdu(pdu, &optlist_chain))
+    goto error;
+
+  if (file_size) {
+    coap_add_data_large_request_app(session, pdu, file_size,
+                                    release_file_block, get_file_block,
+                                    file_block);
+  }
+
+  if (coap_send(session, pdu) == COAP_INVALID_MID)
+    goto error;
+  coap_delete_optlist(optlist_chain);
+  return 1;
+
+error:
+
+  if (pdu)
+    coap_delete_pdu(pdu);
+  coap_delete_optlist(optlist_chain);
+  return 0;
+
+}
+
+int
+main(int argc, char *argv[]) {
+  coap_context_t *context = NULL;
+  coap_session_t *session = NULL;
+  struct stat statbuf;
+
+  (void)argc;
+
+  /* Initialize libcoap library */
+  coap_startup();
+
+  /* ... Set up context, session etc. ... */
+
+  /* Set up using libcoap to do the block work */
+  coap_context_set_block_mode(context,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+  /* ... Other code etc. ... */
+
+  /* open specified input file */
+
+  file_block = fopen(argv[1], "r");
+  if (!file_block) {
+    perror("fopen");
+    return 1;
+  }
+  if (fstat(fileno(file_block), &statbuf) < 0) {
+    perror("stat");
+    fclose(file_block);
+    file_block = NULL;
+    return 1;
+  }
+  file_size = statbuf.st_size;
+
+  build_send_pdu(context, session, COAP_MESSAGE_CON, COAP_REQUEST_PUT,
+                 "/example/uri", NULL, 0);
+
+  /* ... Other coap_io_process() code etc. ... */
 
   coap_cleanup();
   return 0;
