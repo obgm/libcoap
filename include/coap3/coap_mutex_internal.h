@@ -109,8 +109,14 @@ typedef sys_mutex_t coap_mutex_t;
 #define coap_mutex_destroy(a) sys_mutex_set_invalid(a)
 #define coap_mutex_lock(a)    sys_mutex_lock(a)
 #define coap_mutex_unlock(a)  sys_mutex_unlock(a)
-#define coap_thread_pid_t     sys_thread_t
-#define coap_thread_pid       (coap_thread_pid_t)1
+#ifdef _WIN32
+#define DWORD                 sys_thread_t
+#define coap_thread_pid       GetCurrentThreadId()
+#else /* ! _WIN32 */
+/* Assume this is therefore FreeRTOS */
+#define caop_thread_pid_t     TaskHandle_t
+#define coap_thread_pid       xTaskGetCurrentTaskHandle()
+#endif /* ! _WIN32 */
 
 #if COAP_THREAD_RECURSIVE_CHECK
 #error COAP_THREAD_RECURSIVE_CHECK not supported (no coap_mutex_trylock())
