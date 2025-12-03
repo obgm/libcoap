@@ -4160,6 +4160,9 @@ reinit:
         if (updated_block) {
           void *body_free;
 
+          /* Update last_used to prevent premature timeout during long transfers */
+          coap_ticks(&lg_crcv->last_used);
+
           if ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) {
             if (size2 < saved_offset + length) {
               size2 = saved_offset + length;
