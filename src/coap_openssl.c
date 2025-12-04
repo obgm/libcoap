@@ -3739,14 +3739,16 @@ int
 coap_dtls_handle_timeout(coap_session_t *session) {
   SSL *ssl = (SSL *)session->tls;
 
-  assert(ssl != NULL && session->state == COAP_SESSION_STATE_HANDSHAKE);
-  if ((++session->dtls_timeout_count > session->max_retransmit) ||
-      (DTLSv1_handle_timeout(ssl) < 0)) {
-    /* Too many retries */
-    coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
-    return 1;
+  if (ssl != NULL && session->state == COAP_SESSION_STATE_HANDSHAKE) {
+    if ((++session->dtls_timeout_count > session->max_retransmit) ||
+        (DTLSv1_handle_timeout(ssl) < 0)) {
+      /* Too many retries */
+      coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
+      return 1;
+    }
+    return 0;
   }
-  return 0;
+  return 1;
 }
 
 #if COAP_SERVER_SUPPORT
