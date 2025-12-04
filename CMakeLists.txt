@@ -438,7 +438,7 @@ if(${ENABLE_THREAD_RECURSIVE_LOCK_CHECK})
 endif()
 
 if(${ENABLE_THREAD_NUM_LOGGING})
-  set(COAP_THREAD_SAFE "${ENABLE_THREAD_NUM_LOGGING}")
+  set(COAP_THREAD_NUM_LOGGING "${ENABLE_THREAD_NUM_LOGGING}")
   message(STATUS "compiling with thread number logging support")
 endif()
 
