@@ -100,4 +100,8 @@
 #endif /* ! MBEDTLS_MD_CAN_SHA256 */
 #endif /* MBEDTLS_MD_C */
 
+#ifndef MBEDTLS_SSL_COOKIE_C
+#define MBEDTLS_SSL_COOKIE_C
+#endif /* ! MBEDTLS_SSL_COOKIE_C */
+
 #endif /* CONFIG_MBEDTLS_LIBCOAP_H */

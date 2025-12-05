@@ -782,16 +782,23 @@ is_binary(int content_format) {
 #error "COAP_DEBUG_BUF_SIZE must be at least 5, should be >= 32 to be useful"
 #endif /* COAP_DEBUG_BUF_SIZE < 5 */
 
+/* Proxy-Uri: can be 1034 bytes long */
+#if COAP_DEBUG_BUF_SIZE < 1035
+#define USE_BUF_SIZE COAP_DEBUG_BUF_SIZE
+#else
+#define USE_BUF_SIZE 1035
+#endif
+
 void
 coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 #if COAP_CONSTRAINED_STACK
   /* Proxy-Uri: can be 1034 bytes long */
   /* buf and outbuf can be protected by m_show_pdu if needed */
-  static unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1035)];
+  static unsigned char buf[USE_BUF_SIZE];
   static char outbuf[COAP_DEBUG_BUF_SIZE];
 #else /* ! COAP_CONSTRAINED_STACK */
   /* Proxy-Uri: can be 1034 bytes long */
-  unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1035)];
+  unsigned char buf[USE_BUF_SIZE];
   char outbuf[COAP_DEBUG_BUF_SIZE];
 #endif /* ! COAP_CONSTRAINED_STACK */
   size_t buf_len = 0; /* takes the number of bytes written to buf */

@@ -93,6 +93,22 @@ config LIBCOAP_THREAD_SAFE_SUPPORT
 
         If this option is disabled, multi-thread safe use of libcoap is not available.
 
+config LIBCOAP_THREAD_RECURSIVE_CHECK
+    bool "Enable thread-safe recursion checking support within CoAP"
+    depends on LIBCOAP_THREAD_SAFE_SUPPORT
+    default n
+    help
+        Enable thread-safe recursion checking support for CoAP.
+
+config LIBCOAP_ENABLE_THREAD_NUM_LOGGING
+    bool "Enable building with thread number logging support"
+    depends on LIBCOAP_THREAD_SAFE_SUPPORT
+    default y
+    help
+        Enable logging including thread number.
+
+        If this option is disabled, the thread number is not reported.
+
 config LIBCOAP_CLIENT_SUPPORT
     bool "Enable Client functionality within CoAP"
     default n
@@ -187,7 +203,7 @@ config MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 config MBEDTLS_ENTROPY_ENABLED
     bool
     default y
-config MBEDTLS_DTLS
+config MBEDTLS_SSL_PROTO_DTLS
     bool
     default y
 config MBEDTLS_SSL_DTLS_CONNECTION_ID
@@ -196,7 +212,7 @@ config MBEDTLS_SSL_DTLS_CONNECTION_ID
 config MBEDTLS_ZEPHYR_ENTROPY
     bool
     default y
-config MBEDTLS_TLS_VERSION_1_2
+config MBEDTLS_SSL_PROTO_TLS1_2
     bool
     default y
 config MBEDTLS_KEY_EXCHANGE_ALL_ENABLED
@@ -212,9 +228,6 @@ config MBEDTLS_MAC_ALL_ENABLED
     bool
     default y
 config MBEDTLS_GENPRIME_ENABLED
-    bool
-    default y
-config MBEDTLS_HMAC_DRBG_ENABLED
     bool
     default y
 config MBEDTLS_ECDH_C
@@ -233,6 +246,9 @@ config MBEDTLS_PEM_CERTIFICATE_FORMAT
     bool
     default y
 config MBEDTLS_SSL_EXTENDED_MASTER_SECRET
+    bool
+    default y
+config MBEDTLS_HAVE_TIME_DATE
     bool
     default y
 
