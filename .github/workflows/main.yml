@@ -200,7 +200,7 @@ jobs:
     - name: MS CMake configure
       run: |
         cd build_test
-        cmake .. -DWARNING_TO_ERROR=ON -DWITH_OPENSSL=YES
+        cmake .. -DWARNING_TO_ERROR=ON -DWITH_OPENSSL=YES -DENABLE_THREAD_SAFE=OFF
     - name: MS CMake build
       run: |
         cd build_test

@@ -306,7 +306,13 @@ check_function_exists(memset HAVE_MEMSET)
 check_function_exists(select HAVE_SELECT)
 check_function_exists(socket HAVE_SOCKET)
 check_function_exists(strcasecmp HAVE_STRCASECMP)
+if(MINGW OR WIN32)
+  set(CMAKE_REQUIRED_LIBRARIES pthread)
+endif()
 check_function_exists(pthread_mutex_lock HAVE_PTHREAD_MUTEX_LOCK)
+if(MINGW OR WIN32)
+  set(CMAKE_REQUIRED_LIBRARIES "")
+endif()
 check_function_exists(getaddrinfo HAVE_GETADDRINFO)
 check_function_exists(strnlen HAVE_STRNLEN)
 check_function_exists(strrchr HAVE_STRRCHR)
@@ -428,22 +434,25 @@ else()
 endif()
 
 if(${ENABLE_THREAD_SAFE})
-  set(COAP_THREAD_SAFE "${ENABLE_THREAD_SAFE}")
+  set(COAP_THREAD_SAFE "1")
   message(STATUS "compiling with thread safe support")
+else()
+  set(ENABLE_THREAD_RECURSIVE_LOCK_CHECK OFF)
+  set(ENABLE_THREAD_NUM_LOGGING OFF)
 endif()
 
 if(${ENABLE_THREAD_RECURSIVE_LOCK_CHECK})
-  set(COAP_THREAD_RECURSIVE_CHECK "${ENABLE_THREAD_RECURSIVE_LOCK_CHECK}")
+  set(COAP_THREAD_RECURSIVE_CHECK "1")
   message(STATUS "compiling with thread recursive lock detection support")
 endif()
 
 if(${ENABLE_THREAD_NUM_LOGGING})
-  set(COAP_THREAD_NUM_LOGGING "${ENABLE_THREAD_NUM_LOGGING}")
+  set(COAP_THREAD_NUM_LOGGING "1")
   message(STATUS "compiling with thread number logging support")
 endif()
 
 if(${ENABLE_SMALL_STACK})
-  set(COAP_CONSTRAINED_STACK "${ENABLE_SMALL_STACK}")
+  set(COAP_CONSTRAINED_STACK "1")
   message(STATUS "compiling with small stack support")
 endif()
 
@@ -738,7 +747,8 @@ target_link_libraries(
          $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:MbedTLS::mbedtls>
          $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:wolfssl::wolfssl>
          $<$<BOOL:${WIN32}>:ws2_32>
-         $<$<BOOL:${WIN32}>:iphlpapi>)
+         $<$<BOOL:${WIN32}>:iphlpapi>
+         $<$<BOOL:${MINGW}>:pthread>)
 
 target_compile_options(
   ${COAP_LIBRARY_NAME}

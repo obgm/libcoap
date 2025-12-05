@@ -85,6 +85,9 @@
 /* Define to 1 if you have the `select' function. */
 #cmakedefine HAVE_SELECT @HAVE_SELECT@
 
+/* Define to 1 if you have the <signal.h> header file. */
+#cmakedefine HAVE_SIGNAL_H @HAVE_SIGNAL_H@
+
 /* Define to 1 if you have the `socket' function. */
 #cmakedefine HAVE_SOCKET @HAVE_SOCKET@
 
