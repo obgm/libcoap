@@ -118,22 +118,29 @@ static void *
 coap_io_process_worker_thread(void *arg) {
   coap_thread_param_t *thread_param = (coap_thread_param_t *)arg;
   coap_context_t *context = thread_param->context;
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG)
+  long unsigned int thread_pid = coap_thread_pid;
+#endif
 
   thread_no = thread_param->thread_no;
   coap_free_type(COAP_STRING, thread_param);
 
-  coap_log_debug("Thread %lx start\n", pthread_self());
+  coap_log_debug("Thread %lx start\n", thread_pid);
 
   while (!coap_thread_quit) {
     int result;
 
     coap_lock_lock(return 0);
+#ifndef __ZEPHYR__
     result = coap_io_process_lkd(context, COAP_IO_WAIT);
+#else /* __ZEPHYR__ */
+    result = coap_io_process_lkd(context, 1000);
+#endif /* __ZEPHYR__ */
     coap_lock_unlock();
-    if (result < 0)
+    if (result < 0 || coap_thread_quit)
       break;
   }
-  coap_log_debug("Thread %lx exit\n", pthread_self());
+  coap_log_debug("Thread %lx exit\n", thread_pid);
   return 0;
 }
 
@@ -183,12 +190,18 @@ coap_io_process_remove_threads(coap_context_t *context) {
   coap_lock_unlock();
   coap_mutex_lock(&m_io_threads);
 
+#ifndef __ZEPHYR__
   for (i = 0; i < thread_id_count ; i++) {
     int s = pthread_kill(thread_id[i], SIGINT);
     if (s != 0) {
       coap_log_err("thread kill failure\n");
     }
   }
+#else /* __ZEPHYR__ */
+  coap_thread_quit = 1;
+  coap_send_recv_terminate();
+#endif /* __ZEPHYR__ */
+
   for (i = 0; i < thread_id_count ; i++) {
     void *retval;
     int s = pthread_join(thread_id[i], &retval);
