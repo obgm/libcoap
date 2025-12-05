@@ -317,6 +317,7 @@ check_function_exists(if_nametoindex HAVE_IF_NAMETOINDEX)
 # check for symbols
 if(WIN32)
   set(HAVE_STRUCT_CMSGHDR 1)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
   message(STATUS "setting HAVE_STRUCT_CMSGHDR")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL QNX)
   set(HAVE_STRUCT_CMSGHDR 0)
