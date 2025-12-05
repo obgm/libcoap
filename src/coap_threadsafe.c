@@ -119,7 +119,7 @@ coap_io_process_worker_thread(void *arg) {
   coap_thread_param_t *thread_param = (coap_thread_param_t *)arg;
   coap_context_t *context = thread_param->context;
 #if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG)
-  long unsigned int thread_pid = coap_thread_pid;
+  long unsigned int thread_pid = (long unsigned int)coap_thread_pid;
 #endif
 
   thread_no = thread_param->thread_no;
