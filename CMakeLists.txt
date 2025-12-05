@@ -428,22 +428,22 @@ else()
 endif()
 
 if(${ENABLE_THREAD_SAFE})
-  set(COAP_THREAD_SAFE "${ENABLE_THREAD_SAFE}")
+  set(COAP_THREAD_SAFE "1")
   message(STATUS "compiling with thread safe support")
 endif()
 
 if(${ENABLE_THREAD_RECURSIVE_LOCK_CHECK})
-  set(COAP_THREAD_RECURSIVE_CHECK "${ENABLE_THREAD_RECURSIVE_LOCK_CHECK}")
+  set(COAP_THREAD_RECURSIVE_CHECK "1")
   message(STATUS "compiling with thread recursive lock detection support")
 endif()
 
 if(${ENABLE_THREAD_NUM_LOGGING})
-  set(COAP_THREAD_NUM_LOGGING "${ENABLE_THREAD_NUM_LOGGING}")
+  set(COAP_THREAD_NUM_LOGGING "1")
   message(STATUS "compiling with thread number logging support")
 endif()
 
 if(${ENABLE_SMALL_STACK})
-  set(COAP_CONSTRAINED_STACK "${ENABLE_SMALL_STACK}")
+  set(COAP_CONSTRAINED_STACK "1")
   message(STATUS "compiling with small stack support")
 endif()
 
