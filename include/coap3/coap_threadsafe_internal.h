@@ -355,7 +355,6 @@ int coap_lock_lock_func(void);
 #define coap_lock_callback_ret(r,c,func) do { \
     coap_lock_check_locked(c); \
     global_lock.in_callback++; \
-    global_lock.in_callback++; \
     (r) = func; \
     global_lock.in_callback--; \
   } while (0)
