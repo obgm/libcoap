@@ -1032,7 +1032,7 @@ AS_IF([test "x$build_async" = "xyes"],
 
 # configure options
 # __observe_persist__
-AC_ARG_ENABLE([async],
+AC_ARG_ENABLE([observe-persist],
               [AS_HELP_STRING([--enable-observe-persist],
                               [Enable building with support for persisting observes over a server restart [default=yes]])],
               [build_observe_persist="$enableval"],
@@ -1489,13 +1489,13 @@ if test "x$build_add_default_names" = "xyes"; then
 else
     AC_MSG_RESULT([      add default names              : "no"])
 fi
-if test "x$build_observe_persist" = "xyes"; then
-    AC_MSG_RESULT([      build Observe Persist          : "yes"])
-else
-    AC_MSG_RESULT([      build Observe Persist          : "no"])
-fi
 if test "x$have_epoll" = "xyes"; then
     AC_MSG_RESULT([      build using epoll              : "$with_epoll"])
+fi
+if test "x$build_observe_persist" = "xyes"; then
+    AC_MSG_RESULT([      enable Observe Persist support : "yes"])
+else
+    AC_MSG_RESULT([      enable Observe Persist support : "no"])
 fi
 AC_MSG_RESULT([      enable small stack size        : "$enable_small_stack"])
 if test "x$build_async" != "xno"; then
