@@ -31,6 +31,7 @@ coap_tcp_is_supported(void) {
 #include <lwip/tcp.h>
 
 #if NO_SYS == 0
+extern sys_sem_t coap_io_timeout_sem;
 extern uint32_t coap_lwip_in_call_back_ref;
 #endif /* NO_SYS == 0 */
 
@@ -47,6 +48,9 @@ do_tcp_err(void *arg, err_t err) {
 
   (void)err;
 
+  if (!session)
+    return;
+
   coap_lock_lock(return);
   coap_handle_event_lkd(session->context, COAP_EVENT_TCP_FAILED, session);
   /*
@@ -57,6 +61,9 @@ do_tcp_err(void *arg, err_t err) {
   session->sock.tcp_pcb = NULL;
   coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
   coap_lock_unlock();
+#if NO_SYS == 0
+  sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
 }
 
 /** Callback from lwIP when a TCP packet is received.
@@ -67,25 +74,35 @@ do_tcp_err(void *arg, err_t err) {
 static err_t
 coap_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
   coap_session_t *session = (coap_session_t *)arg;
-  coap_socket_t *sock = &session->sock;
+  coap_socket_t *sock = session ? &session->sock : NULL;
   coap_tick_t now;
 
   (void)tpcb;
+  if (!session)
+    return ERR_ARG;
+
   if (p == NULL) {
     /* remote host closed connection */
+    tcp_close(sock->tcp_pcb);
     tcp_arg(sock->tcp_pcb, NULL);
     tcp_recv(sock->tcp_pcb, NULL);
-    tcp_close(sock->tcp_pcb);
     sock->tcp_pcb = NULL;
     coap_lock_lock(return ERR_ARG);
     coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
     coap_lock_unlock();
+#if NO_SYS == 0
+    sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
     return ERR_OK;
   } else if (err != ERR_OK) {
     /* cleanup, for unknown reason */
     if (p != NULL) {
       pbuf_free(p);
     }
+    tcp_recved(sock->tcp_pcb, p->tot_len);
+#if NO_SYS == 0
+    sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
     return err;
   }
 
@@ -100,6 +117,9 @@ coap_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
   coap_lwip_in_call_back_ref--;
 #endif /* NO_SYS == 0 */
   coap_lock_unlock();
+#if NO_SYS == 0
+  sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
   return ERR_OK;
 }
 
@@ -120,6 +140,9 @@ do_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
   coap_ticks(&now);
   coap_connect_session(session, now);
   coap_lock_unlock();
+#if NO_SYS == 0
+  sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
   return ERR_OK;
 }
 
@@ -212,6 +235,9 @@ do_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
     ret_err = ERR_MEM;
   }
   coap_lock_unlock();
+#if NO_SYS == 0
+  sys_sem_signal(&coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
   return ret_err;
 }
 
@@ -289,6 +315,7 @@ coap_lwip_tcp_write(void *ctx) {
     }
     pbuf_free(cb_ctx->pbuf);
     coap_free_type(COAP_STRING, cb_ctx);
+    sys_sem_signal(&coap_io_timeout_sem);
   }
 }
 #endif /* NO_SYS == 0 */
@@ -361,12 +388,14 @@ coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len) {
       memcpy(data, sock->p->payload, data_len);
       sock->p->payload = &ptr[data_len];
       sock->p->len -= data_len;
+      tcp_recved(sock->tcp_pcb, data_len);
       return data_len;
     } else {
       data_len = sock->p->len;
       memcpy(data, sock->p->payload, sock->p->len);
       pbuf_free(sock->p);
       sock->p = NULL;
+      tcp_recved(sock->tcp_pcb, data_len);
       return data_len;
     }
   }
@@ -379,6 +408,8 @@ coap_lwip_tcp_close(void *ctx) {
   struct tcp_pcb *tcp_pcb = (struct tcp_pcb *)ctx;
 
   if (tcp_pcb) {
+    tcp_err(tcp_pcb, NULL);
+    tcp_arg(tcp_pcb, NULL);
     tcp_recv(tcp_pcb, NULL);
     tcp_close(tcp_pcb);
   }
@@ -398,7 +429,9 @@ coap_lwip_endpoint_tcp_close(void *ctx) {
 void
 coap_socket_strm_close(coap_socket_t *sock) {
   struct tcp_pcb *tcp_pcb = sock->tcp_pcb;
+#if NO_SYS == 0
   err_t err;
+#endif /* NO_SYS == 0 */
 
   sock->tcp_pcb = NULL;
   if (tcp_pcb) {

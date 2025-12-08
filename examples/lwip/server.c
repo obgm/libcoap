@@ -44,6 +44,7 @@
 #if LWIP_IPV6_MLD && LWIP_IPV6
 #include <lwip/mld6.h>
 #endif /* LWIP_IPV6_MLD && LWIP_IPV6 */
+#include <lwip/tcpip.h>
 
 #include <netif/etharp.h>
 #include <netif/tapif.h>
@@ -134,7 +135,17 @@ main(int argc, char **argv) {
   printf("TCP/IP initialized.\n");
 
 #if LWIP_IPV4
-  netif_add(&netif, &ipaddr, &netmask, &gw, NULL, tapif_init, ethernet_input);
+#if NO_SYS
+  netif_add(&netif, &ipaddr, &netmask, &gw, NULL, tapif_init, netif_input);
+#else /* NO_SYS == 0 */
+  netif_add(&netif, &ipaddr, &netmask, &gw, NULL, tapif_init, tcpip_input);
+#endif /* NO_SYS == 0 */
+#else  /* ! LWIP_IPV4 */
+#if NO_SYS
+  netif_add(&netif, NULL, tapif_init, netif_init);
+#else /* NO_SYS == 0 */
+  netif_add(&netif, NULL, tapif_init, tcpip_init);
+#endif /* NO_SYS == 0 */
 #endif /* LWIP_IPV4 */
   netif.flags |= NETIF_FLAG_ETHARP;
   netif_set_default(&netif);
