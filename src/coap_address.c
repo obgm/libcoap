@@ -575,7 +575,7 @@ update_coap_addr_port(coap_uri_scheme_t scheme, coap_addr_info_t *info,
   }
 }
 
-#if defined(WITH_LWIP) && !(LWIP_DNS && LWIP_SOCKET && LWIP_COMPAT_SOCKETS)
+#if defined(WITH_LWIP) && !(LWIP_DNS)
 
 coap_addr_info_t *
 coap_resolve_address_info(const coap_str_const_t *address,

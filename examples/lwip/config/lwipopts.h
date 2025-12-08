@@ -21,8 +21,8 @@
  *  Use lwIP without OS-awareness (no thread, semaphores, mutexes or mboxes).
  */
 #define NO_SYS                     0
-#define LWIP_SOCKET                (NO_SYS==0)
-#define LWIP_NETCONN               (NO_SYS==0)
+#define LWIP_SOCKET                0
+#define LWIP_NETCONN               0
 #define LWIP_NETIF_API             (NO_SYS==0)
 
 #define LWIP_IPV4                       1
@@ -32,8 +32,8 @@
 
 #define LWIP_ICMP6                 (LWIP_IPV6==1)
 
-/* Set to 1 if TCP support is required */
-#define LWIP_TCP                        0
+/* Set to 0 if TCP support is not required */
+#define LWIP_TCP                        1
 
 #if LWIP_IPV4
 /* Set to 1 if Multicast registration support is required for IPv4 */
@@ -43,6 +43,13 @@
 #if LWIP_IPV6
 /* Set to 1 if Multicast registration support is required for IPv6 */
 #define LWIP_IPV6_MLD                   0
+#endif
+
+/*
+ * Set to 1 for DNS resolution support
+ */
+#if 1
+#define LWIP_DNS                        1
 #endif
 
 #ifndef netif_get_index
@@ -96,6 +103,22 @@
 #if 0
 #define LWIP_DEBUG 1
 #define UDP_DEBUG LWIP_DBG_ON
+#endif
+
+/*
+ * Set to 1 for debugging TCP traffic and LWIP_DBG_ON where appropriate
+ */
+#if 0
+#define LWIP_DEBUG 1
+#define TCP_DEBUG            LWIP_DBG_ON
+#define TCP_INPUT_DEBUG      LWIP_DBG_ON
+#define TCP_OUTPUT_DEBUG     LWIP_DBG_ON
+#define TCP_RTO_DEBUG        LWIP_DBG_ON
+#define TCP_CWND_DEBUG       LWIP_DBG_ON
+#define TCP_WND_DEBUG        LWIP_DBG_ON
+#define TCP_FR_DEBUG         LWIP_DBG_ON
+#define TCP_QLEN_DEBUG       LWIP_DBG_ON
+#define TCP_RST_DEBUG        LWIP_DBG_ON
 #endif
 
 #endif /* LWIPOPTS_H_ */

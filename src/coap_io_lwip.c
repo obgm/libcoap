@@ -124,10 +124,16 @@ coap_io_process_lkd(coap_context_t *context, uint32_t timeout_ms) {
   coap_log_info("****** Next wakeup msecs %u (2)\n",
                 timeout);
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
-  if (timeout) {
-    sys_timeout(timeout, coap_io_process_timeout, context);
-    context->timer_configured = 1;
+#if NO_SYS == 0
+  if (!context->input_wait) {
+#endif /* NO_SYS == 0 */
+    if (timeout) {
+      sys_timeout(timeout, coap_io_process_timeout, context);
+      context->timer_configured = 1;
+    }
+#if NO_SYS == 0
   }
+#endif /* NO_SYS == 0 */
 
   UNLOCK_TCPIP_CORE();
 

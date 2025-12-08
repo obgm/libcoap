@@ -26,6 +26,23 @@ static coap_resource_t *time_resource = NULL; /* just for testing */
 # define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+#define INDEX "This is a LwIP test server made with libcoap (see https://libcoap.net)\n" \
+  "Copyright (C) 2010--2025 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+
+static void
+hnd_get_index(coap_resource_t *resource,
+              coap_session_t *session,
+              const coap_pdu_t *request,
+              const coap_string_t *query COAP_UNUSED,
+              coap_pdu_t *response) {
+
+  (void)resource;
+  (void)session;
+  (void)request;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+  coap_add_data(response, strlen(INDEX), (const uint8_t *)INDEX);
+}
+
 void
 hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
              const coap_pdu_t *request, const coap_string_t *query,
@@ -76,14 +93,13 @@ hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
 void
 init_coap_resources(coap_context_t *ctx) {
   coap_resource_t *r;
-#if 0
-  r = coap_resource_init(NULL, 0, 0);
+  r = coap_resource_init(NULL, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
   coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
   coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"General Info\""), 0);
   coap_add_resource(ctx, r);
-#endif
+
   /* store clock base to use in /time */
   my_clock_base = clock_offset;
 

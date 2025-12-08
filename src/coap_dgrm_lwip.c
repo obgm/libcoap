@@ -484,11 +484,11 @@ coap_lwip_udp_remove(void *ctx) {
 void
 coap_socket_dgrm_close(coap_socket_t *sock) {
   struct udp_pcb *udp_pcb = sock->udp_pcb;
-  err_t err;
 
   sock->udp_pcb = NULL;
   if (udp_pcb) {
 #if NO_SYS == 0
+    err_t err;
     if (coap_lwip_in_call_back_ref == 0) {
       err = tcpip_try_callback(coap_lwip_udp_remove, udp_pcb);
 
