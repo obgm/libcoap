@@ -420,6 +420,10 @@ coap_lwip_endpoint_tcp_close(void *ctx) {
   struct tcp_pcb *tcp_pcb = (struct tcp_pcb *)ctx;
 
   if (tcp_pcb) {
+    tcp_accept(tcp_pcb, NULL);
+    tcp_err(tcp_pcb, NULL);
+    tcp_arg(tcp_pcb, NULL);
+    tcp_recv(tcp_pcb, NULL);
     tcp_close(tcp_pcb);
   }
 }
@@ -429,14 +433,12 @@ coap_lwip_endpoint_tcp_close(void *ctx) {
 void
 coap_socket_strm_close(coap_socket_t *sock) {
   struct tcp_pcb *tcp_pcb = sock->tcp_pcb;
-#if NO_SYS == 0
-  err_t err;
-#endif /* NO_SYS == 0 */
 
   sock->tcp_pcb = NULL;
   if (tcp_pcb) {
-    tcp_arg(tcp_pcb, NULL);
 #if NO_SYS == 0
+    err_t err;
+
     if (coap_lwip_in_call_back_ref == 0) {
 #if COAP_SERVER_SUPPORT
       if (sock->endpoint)
@@ -453,9 +455,12 @@ coap_socket_strm_close(coap_socket_t *sock) {
     } else {
 #endif /* NO_SYS == 0 */
 #if COAP_SERVER_SUPPORT
-      if (!sock->endpoint)
+      if (sock->endpoint)
+        tcp_accept(tcp_pcb, NULL);
 #endif /* COAP_SERVER_SUPPORT */
-        tcp_recv(tcp_pcb, NULL);
+      tcp_recv(tcp_pcb, NULL);
+      tcp_arg(tcp_pcb, NULL);
+      tcp_err(tcp_pcb, NULL);
       tcp_close(tcp_pcb);
 #if NO_SYS == 0
     }
