@@ -2321,27 +2321,27 @@ coap_session_set_type_server_lkd(coap_session_t *session) {
       LL_PREPEND(session->context->endpoint, ep);
     }
     /* Need to use coap_send_lkd() here to get traffic flowing */
-    if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
-      ping = coap_new_pdu_lkd(COAP_MESSAGE_CON, COAP_EMPTY_CODE, session);
-    }
-#if !COAP_DISABLE_TCP
-    else {
-      ping = coap_new_pdu_lkd(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_PING, session);
-    }
-#endif /* !COAP_DISABLE_TCP */
-    if (!ping) {
-      session->type = COAP_SESSION_TYPE_SERVER;
-      return 0;
-    }
-    mid = coap_send_lkd(session, ping);
-    if (mid != COAP_INVALID_MID) {
-      coap_tick_t now;
+    if (session->proto == COAP_PROTO_UDP) {
+      ping = coap_pdu_init(COAP_MESSAGE_CON, COAP_EMPTY_CODE,
+                           coap_new_message_id_lkd(session), 0);
+      if (!ping) {
+        session->type = COAP_SESSION_TYPE_SERVER;
+        return 0;
+      }
+      mid = coap_send_lkd(session, ping);
+      if (mid != COAP_INVALID_MID) {
+        coap_tick_t now;
 
-      coap_ticks(&now);
-      session->last_ping_mid = mid;
-      session->last_rx_tx = now;
-      session->last_ping = now;
+        coap_ticks(&now);
+        session->last_ping_mid = mid;
+        session->last_rx_tx = now;
+        session->last_ping = now;
+      }
     }
+    /*
+     * (D)TLS will initiate traffic with handshake.
+     * Reliable protocols will be sending a CSM, so no nead for Ping.
+     */
     if (session->context) {
       if (session->context->sessions) {
         SESSIONS_DELETE(session->context->sessions, session);
