@@ -266,11 +266,11 @@ void
 coap_dtls_establish(coap_session_t *session) {
   session->state = COAP_SESSION_STATE_HANDSHAKE;
 #if COAP_CLIENT_SUPPORT
-  if (session->type == COAP_SESSION_TYPE_CLIENT)
+  if (session->type == COAP_SESSION_TYPE_CLIENT || session->client_initiated)
     session->tls = coap_dtls_new_client_session(session);
+  else
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT
-  if (session->type != COAP_SESSION_TYPE_CLIENT)
     session->tls = coap_dtls_new_server_session(session);
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -295,11 +295,11 @@ void
 coap_tls_establish(coap_session_t *session) {
   session->state = COAP_SESSION_STATE_HANDSHAKE;
 #if COAP_CLIENT_SUPPORT
-  if (session->type == COAP_SESSION_TYPE_CLIENT)
+  if (session->type == COAP_SESSION_TYPE_CLIENT || session->client_initiated)
     session->tls = coap_tls_new_client_session(session);
+  else
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT
-  if (session->type != COAP_SESSION_TYPE_CLIENT)
     session->tls = coap_tls_new_server_session(session);
 #endif /* COAP_SERVER_SUPPORT */
 
