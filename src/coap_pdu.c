@@ -143,7 +143,7 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
   pdu->token = (uint8_t *)pdu->pbuf->payload + pdu->max_hdr_size;
 #else /* WITH_LWIP */
   uint8_t *buf;
-  pdu->alloc_size = min(size, 256);
+  pdu->alloc_size = min(size, COAP_DEFAULT_MTU);
   buf = coap_malloc_type(COAP_PDU_BUF, pdu->alloc_size + pdu->max_hdr_size);
   if (buf == NULL) {
     coap_free_type(COAP_PDU, pdu);
