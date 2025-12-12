@@ -947,10 +947,13 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     }
   }
 #else /* ! MBEDTLS_FS_IO */
-  (void)m_context;
-  return coap_dtls_define_issue(COAP_DEFINE_KEY_ROOT_CA,
-                                COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                &key, role, -1);
+  if (m_context->root_ca_file || m_context->root_ca_path ||
+      m_context->trust_store_defined) {
+    /* No FS to read these files */
+    return coap_dtls_define_issue(COAP_DEFINE_KEY_ROOT_CA,
+                                  COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                  &key, role, -1);
+  }
 #endif /* ! MBEDTLS_FS_IO */
 
 #if defined(MBEDTLS_SSL_SRV_C)
