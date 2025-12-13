@@ -227,7 +227,11 @@ coap_time_le(coap_tick_t a, coap_tick_t b) {
 }
 
 /* Can delay up to 24 hrs before next wakeup (coap_tick_t can be 4 bytes or int64 */
+#if defined(RIOT_VERSION)
+#define COAP_MAX_DELAY_TICKS (24UL * 60 * 60 * COAP_TICKS_PER_SECOND)
+#else /* ! RIOT_VERSION */
 #define COAP_MAX_DELAY_TICKS (24 * 60 * 60 * COAP_TICKS_PER_SECOND)
+#endif /* ! RIOT_VERSION */
 
 /** @} */
 

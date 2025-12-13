@@ -18,7 +18,7 @@ This will
 
 To run (and/or rebuild) the server application
 
-* cd RIOT/examples-libcoap-server
+* cd RIOT/examples/networking/libcoap/libcoap_server
 * make RIOT_CI_BUILD=1
 * make term
 * (at the shell prompt) coaps start
@@ -30,7 +30,7 @@ not differ from regular libcoap usage.
 
 To run (and/or rebuild) the client application
 
-* cd RIOT/examples-libcoap-client
+* cd RIOT/examples/networking/libcoap/libcoap_client/
 * make RIOT_CI_BUILD=1
 * make term
 * (at the shell prompt) coapc coap://[ip-6-address]/some/path
