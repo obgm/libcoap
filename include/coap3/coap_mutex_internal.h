@@ -114,7 +114,7 @@ typedef sys_mutex_t coap_mutex_t;
 #define coap_thread_pid       GetCurrentThreadId()
 #else /* ! _WIN32 */
 /* Assume this is therefore FreeRTOS */
-#define caop_thread_pid_t     TaskHandle_t
+#define coap_thread_pid_t     TaskHandle_t
 #define coap_thread_pid       xTaskGetCurrentTaskHandle()
 #endif /* ! _WIN32 */
 
