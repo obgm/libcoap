@@ -76,7 +76,7 @@ coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
   bytes_read = coap_socket_recv(&session->sock, packet);
   keep_errno = errno;
   if (bytes_read == -1) {
-    coap_log_debug("*  %s: netif: failed to read %zd bytes (%s (%d)) state %d\n",
+    coap_log_debug("*  %s: netif: failed to read % " PRIdS " bytes (%s (%d)) state %d\n",
                    coap_session_str(session), packet->length,
                    coap_socket_strerror(), keep_errno, session->state);
     errno = keep_errno;
@@ -106,7 +106,7 @@ coap_netif_dgrm_read_ep(coap_endpoint_t *endpoint, coap_packet_t *packet) {
   keep_errno = errno;
   if (bytes_read == -1) {
     if (errno != EAGAIN) {
-      coap_log_debug("*  %s: netif: failed to read %zd bytes (%s)\n",
+      coap_log_debug("*  %s: netif: failed to read % " PRIdS " bytes (%s)\n",
                      coap_endpoint_str(endpoint), packet->length,
                      coap_socket_strerror());
       errno = keep_errno;
@@ -140,7 +140,7 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
   bytes_written = coap_socket_send(sock, session, data, datalen);
   keep_errno = errno;
   if (bytes_written <= 0) {
-    coap_log_debug("*  %s: netif: failed to send %zd bytes (%s (%d)) state %d\n",
+    coap_log_debug("*  %s: netif: failed to send % " PRIdS " bytes (%s (%d)) state %d\n",
                    coap_session_str(session), datalen,
                    coap_socket_strerror(), errno, session->state);
     errno = keep_errno;
@@ -247,7 +247,7 @@ coap_netif_strm_write(coap_session_t *session, const uint8_t *data,
   int keep_errno = errno;
 
   if (bytes_written <= 0) {
-    coap_log_debug("*  %s: netif: failed to send %zd bytes (%s) state %d\n",
+    coap_log_debug("*  %s: netif: failed to send % " PRIdS " bytes (%s) state %d\n",
                    coap_session_str(session), datalen,
                    coap_socket_strerror(), session->state);
     errno = keep_errno;

@@ -312,7 +312,7 @@ coap_dgram_write(void *ctx, const unsigned char *send_buffer,
     if (result != (ssize_t)send_buffer_length) {
       int keep_errno = errno;
 
-      coap_log_warn("coap_netif_dgrm_write failed (%zd != %zu)\n",
+      coap_log_warn("coap_netif_dgrm_write failed (%" PRIdS " != %" PRIuS ")\n",
                     result, send_buffer_length);
       errno = keep_errno;
       if (result < 0) {
@@ -1821,7 +1821,7 @@ coap_sock_write(void *context, const unsigned char *in, size_t inl) {
       else {
         ret = MBEDTLS_ERR_NET_SEND_FAILED;
       }
-      coap_log_debug("*  %s: failed to send %zd bytes (%s) state %d\n",
+      coap_log_debug("*  %s: failed to send %" PRIdS " bytes (%s) state %d\n",
                      coap_session_str(c_session), inl, coap_socket_strerror(),
                      c_session->state);
     }
@@ -2560,7 +2560,7 @@ coap_dtls_receive(coap_session_t *c_session,
       break;
     default:
       coap_log_warn("coap_dtls_receive: "
-                    "returned -0x%x: '%s' (length %zd)\n",
+                    "returned -0x%x: '%s' (length %" PRIdS ")\n",
                     -ret, get_error_string(ret), data_len);
       break;
     }
@@ -2892,7 +2892,7 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
         break;
       default:
         coap_log_warn("coap_tls_read: "
-                      "returned -0x%x: '%s' (length %zd)\n",
+                      "returned -0x%x: '%s' (length %" PRIdS ")\n",
                       -ret, get_error_string(ret), data_len);
         ret = -1;
         break;

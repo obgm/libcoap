@@ -325,7 +325,7 @@ coap_opt_setheader(coap_opt_t *opt, size_t maxlen,
     opt[0] |= length & 0x0f;
   } else if (length < 269) {
     if (maxlen < skip + 2) {
-      coap_log_debug("insufficient space to encode option length %zu\n",
+      coap_log_debug("insufficient space to encode option length %" PRIuS "\n",
                      length);
       return 0;
     }
@@ -516,7 +516,7 @@ coap_new_optlist(uint16_t number,
 
 #if defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS
   if (length > MEMP_LEN_COAPOPTLIST) {
-    coap_log_crit("coap_new_optlist: size too large (%zu > MEMP_LEN_COAPOPTLIST)\n",
+    coap_log_crit("coap_new_optlist: size too large (%" PRIuS " > MEMP_LEN_COAPOPTLIST)\n",
                   length);
     return NULL;
   }

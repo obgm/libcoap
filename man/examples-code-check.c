@@ -19,6 +19,14 @@
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>
+#include <inttypes.h>
+#ifndef PRIuS
+#define PRIuS "zu"
+#endif /* PRIuS */
+#ifndef PRIdS
+#define PRIdS "zd"
+#endif /* PRIdS */
+
 
 #ifdef _WIN32
 #define GCC_OPTIONS "-I../include"
@@ -460,7 +468,7 @@ main(int argc, char *argv[]) {
         man_cnt++;
       }
       if (man_cnt == sizeof(man_list) / sizeof(name_list[0])) {
-        fprintf(stderr, "man_list[] too small (%zd) for entries from %s\n",
+        fprintf(stderr, "man_list[] too small (%" PRIdS ") for entries from %s\n",
                 sizeof(man_list) / sizeof(name_list[0]), argv[2]);
         exit(1);
       }
@@ -630,7 +638,7 @@ main(int argc, char *argv[]) {
           if (i != name_cnt)
             continue;
           if (i >= (int)(sizeof(name_list)/sizeof(name_list[0]))) {
-            fprintf(stderr, "NAME: %s insufficient space (%zu >= %u)\n", buffer,
+            fprintf(stderr, "NAME: %s insufficient space (%" PRIuS " >= %u)\n", buffer,
                     i, (int)(sizeof(name_list)/sizeof(name_list[0])));
             continue;
           }

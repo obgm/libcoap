@@ -1352,7 +1352,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     const uint8_t *payload = (const uint8_t *)packet->payload;
     size_t length = packet->length;
     if (length < (OFF_HANDSHAKE_TYPE + 1)) {
-      coap_log_debug("coap_dtls_hello: ContentType %d Short Packet (%zu < %d) dropped\n",
+      coap_log_debug("coap_dtls_hello: ContentType %d Short Packet (%" PRIuS " < %d) dropped\n",
                      payload[OFF_CONTENT_TYPE], length,
                      OFF_HANDSHAKE_TYPE + 1);
       return NULL;

@@ -526,7 +526,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
       goto error;
     }
     if (psk_identity->length > result_length) {
-      coap_log_warn("psk_identity too large, truncated to %zd bytes\n",
+      coap_log_warn("psk_identity too large, truncated to % " PRIdS " bytes\n",
                     result_length);
     } else {
       /* Reduce to match */
@@ -548,7 +548,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
         goto error;
       }
       if (psk_key->length > result_length) {
-        coap_log_warn("psk_key too large, truncated to %zd bytes\n",
+        coap_log_warn("psk_key too large, truncated to % " PRIdS " bytes\n",
                       result_length);
       } else {
         /* Reduce to match */
@@ -588,7 +588,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
       if (setup_sdata->validate_id_call_back)
         coap_session_refresh_psk_key(coap_session, psk_key);
       if (psk_key->length > result_length) {
-        coap_log_warn("psk_key too large, truncated to %zd bytes\n",
+        coap_log_warn("psk_key too large, truncated to % " PRIdS " bytes\n",
                       result_length);
       } else {
         /* Reduce to match */
@@ -606,7 +606,7 @@ get_psk_info(struct dtls_context_t *dtls_context,
     if (psk_hint == NULL)
       return 0;
     if (psk_hint->length > result_length) {
-      coap_log_warn("psk_hint too large, truncated to %zd bytes\n",
+      coap_log_warn("psk_hint too large, truncated to % " PRIdS " bytes\n",
                     result_length);
     } else {
       /* Reduce to match */

@@ -920,7 +920,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
          * letter M if set, the _ otherwise */
         if (COAP_OPT_BLOCK_SZX(option) == 7) {
           if (coap_get_data(pdu, &data_len, &data))
-            buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT(%zu)",
+            buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT(%" PRIuS ")",
                                coap_opt_block_num(option), /* block number */
                                COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
                                data_len);
@@ -1065,7 +1065,7 @@ no_more:
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
       outbuflen = strlen(outbuf);
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-               "data length %zu (data suppressed)\n", data_len);
+               "data length %"PRIuS " (data suppressed)\n", data_len);
       COAP_DO_SHOW_OUTPUT_LINE;
 #if COAP_THREAD_SAFE
       coap_mutex_unlock(&m_show_pdu);
@@ -1082,7 +1082,7 @@ no_more:
 
       outbuflen = strlen(outbuf);
       snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-               "binary data length %zu\n", data_len);
+               "binary data length %"PRIuS "\n", data_len);
       COAP_DO_SHOW_OUTPUT_LINE;
       /*
        * Output hex dump of binary data as a continuous entry

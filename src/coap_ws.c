@@ -695,13 +695,13 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
     session->ws->data_size = bytes_size;
     if ((size_t)bytes_size > datalen) {
       coap_log_err("coap_ws_read: packet size bigger than provided data space"
-                   " (%zu > %zu)\n", bytes_size, datalen);
+                   " (%" PRIuS " > %" PRIuS ")\n", bytes_size, datalen);
       coap_handle_event_lkd(session->context, COAP_EVENT_WS_PACKET_SIZE, session);
       session->ws->close_reason = 1009;
       coap_ws_close(session);
       return 0;
     }
-    coap_log_debug("*  %s: Packet size %zu\n", coap_session_str(session),
+    coap_log_debug("*  %s: Packet size %" PRIuS "\n", coap_session_str(session),
                    bytes_size);
 
     /* Handle any data read in as a part of the header */
@@ -774,7 +774,8 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
     return session->ws->data_size;
   }
   /* Need to get in all of the data */
-  coap_log_debug("*  %s: Waiting Packet size %zu (got %zu)\n", coap_session_str(session),
+  coap_log_debug("*  %s: Waiting Packet size %" PRIuS " (got %" PRIuS ")\n",
+                 coap_session_str(session),
                  session->ws->data_size, session->ws->data_ofs);
   return 0;
 }

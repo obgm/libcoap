@@ -2052,7 +2052,7 @@ coap_dgram_write(gnutls_transport_ptr_t context, const void *send_buffer,
     if (result != (int)send_buffer_length) {
       int keep_errno = errno;
 
-      coap_log_warn("coap_netif_dgrm_write failed (%zd != %zu)\n",
+      coap_log_warn("coap_netif_dgrm_write failed (%" PRIdS " != %" PRIuS ")\n",
                     result, send_buffer_length);
       errno = keep_errno;
       if (result < 0) {
@@ -2742,7 +2742,7 @@ coap_sock_write(gnutls_transport_ptr_t context, const void *in, size_t inl) {
        */
       ret = inl;
     } else {
-      coap_log_debug("*  %s: failed to send %zd bytes (%s) state %d\n",
+      coap_log_debug("*  %s: failed to send %" PRIdS " bytes (%s) state %d\n",
                      coap_session_str(c_session), inl, coap_socket_strerror(),
                      c_session->state);
     }
