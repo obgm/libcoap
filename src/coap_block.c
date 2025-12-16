@@ -86,7 +86,7 @@ coap_get_block_b(const coap_session_t *session, const coap_pdu_t *pdu,
       block->bert = 1;
       if (coap_get_data(pdu, &length, &data)) {
         if (block->m && (length % 1024) != 0) {
-          coap_log_debug("block: Oversized packet - reduced to %zu from %zu\n",
+          coap_log_debug("block: Oversized packet - reduced to %" PRIuS " from %" PRIuS "\n",
                          length - (length % 1024), length);
           length -= length % 1024;
         }
@@ -159,7 +159,7 @@ setup_block_b(coap_session_t *session, coap_pdu_t *pdu, coap_block_b_t *block,
         return 0;
       }
       new_blk_size = coap_flsll((long long)avail) - 5;
-      coap_log_debug("decrease block size for %zu to %d\n", avail, new_blk_size);
+      coap_log_debug("decrease block size for %" PRIuS " to %d\n", avail, new_blk_size);
       szx = block->szx;
       block->szx = new_blk_size;
       block->num <<= szx - block->szx;
@@ -299,7 +299,7 @@ coap_add_data_blocked_response(const coap_pdu_t *request,
     if (coap_get_block(request, COAP_OPTION_BLOCK2, &block2)) {
       block2_requested = 1;
       if (block2.num != 0 && length <= (block2.num << (block2.szx + 4))) {
-        coap_log_debug("Illegal block requested (%d > last = %zu)\n",
+        coap_log_debug("Illegal block requested (%d > last = %" PRIuS ")\n",
                        block2.num,
                        length >> (block2.szx + 4));
         response->code = COAP_RESPONSE_CODE(400);
@@ -455,7 +455,7 @@ coap_context_set_max_block_size_lkd(coap_context_t *context, size_t max_block_si
   case 1024:
     break;
   default:
-    coap_log_info("coap_context_set_max_block_size: Invalid max block size (%zu)\n",
+    coap_log_info("coap_context_set_max_block_size: Invalid max block size (%" PRIuS ")\n",
                   max_block_size);
     return 0;
   }
@@ -1417,7 +1417,7 @@ coap_add_data_large_response_lkd(coap_resource_t *resource,
     if (coap_get_block_b(session, request, COAP_OPTION_BLOCK2, &block)) {
       block_requested = 1;
       if (block.num != 0 && length <= (block.num << (block.szx + 4))) {
-        coap_log_debug("Illegal block requested (%d > last = %zu)\n",
+        coap_log_debug("Illegal block requested (%d > last = %" PRIuS ")\n",
                        block.num,
                        length >> (block.szx + 4));
         response->code = COAP_RESPONSE_CODE(400);
@@ -1428,7 +1428,7 @@ coap_add_data_large_response_lkd(coap_resource_t *resource,
     else if (coap_get_block_b(session, request, COAP_OPTION_Q_BLOCK2, &block)) {
       block_requested = 1;
       if (block.num != 0 && length <= (block.num << (block.szx + 4))) {
-        coap_log_debug("Illegal block requested (%d > last = %zu)\n",
+        coap_log_debug("Illegal block requested (%d > last = %" PRIuS ")\n",
                        block.num,
                        length >> (block.szx + 4));
         response->code = COAP_RESPONSE_CODE(400);
@@ -2828,7 +2828,7 @@ coap_handle_request_send_block(coap_session_t *session,
         } else {
           coap_log_debug("ignoring request to increase Block size, "
                          "next block is not aligned on requested block size "
-                         "boundary. (%zu x %u mod %u = %zu (which is not 0)\n",
+                         "boundary. (%" PRIuS " x %u mod %u = %" PRIuS " (which is not 0)\n",
                          lg_xmit->offset/chunk + 1, (1 << (lg_xmit->blk_size + 4)),
                          (1 << (block.szx + 4)),
                          (lg_xmit->offset + chunk) % ((size_t)1 << (block.szx + 4)));
@@ -3178,11 +3178,11 @@ coap_handle_request_put_block(coap_context_t *context,
   rtag = rtag_opt ? coap_opt_value(rtag_opt) : NULL;
 
   if (length > block.chunk_size) {
-    coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %zu\n",
+    coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %" PRIuS "\n",
                    block.chunk_size, length);
     length = block.chunk_size;
   } else if (!block.bert && block.m && length != block.chunk_size) {
-    coap_log_info("block: Undersized packet chunk %"PRIu32" got %zu\n",
+    coap_log_info("block: Undersized packet chunk %"PRIu32" got %" PRIuS "\n",
                   block.chunk_size, length);
     response->code = COAP_RESPONSE_CODE(400);
     goto skip_app_handler;
@@ -3683,7 +3683,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
         coap_get_block_b(session, rcvd, lg_xmit->option, &block)) {
 
       if (block.bert) {
-        coap_log_debug("found Block option, block is BERT, block nr. %u (%zu)\n",
+        coap_log_debug("found Block option, block is BERT, block nr. %u (%" PRIuS ")\n",
                        block.num, lg_xmit->b.b1.bert_size);
       } else {
         coap_log_debug("found Block option, block size is %u, block nr. %u\n",
@@ -3710,7 +3710,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
         } else {
           coap_log_debug("ignoring request to increase Block size, "
                          "next block is not aligned on requested block size boundary. "
-                         "(%zu x %u mod %u = %zu != 0)\n",
+                         "(%" PRIuS " x %u mod %u = %" PRIuS " != 0)\n",
                          lg_xmit->offset/chunk + 1, (1 << (lg_xmit->blk_size + 4)),
                          (1 << (block.szx + 4)),
                          (lg_xmit->offset + chunk) % ((size_t)1 << (block.szx + 4)));
@@ -4117,12 +4117,12 @@ coap_handle_response_get_block(coap_context_t *context,
         int updated_block;
 
         if (length > block.chunk_size) {
-          coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %zu\n",
+          coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %" PRIuS "\n",
                          block.chunk_size, length);
           length = block.chunk_size;
         }
         if (block.m && length != block.chunk_size) {
-          coap_log_warn("block: Undersized packet - expected %"PRIu32", got %zu\n",
+          coap_log_warn("block: Undersized packet - expected %"PRIu32", got %" PRIuS "\n",
                         block.chunk_size, length);
           /* Unclear how to properly handle this */
           rcvd->code = COAP_RESPONSE_CODE(402);

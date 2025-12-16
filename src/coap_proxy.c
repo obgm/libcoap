@@ -531,7 +531,7 @@ retry:
 
       coap_proxy_cleanup_entry(proxy_entry, send_failure);
       ongoing = proxy_entry->ongoing;
-      coap_log_debug("*  %s: proxy_entry %p released (rem count = %zd)\n",
+      coap_log_debug("*  %s: proxy_entry %p released (rem count = % " PRIdS ")\n",
                      coap_session_str(ongoing),
                      (void *)proxy_entry,
                      session->context->proxy_list_count - 1);
@@ -707,7 +707,7 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
       return NULL;
     }
     if (proxy_entry_created) {
-      coap_log_debug("*  %s: proxy_entry %p created (tot count = %zd)\n",
+      coap_log_debug("*  %s: proxy_entry %p created (tot count = % " PRIdS ")\n",
                      coap_session_str(proxy_entry->ongoing),
                      (void *)proxy_entry,
                      session->context->proxy_list_count);

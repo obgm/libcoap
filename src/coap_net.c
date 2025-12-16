@@ -1544,7 +1544,7 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
    */
   if (COAP_PDU_IS_REQUEST(pdu) &&
       pdu->actual_token.length > session->max_token_size) {
-    coap_log_warn("coap_send: PDU dropped as token too long (%zu > %" PRIu32 ")\n",
+    coap_log_warn("coap_send: PDU dropped as token too long (%" PRIuS " > %" PRIu32 ")\n",
                   pdu->actual_token.length, session->max_token_size);
     goto error;
   }
@@ -1915,7 +1915,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
           return (coap_mid_t)COAP_DROPPED_RESPONSE;
         } else if (hop_limit < 1 || hop_limit > 255) {
           /* Something is bad - need to drop this pdu (TODO or delete option) */
-          coap_log_warn("Proxy return has bad hop limit count '%zu'\n",
+          coap_log_warn("Proxy return has bad hop limit count '%" PRIuS "'\n",
                         hop_limit);
           coap_delete_pdu_lkd(pdu);
           return (coap_mid_t)COAP_DROPPED_RESPONSE;
@@ -2606,7 +2606,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
             size_t size = coap_pdu_parse_size(session->proto, session->read_header,
                                               hdr_size + tok_ext_bytes);
             if (size > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
-              coap_log_warn("** %s: incoming PDU length too large (%zu > %lu)\n",
+              coap_log_warn("** %s: incoming PDU length too large (%" PRIuS " > %lu)\n",
                             coap_session_str(session),
                             size, COAP_DEFAULT_MAX_PDU_RX_SIZE);
               bytes_read = -1;
@@ -3279,7 +3279,7 @@ hnd_get_wellknown_lkd(coap_resource_t *resource,
          * Data does not fit into a packet and no libcoap block support
          * +1 for end of options marker
          */
-        coap_log_debug(".well-known/core: truncating data length to %zu from %zu\n",
+        coap_log_debug(".well-known/core: truncating data length to %" PRIuS " from %" PRIuS "\n",
                        len, response->max_size  - response->used_size - 1);
         len = response->max_size - response->used_size - 1;
       }
@@ -5538,7 +5538,7 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops) {
     case AF_INET:
       if (setsockopt(session->sock.fd, IPPROTO_IP, IP_MULTICAST_TTL,
                      (const char *)&hops, sizeof(hops)) < 0) {
-        coap_log_info("coap_mcast_set_hops: %zu: setsockopt: %s\n",
+        coap_log_info("coap_mcast_set_hops: %" PRIuS ": setsockopt: %s\n",
                       hops, coap_socket_strerror());
         return 0;
       }
@@ -5548,7 +5548,7 @@ coap_mcast_set_hops(coap_session_t *session, size_t hops) {
     case AF_INET6:
       if (setsockopt(session->sock.fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
                      (const char *)&hops, sizeof(hops)) < 0) {
-        coap_log_info("coap_mcast_set_hops: %zu: setsockopt: %s\n",
+        coap_log_info("coap_mcast_set_hops: %" PRIuS ": setsockopt: %s\n",
                       hops, coap_socket_strerror());
         return 0;
       }
