@@ -198,8 +198,10 @@ struct coap_context_t {
   int eptimerfd;                   /**< Internal FD for timeout */
 #else /* ! COAP_EPOLL_SUPPORT */
 #if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
+#if COAP_CONSTRAINED_STACK
   fd_set readfds, writefds, exceptfds; /**< Used for select call
                                             in coap_io_process_with_fds_lkd() */
+#endif /* COAP_CONSTRAINED_STACK */
   coap_socket_t *sockets[64];      /**< Track different socket information
                                         in coap_io_process_with_fds_lkd() */
   unsigned int num_sockets;        /**< Number of sockets being tracked */

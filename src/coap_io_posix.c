@@ -164,7 +164,9 @@ coap_io_process_with_fds(coap_context_t *ctx, uint32_t timeout_ms,
 static unsigned int
 coap_io_prepare_fds(coap_context_t *ctx,
                     int enfds, fd_set *ereadfds, fd_set *ewritefds,
-                    fd_set *eexceptfds) {
+                    fd_set *eexceptfds, fd_set *readfds, fd_set *writefds,
+                    fd_set *exceptfds
+                   ) {
   coap_session_t *s, *stmp;
   unsigned int max_sockets = sizeof(ctx->sockets) / sizeof(ctx->sockets[0]);
   coap_fd_t nfds = 0;
@@ -198,36 +200,36 @@ coap_io_prepare_fds(coap_context_t *ctx,
   }
 #endif /* COAP_CLIENT_SUPPORT */
   if (ereadfds) {
-    ctx->readfds = *ereadfds;
+    *readfds = *ereadfds;
     nfds = enfds;
   } else {
-    FD_ZERO(&ctx->readfds);
+    FD_ZERO(readfds);
   }
   if (ewritefds) {
-    ctx->writefds = *ewritefds;
+    *writefds = *ewritefds;
     nfds = enfds;
   } else {
-    FD_ZERO(&ctx->writefds);
+    FD_ZERO(writefds);
   }
   if (eexceptfds) {
-    ctx->exceptfds = *eexceptfds;
+    *exceptfds = *eexceptfds;
     nfds = enfds;
   } else {
-    FD_ZERO(&ctx->exceptfds);
+    FD_ZERO(exceptfds);
   }
   for (i = 0; i < ctx->num_sockets; i++) {
     if (ctx->sockets[i]->fd + 1 > nfds)
       nfds = ctx->sockets[i]->fd + 1;
     if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_READ)
-      FD_SET(ctx->sockets[i]->fd, &ctx->readfds);
+      FD_SET(ctx->sockets[i]->fd, readfds);
     if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_WRITE)
-      FD_SET(ctx->sockets[i]->fd, &ctx->writefds);
+      FD_SET(ctx->sockets[i]->fd, writefds);
 #if !COAP_DISABLE_TCP
     if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_ACCEPT)
-      FD_SET(ctx->sockets[i]->fd, &ctx->readfds);
+      FD_SET(ctx->sockets[i]->fd, readfds);
     if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_CONNECT) {
-      FD_SET(ctx->sockets[i]->fd, &ctx->writefds);
-      FD_SET(ctx->sockets[i]->fd, &ctx->exceptfds);
+      FD_SET(ctx->sockets[i]->fd, writefds);
+      FD_SET(ctx->sockets[i]->fd, exceptfds);
     }
 #endif /* !COAP_DISABLE_TCP */
   }
@@ -246,6 +248,16 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   struct timeval tv;
   int result;
   unsigned int i;
+#if ! COAP_CONSTRAINED_STACK
+  fd_set readfds, writefds, exceptfds;
+#define COAP_READFDS readfds
+#define COAP_WRITEFDS writefds
+#define COAP_EXCEPTFDS exceptfds
+#else
+#define COAP_READFDS (ctx->readfds)
+#define COAP_WRITEFDS (ctx->writefds)
+#define COAP_EXCEPTFDS (ctx->exceptfds)
+#endif /* ! COAP_CONSTRAINED_STACK */
 #endif /* ! COAP_EPOLL_SUPPORT */
 
   coap_lock_check_locked();
@@ -259,36 +271,36 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   ctx->next_timeout = timeout ? timeout + before : 0;
 
   if (ereadfds) {
-    ctx->readfds = *ereadfds;
+    COAP_READFDS = *ereadfds;
     nfds = enfds;
   } else {
-    FD_ZERO(&ctx->readfds);
+    FD_ZERO(&COAP_READFDS);
   }
   if (ewritefds) {
-    ctx->writefds = *ewritefds;
+    COAP_WRITEFDS = *ewritefds;
     nfds = enfds;
   } else {
-    FD_ZERO(&ctx->writefds);
+    FD_ZERO(&COAP_WRITEFDS);
   }
   if (eexceptfds) {
-    ctx->exceptfds = *eexceptfds;
+    COAP_EXCEPTFDS = *eexceptfds;
     nfds = enfds;
   } else {
-    FD_ZERO(&ctx->exceptfds);
+    FD_ZERO(&COAP_EXCEPTFDS);
   }
   for (i = 0; i < ctx->num_sockets; i++) {
     if (ctx->sockets[i]->fd + 1 > nfds)
       nfds = ctx->sockets[i]->fd + 1;
     if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_READ)
-      FD_SET(ctx->sockets[i]->fd, &ctx->readfds);
+      FD_SET(ctx->sockets[i]->fd, &COAP_READFDS);
     if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_WRITE)
-      FD_SET(ctx->sockets[i]->fd, &ctx->writefds);
+      FD_SET(ctx->sockets[i]->fd, &COAP_WRITEFDS);
 #if !COAP_DISABLE_TCP
     if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_ACCEPT)
-      FD_SET(ctx->sockets[i]->fd, &ctx->readfds);
+      FD_SET(ctx->sockets[i]->fd, &COAP_READFDS);
     if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_CONNECT) {
-      FD_SET(ctx->sockets[i]->fd, &ctx->writefds);
-      FD_SET(ctx->sockets[i]->fd, &ctx->exceptfds);
+      FD_SET(ctx->sockets[i]->fd, &COAP_WRITEFDS);
+      FD_SET(ctx->sockets[i]->fd, &COAP_EXCEPTFDS);
     }
 #endif /* !COAP_DISABLE_TCP */
   }
@@ -313,7 +325,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
     /* Unlock so that other threads can lock/update ctx */
     coap_lock_unlock();
 
-    result = select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds,
+    result = select((int)nfds, &COAP_READFDS, &COAP_WRITEFDS, &COAP_EXCEPTFDS,
                     timeout > 0 ? &tv : NULL);
 
     coap_lock_lock(return -1);
@@ -354,13 +366,14 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
   }
 #if COAP_THREAD_SAFE
   /* Need to refresh what is available to read / write etc. */
-  nfds = coap_io_prepare_fds(ctx, enfds, ereadfds, ewritefds, eexceptfds);
+  nfds = coap_io_prepare_fds(ctx, enfds, ereadfds, ewritefds, eexceptfds,
+                             &COAP_READFDS, &COAP_WRITEFDS, &COAP_EXCEPTFDS);
 #ifdef _WIN32
   if (nfds > 0) {
 #endif /* _WIN32 */
     tv.tv_usec = 0;
     tv.tv_sec = 0;
-    result = select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds, &tv);
+    result = select((int)nfds, &COAP_READFDS, &COAP_WRITEFDS, &COAP_EXCEPTFDS, &tv);
     if (result < 0) {   /* error */
 #ifdef _WIN32
       coap_win_error_to_errno();
@@ -380,30 +393,30 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
 #endif /* _WIN32 */
 #endif /* COAP_THREAD_SAFE */
   if (ereadfds) {
-    *ereadfds = ctx->readfds;
+    *ereadfds = COAP_READFDS;
   }
   if (ewritefds) {
-    *ewritefds = ctx->writefds;
+    *ewritefds = COAP_WRITEFDS;
   }
   if (eexceptfds) {
-    *eexceptfds = ctx->exceptfds;
+    *eexceptfds = COAP_EXCEPTFDS;
   }
 
   if (result > 0) {
     for (i = 0; i < ctx->num_sockets; i++) {
       if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_READ) &&
-          FD_ISSET(ctx->sockets[i]->fd, &ctx->readfds))
+          FD_ISSET(ctx->sockets[i]->fd, &COAP_READFDS))
         ctx->sockets[i]->flags |= COAP_SOCKET_CAN_READ;
 #if !COAP_DISABLE_TCP
       if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_ACCEPT) &&
-          FD_ISSET(ctx->sockets[i]->fd, &ctx->readfds))
+          FD_ISSET(ctx->sockets[i]->fd, &COAP_READFDS))
         ctx->sockets[i]->flags |= COAP_SOCKET_CAN_ACCEPT;
       if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_WRITE) &&
-          FD_ISSET(ctx->sockets[i]->fd, &ctx->writefds))
+          FD_ISSET(ctx->sockets[i]->fd, &COAP_WRITEFDS))
         ctx->sockets[i]->flags |= COAP_SOCKET_CAN_WRITE;
       if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_CONNECT) &&
-          (FD_ISSET(ctx->sockets[i]->fd, &ctx->writefds) ||
-           FD_ISSET(ctx->sockets[i]->fd, &ctx->exceptfds)))
+          (FD_ISSET(ctx->sockets[i]->fd, &COAP_WRITEFDS) ||
+           FD_ISSET(ctx->sockets[i]->fd, &COAP_EXCEPTFDS)))
         ctx->sockets[i]->flags |= COAP_SOCKET_CAN_CONNECT;
 #endif /* !COAP_DISABLE_TCP */
     }
