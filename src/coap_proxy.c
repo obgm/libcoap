@@ -1556,7 +1556,7 @@ coap_proxy_local_write(coap_session_t *session, coap_pdu_t *pdu) {
     goto fail;
   }
 
-  coap_log_debug("*  %s: internal: sent %4zd bytes\n",
+  coap_log_debug("*  %s: internal: sent %4" PRIdS " bytes\n",
                  coap_session_str(session),
                  pdu->used_size + coap_pdu_encode_header(pdu, session->proto));
   coap_show_pdu(COAP_LOG_DEBUG, pdu);

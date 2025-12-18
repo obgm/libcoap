@@ -2845,7 +2845,7 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
       coap_log_debug("*  %s: tls:   sent %4d bytes\n",
                      coap_session_str(session), r);
     else
-      coap_log_debug("*  %s: tls:   sent %4d of %4zd bytes\n",
+      coap_log_debug("*  %s: tls:   sent %4d of %4" PRIdS " bytes\n",
                      coap_session_str(session), r, data_len);
   }
   return r;

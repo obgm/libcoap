@@ -2922,7 +2922,7 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
       coap_log_debug("*  %s: tls:   sent %4d bytes\n",
                      coap_session_str(c_session), ret);
     else
-      coap_log_debug("*  %s: tls:   sent %4d of %4zd bytes\n",
+      coap_log_debug("*  %s: tls:   sent %4d of %4" PRIdS " bytes\n",
                      coap_session_str(c_session), ret, data_len);
   }
   return ret;
