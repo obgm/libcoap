@@ -267,13 +267,13 @@ coap_ws_write(coap_session_t *session, const uint8_t *data, size_t datalen) {
   if (ret < hdr_len) {
     return ret;
   }
-  coap_log_debug("*  %s: ws h:  sent %4zd bytes\n",
+  coap_log_debug("*  %s: ws h:  sent %4" PRIdS " bytes\n",
                  coap_session_str(session), hdr_len);
   if (ret == (ssize_t)(datalen + hdr_len))
-    coap_log_debug("*  %s: ws:    sent %4zd bytes\n",
+    coap_log_debug("*  %s: ws:    sent %4" PRIdS " bytes\n",
                    coap_session_str(session), ret - hdr_len);
   else
-    coap_log_debug("*  %s: ws:    sent %4zd of %4zd bytes\n",
+    coap_log_debug("*  %s: ws:    sent %4" PRIdS " of %4" PRIdS " bytes\n",
                    coap_session_str(session), ret, datalen - hdr_len);
   return datalen;
 }
@@ -769,7 +769,7 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
     session->ws->all_hdr_in = 0;
     session->ws->hdr_ofs = 0;
     session->ws->data_ofs = 0;
-    coap_log_debug("*  %s: ws:    recv %4zd bytes\n",
+    coap_log_debug("*  %s: ws:    recv %4" PRIdS " bytes\n",
                    coap_session_str(session), session->ws->data_size);
     return session->ws->data_size;
   }
