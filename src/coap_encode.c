@@ -47,6 +47,9 @@ unsigned int
 coap_encode_var_safe(uint8_t *buf, size_t length, unsigned int val) {
   unsigned int n, i;
 
+  if (val == 0)
+    return 0;
+
   for (n = 0, i = val; i && n < sizeof(val); ++n)
     i >>= 8;
 
@@ -77,6 +80,9 @@ unsigned int
 coap_encode_var_safe8(uint8_t *buf, size_t length, uint64_t val) {
   unsigned int n, i;
   uint64_t tval = val;
+
+  if (val == 0)
+    return 0;
 
   for (n = 0; tval && n < sizeof(val); ++n)
     tval >>= 8;

@@ -523,6 +523,7 @@ coap_free_resource(coap_resource_t *resource, coap_deleting_resource_t deleting)
 void
 coap_resource_release_lkd(coap_resource_t *resource) {
 
+#ifndef __COVERITY__
   assert(resource->ref);
   resource->ref--;
   if (resource->ref)
@@ -538,6 +539,14 @@ coap_resource_release_lkd(coap_resource_t *resource) {
   }
 
   coap_free_type(COAP_RESOURCE, resource);
+#else /* __COVERITY__ */
+  /* Coverity scan is fooled by the reference counter leading to
+   * false positives for USE_AFTER_FREE. */
+  --resource->ref;
+  __coverity_negative_sink__(resource->ref);
+  /* Indicate that resources are released properly. */
+  __coverity_free__(resource);
+#endif /* __COVERITY__ */
 }
 
 COAP_API void
@@ -1355,10 +1364,13 @@ cleanup:
       coap_session_release_lkd(obs_session);
       coap_pdu_release_lkd(obs_pdu);
     }
-    coap_resource_release_lkd(r);
     r->list_being_traversed = 0;
+    r->dirty = 0;
+    coap_resource_release_lkd(r);
+    /* r may be no more if elsewhere coap_free_resource() has been called */
+  } else {
+    r->dirty = 0;
   }
-  r->dirty = 0;
 }
 
 COAP_API int

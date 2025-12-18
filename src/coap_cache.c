@@ -208,6 +208,7 @@ coap_new_cache_entry_lkd(coap_session_t *session, const coap_pdu_t *pdu,
   }
   entry->cache_key = coap_cache_derive_key(session, pdu, session_based);
   if (!entry->cache_key) {
+    coap_delete_pdu_lkd(entry->pdu);
     coap_free_type(COAP_CACHE_ENTRY, entry);
     return NULL;
   }

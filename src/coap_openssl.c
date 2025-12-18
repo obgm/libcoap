@@ -1024,7 +1024,7 @@ coap_sock_write(BIO *a, const char *in, int inl) {
 
   if (!session) {
     errno = ENOMEM;
-    ret = -1;
+    return -1;
   } else {
     ret = (int)session->sock.lfunc[COAP_LAYER_TLS].l_write(session,
                                                            (const uint8_t *)in,
@@ -4631,6 +4631,7 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
     return 1;
   }
 
+  coap_delete_binary(dummy);
   coap_crypto_output_errors("coap_crypto_hmac");
   return 0;
 }
