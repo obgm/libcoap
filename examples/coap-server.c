@@ -799,7 +799,7 @@ hnd_put_post(coap_resource_t *resource,
   dynamic_resource_t *resource_entry = NULL;
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
-  coap_binary_t *data_so_far;
+  coap_binary_t *data_so_far = NULL;
   transient_value_t *transient_value;
 
   resource_entry = coap_resource_get_userdata(resource);
@@ -967,8 +967,8 @@ individual_blocks(coap_session_t *session COAP_UNUSED,
                   size_t offset,
                   size_t total) {
 
-  fwrite(data, length, 1, stderr);
-  /* Keep all hte data, so that hnd_put_example_data() can also update things */
+  (void)fwrite(data, length, 1, stderr);
+  /* Keep all the data, so that hnd_put_example_data() can also update things */
   *body_data = coap_block_build_body(*body_data, length, data,
                                      offset, total);
   if (!(*body_data)) {

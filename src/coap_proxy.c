@@ -67,7 +67,7 @@ coap_proxy_log_entry(coap_session_t *incoming, const coap_pdu_t *pdu,
                    "%02x", upstream_token->s[i]);
         }
       }
-      coap_print_addr(coap_session_get_addr_remote(incoming), addr, sizeof(addr));
+      (void)coap_print_addr(coap_session_get_addr_remote(incoming), addr, sizeof(addr));
       coap_log_debug("   proxy %-4s %s {%s}-{%s} \"%s\"%s\n", type, addr, scratch_u, scratch_d,
                      url->s, coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter) ? " Observe" : "");
       coap_delete_string(url);
@@ -776,8 +776,9 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
   if (!resp_pdu)
     return COAP_RESPONSE_FAIL;
 
+  assert(proxy_req);
   /* Incase change in type of request over the proxy */
-  if (proxy_req && proxy_req->pdu)
+  if (proxy_req->pdu)
     resp_pdu->type = proxy_req->pdu->type;
 
   if (COAP_PROTO_NOT_RELIABLE(session->proto))
