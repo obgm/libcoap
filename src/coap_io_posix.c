@@ -327,17 +327,19 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
         milliseconds = 2000;
       }
       if (milliseconds) {
+        coap_lock_unlock();
         Sleep(milliseconds);
+        coap_lock_lock(return -1);
       }
     }
-    goto all_over;
+    result = 0;
   }
 #endif /* _WIN32 */
 
   if (result < 0) {   /* error */
 #ifdef _WIN32
     coap_win_error_to_errno();
-#endif
+#endif /* _WIN32 */
     if (errno != EINTR) {
 #if COAP_THREAD_SAFE
       if (errno == EBADF) {
@@ -353,23 +355,29 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
 #if COAP_THREAD_SAFE
   /* Need to refresh what is available to read / write etc. */
   nfds = coap_io_prepare_fds(ctx, enfds, ereadfds, ewritefds, eexceptfds);
-  tv.tv_usec = 0;
-  tv.tv_sec = 0;
-  result = select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds, &tv);
-  if (result < 0) {   /* error */
 #ifdef _WIN32
-    coap_win_error_to_errno();
-#endif
-    if (errno != EINTR) {
-      if (errno == EBADF) {
-        coap_log_debug("select: %s\n", coap_socket_strerror());
-        goto all_over;
+  if (nfds > 0) {
+#endif /* _WIN32 */
+    tv.tv_usec = 0;
+    tv.tv_sec = 0;
+    result = select((int)nfds, &ctx->readfds, &ctx->writefds, &ctx->exceptfds, &tv);
+    if (result < 0) {   /* error */
+#ifdef _WIN32
+      coap_win_error_to_errno();
+#endif /* _WIN32 */
+      if (errno != EINTR) {
+        if (errno == EBADF) {
+          coap_log_debug("select: %s\n", coap_socket_strerror());
+          goto all_over;
+        }
+        coap_log_err("select: %s\n", coap_socket_strerror());
+        return -1;
       }
-      coap_log_err("select: %s\n", coap_socket_strerror());
-      return -1;
+      goto all_over;
     }
-    goto all_over;
+#ifdef _WIN32
   }
+#endif /* _WIN32 */
 #endif /* COAP_THREAD_SAFE */
   if (ereadfds) {
     *ereadfds = ctx->readfds;
