@@ -181,7 +181,7 @@ coap_io_prepare_fds(coap_context_t *ctx,
     }
     SESSIONS_ITER(ep->sessions, s, stmp) {
       if (s->sock.flags & (COAP_SOCKET_WANT_READ|COAP_SOCKET_WANT_WRITE)) {
-        if (ctx->num_sockets < max_sockets)
+        if (ctx->num_sockets < max_sockets && !(s->sock.flags & COAP_SOCKET_SLAVE))
           ctx->sockets[ctx->num_sockets++] = &s->sock;
       }
     }
@@ -192,7 +192,7 @@ coap_io_prepare_fds(coap_context_t *ctx,
     if (s->sock.flags & (COAP_SOCKET_WANT_READ |
                          COAP_SOCKET_WANT_WRITE |
                          COAP_SOCKET_WANT_CONNECT)) {
-      if (ctx->num_sockets < max_sockets)
+      if (ctx->num_sockets < max_sockets && !(s->sock.flags & COAP_SOCKET_SLAVE))
         ctx->sockets[ctx->num_sockets++] = &s->sock;
     }
   }
