@@ -15,9 +15,9 @@ coap_new_oscore_conf,
 coap_delete_oscore_conf,
 coap_new_oscore_recipient,
 coap_delete_oscore_recipient,
-coap_new_client_session_oscore,
-coap_new_client_session_oscore_pki,
-coap_new_client_session_oscore_psk,
+coap_new_client_session_oscore3,
+coap_new_client_session_oscore_pki3,
+coap_new_client_session_oscore_psk3,
 coap_context_oscore_server
 - Work with CoAP OSCORE
 
@@ -37,19 +37,22 @@ coap_bin_const_t *_recipient_id_);*
 *int coap_delete_oscore_recipient(coap_context_t *_context_,
 coap_bin_const_t *_recipient_id_);*
 
-*coap_session_t *coap_new_client_session_oscore(coap_context_t *_context_,
+*coap_session_t *coap_new_client_session_oscore3(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_,
-coap_proto_t _proto_, coap_oscore_conf_t *_oscore_conf_);*
+coap_proto_t _proto_, coap_oscore_conf_t *_oscore_conf_, void *_app_data_,
+coap_app_data_free_callback_t _callback_, coap_str_const_t *_ws_host_);*
 
-*coap_session_t *coap_new_client_session_oscore_psk(coap_context_t *_context_,
+*coap_session_t *coap_new_client_session_oscore_psk3(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_,
 coap_proto_t _proto_, coap_dtls_cpsk_t *_psk_data_,
-coap_oscore_conf_t *_oscore_conf_);*
+coap_oscore_conf_t *_oscore_conf_, void *_app_data_,
+coap_app_data_free_callback_t _callback_, coap_str_const_t *_ws_host_);*
 
-*coap_session_t *coap_new_client_session_oscore_pki(coap_context_t *_context_,
+*coap_session_t *coap_new_client_session_oscore_pki3(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_,
 coap_proto_t _proto_, coap_dtls_pki_t *_pki_data_,
-coap_oscore_conf_t *_oscore_conf_);*
+coap_oscore_conf_t *_oscore_conf_, void *_app_data_,
+coap_app_data_free_callback_t _callback_, coap_str_const_t *_ws_host_);*
 
 *int coap_context_oscore_server(coap_context_t *_context_,
 coap_oscore_conf_t *_oscore_conf_);*
@@ -144,10 +147,10 @@ coap_oscore_conf_t structure _oscore_conf_ as returned by
 *coap_new_oscore_conf*().  Normally this function never needs to be called
 as _oscore_conf_ is freed off by the call the client or server setup functions.
 
-*Function: coap_new_client_session_oscore()*
+*Function: coap_new_client_session_oscore3()*
 
-The *coap_new_client_session_oscore*() is basically the same as
-*coap_new_client_session*(3), but has an additional parameter _oscore_conf_
+The *coap_new_client_session_oscore3*() is basically the same as
+*coap_new_client_session3*(3), but has an additional parameter _oscore_conf_
 that is created by *coap_new_oscore_conf*(). This function creates a
 client endpoint for a specific _context_ and initiates a new client session
 to the specified _server_ using the CoAP protocol _proto_ and OSCORE
@@ -157,10 +160,20 @@ Normally _local_if_ would be set to NULL, but by specifying _local_if_ the
 source of the network session can be bound to a specific IP address or port.
 The session will initially have a reference count of 1.
 
-*Function: coap_new_client_session_oscore_psk()*
+_app_data_ and _callback_ are added to the returned session early on in the
+session create cycle to remove any potential timing issues on a multi-threaded
+system.  If not required, then these can be set to NULL. See
+*coap_session_set_app_data2*() for further information.
 
-The *coap_new_client_session_oscore_psk*() is basically the same as
-*coap_new_client_session_psk2*(3), but has an additional parameter
+For _proto_ COAP_PROTO_WS or COAP_PROTO_WSS, _ws_host_ is added to the returned
+session early on in the session create cycle to remove any potential timing
+issues on a multi-threaded system. If not required, then this can be set to NULL.
+See *coap_ws_set_host_request*(3) for further information.
+
+*Function: coap_new_client_session_oscore_psk3()*
+
+The *coap_new_client_session_oscore_psk3*() is basically the same as
+*coap_new_client_session_psk3*(3), but has an additional parameter
 _oscore_conf_ that is created by *coap_new_oscore_conf*(). This
 function, for a specific _context_, is used to configure the TLS context
 using the _setup_data_ variables as defined in the coap_dtls_cpsk_t structure
@@ -172,10 +185,20 @@ port is used.  Normally _local_if_ would be set to NULL, but by specifying
 _local_if_ the source of the network session can be bound to a specific IP
 address or port. The session will initially have a reference count of 1.
 
-*Function: coap_new_client_session_oscore_pki()*
+_app_data_ and _callback_ are added to the returned session early on in the
+session create cycle to remove any potential timing issues on a multi-threaded
+system.  If not required, then these can be set to NULL. See
+*coap_session_set_app_data2*() for further information.
 
-The *coap_new_client_session_oscore_pki*() is basically the same as
-*coap_new_client_session_pki*(3), but has an additional parameter
+For _proto_ COAP_PROTO_WS or COAP_PROTO_WSS, _ws_host_ is added to the returned
+session early on in the session create cycle to remove any potential timing
+issues on a multi-threaded system. If not required, then this can be set to NULL.
+See *coap_ws_set_host_request*(3) for further information.
+
+*Function: coap_new_client_session_oscore_pki3()*
+
+The *coap_new_client_session_oscore_pki3*() is basically the same as
+*coap_new_client_session_pki3*(3), but has an additional parameter
 _oscore_conf_ that is created by *coap_new_oscore_conf*(). This
 function, for a specific _context_, is used to configure the TLS context using
 the _setup_data_ variables as defined in the coap_dtls_pki_t structure in the
@@ -187,6 +210,16 @@ Normally _local_if_ would be set to NULL, but by specifying _local_if_ the
 source of the network session can be bound to a specific IP address or port.
 The session will initially have a reference count of 1.
 
+_app_data_ and _callback_ are added to the returned session early on in the
+session create cycle to remove any potential timing issues on a multi-threaded
+system.  If not required, then these can be set to NULL. See
+*coap_session_set_app_data2*() for further information.
+
+For _proto_ COAP_PROTO_WS or COAP_PROTO_WSS, _ws_host_ is added to the returned
+session early on in the session create cycle to remove any potential timing
+issues on a multi-threaded system. If not required, then this can be set to NULL.
+See *coap_ws_set_host_request*(3) for further information.
+
 *Function: coap_context_oscore_server()*
 
 The *coap_context_oscore_server*() function is used to enable the server to
@@ -195,8 +228,8 @@ configure _oscore_conf_ (which is freed off by this call).
 
 RETURN VALUES
 -------------
-*coap_new_client_session_oscore*(), *coap_new_client_session_oscore_psk*()
-and *coap_new_client_session_oscore_pki*() return a newly created
+*coap_new_client_session_oscore3*(), *coap_new_client_session_oscore_psk3*()
+and *coap_new_client_session_oscore_pki3*() return a newly created
 client session or NULL if there is a malloc or parameter failure.
 
 *coap_new_oscore_conf*() returns a _coap_oscore_conf_t_

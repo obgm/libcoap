@@ -114,7 +114,7 @@ get_session(coap_context_t *ctx, const char *group) {
     addr.size = rp->ai_addrlen;
     memcpy(&addr.addr, rp->ai_addr, rp->ai_addrlen);
 
-    session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
+    session = coap_new_client_session3(ctx, NULL, &addr, COAP_PROTO_UDP, NULL, NULL, NULL);
     if (!session)
       continue;
 

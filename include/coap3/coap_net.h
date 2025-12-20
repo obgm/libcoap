@@ -548,7 +548,7 @@ COAP_API uint16_t coap_new_message_id(coap_session_t *session);
 COAP_API void coap_free_context(coap_context_t *context);
 
 /**
- * @deprecated Use coap_context_set_app_data() instead.
+ * @deprecated Use coap_context_set_app_data2() instead.
  *
  * Stores @p data with the given CoAP context. This function
  * overwrites any value that has previously been stored with @p

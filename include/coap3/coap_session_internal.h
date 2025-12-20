@@ -531,7 +531,15 @@ size_t coap_session_max_pdu_rcv_size(const coap_session_t *session);
 size_t coap_session_max_pdu_size_lkd(const coap_session_t *session);
 
 /**
- * Creates a new client session to the designated server.
+ * Creates a new client session to the designated server, with PSK credentials
+ * along with app_data information (as per coap_session_set_app_data2()) and
+ * optional WebSockets host (as per coap_ws_set_host_request()) to remove timing
+ * window call-back instead of doing
+ *   coap_new_client_session();
+ *   coap_session_set_app_data2();
+ * or
+ *   coap_new_client_session();
+ *   coap_ws_set_host_request();
  *
  * Note: This function must be called in the locked state.
  *
@@ -543,18 +551,33 @@ size_t coap_session_max_pdu_size_lkd(const coap_session_t *session);
  * @param server The server's address. If the port number is zero, the default port
  *               for the protocol will be used.
  * @param proto Protocol.
+ * @param app_data The pointer to the application data to store or NULL.
+ * @param callback The optional release call-back for app_data on session
+ *                 removal or NULL.
+ * @param ws_host If proto is COAP_PROTO_WS or COAP_PROTO_WSS, then set the
+ *                Host parameter accordingly.
  *
  * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd to free.
  */
-coap_session_t *coap_new_client_session_lkd(
-    coap_context_t *ctx,
-    const coap_address_t *local_if,
-    const coap_address_t *server,
-    coap_proto_t proto
-);
+coap_session_t *coap_new_client_session3_lkd(coap_context_t *ctx,
+                                             const coap_address_t *local_if,
+                                             const coap_address_t *server,
+                                             coap_proto_t proto,
+                                             void *app_data,
+                                             coap_app_data_free_callback_t callback,
+                                             coap_str_const_t *ws_host
+                                            );
 
 /**
- * Creates a new client session to the designated server with PKI credentials
+ * Creates a new client session to the designated server, with PKI credentials
+ * along with app_data information (as per coap_session_set_app_data2()) and
+ * optional WebSockets host (as per coap_ws_set_host_request()) to remove timing
+ *  window call-back in (D)TLS startup instead of doing
+ *   coap_new_client_session_pki();
+ *   coap_session_set_app_data2();
+ * or
+ *   coap_new_client_session_pki();
+ *   coap_ws_set_host_request();
  *
  * Note: This function must be called in the locked state.
  *
@@ -567,23 +590,29 @@ coap_session_t *coap_new_client_session_lkd(
  *               port for the protocol will be used.
  * @param proto CoAP Protocol.
  * @param setup_data PKI parameters.
+ * @param app_data The pointer to the application data to store or NULL.
+ * @param callback The optional release call-back for app_data on session
+ *                 removal or NULL.
+ * @param ws_host If proto is COAP_PROTO_WS or COAP_PROTO_WSS, then set the
+ *                Host parameter accordingly.
  *
  * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
-coap_session_t *coap_new_client_session_pki_lkd(coap_context_t *ctx,
-                                                const coap_address_t *local_if,
-                                                const coap_address_t *server,
-                                                coap_proto_t proto,
-                                                coap_dtls_pki_t *setup_data
-                                               );
+coap_session_t *coap_new_client_session_pki3_lkd(coap_context_t *ctx,
+                                                 const coap_address_t *local_if,
+                                                 const coap_address_t *server,
+                                                 coap_proto_t proto,
+                                                 coap_dtls_pki_t *setup_data,
+                                                 void *app_data,
+                                                 coap_app_data_free_callback_t callback,
+                                                 coap_str_const_t *ws_host
+                                                );
 
 /**
  * Creates a new client session to the designated server with PSK credentials
  *
  * Note: This function must be called in the locked state.
- *
- * @deprecated Use coap_new_client_session_psk2_lkd() instead.
  *
  * @param ctx The CoAP context.
  * @param local_if Address of local interface. It is recommended to use NULL to let
@@ -609,7 +638,15 @@ coap_session_t *coap_new_client_session_psk_lkd(coap_context_t *ctx,
                                                );
 
 /**
- * Creates a new client session to the designated server with PSK credentials
+ * Creates a new client session to the designated server, with PSK credentials
+ * along with app_data information (as per coap_session_set_app_data2()) and
+ * optional WebSockets host (as per coap_ws_set_host_request()) to remove timing
+ *  window call-back in (D)TLS startup instead of doing
+ *   coap_new_client_session_psk2();
+ *   coap_session_set_app_data2();
+ * or
+ *   coap_new_client_session_psk2();
+ *   coap_ws_set_host_request();
  *
  * Note: This function must be called in the locked state.
  *
@@ -622,15 +659,23 @@ coap_session_t *coap_new_client_session_psk_lkd(coap_context_t *ctx,
  *               port for the protocol will be used.
  * @param proto CoAP Protocol.
  * @param setup_data PSK parameters.
+ * @param app_data The pointer to the application data to store or NULL.
+ * @param callback The optional release call-back for app_data on session
+ *                 removal or NULL.
+ * @param ws_host If proto is COAP_PROTO_WS or COAP_PROTO_WSS, then set the
+ *                Host parameter accordingly.
  *
  * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
-coap_session_t *coap_new_client_session_psk2_lkd(coap_context_t *ctx,
+coap_session_t *coap_new_client_session_psk3_lkd(coap_context_t *ctx,
                                                  const coap_address_t *local_if,
                                                  const coap_address_t *server,
                                                  coap_proto_t proto,
-                                                 coap_dtls_cpsk_t *setup_data
+                                                 coap_dtls_cpsk_t *setup_data,
+                                                 void *app_data,
+                                                 coap_app_data_free_callback_t callback,
+                                                 coap_str_const_t *ws_host
                                                 );
 
 /**

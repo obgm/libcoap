@@ -192,11 +192,11 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
     dtls_psk.psk_info.key.s = (const uint8_t *)use_psk;
     dtls_psk.psk_info.key.length = strlen(use_psk);
 
-    session = coap_new_client_session_psk2(main_coap_context, NULL, &dst,
-                                           COAP_PROTO_DTLS, &dtls_psk);
+    session = coap_new_client_session_psk3(main_coap_context, NULL, &dst,
+                                           COAP_PROTO_DTLS, &dtls_psk, NULL, NULL, NULL);
   } else {
-    session = coap_new_client_session(main_coap_context, NULL, &dst,
-                                      proto);
+    session = coap_new_client_session3(main_coap_context, NULL, &dst,
+                                       proto, NULL, NULL, NULL);
   }
 
   LWIP_ASSERT("Failed to create session", session != NULL);

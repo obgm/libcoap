@@ -1459,7 +1459,10 @@ static coap_session_t *
 coap_session_create_client(coap_context_t *ctx,
                            const coap_address_t *local_if,
                            const coap_address_t *server,
-                           coap_proto_t proto) {
+                           coap_proto_t proto,
+                           void *app_data,
+                           coap_app_data_free_callback_t callback,
+                           coap_str_const_t *ws_host) {
   coap_session_t *session = NULL;
   int default_port = COAP_DEFAULT_PORT;
 
@@ -1519,6 +1522,16 @@ coap_session_create_client(coap_context_t *ctx,
   session->sock.session = session;
   memcpy(&session->sock.lfunc, coap_layers_coap[proto],
          sizeof(session->sock.lfunc));
+
+  session->app_data = app_data;
+  session->app_cb = app_data ? callback : NULL;
+#if COAP_WS_SUPPORT
+  if (ws_host) {
+    session->ws_host = coap_new_str_const(ws_host->s, ws_host->length);
+  }
+#else /* ! COAP_WS_SUPPORT */
+  (void)ws_host;
+#endif /* ! COAP_WS_SUPPORT */
 
   if (COAP_PROTO_NOT_RELIABLE(proto)) {
     coap_session_t *s, *rtmp;
@@ -1707,21 +1720,40 @@ coap_new_client_session(coap_context_t *ctx,
   coap_session_t *session;
 
   coap_lock_lock(return NULL);
-  session = coap_new_client_session_lkd(ctx, local_if, server, proto);
+  session = coap_new_client_session3_lkd(ctx, local_if, server, proto, NULL, NULL, NULL);
+  coap_lock_unlock();
+  return session;
+}
+
+COAP_API coap_session_t *
+coap_new_client_session3(coap_context_t *ctx,
+                         const coap_address_t *local_if,
+                         const coap_address_t *server,
+                         coap_proto_t proto,
+                         void *app_data,
+                         coap_app_data_free_callback_t callback,
+                         coap_str_const_t *ws_host) {
+  coap_session_t *session;
+
+  coap_lock_lock(return NULL);
+  session = coap_new_client_session3_lkd(ctx, local_if, server, proto, app_data, callback, ws_host);
   coap_lock_unlock();
   return session;
 }
 
 coap_session_t *
-coap_new_client_session_lkd(coap_context_t *ctx,
-                            const coap_address_t *local_if,
-                            const coap_address_t *server,
-                            coap_proto_t proto) {
+coap_new_client_session3_lkd(coap_context_t *ctx,
+                             const coap_address_t *local_if,
+                             const coap_address_t *server,
+                             coap_proto_t proto,
+                             void *app_data,
+                             coap_app_data_free_callback_t callback,
+                             coap_str_const_t *ws_host) {
   coap_session_t *session;
 
   coap_lock_check_locked();
   session = coap_session_create_client(ctx, local_if, server,
-                                       proto);
+                                       proto, app_data, callback, ws_host);
   if (session) {
     coap_log_debug("***%s: session %p: created outgoing session\n",
                    coap_session_str(session), (void *)session);
@@ -1766,8 +1798,8 @@ coap_new_client_session_psk_lkd(coap_context_t *ctx,
     setup_data.psk_info.key.length = key_len;
   }
 
-  return coap_new_client_session_psk2_lkd(ctx, local_if, server,
-                                          proto, &setup_data);
+  return coap_new_client_session_psk3_lkd(ctx, local_if, server,
+                                          proto, &setup_data, NULL, NULL, NULL);
 }
 
 /*
@@ -1894,21 +1926,43 @@ coap_new_client_session_psk2(coap_context_t *ctx,
   coap_session_t *session;
 
   coap_lock_lock(return NULL);
-  session = coap_new_client_session_psk2_lkd(ctx, local_if, server, proto, setup_data);
+  session = coap_new_client_session_psk3_lkd(ctx, local_if, server, proto, setup_data,
+                                             NULL, NULL, NULL);
+  coap_lock_unlock();
+  return session;
+}
+
+COAP_API coap_session_t *
+coap_new_client_session_psk3(coap_context_t *ctx,
+                             const coap_address_t *local_if,
+                             const coap_address_t *server,
+                             coap_proto_t proto,
+                             coap_dtls_cpsk_t *setup_data,
+                             void *app_data,
+                             coap_app_data_free_callback_t callback,
+                             coap_str_const_t *ws_host) {
+  coap_session_t *session;
+
+  coap_lock_lock(return NULL);
+  session = coap_new_client_session_psk3_lkd(ctx, local_if, server, proto,
+                                             setup_data, app_data, callback, ws_host);
   coap_lock_unlock();
   return session;
 }
 
 coap_session_t *
-coap_new_client_session_psk2_lkd(coap_context_t *ctx,
+coap_new_client_session_psk3_lkd(coap_context_t *ctx,
                                  const coap_address_t *local_if,
                                  const coap_address_t *server,
                                  coap_proto_t proto,
-                                 coap_dtls_cpsk_t *setup_data) {
+                                 coap_dtls_cpsk_t *setup_data,
+                                 void *app_data,
+                                 coap_app_data_free_callback_t callback,
+                                 coap_str_const_t *ws_host) {
   coap_session_t *session;
 
   coap_lock_check_locked();
-  session = coap_session_create_client(ctx, local_if, server, proto);
+  session = coap_session_create_client(ctx, local_if, server, proto, app_data, callback, ws_host);
 
   if (!session || !setup_data)
     return NULL;
@@ -2082,17 +2136,39 @@ coap_new_client_session_pki(coap_context_t *ctx,
   coap_session_t *session;
 
   coap_lock_lock(return NULL);
-  session = coap_new_client_session_pki_lkd(ctx, local_if, server, proto, setup_data);
+  session = coap_new_client_session_pki3_lkd(ctx, local_if, server, proto, setup_data,
+                                             NULL, NULL, NULL);
+  coap_lock_unlock();
+  return session;
+}
+
+COAP_API coap_session_t *
+coap_new_client_session_pki3(coap_context_t *ctx,
+                             const coap_address_t *local_if,
+                             const coap_address_t *server,
+                             coap_proto_t proto,
+                             coap_dtls_pki_t *setup_data,
+                             void *app_data,
+                             coap_app_data_free_callback_t callback,
+                             coap_str_const_t *ws_host) {
+  coap_session_t *session;
+
+  coap_lock_lock(return NULL);
+  session = coap_new_client_session_pki3_lkd(ctx, local_if, server, proto, setup_data,
+                                             app_data, callback, ws_host);
   coap_lock_unlock();
   return session;
 }
 
 coap_session_t *
-coap_new_client_session_pki_lkd(coap_context_t *ctx,
-                                const coap_address_t *local_if,
-                                const coap_address_t *server,
-                                coap_proto_t proto,
-                                coap_dtls_pki_t *setup_data) {
+coap_new_client_session_pki3_lkd(coap_context_t *ctx,
+                                 const coap_address_t *local_if,
+                                 const coap_address_t *server,
+                                 coap_proto_t proto,
+                                 coap_dtls_pki_t *setup_data,
+                                 void *app_data,
+                                 coap_app_data_free_callback_t callback,
+                                 coap_str_const_t *ws_host) {
   coap_session_t *session;
   coap_dtls_pki_t l_setup_data;
 
@@ -2107,7 +2183,7 @@ coap_new_client_session_pki_lkd(coap_context_t *ctx,
   l_setup_data = *setup_data;
   coap_sanitize_client_sni(&l_setup_data.client_sni);
 
-  session = coap_session_create_client(ctx, local_if, server, proto);
+  session = coap_session_create_client(ctx, local_if, server, proto, app_data, callback, ws_host);
 
   if (!session) {
     return NULL;

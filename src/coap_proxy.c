@@ -644,12 +644,14 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
 #if COAP_OSCORE_SUPPORT
       if (server_use.oscore_conf) {
         proxy_entry->ongoing =
-            coap_new_client_session_oscore_lkd(context, local_addr, &dst,
-                                               proto, server_use.oscore_conf);
+            coap_new_client_session_oscore3_lkd(context, local_addr, &dst,
+                                                proto, server_use.oscore_conf,
+                                                NULL, NULL, NULL);
       } else {
 #endif /* COAP_OSCORE_SUPPORT */
         proxy_entry->ongoing =
-            coap_new_client_session_lkd(context, local_addr, &dst, proto);
+            coap_new_client_session3_lkd(context, local_addr, &dst, proto,
+                                         NULL, NULL, NULL);
 #if COAP_OSCORE_SUPPORT
       }
 #endif /* COAP_OSCORE_SUPPORT */
@@ -662,13 +664,17 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
         if (server_use.dtls_pki) {
           server_use.dtls_pki->client_sni = client_sni;
           proxy_entry->ongoing =
-              coap_new_client_session_oscore_pki_lkd(context, local_addr, &dst,
-                                                     proto, server_use.dtls_pki, server_use.oscore_conf);
+              coap_new_client_session_oscore_pki3_lkd(context, local_addr, &dst,
+                                                      proto, server_use.dtls_pki,
+                                                      server_use.oscore_conf,
+                                                      NULL, NULL, NULL);
         } else if (server_use.dtls_cpsk) {
           server_use.dtls_cpsk->client_sni = client_sni;
           proxy_entry->ongoing =
-              coap_new_client_session_oscore_psk_lkd(context, local_addr, &dst,
-                                                     proto, server_use.dtls_cpsk, server_use.oscore_conf);
+              coap_new_client_session_oscore_psk3_lkd(context, local_addr, &dst,
+                                                      proto, server_use.dtls_cpsk,
+                                                      server_use.oscore_conf,
+                                                      NULL, NULL, NULL);
         } else {
           coap_log_warn("Proxy: (D)TLS not configured for secure session\n");
         }
@@ -678,17 +684,20 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
         if (server_use.dtls_pki) {
           server_use.dtls_pki->client_sni = client_sni;
           proxy_entry->ongoing =
-              coap_new_client_session_pki_lkd(context, local_addr, &dst,
-                                              proto, server_use.dtls_pki);
+              coap_new_client_session_pki3_lkd(context, local_addr, &dst,
+                                               proto, server_use.dtls_pki,
+                                               NULL, NULL, NULL);
         } else if (server_use.dtls_cpsk) {
           server_use.dtls_cpsk->client_sni = client_sni;
           proxy_entry->ongoing =
-              coap_new_client_session_psk2_lkd(context, local_addr, &dst,
-                                               proto, server_use.dtls_cpsk);
+              coap_new_client_session_psk3_lkd(context, local_addr, &dst,
+                                               proto, server_use.dtls_cpsk,
+                                               NULL, NULL, NULL);
         } else {
           /* Using client anonymous PKI */
           proxy_entry->ongoing =
-              coap_new_client_session_lkd(context, local_addr, &dst, proto);
+              coap_new_client_session3_lkd(context, local_addr, &dst, proto,
+                                           NULL, NULL, NULL);
         }
 #if COAP_OSCORE_SUPPORT
       }
@@ -1613,7 +1622,8 @@ coap_new_client_session_proxy_lkd(coap_context_t *ctx,
     return NULL;
   }
 
-  session = coap_new_client_session_lkd(ctx, NULL, &info_list->addr, COAP_PROTO_UDP);
+  session = coap_new_client_session3_lkd(ctx, NULL, &info_list->addr, COAP_PROTO_UDP,
+                                         NULL, NULL, NULL);
 
   if (session) {
     session->server_list = server_list;
