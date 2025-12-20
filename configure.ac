@@ -1362,7 +1362,6 @@ man/coap_endpoint_server.txt
 man/coap_handler.txt
 man/coap_init.txt
 man/coap_io.txt
-man/coap_io_loop.txt
 man/coap_keepalive.txt
 man/coap_locking.txt
 man/coap_logging.txt
@@ -1379,6 +1378,7 @@ man/coap_resource.txt
 man/coap_session.txt
 man/coap_string.txt
 man/coap_supported.txt
+man/coap_threads.txt
 man/coap_tls_library.txt
 man/coap_uri.txt
 man/coap_websockets.txt

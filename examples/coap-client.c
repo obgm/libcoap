@@ -1689,6 +1689,11 @@ open_session(coap_context_t *ctx,
              const uint8_t *key,
              size_t key_len) {
   coap_session_t *session;
+  coap_str_const_t *ws_host = NULL;
+
+  if (proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS) {
+    ws_host = &uri.host;
+  }
 
   if (proto == COAP_PROTO_DTLS || proto == COAP_PROTO_TLS ||
       proto == COAP_PROTO_WSS) {
@@ -1697,44 +1702,41 @@ open_session(coap_context_t *ctx,
       /* Setup PKI session */
       coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT);
       if (doing_oscore) {
-        session = coap_new_client_session_oscore_pki(ctx, bind_addr, dst,
-                                                     proto, dtls_pki,
-                                                     oscore_conf);
+        session = coap_new_client_session_oscore_pki3(ctx, bind_addr, dst,
+                                                      proto, dtls_pki,
+                                                      oscore_conf, NULL, NULL, ws_host);
       } else
-        session = coap_new_client_session_pki(ctx, bind_addr, dst, proto,
-                                              dtls_pki);
+        session = coap_new_client_session_pki3(ctx, bind_addr, dst, proto,
+                                               dtls_pki, NULL, NULL, ws_host);
     } else if (identity || key) {
       /* Setup PSK session */
       coap_dtls_cpsk_t *dtls_psk = setup_psk(identity, identity_len,
                                              key, key_len);
       if (doing_oscore) {
-        session = coap_new_client_session_oscore_psk(ctx, bind_addr, dst,
-                                                     proto, dtls_psk,
-                                                     oscore_conf);
+        session = coap_new_client_session_oscore_psk3(ctx, bind_addr, dst,
+                                                      proto, dtls_psk,
+                                                      oscore_conf, NULL, NULL, ws_host);
       } else
-        session = coap_new_client_session_psk2(ctx, bind_addr, dst, proto,
-                                               dtls_psk);
+        session = coap_new_client_session_psk3(ctx, bind_addr, dst, proto,
+                                               dtls_psk, NULL, NULL, ws_host);
     } else {
       /* No PKI or PSK defined, as encrypted, use PKI */
       coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT);
       if (doing_oscore) {
-        session = coap_new_client_session_oscore_pki(ctx, bind_addr, dst,
-                                                     proto, dtls_pki,
-                                                     oscore_conf);
+        session = coap_new_client_session_oscore_pki3(ctx, bind_addr, dst,
+                                                      proto, dtls_pki,
+                                                      oscore_conf, NULL, NULL, ws_host);
       } else
-        session = coap_new_client_session_pki(ctx, bind_addr, dst, proto,
-                                              dtls_pki);
+        session = coap_new_client_session_pki3(ctx, bind_addr, dst, proto,
+                                               dtls_pki, NULL, NULL, ws_host);
     }
   } else {
     /* Non-encrypted session */
     if (doing_oscore) {
-      session = coap_new_client_session_oscore(ctx, bind_addr, dst, proto,
-                                               oscore_conf);
+      session = coap_new_client_session_oscore3(ctx, bind_addr, dst, proto,
+                                                oscore_conf, NULL, NULL, ws_host);
     } else
-      session = coap_new_client_session(ctx, bind_addr, dst, proto);
-  }
-  if (session && (proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS)) {
-    coap_ws_set_host_request(session, &uri.host);
+      session = coap_new_client_session3(ctx, bind_addr, dst, proto, NULL, NULL, ws_host);
   }
   return session;
 }

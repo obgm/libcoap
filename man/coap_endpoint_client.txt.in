@@ -11,9 +11,9 @@ coap_endpoint_client(3)
 NAME
 ----
 coap_endpoint_client,
-coap_new_client_session,
-coap_new_client_session_psk2,
-coap_new_client_session_pki,
+coap_new_client_session3,
+coap_new_client_session_psk3,
+coap_new_client_session_pki3,
 coap_session_set_mtu,
 coap_session_max_pdu_size,
 coap_mcast_set_hops
@@ -23,17 +23,20 @@ SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
 
-*coap_session_t *coap_new_client_session(coap_context_t *_context_,
+*coap_session_t *coap_new_client_session3(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_,
-coap_proto_t _proto_);*
+coap_proto_t _proto_, void *_app_data_, coap_app_data_free_callback_t _callback_,
+coap_str_const_t *_ws_host_);*
 
-*coap_session_t *coap_new_client_session_psk2(coap_context_t *_context_,
+*coap_session_t *coap_new_client_session_psk3(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_, coap_proto_t
-_proto_, coap_dtls_cpsk_t *_setup_data_);*
+_proto_, coap_dtls_cpsk_t *_setup_data_, void *_app_data_,
+coap_app_data_free_callback_t _callback_, coap_str_const_t *_ws_host_);*
 
-*coap_session_t *coap_new_client_session_pki(coap_context_t *_context_,
+*coap_session_t *coap_new_client_session_pki3(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_, coap_proto_t
-_proto_, coap_dtls_pki_t *_setup_data_);*
+_proto_, coap_dtls_pki_t *_setup_data_, void *_app_data_,
+coap_app_data_free_callback_t _callback_, coap_str_const_t *_ws_host_);*
 
 *void coap_session_set_mtu(coap_session_t *_session_, unsigned _mtu_);*
 
@@ -88,7 +91,7 @@ In principle the set-up sequence for CoAP client endpoints looks like
 ----
 coap_new_context()
 coap_context_set_pki_root_cas() - if the root CAs need to be updated and using PKI
-coap_new_client_session(), coap_new_client_session_pki() or coap_new_client_session_psk2()
+coap_new_client_session3(), coap_new_client_session_pki3() or coap_new_client_session_psk3()
 ----
 
 Multiple client endpoints and hence sessions are supported per _context_.
@@ -136,9 +139,9 @@ unix domain path to connect to must be specified.
 FUNCTIONS
 ---------
 
-*Function: coap_new_client_session()*
+*Function: coap_new_client_session3()*
 
-The *coap_new_client_session*() function creates a client endpoint for a
+The *coap_new_client_session3*() function creates a client endpoint for a
 specific _context_ and initiates a new client session to the specified
 _server_ using the CoAP protocol _proto_ as defined above. If the port is set
 to 0 in _server_ (for AF_INET or AF_INET6), then the default CoAP port is used.
@@ -150,13 +153,23 @@ appropriate *coap_address_t*.  If _local_if_ is defined, the address families
 for _local_if_ and _server_ must be identical. The session will initially have
 a reference count of 1.
 
+_app_data_ and _callback_ are added to the returned session early on in the
+session create cycle to remove any potential timing issues on a multi-threaded
+system.  If not required, then these can be set to NULL. See
+*coap_session_set_app_data2*() for further information.
+
+For _proto_ COAP_PROTO_WS or COAP_PROTO_WSS, _ws_host_ is added to the returned
+session early on in the session create cycle to remove any potential timing
+issues on a multi-threaded system. If not required, then this can be set to NULL.
+See *coap_ws_set_host_request*(3) for further information.
+
 To stop using a client session, the reference count must be decremented to 0
 by calling *coap_session_release*(3). See *coap_session*(3). This will remove
 the client endpoint's _session_ and all its associated information.
 
-*Function: coap_new_client_session_pki()*
+*Function: coap_new_client_session_pki3()*
 
-The *coap_new_client_session_pki*() function, for a specific _context_, is
+The *coap_new_client_session_pki3*() function, for a specific _context_, is
 used to configure the (D)TLS context using the _setup_data_ variables as defined
 in the coap_dtls_pki_t structure in the newly created endpoint session -
 see *coap_encryption*(3). The connection is to the specified _server_ using
@@ -170,13 +183,23 @@ appropriate *coap_address_t*.  If _local_if_ is defined, the address families
 for _local_if_ and _server_ must be identical. The session will initially have
 a reference count of 1.
 
+_app_data_ and _callback_ are added to the returned session early on in the
+session create cycle to remove any potential timing issues on a multi-threaded
+system.  If not required, then these can be set to NULL. See
+*coap_session_set_app_data2*() for further information.
+
+For _proto_ COAP_PROTO_WS or COAP_PROTO_WSS, _ws_host_ is added to the returned
+session early on in the session create cycle to remove any potential timing
+issues on a multi-threaded system. If not required, then this can be set to NULL.
+See *coap_ws_set_host_request*(3) for further information.
+
 To stop using a client session, the reference count must be decremented to 0
 by calling *coap_session_release*(3). See *coap_session*(3). This will remove
 the client endpoint's _session_ and all its associated information.
 
-*Function: coap_new_client_session_psk2()*
+*Function: coap_new_client_session_psk3()*
 
-The *coap_new_client_session_psk2*() function, for a specific _context_, is
+The *coap_new_client_session_psk3*() function, for a specific _context_, is
 used to configure the (D)TLS context using the _setup_data_ variables as defined
 in the coap_dtls_cpsk_t structure in the newly created endpoint session -
 see *coap_encryption*(3). The connection is to the specified _server_ using
@@ -189,6 +212,16 @@ address or port. For AF_UNIX, _local_if_ must be specified pointing to an
 appropriate *coap_address_t*.  If _local_if_ is defined, the address families
 for _local_if_ and _server_ must be identical. The session will initially have
 a reference count of 1.
+
+_app_data_ and _callback_ are added to the returned session early on in the
+session create cycle to remove any potential timing issues on a multi-threaded
+system.  If not required, then these can be set to NULL. See
+*coap_session_set_app_data2*() for further information.
+
+For _proto_ COAP_PROTO_WS or COAP_PROTO_WSS, _ws_host_ is added to the returned
+session early on in the session create cycle to remove any potential timing
+issues on a multi-threaded system. If not required, then this can be set to NULL.
+See *coap_ws_set_host_request*(3) for further information.
 
 To stop using a client session, the reference count must be decremented to 0
 by calling *coap_session_release*(3). See *coap_session*(3). This will remove
@@ -216,8 +249,8 @@ _session_.
 
 RETURN VALUES
 -------------
-*coap_new_client_session*(), *coap_new_client_session_psk2*(),
-*coap_new_client_session_pki*() return a newly created client
+*coap_new_client_session3*(), *coap_new_client_session_psk3*(),
+*coap_new_client_session_pki3*() return a newly created client
 session or NULL if there is a creation failure.
 
 *coap_session_max_pdu_size*() returns the MTU size.
@@ -253,7 +286,8 @@ setup_client_session(struct in_addr ip_address) {
   server.addr.sin.sin_addr = ip_address;
   server.addr.sin.sin_port = htons(5683);
 
-  session = coap_new_client_session(context, NULL, &server, COAP_PROTO_UDP);
+  session = coap_new_client_session3(context, NULL, &server, COAP_PROTO_UDP,
+                                     NULL, NULL, NULL);
   if (!session) {
     coap_free_context(context);
     return NULL;
@@ -301,7 +335,8 @@ setup_client_session(const char *server_ud) {
   /* Only do this if you know it is safe to do so */
   unlink(local.addr.cun.sun_path);
 
-  session = coap_new_client_session(context, &local, &server, COAP_PROTO_UDP);
+  session = coap_new_client_session3(context, &local, &server, COAP_PROTO_UDP,
+                                     NULL, NULL, NULL);
   if (!session) {
     coap_free_context(context);
     return NULL;
@@ -399,8 +434,9 @@ setup_client_session_pki(const char *host,
   dtls_pki.pki_key.key.pem.public_cert = public_cert_file;
   dtls_pki.pki_key.key.pem.private_key = private_key_file;
 
-  session = coap_new_client_session_pki(context, NULL, &server,
-                                        COAP_PROTO_DTLS, &dtls_pki);
+  session = coap_new_client_session_pki3(context, NULL, &server,
+                                         COAP_PROTO_DTLS, &dtls_pki,
+                                         NULL, NULL, NULL);
   if (!session) {
     coap_free_context(context);
     return NULL;
@@ -475,8 +511,9 @@ setup_client_session_psk(const char *host,
   dtls_psk.psk_info.identity.length = identity_len;
   dtls_psk.psk_info.key.s = key;
   dtls_psk.psk_info.key.length = key_len;
-  session = coap_new_client_session_psk2(context, NULL, &server,
-                                         COAP_PROTO_DTLS, &dtls_psk);
+  session = coap_new_client_session_psk3(context, NULL, &server,
+                                         COAP_PROTO_DTLS, &dtls_psk,
+                                         NULL, NULL, NULL);
   if (!session) {
     coap_free_context(context);
     return NULL;
@@ -513,8 +550,9 @@ setup_client_session_dtls(struct in_addr ip_address) {
   server.addr.sin.sin_addr = ip_address;
   server.addr.sin.sin_port = htons(5683);
 
-  session = coap_new_client_session(context, NULL, &server,
-                                    COAP_PROTO_DTLS);
+  session = coap_new_client_session3(context, NULL, &server,
+                                     COAP_PROTO_DTLS,
+                                     NULL, NULL, NULL);
   if (!session) {
     coap_free_context(context);
     return NULL;

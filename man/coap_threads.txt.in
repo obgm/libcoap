@@ -1,21 +1,21 @@
 // -*- mode:doc; -*-
 // vim: set syntax=asciidoc tw=0
 
-coap_io_loop(3)
+coap_threads(3)
 ===============
 :doctype: manpage
-:man source:   coap_io_loop
+:man source:   coap_threads
 :man version:  @PACKAGE_VERSION@
 :man manual:   libcoap Manual
 
 NAME
 ----
-coap_io_loop,
+coap_threads,
 coap_io_process_loop,
 coap_io_process_terminate_loop,
 coap_io_process_configure_threads,
 coap_io_process_remove_threads
-- Work with CoAP threads doing coap_io_process
+- Work with CoAP threads
 
 SYNOPSIS
 --------
@@ -42,14 +42,59 @@ or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
 DESCRIPTION
 -----------
 This man page focuses on setting up and supporting multiple threads, each one
-invoking *coap_io_process*(3) in a loop.
+invoking *coap_io_process*(3) in a loop.  There is no reason why an
+application cannot set up and manage its own threading model.
 
-Each thread can receive a packet (a different packet for each thread), call the
-appropriate application call-back handler and potentially be spending time of
-consequence in that handler without blocking the reciept of other input traffic.
+Each thread calling *coap_io_process*(3) can receive a packet (a different packet
+for each thread), call the appropriate application call-back handler and
+potentially be spending time of consequence in that handler without blocking the
+reciept of other input traffic.
 
-These functions should be called from the main thread.  It is assumed that
-thread-safe code has been enabled.
+These above listed functions should be called from the main thread.  It is
+assumed that thread-safe code has been enabled.
+
+*CAUTION:* The thread interaction lock protection is done within the libcoap
+library. There are several things that can cause thread interaction issues.
+
+Any application thread that is not executing in the libcoap library or in
+a libcoap call-back function must not modify any libcoap structure other
+than by calling a libcoap Public API as there is no locking protection.
+
+There are two types of libcoap call-back.
+
+The first type of call-back is executing under the libcoap library lock protections
+and so changes can safely be made to any structure that libcoap is using including
+invoking any libcoap Public API calls.
+
+The second type of call-back is executing without the libcoap lock protections and
+so no mofications must take place other than by using the libcoap Public API. The
+second type is used when there is a likelyhood that the call-back may block on an
+external event and libcoap in general should not be blocked.
+
+The list of the second type of call-backs are set up by the following functions:
+
+[source, c]
+----
+coap_io_process_loop()
+coap_register_request_handler()
+coap_register_dynamic_resource_handler()
+coap_register_response_handler()
+coap_register_proxy_response_handler()
+coap_lwip_set_input_wait_handler()
+----
+
+*coap_io_process*(3) must not be called from within a call-back handler as
+*coap_io_process*(3) may then recursively call the same call-back handler.
+
+Calling a Public API that initiates a process that will invoke a call-back
+(potentially on a different thread) that requires external information to
+be already set up may fail if this information is provided in a subsequent
+Public API call (which may be done too late) sequentially done by the caller
+of the initial Public API. An example of this is calling
+*coap_new_client_session_psk2*(3) followed by *coap_session_set_app_data2*(3)
+and the (D)TLS Identity call-cack is called before
+*coap_session_set_app_data2*(3) completes. Use *coap_new_client_session_psk3*(3)
+instead.
 
 FUNCTIONS
 ---------
@@ -63,8 +108,8 @@ The thread calling *coap_io_process_loop*() will also be in a separate loop
 that is calling *coap_io_process*(3), optionally calling _main_loop_code_
 (if not NULL) with argument _main_loop_code_arg_. For the thread calling
 *coap_io_process_loop*(), it will call _main_loop_code_ at least every
-_timeout_ms_ milli-secs, the call to _main_loop_code_ start time aligned to
-the nearest second.
+_timeout_ms_ milli-secs, with the call to _main_loop_code_ start time is rounded
+down to the nearest second if _timeout_ms_ is >= 1000.
 
 _context_ defines the context to associate the threads with. _thread_count_
 is the number of threads to be running *coap_io_process*(3) which includes the

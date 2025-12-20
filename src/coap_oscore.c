@@ -71,19 +71,41 @@ coap_new_client_session_oscore(coap_context_t *ctx,
   coap_session_t *session;
 
   coap_lock_lock(return NULL);
-  session = coap_new_client_session_oscore_lkd(ctx, local_if, server, proto, oscore_conf);
+  session = coap_new_client_session_oscore3_lkd(ctx, local_if, server, proto, oscore_conf, NULL,
+                                                NULL, NULL);
+  coap_lock_unlock();
+  return session;
+}
+
+COAP_API coap_session_t *
+coap_new_client_session_oscore3(coap_context_t *ctx,
+                                const coap_address_t *local_if,
+                                const coap_address_t *server,
+                                coap_proto_t proto,
+                                coap_oscore_conf_t *oscore_conf,
+                                void *app_data,
+                                coap_app_data_free_callback_t callback,
+                                coap_str_const_t *ws_host) {
+  coap_session_t *session;
+
+  coap_lock_lock(return NULL);
+  session = coap_new_client_session_oscore3_lkd(ctx, local_if, server, proto, oscore_conf, app_data,
+                                                callback, ws_host);
   coap_lock_unlock();
   return session;
 }
 
 coap_session_t *
-coap_new_client_session_oscore_lkd(coap_context_t *ctx,
-                                   const coap_address_t *local_if,
-                                   const coap_address_t *server,
-                                   coap_proto_t proto,
-                                   coap_oscore_conf_t *oscore_conf) {
+coap_new_client_session_oscore3_lkd(coap_context_t *ctx,
+                                    const coap_address_t *local_if,
+                                    const coap_address_t *server,
+                                    coap_proto_t proto,
+                                    coap_oscore_conf_t *oscore_conf,
+                                    void *app_data,
+                                    coap_app_data_free_callback_t callback,
+                                    coap_str_const_t *ws_host) {
   coap_session_t *session =
-      coap_new_client_session_lkd(ctx, local_if, server, proto);
+      coap_new_client_session3_lkd(ctx, local_if, server, proto, app_data, callback, ws_host);
 
   if (!session)
     return NULL;
@@ -105,23 +127,46 @@ coap_new_client_session_oscore_psk(coap_context_t *ctx,
   coap_session_t *session;
 
   coap_lock_lock(return NULL);
-  session = coap_new_client_session_oscore_psk_lkd(ctx, local_if, server, proto, psk_data,
-                                                   oscore_conf);
+  session = coap_new_client_session_oscore_psk3_lkd(ctx, local_if, server, proto, psk_data,
+                                                    oscore_conf, NULL, NULL, NULL);
+  coap_lock_unlock();
+  return session;
+}
+
+COAP_API coap_session_t *
+coap_new_client_session_oscore_psk3(coap_context_t *ctx,
+                                    const coap_address_t *local_if,
+                                    const coap_address_t *server,
+                                    coap_proto_t proto,
+                                    coap_dtls_cpsk_t *psk_data,
+                                    coap_oscore_conf_t *oscore_conf,
+                                    void *app_data,
+                                    coap_app_data_free_callback_t callback,
+                                    coap_str_const_t *ws_host) {
+  coap_session_t *session;
+
+  coap_lock_lock(return NULL);
+  session = coap_new_client_session_oscore_psk3_lkd(ctx, local_if, server, proto, psk_data,
+                                                    oscore_conf, app_data, callback, ws_host);
   coap_lock_unlock();
   return session;
 }
 
 coap_session_t *
-coap_new_client_session_oscore_psk_lkd(coap_context_t *ctx,
-                                       const coap_address_t *local_if,
-                                       const coap_address_t *server,
-                                       coap_proto_t proto,
-                                       coap_dtls_cpsk_t *psk_data,
-                                       coap_oscore_conf_t *oscore_conf) {
+coap_new_client_session_oscore_psk3_lkd(coap_context_t *ctx,
+                                        const coap_address_t *local_if,
+                                        const coap_address_t *server,
+                                        coap_proto_t proto,
+                                        coap_dtls_cpsk_t *psk_data,
+                                        coap_oscore_conf_t *oscore_conf,
+                                        void *app_data,
+                                        coap_app_data_free_callback_t callback,
+                                        coap_str_const_t *ws_host) {
   coap_session_t *session;
 
   coap_lock_check_locked();
-  session = coap_new_client_session_psk2_lkd(ctx, local_if, server, proto, psk_data);
+  session = coap_new_client_session_psk3_lkd(ctx, local_if, server, proto, psk_data,
+                                             app_data, callback, ws_host);
 
   if (!session)
     return NULL;
@@ -143,23 +188,46 @@ coap_new_client_session_oscore_pki(coap_context_t *ctx,
   coap_session_t *session;
 
   coap_lock_lock(return NULL);
-  session = coap_new_client_session_oscore_pki_lkd(ctx, local_if, server, proto, pki_data,
-                                                   oscore_conf);
+  session = coap_new_client_session_oscore_pki3_lkd(ctx, local_if, server, proto, pki_data,
+                                                    oscore_conf, NULL, NULL, NULL);
+  coap_lock_unlock();
+  return session;
+}
+
+COAP_API coap_session_t *
+coap_new_client_session_oscore_pki3(coap_context_t *ctx,
+                                    const coap_address_t *local_if,
+                                    const coap_address_t *server,
+                                    coap_proto_t proto,
+                                    coap_dtls_pki_t *pki_data,
+                                    coap_oscore_conf_t *oscore_conf,
+                                    void *app_data,
+                                    coap_app_data_free_callback_t callback,
+                                    coap_str_const_t *ws_host) {
+  coap_session_t *session;
+
+  coap_lock_lock(return NULL);
+  session = coap_new_client_session_oscore_pki3_lkd(ctx, local_if, server, proto, pki_data,
+                                                    oscore_conf, app_data, callback, ws_host);
   coap_lock_unlock();
   return session;
 }
 
 coap_session_t *
-coap_new_client_session_oscore_pki_lkd(coap_context_t *ctx,
-                                       const coap_address_t *local_if,
-                                       const coap_address_t *server,
-                                       coap_proto_t proto,
-                                       coap_dtls_pki_t *pki_data,
-                                       coap_oscore_conf_t *oscore_conf) {
+coap_new_client_session_oscore_pki3_lkd(coap_context_t *ctx,
+                                        const coap_address_t *local_if,
+                                        const coap_address_t *server,
+                                        coap_proto_t proto,
+                                        coap_dtls_pki_t *pki_data,
+                                        coap_oscore_conf_t *oscore_conf,
+                                        void *app_data,
+                                        coap_app_data_free_callback_t callback,
+                                        coap_str_const_t *ws_host) {
   coap_session_t *session;
 
   coap_lock_check_locked();
-  session = coap_new_client_session_pki_lkd(ctx, local_if, server, proto, pki_data);
+  session = coap_new_client_session_pki3_lkd(ctx, local_if, server, proto, pki_data,
+                                             app_data, callback, ws_host);
 
   if (!session)
     return NULL;

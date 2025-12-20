@@ -32,7 +32,6 @@ TXT3 = coap_address.txt \
 	coap_handler.txt \
 	coap_init.txt \
 	coap_io.txt \
-	coap_io_loop.txt \
 	coap_keepalive.txt \
 	coap_locking.txt \
 	coap_logging.txt \
@@ -49,6 +48,7 @@ TXT3 = coap_address.txt \
 	coap_session.txt \
 	coap_string.txt \
 	coap_supported.txt \
+	coap_threads.txt \
 	coap_tls_library.txt \
 	coap_uri.txt \
 	coap_websockets.txt
@@ -132,8 +132,12 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_set_session_reconnect_time.3
 	@echo ".so man3/coap_context.3" > coap_context_set_session_reconnect_time2.3
 	@echo ".so man3/coap_context.3" > coap_register_option.3
-	@echo ".so man3/coap_deprecated.3" > coap_set_app_data.3
-	@echo ".so man3/coap_deprecated.3" > coap_get_app_data.3
+	@echo ".so man3/coap_deprecated.3" > coap_new_client_session_oscore_psk.3
+	@echo ".so man3/coap_deprecated.3" > coap_new_client_session_psk.3
+	@echo ".so man3/coap_deprecated.3" > coap_new_client_session_psk2.3
+	@echo ".so man3/coap_deprecated.3" > coap_new_client_session_pki.3
+	@echo ".so man3/coap_deprecated.3" > coap_option_clrb.3
+	@echo ".so man3/coap_deprecated.3" > coap_option_getb.3
 	@echo ".so man3/coap_deprecated.3" > coap_option_setb.3
 	@echo ".so man3/coap_deprecated.3" > coap_read.3
 	@echo ".so man3/coap_deprecated.3" > coap_register_handler.3
@@ -141,6 +145,8 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_deprecated.3" > coap_run_once.3
 	@echo ".so man3/coap_deprecated.3" > coap_set_event_handler.3
 	@echo ".so man3/coap_deprecated.3" > coap_write.3
+	@echo ".so man3/coap_deprecated.3" > coap_get_app_data.3
+	@echo ".so man3/coap_deprecated.3" > coap_set_app_data.3
 	@echo ".so man3/coap_deprecated.3" > coap_async_set_app_data.3
 	@echo ".so man3/coap_deprecated.3" > coap_cache_set_app_data.3
 	@echo ".so man3/coap_deprecated.3" > coap_context_set_app_data.3

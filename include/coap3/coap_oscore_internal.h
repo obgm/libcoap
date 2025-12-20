@@ -199,7 +199,14 @@ int coap_delete_oscore_recipient_lkd(coap_context_t *context,
 
 /**
  * Creates a new client session to the designated server, protecting the data
- * using OSCORE.
+ * using OSCORE, along with app_data information (as per coap_session_set_app_data2())
+ * and optional WebSockets host (as per coap_ws_set_host_request()) to remove timing
+ * window call-back instead of doing
+ *   coap_new_client_session_oscore();
+ *   coap_session_set_app_data2();
+ * or
+ *   coap_new_client_session_oscore();
+ *   coap_ws_set_host_request();
  *
  * Note: This function must be called in the locked state.
  *
@@ -214,19 +221,35 @@ int coap_delete_oscore_recipient_lkd(coap_context_t *context,
  * @param proto  CoAP Protocol.
  * @param oscore_conf OSCORE configuration information. This structure is
  *                    freed off by this call.
+ * @param app_data The pointer to the application data to store or NULL.
+ * @param callback The optional release call-back for app_data on session
+ *                 removal or NULL.
+ * @param ws_host If proto is COAP_PROTO_WS or COAP_PROTO_WSS, then set the
+ *                Host parameter accordingly.
  *
  * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
-coap_session_t *coap_new_client_session_oscore_lkd(coap_context_t *ctx,
-                                                   const coap_address_t *local_if,
-                                                   const coap_address_t *server,
-                                                   coap_proto_t proto,
-                                                   coap_oscore_conf_t *oscore_conf);
+coap_session_t *coap_new_client_session_oscore3_lkd(coap_context_t *ctx,
+                                                    const coap_address_t *local_if,
+                                                    const coap_address_t *server,
+                                                    coap_proto_t proto,
+                                                    coap_oscore_conf_t *oscore_conf,
+                                                    void *app_data,
+                                                    coap_app_data_free_callback_t callback,
+                                                    coap_str_const_t *ws_host);
 
 /**
- * Creates a new client session to the designated server with PKI credentials
- * as well as protecting the data using OSCORE.
+ * Creates a new client session to the designated server, with PKI credentials
+ * protecting the data using OSCORE, along with app_data information (as per
+ * coap_session_set_app_data2()) and optional WebSockets host (as per
+ * coap_ws_set_host_request()) to remove timing window call-back in (D)TLS startup
+ * instead of doing
+ *   coap_new_client_session_oscore_pki();
+ *   coap_session_set_app_data2();
+ * or
+ *   coap_new_client_session_oscore_pki();
+ *   coap_ws_set_host_request();
  *
  * Note: This function must be called in the locked state.
  *
@@ -241,20 +264,36 @@ coap_session_t *coap_new_client_session_oscore_lkd(coap_context_t *ctx,
  * @param pki_data PKI parameters.
  * @param oscore_conf OSCORE configuration information. This structure is
  *                    freed off by this call.
+ * @param app_data The pointer to the application data to store or NULL.
+ * @param callback The optional release call-back for app_data on session
+ *                 removal or NULL.
+ * @param ws_host If proto is COAP_PROTO_WS or COAP_PROTO_WSS, then set the
+ *                Host parameter accordingly.
  *
  * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
-coap_session_t *coap_new_client_session_oscore_pki_lkd(coap_context_t *ctx,
-                                                       const coap_address_t *local_if,
-                                                       const coap_address_t *server,
-                                                       coap_proto_t proto,
-                                                       coap_dtls_pki_t *pki_data,
-                                                       coap_oscore_conf_t *oscore_conf);
+coap_session_t *coap_new_client_session_oscore_pki3_lkd(coap_context_t *ctx,
+                                                        const coap_address_t *local_if,
+                                                        const coap_address_t *server,
+                                                        coap_proto_t proto,
+                                                        coap_dtls_pki_t *pki_data,
+                                                        coap_oscore_conf_t *oscore_conf,
+                                                        void *app_data,
+                                                        coap_app_data_free_callback_t callback,
+                                                        coap_str_const_t *ws_host);
 
 /**
- * Creates a new client session to the designated server with PSK credentials
- * as well as protecting the data using OSCORE.
+ * Creates a new client session to the designated server, with PSK credentials
+ * protecting the data using OSCORE, along with app_data information (as per
+ * coap_session_set_app_data2()) and optional WebSockets host (as per
+ * coap_ws_set_host_request()) to remove timing window call-back in (D)TLS startup
+ * instead of doing
+ *   coap_new_client_session_oscore_psk();
+ *   coap_session_set_app_data2();
+ * or
+ *   coap_new_client_session_oscore_psk();
+ *   coap_ws_set_host_request();
  *
  * Note: This function must be called in the locked state.
  *
@@ -269,16 +308,24 @@ coap_session_t *coap_new_client_session_oscore_pki_lkd(coap_context_t *ctx,
  * @param psk_data PSK parameters.
  * @param oscore_conf OSCORE configuration information. This structure is
  *                    freed off by this call.
+ * @param app_data The pointer to the application data to store or NULL.
+ * @param callback The optional release call-back for app_data on session
+ *                 removal or NULL.
+ * @param ws_host If proto is COAP_PROTO_WS or COAP_PROTO_WSS, then set the
+ *                Host parameter accordingly.
  *
  * @return A new CoAP session or NULL if failed. Call coap_session_release_lkd()
  *         to free.
  */
-coap_session_t *coap_new_client_session_oscore_psk_lkd(coap_context_t *ctx,
-                                                       const coap_address_t *local_if,
-                                                       const coap_address_t *server,
-                                                       coap_proto_t proto,
-                                                       coap_dtls_cpsk_t *psk_data,
-                                                       coap_oscore_conf_t *oscore_conf);
+coap_session_t *coap_new_client_session_oscore_psk3_lkd(coap_context_t *ctx,
+                                                        const coap_address_t *local_if,
+                                                        const coap_address_t *server,
+                                                        coap_proto_t proto,
+                                                        coap_dtls_cpsk_t *psk_data,
+                                                        coap_oscore_conf_t *oscore_conf,
+                                                        void *app_data,
+                                                        coap_app_data_free_callback_t callback,
+                                                        coap_str_const_t *ws_host);
 
 /**
  * Add in the specific Recipient ID into the OSCORE context (server only).

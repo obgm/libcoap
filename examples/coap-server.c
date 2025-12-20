@@ -1778,7 +1778,7 @@ do_call_home(coap_context_t *ctx) {
   case COAP_URI_SCHEME_COAP:
   case COAP_URI_SCHEME_COAP_TCP:
   case COAP_URI_SCHEME_COAP_WS:
-    session = coap_new_client_session(ctx, NULL, &dst, proto);
+    session = coap_new_client_session3(ctx, NULL, &dst, proto, NULL, NULL, NULL);
     break;
   case COAP_URI_SCHEME_COAPS:
   case COAP_URI_SCHEME_COAPS_TCP:
@@ -1788,12 +1788,12 @@ do_call_home(coap_context_t *ctx) {
       /* Use our defined PKI certs (or NULL)  */
       coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT,
                                             client_sni);
-      session = coap_new_client_session_pki(ctx, NULL, &dst, proto, dtls_pki);
+      session = coap_new_client_session_pki3(ctx, NULL, &dst, proto, dtls_pki, NULL, NULL, NULL);
     } else {
       /* Use our defined PSK */
       coap_dtls_cpsk_t *dtls_cpsk = setup_cpsk(client_sni);
 
-      session = coap_new_client_session_psk2(ctx, NULL, &dst, proto, dtls_cpsk);
+      session = coap_new_client_session_psk3(ctx, NULL, &dst, proto, dtls_cpsk, NULL, NULL, NULL);
     }
     break;
   case COAP_URI_SCHEME_HTTP:

@@ -93,7 +93,7 @@ int coap_dtls_context_set_spsk(coap_context_t *coap_context,
  *
  * @param coap_context The CoAP context.
  * @param setup_data A structure containing setup data originally passed into
- *                   coap_new_client_session_psk2_lkd().
+ *                   coap_new_client_session_psk3_lkd().
  *
  * @return @c 1 if successful, else @c 0.
  */

@@ -16,7 +16,13 @@ coap_context_get_csm_timeout,
 coap_context_set_csm_timeout,
 coap_context_set_psk,
 coap_encode_var_bytes,
+coap_new_client_session,
+coap_new_client_session_oscore,
+coap_new_client_session_oscore_pki,
+coap_new_client_session_oscore_psk,
+coap_new_client_session_pki,
 coap_new_client_session_psk,
+coap_new_client_session_psk2,
 coap_option_clrb,
 coap_option_getb,
 coap_option_setb,
@@ -50,10 +56,36 @@ const uint8_t *_key_, size_t _key_len_);*
 
 *int coap_encode_var_bytes(uint8_t *_buffer_, unsigned int _value_);*
 
+*coap_session_t *coap_new_client_session(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_,
+coap_proto_t _proto_);*
+
+*coap_session_t *coap_new_client_session_oscore(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_,
+coap_proto_t _proto_, coap_oscore_conf_t *_oscore_conf_);*
+
+*coap_session_t *coap_new_client_session_oscore_psk(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_,
+coap_proto_t _proto_, coap_dtls_cpsk_t *_psk_data_,
+coap_oscore_conf_t *_oscore_conf_);*
+
+*coap_session_t *coap_new_client_session_oscore_pki(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_,
+coap_proto_t _proto_, coap_dtls_pki_t *_pki_data_,
+coap_oscore_conf_t *_oscore_conf_);*
+
+*coap_session_t *coap_new_client_session_pki(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_, coap_proto_t
+_proto_, coap_dtls_pki_t *_setup_data_);*
+
 *coap_session_t *coap_new_client_session_psk(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_,
 coap_proto_t _proto_, const char *_identity_, const uint8_t *_key_,
 unsigned _key_len_);*
+
+*coap_session_t *coap_new_client_session_psk2(coap_context_t *_context_,
+const coap_address_t *_local_if_, const coap_address_t *_server_, coap_proto_t
+_proto_, coap_dtls_cpsk_t *_setup_data_);*
 
 *int coap_option_clrb(coap_opt_filter_t *_filter_, uint16_t _type_);*
 
@@ -135,11 +167,48 @@ by the use of the coap_dtls_spsk_t structure.
 The *coap_encode_var_bytes*() function is replaced by
 *coap_encode_var_safe*(3).
 
+*Function: coap_new_client_session()*
+
+The *coap_new_client_session*() function is replaced by
+*coap_new_client_session3*(3) which supports additional session app_data to
+remove startup call-back timing issues.
+
+*Function: coap_new_client_session_oscore()*
+
+The *coap_new_client_session_oscore*() function is replaced by
+*coap_new_client_session_oscore3*(3) which supports additional session app_data and
+ws_host to remove startup call-back timing issues.
+
+*Function: coap_new_client_session_oscore_pki()*
+
+The *coap_new_client_session_oscore_pki*() function is replaced by
+*coap_new_client_session_oscore_pki3*(3) which supports additional session app_data and
+ws_host to remove startup call-back timing issues.
+
+*Function: coap_new_client_session_oscore_psk()*
+
+The *coap_new_client_session_oscore_psk*() function is replaced by
+*coap_new_client_session_oscore_psk3*(3) which supports additional session app_data and
+ws_host to remove startup call-back timing issues.
+
+*Function: coap_new_client_session_pki()*
+
+The *coap_new_client_session_pki*() function is replaced by
+*coap_new_client_session_pki3*(3) which supports additional session app_data and
+ws_host to remove startup call-back timing issues.
+
 *Function: coap_new_client_session_psk()*
 
 The *coap_new_client_session_psk*() function is replaced by
-*coap_new_client_session_psk2*(3) which gives additional PSK configuration capability
-by the use of the coap_dtls_cpsk_t structure.
+*coap_new_client_session_psk3*(3) which gives additional PSK configuration capability
+by the use of the coap_dtls_cpsk_t structure along with additional session app_data and
+ws_host to remove startup call-back timing issues.
+
+*Function: coap_new_client_session_psk2()*
+
+The *coap_new_client_session_psk2*() function is replaced by
+*coap_new_client_session_psk3*(3) which supports additional session app_data and
+ws_host to remove startup call-back timing issues.
 
 *Function: coap_option_clrb()*
 
@@ -218,8 +287,10 @@ negotiation response from the peer.
 *coap_encode_var_bytes*() returns either the length of bytes encoded (which can
 be 0 when encoding 0) or 0 on failure.
 
-*coap_new_client_session_psk*() returns a new session if success, NULL on
-failure.
+*coap_new_client_session*(), *coap_new_client_session_oscore*(),
+*coap_new_client_session_oscore_psk*(), *coap_new_client_session_oscore_pki*(),
+*coap_new_client_session_psk*(), *coap_new_client_session_psk2*() and
+*coap_new_client_session_pki*() return a new session if success, NULL on failure.
 
 *coap_option_clrb*() returns  1 if bit was set, -1 otherwise.
 

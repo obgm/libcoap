@@ -171,12 +171,12 @@ client_coap_init(int argc, char **argv)
     coap_context_set_block_mode(main_coap_context, COAP_BLOCK_USE_LIBCOAP);
 
     if (uri.scheme == COAP_URI_SCHEME_COAP) {
-        session = coap_new_client_session(main_coap_context, NULL, &dst,
-                                          COAP_PROTO_UDP);
+        session = coap_new_client_session3(main_coap_context, NULL, &dst,
+                                           COAP_PROTO_UDP, NULL, NULL, NULL);
     }
     else if (uri.scheme == COAP_URI_SCHEME_COAP_TCP) {
-        session = coap_new_client_session(main_coap_context, NULL, &dst,
-                                          COAP_PROTO_TCP);
+        session = coap_new_client_session3(main_coap_context, NULL, &dst,
+                                           COAP_PROTO_TCP, NULL, NULL, NULL);
 #if defined (COAP_USE_PSK) && defined(COAP_USE_PSK_ID)
     }
     else {
@@ -192,8 +192,8 @@ client_coap_init(int argc, char **argv)
         dtls_psk.psk_info.key.s = (const uint8_t *)COAP_USE_PSK;
         dtls_psk.psk_info.key.length = strlen(COAP_USE_PSK);
 
-        session = coap_new_client_session_psk2(main_coap_context, NULL, &dst,
-                                               COAP_PROTO_DTLS, &dtls_psk);
+        session = coap_new_client_session_psk3(main_coap_context, NULL, &dst,
+                                               COAP_PROTO_DTLS, &dtls_psk, NULL, NULL, NULL);
 #else /* ! COAP_USE_PSK && ! COAP_USE_PSK_ID */
         coap_log_err("CONFIG_LIBCOAP_USE_PSK and CONFIG_LIBCOAP_USE_PSK_ID not defined\n");
         goto fail;
