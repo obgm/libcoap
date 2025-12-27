@@ -43,6 +43,9 @@
 /* Define to 1 if you have the `getaddrinfo' function. */
 #cmakedefine HAVE_GETADDRINFO @HAVE_GETADDRINFO@
 
+/* Define to 1 if you have the `getifaddrs' function. */
+#cmakedefine HAVE_GETIFADDRS @HAVE_GETIFADDRS@
+
 /* Define to 1 if you have the `getrandom' function. */
 #cmakedefine HAVE_GETRANDOM @HAVE_GETRANDOM@
 
