@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
+#include <wait.h>
 #ifndef PRIuS
 #define PRIuS "zu"
 #endif /* PRIuS */
