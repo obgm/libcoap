@@ -982,13 +982,11 @@ coap_add_data_large_internal(coap_session_t *session,
   /* May need token of length 8, so account for this */
   avail -= (pdu->actual_token.length < 8) ? 8 - pdu->actual_token.length : 0;
 
-  if (avail < 16 && ((ssize_t)length > avail || have_block_defined)) {
-    /* bad luck, this is the smallest block size */
-    coap_log_debug("not enough space, even the smallest block does not fit (2)\n");
-    goto fail;
+  if (avail < 16) {
+    blk_size = 0;
+  } else {
+    blk_size = coap_flsll((long long)avail) - 4 - 1;
   }
-
-  blk_size = coap_flsll((long long)avail) - 4 - 1;
   if (blk_size > 6)
     blk_size = 6;
 
@@ -1018,6 +1016,12 @@ coap_add_data_large_internal(coap_session_t *session,
     }
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
+
+  if (avail < 16 && ((ssize_t)length > avail || have_block_defined)) {
+    /* bad luck, this is the smallest block size */
+    coap_log_debug("not enough space, even the smallest block does not fit (2)\n");
+    goto fail;
+  }
 
   chunk = (size_t)1 << (blk_size + 4);
   if ((have_block_defined && block.num != 0) || single_request ||
