@@ -3437,7 +3437,19 @@ coap_handle_request_put_block(coap_context_t *context,
                                                      NULL);
         if (tmp_pdu) {
           tmp_pdu->code = COAP_RESPONSE_CODE(231);
-          coap_send_internal(session, tmp_pdu, NULL);
+          if (coap_send_internal(session, tmp_pdu, NULL) == COAP_INVALID_MID) {
+            /* lg_srcv may have got deleted */
+            coap_lg_srcv_t *sg;
+
+            LL_FOREACH(session->lg_srcv, sg) {
+              if (lg_srcv == sg) {
+                /* Still there */
+                break;
+              }
+            }
+            if (!sg)
+              goto skip_app_handler;
+          }
         }
         if (lg_srcv->last_token) {
           coap_update_token(response, lg_srcv->last_token->length, lg_srcv->last_token->s);
