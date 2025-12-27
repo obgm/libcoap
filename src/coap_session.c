@@ -1292,7 +1292,8 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
   }
 #endif /* COAP_CLIENT_SUPPORT */
   SESSIONS_ITER(endpoint->sessions, session, rtmp) {
-    if (session->ref == 0 && session->delayqueue == NULL) {
+    if (session->ref == 0 && session->delayqueue == NULL &&
+        session->lg_srcv == NULL && session->lg_xmit == NULL) {
       if (
 #if COAP_CLIENT_SUPPORT
           !(session->client_initiated && endpoint->context->reconnect_time) &&

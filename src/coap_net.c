@@ -4022,8 +4022,17 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
         coap_check_option(response, COAP_OPTION_ECHO, &opt_iter)) {
       /* Need to keep lg_srcv around for client's response */
     } else {
-      LL_DELETE(session->lg_srcv, free_lg_srcv);
-      coap_block_delete_lg_srcv(session, free_lg_srcv);
+      coap_lg_srcv_t *lg_srcv;
+      /*
+       * Need to check free_lg_srcv still exists in case of error or timing window
+       */
+      LL_FOREACH(session->lg_srcv, lg_srcv) {
+        if (lg_srcv == free_lg_srcv) {
+          LL_DELETE(session->lg_srcv, free_lg_srcv);
+          coap_block_delete_lg_srcv(session, free_lg_srcv);
+          break;
+        }
+      }
     }
   }
   if (added_block && COAP_RESPONSE_CLASS(response->code) == 2) {
