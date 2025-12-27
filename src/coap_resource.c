@@ -972,6 +972,11 @@ coap_add_observer(coap_resource_t *resource,
         ret += oscore_cbor_put_nil(&info_buf, &info_len);
         ret += oscore_cbor_put_nil(&info_buf, &info_len);
       }
+      if (ret > sizeof(info_buffer)) {
+        /* Should have been caught by assert() inoscborput_* functions */
+        coap_log_warn("coap_add_observer overrun of info_buffer (%" PRIuS ")\n", ret);
+        ret = sizeof(info_buffer);
+      }
       oscore_info = coap_new_bin_const(info_buffer, ret);
     }
 #endif /* COAP_OSCORE_SUPPORT */
