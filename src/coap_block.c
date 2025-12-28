@@ -3355,14 +3355,21 @@ coap_handle_request_put_block(coap_context_t *context,
     if (lg_srcv->total_len < saved_offset + length) {
       lg_srcv->total_len = saved_offset + length;
     }
-    if (context && context->block_data_handler && !resource->is_proxy_uri &&
-        !resource->is_reverse_proxy &&
-        ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) &&
-        (resource->flags & COAP_RESOURCE_USE_BLOCK_DATA_HANDLER)) {
+
+#define USE_BLOCK_DATA_HANDLER (context && context->block_data_cb && \
+                                !resource->is_proxy_uri && \
+                                !resource->is_reverse_proxy && \
+                                ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) && \
+                                (resource->flags & COAP_RESOURCE_USE_BLOCK_DATA_HANDLER))
+
+    if (USE_BLOCK_DATA_HANDLER) {
       coap_response_t resp;
-      resp = context->block_data_handler(session, pdu, resource, &lg_srcv->body_data,
-                                         length, data, saved_offset,
-                                         lg_srcv->total_len);
+
+      coap_lock_callback_ret(resp,
+                             context->block_data_cb(session, pdu, resource,
+                                                    &lg_srcv->body_data,
+                                                    length, data, saved_offset,
+                                                    lg_srcv->total_len));
       if (resp != COAP_RESPONSE_OK) {
         response->code = COAP_RESPONSE_CODE(500);
         goto skip_app_handler;
@@ -3507,10 +3514,7 @@ give_app_data:
   }
   pdu->body_offset = 0;
   pdu->body_total = lg_srcv->total_len;
-  if (context && context->block_data_handler && !resource->is_proxy_uri &&
-      !resource->is_reverse_proxy &&
-      ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) &&
-      (resource->flags & COAP_RESOURCE_USE_BLOCK_DATA_HANDLER)) {
+  if (USE_BLOCK_DATA_HANDLER) {
     /* Data has already been provided - do not duplicate */
     if (pdu->data) {
       pdu->used_size = pdu->data - pdu->token - 1;
@@ -4004,7 +4008,7 @@ lg_xmit_finished:
 void
 coap_register_block_data_handler(coap_context_t *context,
                                  coap_block_data_handler_t block_data_handler) {
-  context->block_data_handler = block_data_handler;
+  context->block_data_cb = block_data_handler;
 }
 
 /*
@@ -4297,11 +4301,14 @@ reinit:
             if (size2 < saved_offset + length) {
               size2 = saved_offset + length;
             }
-            if (context && context->block_data_handler) {
+            if (context && context->block_data_cb) {
               coap_response_t resp;
-              resp = context->block_data_handler(session, rcvd, 0,
-                                                 &lg_crcv->body_data, length,
-                                                 data, saved_offset, size2);
+
+              coap_lock_callback_ret(resp,
+                                     context->block_data_cb(session, rcvd, 0,
+                                                            &lg_crcv->body_data,
+                                                            length, data,
+                                                            saved_offset, size2));
               if (resp != COAP_RESPONSE_OK) {
                 goto fail_resp;
               }
@@ -4418,7 +4425,7 @@ give_to_app:
             }
             rcvd->body_data = lg_crcv->body_data ? lg_crcv->body_data->s : NULL;
 #if COAP_Q_BLOCK_SUPPORT
-            if (context && context->block_data_handler) {
+            if (context && context->block_data_cb) {
               /* Data has already been provided - do not duplicate */
               if (rcvd->data) {
                 rcvd->used_size = rcvd->data - rcvd->token - 1;

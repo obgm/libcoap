@@ -910,7 +910,7 @@ coap_free_context_lkd(coap_context_t *context) {
 #endif /* COAP_PROXY_SUPPORT */
 
   if (context->app_cb) {
-    context->app_cb(context->app_data);
+    coap_lock_callback(context->app_cb(context->app_data));
   }
   coap_free_type(COAP_CONTEXT, context);
   coap_dump_memory_type_counts(COAP_LOG_DEBUG);
@@ -4191,7 +4191,7 @@ coap_call_response_handler(coap_session_t *session,
   coap_response_t ret;
 
 #if COAP_PROXY_SUPPORT
-  if (context->proxy_response_handler) {
+  if (context->proxy_response_cb) {
     coap_proxy_list_t *proxy_entry;
     coap_proxy_req_t *proxy_req = coap_proxy_map_outgoing_request(session,
                                   rcvd,
@@ -4214,12 +4214,12 @@ coap_call_response_handler(coap_session_t *session,
     coap_send_ack_lkd(session, rcvd);
     session->last_con_handler_res = COAP_RESPONSE_OK;
     return;
-  } else if (context->response_handler) {
+  } else if (context->response_cb) {
     coap_lock_callback_ret_release(ret,
-                                   context->response_handler(session,
-                                                             sent,
-                                                             rcvd,
-                                                             rcvd->mid),
+                                   context->response_cb(session,
+                                                        sent,
+                                                        rcvd,
+                                                        rcvd->mid),
                                    /* context is being freed off */
                                    return);
   } else {
@@ -4394,8 +4394,8 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       coap_session_connected(session);
   } else if (pdu->code == COAP_SIGNALING_CODE_PING) {
     coap_pdu_t *pong = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_PONG, 0, 1);
-    if (context->ping_handler) {
-      coap_lock_callback(context->ping_handler(session, pdu, pdu->mid));
+    if (context->ping_cb) {
+      coap_lock_callback(context->ping_cb(session, pdu, pdu->mid));
     }
     if (pong) {
       coap_add_option_internal(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
@@ -4403,8 +4403,8 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
     }
   } else if (pdu->code == COAP_SIGNALING_CODE_PONG) {
     session->last_pong = session->last_rx_tx;
-    if (context->pong_handler) {
-      coap_lock_callback(context->pong_handler(session, pdu, pdu->mid));
+    if (context->pong_cb) {
+      coap_lock_callback(context->pong_cb(session, pdu, pdu->mid));
     }
   } else if (pdu->code == COAP_SIGNALING_CODE_RELEASE
              || pdu->code == COAP_SIGNALING_CODE_ABORT) {
@@ -4776,8 +4776,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           coap_handle_nack(sent->session, sent->pdu, COAP_NACK_RST, sent->id);
         }
       } else if (is_ping_rst) {
-        if (context->pong_handler) {
-          coap_lock_callback(context->pong_handler(session, pdu, pdu->mid));
+        if (context->pong_cb) {
+          coap_lock_callback(context->pong_cb(session, pdu, pdu->mid));
         }
         session->last_pong = session->last_rx_tx;
         session->last_ping_mid = COAP_INVALID_MID;
@@ -4869,8 +4869,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #endif /* COAP_CLIENT_SUPPORT */
       {
         if (COAP_PDU_IS_EMPTY(pdu)) {
-          if (context->ping_handler) {
-            coap_lock_callback(context->ping_handler(session, pdu, pdu->mid));
+          if (context->ping_cb) {
+            coap_lock_callback(context->ping_cb(session, pdu, pdu->mid));
           }
         } else {
           packet_is_bad = 1;
@@ -5003,8 +5003,8 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
 
   coap_log_debug("***EVENT: %s\n", coap_event_name(event));
 
-  if (context->handle_event) {
-    coap_lock_callback_ret(ret, context->handle_event(session, event));
+  if (context->event_cb) {
+    coap_lock_callback_ret(ret, context->event_cb(session, event));
 #if COAP_PROXY_SUPPORT
     if (event == COAP_EVENT_SERVER_SESSION_DEL)
       coap_proxy_remove_association(session, 0);
@@ -5249,7 +5249,7 @@ void
 coap_register_response_handler(coap_context_t *context,
                                coap_response_handler_t handler) {
 #if COAP_CLIENT_SUPPORT
-  context->response_handler = handler;
+  context->response_cb = handler;
 #else /* ! COAP_CLIENT_SUPPORT */
   (void)context;
   (void)handler;
@@ -5260,7 +5260,7 @@ void
 coap_register_proxy_response_handler(coap_context_t *context,
                                      coap_proxy_response_handler_t handler) {
 #if COAP_PROXY_SUPPORT
-  context->proxy_response_handler = handler;
+  context->proxy_response_cb = handler;
 #else /* ! COAP_PROXY_SUPPORT */
   (void)context;
   (void)handler;
@@ -5270,19 +5270,19 @@ coap_register_proxy_response_handler(coap_context_t *context,
 void
 coap_register_nack_handler(coap_context_t *context,
                            coap_nack_handler_t handler) {
-  context->nack_handler = handler;
+  context->nack_cb = handler;
 }
 
 void
 coap_register_ping_handler(coap_context_t *context,
                            coap_ping_handler_t handler) {
-  context->ping_handler = handler;
+  context->ping_cb = handler;
 }
 
 void
 coap_register_pong_handler(coap_context_t *context,
                            coap_pong_handler_t handler) {
-  context->pong_handler = handler;
+  context->pong_cb = handler;
 }
 
 void

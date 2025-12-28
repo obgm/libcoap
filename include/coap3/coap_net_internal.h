@@ -61,7 +61,7 @@ struct coap_context_t {
                                           unknown resources */
   coap_resource_t *proxy_uri_resource; /**< can be used for handling
                                             proxy URI resources */
-  coap_resource_release_userdata_handler_t release_userdata;
+  coap_resource_release_userdata_handler_t release_userdata_cb;
   /**< function to  release user_data
        when resource is deleted */
 #endif /* COAP_SERVER_SUPPORT */
@@ -92,7 +92,7 @@ struct coap_context_t {
 #endif /* WITH_CONTIKI */
 
 #ifdef WITH_LWIP
-  coap_lwip_input_wait_handler_t input_wait; /** Input wait / timeout handler if set */
+  coap_lwip_input_wait_handler_t input_wait_cb; /** Input wait / timeout handler if set */
   void *input_arg;                /** argument to pass it input handler */
   uint8_t timer_configured;       /**< Set to 1 when a retransmission is
                                    *   scheduled using lwIP timers for this
@@ -106,35 +106,33 @@ struct coap_context_t {
 #endif /* COAP_OSCORE_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
-  coap_response_handler_t response_handler; /**< Called when a response is
-                                                 received */
+  coap_response_handler_t response_cb; /**< Called when a response is
+                                            received */
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_PROXY_SUPPORT
-  coap_proxy_response_handler_t proxy_response_handler; /**< Called when a reponse
-                                                             to proxy logic received */
+  coap_proxy_response_handler_t proxy_response_cb; /**< Called when a reponse
+                                                        to proxy logic received */
 #endif /* COAP_PROXY_SUPPORT */
-  coap_nack_handler_t nack_handler; /**< Called when a response issue has
-                                         occurred */
-  coap_ping_handler_t ping_handler; /**< Called when a CoAP ping is received */
-  coap_pong_handler_t pong_handler; /**< Called when a ping response
-                                         is received */
-  coap_block_data_handler_t block_data_handler; /**< Called with each block data
-                                                     during block transfers */
+  coap_nack_handler_t nack_cb; /**< Called when a response issue has occurred */
+  coap_ping_handler_t ping_cb; /**< Called when a CoAP ping is received */
+  coap_pong_handler_t pong_cb; /**< Called when a ping response is received */
+  coap_block_data_handler_t block_data_cb; /**< Called with each block data
+                                                during block transfers */
 
 #if COAP_SERVER_SUPPORT
-  coap_observe_added_t observe_added; /**< Called when there is a new observe
-                                           subscription request */
-  coap_observe_deleted_t observe_deleted; /**< Called when there is a observe
-                                           subscription de-register request */
+  coap_observe_added_t observe_added_cb; /**< Called when there is a new observe
+                                              subscription request */
+  coap_observe_deleted_t observe_deleted_cb; /**< Called when there is a observe
+                                                  subscription de-register request */
   void *observe_user_data; /**< App provided data for use in observe_added or
                                 observe_deleted */
   uint32_t observe_save_freq; /**< How frequently to update observe value */
-  coap_track_observe_value_t track_observe_value; /**< Callback to save observe
-                                                       value when updated */
-  coap_dyn_resource_added_t dyn_resource_added; /**< Callback to save dynamic
-                                                     resource when created */
-  coap_resource_deleted_t resource_deleted; /**< Invoked when resource
-                                                 is deleted */
+  coap_track_observe_value_t track_observe_value_cb; /**< Callback to save observe
+                                                          value when updated */
+  coap_dyn_resource_added_t dyn_resource_added_cb; /**< Callback to save dynamic
+                                                        resource when created */
+  coap_resource_deleted_t resource_deleted_cb; /**< Invoked when resource
+                                                    is deleted */
 #if COAP_WITH_OBSERVE_PERSIST
   coap_bin_const_t *dyn_resource_save_file; /** Where dynamic resource requests
                                                 that create resources are
@@ -151,7 +149,7 @@ struct coap_context_t {
    * Callback function that is used to signal events to the
    * application.  This field is set by coap_set_event_handler().
    */
-  coap_event_handler_t handle_event;
+  coap_event_handler_t event_cb;
 
   void *dtls_context;
 
