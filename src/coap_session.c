@@ -660,7 +660,7 @@ coap_session_free(coap_session_t *session) {
 #endif /* COAP_SERVER_SUPPORT */
 
   if (session->app_cb) {
-    session->app_cb(session->app_data);
+    coap_lock_callback(session->app_cb(session->app_data));
   }
   coap_log_debug("***%s: session %p: closed\n", coap_session_str(session),
                  (void *)session);
@@ -1043,7 +1043,7 @@ coap_handle_nack(coap_session_t *session,
                  coap_pdu_t *sent,
                  const coap_nack_reason_t reason,
                  const coap_mid_t mid) {
-  if (session->context->nack_handler
+  if (session->context->nack_cb
 #if COAP_CLIENT_SUPPORT
       && !session->doing_first_pdu
 #endif /* COAP_CLIENT_SUPPORT */
@@ -1054,7 +1054,7 @@ coap_handle_nack(coap_session_t *session,
       coap_check_update_token(session, sent);
       token = sent->actual_token;
     }
-    coap_lock_callback(session->context->nack_handler(session, sent, reason, mid));
+    coap_lock_callback(session->context->nack_cb(session, sent, reason, mid));
     if (sent) {
       coap_update_token(sent, token.length, token.s);
     }
@@ -2640,7 +2640,7 @@ coap_free_endpoint_lkd(coap_endpoint_t *ep) {
     }
 
     if (ep->app_cb) {
-      ep->app_cb(ep->app_data);
+      coap_lock_callback(ep->app_cb(ep->app_data));
     }
 
     coap_mfree_endpoint(ep);

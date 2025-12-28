@@ -447,7 +447,7 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
     if (coap_string_equal(&proxy_list[i].uri.host, &server_use->uri.host) &&
         proxy_list[i].uri.port == server_use->uri.port &&
         proxy_list[i].uri.scheme == server_use->uri.scheme) {
-      if (!server_list->track_client_session && session->context->proxy_response_handler) {
+      if (!server_list->track_client_session && session->context->proxy_response_cb) {
         coap_ticks(&proxy_list[i].last_used);
         return &proxy_list[i];
       } else {
@@ -840,7 +840,7 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
     }
   }
   coap_lock_callback_ret_release(fwd_pdu,
-                                 session->context->proxy_response_handler(session,
+                                 session->context->proxy_response_cb(session,
                                      sent,
                                      resp_pdu,
                                      proxy_req->cache_key),
@@ -930,7 +930,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   coap_proxy_log_entry(session, request, NULL, "req");
 
   /* Is this a observe cached request? */
-  if (obs_opt && session->context->proxy_response_handler) {
+  if (obs_opt && session->context->proxy_response_cb) {
     coap_cache_key_t *cache_key_l;
 
     cache_key_l = coap_cache_derive_key_w_ignore(session, request,

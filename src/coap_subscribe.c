@@ -45,13 +45,13 @@ coap_persist_track_funcs(coap_context_t *context,
                          coap_resource_deleted_t resource_deleted,
                          uint32_t save_freq,
                          void *user_data) {
-  context->observe_added = observe_added;
-  context->observe_deleted = observe_deleted;
+  context->observe_added_cb = observe_added;
+  context->observe_deleted_cb = observe_deleted;
   context->observe_user_data = user_data;
   context->observe_save_freq = save_freq ? save_freq : 1;
-  context->track_observe_value = track_observe_value;
-  context->dyn_resource_added = dyn_resource_added;
-  context->resource_deleted = resource_deleted;
+  context->track_observe_value_cb = track_observe_value;
+  context->dyn_resource_added_cb = dyn_resource_added;
+  context->resource_deleted_cb = resource_deleted;
 }
 
 COAP_API coap_subscription_t *
@@ -1195,8 +1195,8 @@ coap_persist_startup_lkd(coap_context_t *context,
     if (!context->dyn_resource_save_file)
       return 0;
     coap_op_dyn_resource_load_disk(context);
-    context->dyn_resource_added = coap_op_dyn_resource_added;
-    context->resource_deleted = coap_op_resource_deleted;
+    context->dyn_resource_added_cb = coap_op_dyn_resource_added;
+    context->resource_deleted_cb = coap_op_resource_deleted;
   }
   if (obs_cnt_save_file) {
     context->obs_cnt_save_file =
@@ -1206,8 +1206,8 @@ coap_persist_startup_lkd(coap_context_t *context,
       return 0;
     context->observe_save_freq = save_freq ? save_freq : 1;
     coap_op_obs_cnt_load_disk(context);
-    context->track_observe_value = coap_op_obs_cnt_track_observe;
-    context->resource_deleted = coap_op_resource_deleted;
+    context->track_observe_value_cb = coap_op_obs_cnt_track_observe;
+    context->resource_deleted_cb = coap_op_resource_deleted;
   }
   if (observe_save_file) {
     context->observe_save_file =
@@ -1216,8 +1216,8 @@ coap_persist_startup_lkd(coap_context_t *context,
     if (!context->observe_save_file)
       return 0;
     coap_op_observe_load_disk(context);
-    context->observe_added = coap_op_observe_added;
-    context->observe_deleted = coap_op_observe_deleted;
+    context->observe_added_cb = coap_op_observe_added;
+    context->observe_deleted_cb = coap_op_observe_deleted;
   }
   return 1;
 }

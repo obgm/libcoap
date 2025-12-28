@@ -60,7 +60,7 @@ void
 coap_lwip_set_input_wait_handler(coap_context_t *context,
                                  coap_lwip_input_wait_handler_t handler,
                                  void *input_arg) {
-  context->input_wait = handler;
+  context->input_wait_cb = handler;
   context->input_arg = input_arg;
 }
 
@@ -125,7 +125,7 @@ coap_io_process_lkd(coap_context_t *context, uint32_t timeout_ms) {
                 timeout);
 #endif /* COAP_DEBUG_WAKEUP_TIMES */
 #if NO_SYS == 0
-  if (!context->input_wait) {
+  if (!context->input_wait_cb) {
 #endif /* NO_SYS == 0 */
     if (timeout) {
       sys_timeout(timeout, coap_io_process_timeout, context);
@@ -137,8 +137,8 @@ coap_io_process_lkd(coap_context_t *context, uint32_t timeout_ms) {
 
   UNLOCK_TCPIP_CORE();
 
-  if (context->input_wait) {
-    coap_lock_callback_release(context->input_wait(context->input_arg, timeout),
+  if (context->input_wait_cb) {
+    coap_lock_callback_release(context->input_wait_cb(context->input_arg, timeout),
                                return 0);
 #if NO_SYS == 0
   } else {
