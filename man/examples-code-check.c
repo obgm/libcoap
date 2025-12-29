@@ -10,6 +10,9 @@
 * This file is part of the CoAP library libcoap. Please see README for terms
 * of use.
 */
+#if defined (__GNUC__) || defined (_WIN32)
+
+#include "coap_config.h"
 
 #include <unistd.h>
 #include <stdio.h>
@@ -20,14 +23,17 @@
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
+#if defined(HAVE_SYS_WAIT_H)
+#include <sys/wait.h>
+#elif defined(HAVE_WAIT_H)
 #include <wait.h>
+#endif
 #ifndef PRIuS
 #define PRIuS "zu"
 #endif /* PRIuS */
 #ifndef PRIdS
 #define PRIdS "zd"
 #endif /* PRIdS */
-
 
 #ifdef _WIN32
 #define GCC_OPTIONS "-I../include"
@@ -829,3 +835,11 @@ bad:
   }
   exit(exit_code);
 }
+#else /* ! __GNUC__ && ! _WIN32 */
+int
+main(int argc, char *argv[]) {
+  (void)argc;
+  (void)argv;
+  return 0;
+}
+#endif /* __GNUC__ && ! _WIN32 */
