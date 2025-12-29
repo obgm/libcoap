@@ -1104,7 +1104,8 @@ fi
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
                   pthread.h errno.h winsock2.h ws2tcpip.h signal.h \
                   stdlib.h string.h strings.h sys/socket.h sys/select.h sys/time.h \
-                  time.h unistd.h sys/unistd.h sys/ioctl.h net/if.h ifaddrs.h])
+                  time.h unistd.h sys/unistd.h sys/ioctl.h net/if.h ifaddrs.h \
+                  wait.h sys/wait.h])
 
 # For epoll, need two headers (sys/epoll.h sys/timerfd.h), but set up one #define
 AC_CHECK_HEADER([sys/epoll.h])
