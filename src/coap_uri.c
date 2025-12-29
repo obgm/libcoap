@@ -782,6 +782,9 @@ coap_path_into_optlist(const uint8_t *s, size_t length, coap_option_num_t optnum
       default:
         /* add segment */
         optlist = coap_new_optlist(optnum, s - p, p);
+        if (!optlist) {
+          return 0;
+        }
         coap_replace_percents(optlist);
         if (!coap_insert_optlist(optlist_chain, optlist)) {
           return 0;
@@ -808,6 +811,9 @@ coap_path_into_optlist(const uint8_t *s, size_t length, coap_option_num_t optnum
   default:
     /* add segment */
     optlist = coap_new_optlist(optnum, s - p, p);
+    if (!optlist) {
+      return 0;
+    }
     coap_replace_percents(optlist);
     if (!coap_insert_optlist(optlist_chain, optlist)) {
       return 0;
@@ -851,6 +857,9 @@ coap_query_into_optlist(const uint8_t *s, size_t length, coap_option_num_t optnu
     if (*s == '&') {                /* start of new query element */
       /* add previous query element */
       optlist = coap_new_optlist(optnum, s - p, p);
+      if (!optlist) {
+        return 0;
+      }
       coap_replace_percents(optlist);
       if (!coap_insert_optlist(optlist_chain, optlist)) {
         return 0;
@@ -862,6 +871,9 @@ coap_query_into_optlist(const uint8_t *s, size_t length, coap_option_num_t optnu
   }
   /* add last query element */
   optlist = coap_new_optlist(optnum, s - p, p);
+  if (!optlist) {
+    return 0;
+  }
   coap_replace_percents(optlist);
   if (!coap_insert_optlist(optlist_chain, optlist)) {
     return 0;
