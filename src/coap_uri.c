@@ -466,7 +466,7 @@ check_segment(const uint8_t *s, size_t length, size_t *segment_size) {
 
   while (length) {
     if (*s == '%') {
-      if (length < 2 || !(isxdigit(s[1]) && isxdigit(s[2])))
+      if (length < 3 || !(isxdigit(s[1]) && isxdigit(s[2])))
         return -1;
 
       s += 2;
