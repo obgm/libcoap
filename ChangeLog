@@ -4,6 +4,7 @@
 
         * Fixes the following CVEs
           CVE-2025-59391
+          CVE-2025-65493
           CVE-2025-65494
           CVE-2025-65495
           CVE-2025-65496

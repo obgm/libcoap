@@ -221,13 +221,13 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
 
   switch (server_list->type) {
   case COAP_PROXY_REVERSE:
-  case COAP_PROXY_FORWARD:
   case COAP_PROXY_DIRECT:
+  case COAP_PROXY_DIRECT_STRIP:
+  case COAP_PROXY_REVERSE_STRIP:
     /* Nothing else needs to be done */
     break;
-  case COAP_PROXY_REVERSE_STRIP:
+  case COAP_PROXY_FORWARD:
   case COAP_PROXY_FORWARD_STRIP:
-  case COAP_PROXY_DIRECT_STRIP:
     /* Need to get actual server from CoAP options */
     /*
      * See if Proxy-Scheme
