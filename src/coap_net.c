@@ -4530,10 +4530,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #if COAP_OSCORE_SUPPORT
   if (!COAP_PDU_IS_SIGNALING(pdu) &&
       coap_option_check_critical(session, pdu, &opt_filter) == 0) {
-    if (pdu->type == COAP_MESSAGE_NON) {
-      coap_send_rst_lkd(session, pdu);
-      goto cleanup;
-    } else if (pdu->type == COAP_MESSAGE_CON) {
+    if (pdu->type == COAP_MESSAGE_CON || pdu->type == COAP_MESSAGE_NON) {
       if (COAP_PDU_IS_REQUEST(pdu)) {
         response =
             coap_new_error_response(pdu, COAP_RESPONSE_CODE(402), &opt_filter);
@@ -4825,7 +4822,19 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     /* check for oscore issue or unknown critical options */
     if (oscore_invalid || coap_option_check_critical(session, pdu, &opt_filter) == 0) {
       packet_is_bad = 1;
-      coap_send_rst_lkd(session, pdu);
+      if (COAP_PDU_IS_REQUEST(pdu)) {
+        response =
+            coap_new_error_response(pdu, COAP_RESPONSE_CODE(402), &opt_filter);
+
+        if (!response) {
+          coap_log_warn("coap_dispatch: cannot create error response\n");
+        } else {
+          if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
+            coap_log_warn("coap_dispatch: error sending response\n");
+        }
+      } else {
+        coap_send_rst_lkd(session, pdu);
+      }
       goto cleanup;
     }
     break;
