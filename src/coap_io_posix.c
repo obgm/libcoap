@@ -1,6 +1,6 @@
 /* coap_io_posix.c -- Network I/O functions for libcoap using Posix
  *
- * Copyright (C) 2012,2014,2016-2025 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2012,2014,2016-2026 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

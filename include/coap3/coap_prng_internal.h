@@ -1,7 +1,7 @@
 /*
  * coap_prng_internal.h -- Pseudo Random Numbers
  *
- * Copyright (C) 2024-2025 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2024-2026 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

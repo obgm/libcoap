@@ -2,7 +2,7 @@
  * coap_net_internal.h -- CoAP context internal information
  * exposed to application programming
  *
- * Copyright (C) 2010-2025 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2026 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

@@ -1,7 +1,7 @@
 /*
  * coap_option.h -- helpers for handling options in CoAP PDUs
  *
- * Copyright (C) 2010-2013,2022-2025 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2013,2022-2026 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

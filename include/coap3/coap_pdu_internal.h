@@ -1,7 +1,7 @@
 /*
  * coap_pdu_internal.h -- CoAP PDU structure
  *
- * Copyright (C) 2010-2025 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010-2026 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

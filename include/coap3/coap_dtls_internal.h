@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2016      Olaf Bergmann <bergmann@tzi.org>
  * Copyright (C) 2017      Jean-Claude Michelou <jcm@spinetix.com>
- * Copyright (C) 2023-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
