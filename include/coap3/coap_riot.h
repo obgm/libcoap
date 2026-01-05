@@ -1,6 +1,6 @@
 /* coap_riot.h -- RIOT-specific definitions for libcoap
  *
- * Copyright (C) 2019-2025 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2019-2026 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

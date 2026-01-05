@@ -1,7 +1,7 @@
 /*
  * coap_libcoap_build.h -- libcoap library build specifics
  *
- * Copyright (C) 2019-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2019-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

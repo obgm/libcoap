@@ -1,7 +1,7 @@
 /*
  * server_coap.c -- RIOT example
  *
- * Copyright (C) 2023-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

@@ -2,7 +2,7 @@
  * server-coap.c -- LwIP example
  *
  * Copyright (C) 2013-2016 Christian Amsüss <chrysn@fsfe.org>
- * Copyright (C) 2018-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -27,7 +27,7 @@ static coap_resource_t *time_resource = NULL; /* just for testing */
 #endif
 
 #define INDEX "This is a LwIP test server made with libcoap (see https://libcoap.net)\n" \
-  "Copyright (C) 2010--2025 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
+  "Copyright (C) 2010--2026 Olaf Bergmann <bergmann@tzi.org> and others\n\n"
 
 static void
 hnd_get_index(coap_resource_t *resource,

@@ -1,7 +1,7 @@
 /*
  * coap_proxy.h -- helper functions for proxy handling
  *
- * Copyright (C) 2024-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2024-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

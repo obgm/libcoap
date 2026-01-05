@@ -1,6 +1,6 @@
 /* coap_pdu.c -- CoAP PDU handling
  *
- * Copyright (C) 2010--2025 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2010--2026 Olaf Bergmann <bergmann@tzi.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

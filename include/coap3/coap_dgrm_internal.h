@@ -1,7 +1,7 @@
 /*
  * coap_dgrm_internal.h -- Datagram (UDP) functions for libcoap
  *
- * Copyright (C) 2019--2025 Olaf Bergmann <bergmann@tzi.org> and others
+ * Copyright (C) 2019--2026 Olaf Bergmann <bergmann@tzi.org> and others
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *

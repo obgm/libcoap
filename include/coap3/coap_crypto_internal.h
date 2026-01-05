@@ -4,8 +4,8 @@
  * coap_crypto_internal.h -- Structures, Enums & Functions that are not
  * exposed to application programming
  *
- * Copyright (C) 2017-2025 Olaf Bergmann <bergmann@tzi.org>
- * Copyright (C) 2021-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2017-2026 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2021-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
