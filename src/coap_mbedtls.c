@@ -65,20 +65,59 @@
 #include <mbedtls/platform.h>
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/ssl.h>
+#include <mbedtls/version.h>
+
+/* Auto-detect mbedTLS 4.x which requires PSA Crypto APIs */
+#if MBEDTLS_VERSION_NUMBER >= 0x04000000
+#define COAP_USE_PSA_CRYPTO 1
+#else
+#define COAP_USE_PSA_CRYPTO 0
+#endif
+
+#if COAP_USE_PSA_CRYPTO
+#include <psa/crypto.h>
+#else
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
+#include <mbedtls/sha256.h>
+#include <mbedtls/md.h>
+#include <mbedtls/cipher.h>
+#endif /* COAP_USE_PSA_CRYPTO */
 #include <mbedtls/error.h>
 #include <mbedtls/timing.h>
 #include <mbedtls/ssl_cookie.h>
 #include <mbedtls/oid.h>
 #include <mbedtls/debug.h>
-#include <mbedtls/sha256.h>
 #if defined(ESPIDF_VERSION) && defined(CONFIG_MBEDTLS_DEBUG)
 #include <mbedtls/esp_debug.h>
 #endif /* ESPIDF_VERSION && CONFIG_MBEDTLS_DEBUG */
-#if defined(MBEDTLS_PSA_CRYPTO_C)
+#if !COAP_USE_PSA_CRYPTO && defined(MBEDTLS_PSA_CRYPTO_C)
 #include <psa/crypto.h>
-#endif /* MBEDTLS_PSA_CRYPTO_C */
+#endif /* !COAP_USE_PSA_CRYPTO && MBEDTLS_PSA_CRYPTO_C */
+
+/*
+ * Crypto abstraction types for mbedTLS version compatibility
+ */
+#if COAP_USE_PSA_CRYPTO
+typedef psa_hash_operation_t coap_crypto_sha256_ctx_t;
+typedef psa_algorithm_t coap_crypto_md_type_t;
+
+#define COAP_CRYPTO_MD_SHA1     PSA_ALG_SHA_1
+#define COAP_CRYPTO_MD_SHA256   PSA_ALG_SHA_256
+#define COAP_CRYPTO_MD_SHA384   PSA_ALG_SHA_384
+#define COAP_CRYPTO_MD_SHA512   PSA_ALG_SHA_512
+#define COAP_CRYPTO_MD_NONE     PSA_ALG_NONE
+
+#else /* !COAP_USE_PSA_CRYPTO */
+typedef mbedtls_sha256_context coap_crypto_sha256_ctx_t;
+typedef mbedtls_md_type_t coap_crypto_md_type_t;
+
+#define COAP_CRYPTO_MD_SHA1     MBEDTLS_MD_SHA1
+#define COAP_CRYPTO_MD_SHA256   MBEDTLS_MD_SHA256
+#define COAP_CRYPTO_MD_SHA384   MBEDTLS_MD_SHA384
+#define COAP_CRYPTO_MD_SHA512   MBEDTLS_MD_SHA512
+#define COAP_CRYPTO_MD_NONE     MBEDTLS_MD_NONE
+#endif /* !COAP_USE_PSA_CRYPTO */
 
 #ifdef _WIN32
 #include <stdlib.h>
@@ -137,8 +176,10 @@ typedef struct coap_ssl_t {
  */
 typedef struct coap_mbedtls_env_t {
   mbedtls_ssl_context ssl;
+#if !COAP_USE_PSA_CRYPTO
   mbedtls_entropy_context entropy;
   mbedtls_ctr_drbg_context ctr_drbg;
+#endif /* !COAP_USE_PSA_CRYPTO */
   mbedtls_ssl_config conf;
   mbedtls_timing_delay_context timer;
   mbedtls_x509_crt cacert;
@@ -238,6 +279,352 @@ zephyr_timing_get_delay(void *data) {
 
 #endif /* __ZEPHYR__ */
 
+/*
+ * Crypto Abstraction Functions
+ * These provide a unified API for both legacy mbedTLS and PSA Crypto.
+ */
+
+#if COAP_SERVER_SUPPORT
+/* SHA-256 Digest Functions */
+
+static int
+coap_crypto_sha256_init(coap_crypto_sha256_ctx_t *ctx) {
+#if COAP_USE_PSA_CRYPTO
+  *ctx = psa_hash_operation_init();
+  return (psa_hash_setup(ctx, PSA_ALG_SHA_256) == PSA_SUCCESS) ? 0 : -1;
+#else
+  mbedtls_sha256_init(ctx);
+#if (MBEDTLS_VERSION_NUMBER < 0x03000000)
+  return mbedtls_sha256_starts_ret(ctx, 0);
+#else
+  return mbedtls_sha256_starts(ctx, 0);
+#endif
+#endif
+}
+
+static int
+coap_crypto_sha256_update(coap_crypto_sha256_ctx_t *ctx,
+                          const uint8_t *data, size_t len) {
+#if COAP_USE_PSA_CRYPTO
+  return (psa_hash_update(ctx, data, len) == PSA_SUCCESS) ? 0 : -1;
+#else
+#if (MBEDTLS_VERSION_NUMBER < 0x03000000)
+  return mbedtls_sha256_update_ret(ctx, data, len);
+#else
+  return mbedtls_sha256_update(ctx, data, len);
+#endif
+#endif
+}
+
+static int
+coap_crypto_sha256_finish(coap_crypto_sha256_ctx_t *ctx, uint8_t *output) {
+#if COAP_USE_PSA_CRYPTO
+  size_t hash_len;
+  return (psa_hash_finish(ctx, output, 32, &hash_len) == PSA_SUCCESS) ? 0 : -1;
+#else
+#if (MBEDTLS_VERSION_NUMBER < 0x03000000)
+  return mbedtls_sha256_finish_ret(ctx, output);
+#else
+  return mbedtls_sha256_finish(ctx, output);
+#endif
+#endif
+}
+
+static void
+coap_crypto_sha256_free(coap_crypto_sha256_ctx_t *ctx) {
+#if COAP_USE_PSA_CRYPTO
+  psa_hash_abort(ctx);
+#else
+  mbedtls_sha256_free(ctx);
+#endif
+}
+#endif /* COAP_SERVER_SUPPORT */
+
+/* General Hash Functions */
+#if COAP_WS_SUPPORT
+static size_t
+coap_crypto_hash_size(coap_crypto_md_type_t md_type) {
+#if COAP_USE_PSA_CRYPTO
+  switch ((int)md_type) {
+  case PSA_ALG_SHA_1:
+    return 20;
+  case PSA_ALG_SHA_256:
+    return 32;
+  case PSA_ALG_SHA_384:
+    return 48;
+  case PSA_ALG_SHA_512:
+    return 64;
+  default:
+    return 0;
+  }
+#else
+  const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(md_type);
+  return md_info ? mbedtls_md_get_size(md_info) : 0;
+#endif
+}
+
+static int
+coap_crypto_hash_compute(coap_crypto_md_type_t md_type,
+                         const uint8_t *input, size_t ilen,
+                         uint8_t *output, size_t output_size,
+                         size_t *output_len) {
+#if COAP_USE_PSA_CRYPTO
+  size_t actual_len;
+  psa_status_t status = psa_hash_compute(md_type, input, ilen,
+                                         output, output_size, &actual_len);
+  if (output_len)
+    *output_len = actual_len;
+  return (status == PSA_SUCCESS) ? 0 : -1;
+#else
+  const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(md_type);
+  if (!md_info)
+    return -1;
+  size_t hash_len = mbedtls_md_get_size(md_info);
+  if (hash_len > output_size)
+    return -1;
+  if (output_len)
+    *output_len = hash_len;
+  return mbedtls_md(md_info, input, ilen, output);
+#endif
+}
+#endif /* COAP_WS_SUPPORT */
+
+/* HMAC Functions */
+
+#if COAP_OSCORE_SUPPORT
+static int
+coap_crypto_hmac_compute(coap_crypto_md_type_t md_type,
+                         const uint8_t *key, size_t key_len,
+                         const uint8_t *input, size_t ilen,
+                         uint8_t *output, size_t output_size,
+                         size_t *output_len) {
+#if COAP_USE_PSA_CRYPTO
+  psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+  psa_key_id_t key_id;
+  psa_algorithm_t psa_alg = PSA_ALG_HMAC(md_type);
+  size_t mac_len;
+  psa_status_t status;
+
+  psa_set_key_type(&attributes, PSA_KEY_TYPE_HMAC);
+  psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_SIGN_MESSAGE);
+  psa_set_key_algorithm(&attributes, psa_alg);
+
+  if (psa_import_key(&attributes, key, key_len, &key_id) != PSA_SUCCESS) {
+    return -1;
+  }
+
+  status = psa_mac_compute(key_id, psa_alg, input, ilen,
+                           output, output_size, &mac_len);
+  psa_destroy_key(key_id);
+
+  if (output_len)
+    *output_len = mac_len;
+  return (status == PSA_SUCCESS) ? 0 : -1;
+#else
+  const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(md_type);
+  if (!md_info)
+    return -1;
+  size_t mac_size = mbedtls_md_get_size(md_info);
+  if (mac_size > output_size)
+    return -1;
+  if (output_len)
+    *output_len = mac_size;
+  return mbedtls_md_hmac(md_info, key, key_len, input, ilen, output);
+#endif
+}
+
+/* AEAD (AES-CCM) Functions */
+
+static int
+coap_crypto_aead_encrypt_ccm(const uint8_t *key, size_t key_len,
+                             const uint8_t *nonce, size_t nonce_len,
+                             const uint8_t *aad, size_t aad_len,
+                             const uint8_t *plaintext, size_t plaintext_len,
+                             uint8_t *ciphertext, size_t ciphertext_size,
+                             size_t *ciphertext_len, size_t tag_len) {
+#if COAP_USE_PSA_CRYPTO
+  psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+  psa_key_id_t key_id;
+  psa_algorithm_t psa_alg = PSA_ALG_AEAD_WITH_SHORTENED_TAG(PSA_ALG_CCM, tag_len);
+  size_t output_len;
+  psa_status_t status;
+
+  psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
+  psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_ENCRYPT);
+  psa_set_key_algorithm(&attributes, psa_alg);
+  psa_set_key_bits(&attributes, key_len * 8);
+
+  if (psa_import_key(&attributes, key, key_len, &key_id) != PSA_SUCCESS) {
+    return -1;
+  }
+
+  status = psa_aead_encrypt(key_id, psa_alg,
+                            nonce, nonce_len,
+                            aad, aad_len,
+                            plaintext, plaintext_len,
+                            ciphertext, ciphertext_size, &output_len);
+  psa_destroy_key(key_id);
+
+  if (ciphertext_len)
+    *ciphertext_len = output_len;
+  return (status == PSA_SUCCESS) ? 0 : -1;
+#else
+  mbedtls_cipher_context_t ctx;
+  const mbedtls_cipher_info_t *cipher_info;
+  mbedtls_cipher_type_t cipher_type;
+  int ret = -1;
+  size_t result_len = ciphertext_size;
+
+  if (key_len == 16) {
+    cipher_type = MBEDTLS_CIPHER_AES_128_CCM;
+  } else if (key_len == 32) {
+    cipher_type = MBEDTLS_CIPHER_AES_256_CCM;
+  } else {
+    return -1;
+  }
+
+  cipher_info = mbedtls_cipher_info_from_type(cipher_type);
+  if (!cipher_info)
+    return -1;
+
+  mbedtls_cipher_init(&ctx);
+  if (mbedtls_cipher_setup(&ctx, cipher_info) != 0)
+    goto cleanup;
+  if (mbedtls_cipher_setkey(&ctx, key, key_len * 8, MBEDTLS_ENCRYPT) != 0)
+    goto cleanup;
+
+#if (MBEDTLS_VERSION_NUMBER < 0x02150000)
+  {
+    unsigned char tag[16];
+    if (mbedtls_cipher_auth_encrypt(&ctx,
+                                    nonce, nonce_len,
+                                    aad, aad_len,
+                                    plaintext, plaintext_len,
+                                    ciphertext, &result_len,
+                                    tag, tag_len) != 0) {
+      goto cleanup;
+    }
+    if ((result_len + tag_len) > ciphertext_size)
+      goto cleanup;
+    memcpy(ciphertext + result_len, tag, tag_len);
+    result_len += tag_len;
+  }
+#else
+  if (mbedtls_cipher_auth_encrypt_ext(&ctx,
+                                      nonce, nonce_len,
+                                      aad, aad_len,
+                                      plaintext, plaintext_len,
+                                      ciphertext, ciphertext_size,
+                                      &result_len, tag_len) != 0) {
+    goto cleanup;
+  }
+#endif
+
+  if (ciphertext_len)
+    *ciphertext_len = result_len;
+  ret = 0;
+
+cleanup:
+  mbedtls_cipher_free(&ctx);
+  return ret;
+#endif
+}
+
+static int
+coap_crypto_aead_decrypt_ccm(const uint8_t *key, size_t key_len,
+                             const uint8_t *nonce, size_t nonce_len,
+                             const uint8_t *aad, size_t aad_len,
+                             const uint8_t *ciphertext, size_t ciphertext_len,
+                             uint8_t *plaintext, size_t plaintext_size,
+                             size_t *plaintext_len, size_t tag_len) {
+#if COAP_USE_PSA_CRYPTO
+  psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+  psa_key_id_t key_id;
+  psa_algorithm_t psa_alg = PSA_ALG_AEAD_WITH_SHORTENED_TAG(PSA_ALG_CCM, tag_len);
+  size_t output_len;
+  psa_status_t status;
+
+  psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
+  psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_DECRYPT);
+  psa_set_key_algorithm(&attributes, psa_alg);
+  psa_set_key_bits(&attributes, key_len * 8);
+
+  if (psa_import_key(&attributes, key, key_len, &key_id) != PSA_SUCCESS) {
+    return -1;
+  }
+
+  status = psa_aead_decrypt(key_id, psa_alg,
+                            nonce, nonce_len,
+                            aad, aad_len,
+                            ciphertext, ciphertext_len,
+                            plaintext, plaintext_size, &output_len);
+  psa_destroy_key(key_id);
+
+  if (plaintext_len)
+    *plaintext_len = output_len;
+  return (status == PSA_SUCCESS) ? 0 : -1;
+#else
+  mbedtls_cipher_context_t ctx;
+  const mbedtls_cipher_info_t *cipher_info;
+  mbedtls_cipher_type_t cipher_type;
+  int ret = -1;
+  size_t result_len = plaintext_size;
+
+  if (key_len == 16) {
+    cipher_type = MBEDTLS_CIPHER_AES_128_CCM;
+  } else if (key_len == 32) {
+    cipher_type = MBEDTLS_CIPHER_AES_256_CCM;
+  } else {
+    return -1;
+  }
+
+  cipher_info = mbedtls_cipher_info_from_type(cipher_type);
+  if (!cipher_info)
+    return -1;
+
+  mbedtls_cipher_init(&ctx);
+  if (mbedtls_cipher_setup(&ctx, cipher_info) != 0)
+    goto cleanup;
+  if (mbedtls_cipher_setkey(&ctx, key, key_len * 8, MBEDTLS_DECRYPT) != 0)
+    goto cleanup;
+
+#if (MBEDTLS_VERSION_NUMBER < 0x02150000)
+  {
+    const unsigned char *tag = ciphertext + ciphertext_len - tag_len;
+    if (mbedtls_cipher_auth_decrypt(&ctx,
+                                    nonce, nonce_len,
+                                    aad, aad_len,
+                                    ciphertext, ciphertext_len - tag_len,
+                                    plaintext, &result_len,
+                                    tag, tag_len) != 0) {
+      goto cleanup;
+    }
+  }
+#else
+  if (mbedtls_cipher_auth_decrypt_ext(&ctx,
+                                      nonce, nonce_len,
+                                      aad, aad_len,
+                                      ciphertext, ciphertext_len,
+                                      plaintext, plaintext_size,
+                                      &result_len, tag_len) != 0) {
+    goto cleanup;
+  }
+#endif
+
+  if (plaintext_len)
+    *plaintext_len = result_len;
+  ret = 0;
+
+cleanup:
+  mbedtls_cipher_free(&ctx);
+  return ret;
+#endif
+}
+#endif /* COAP_OSCORE_SUPPORT */
+
+/* End of Crypto Abstraction Functions */
+
+#if !COAP_USE_PSA_CRYPTO
 #ifndef MBEDTLS_2_X_COMPAT
 /*
  * mbedtls_ callback functions expect 0 on success, -ve on failure.
@@ -247,6 +634,7 @@ coap_rng(void *ctx COAP_UNUSED, unsigned char *buf, size_t len) {
   return coap_prng_lkd(buf, len) ? 0 : MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED;
 }
 #endif /* MBEDTLS_2_X_COMPAT */
+#endif /* !COAP_USE_PSA_CRYPTO */
 
 static int
 coap_dgram_read(void *ctx, unsigned char *out, size_t outl) {
@@ -619,14 +1007,17 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     case COAP_PKI_KEY_DEF_PEM: /* define private key */
 #if defined(MBEDTLS_FS_IO)
       mbedtls_pk_init(private_key);
-#ifdef MBEDTLS_2_X_COMPAT
+#if COAP_USE_PSA_CRYPTO
+      ret = mbedtls_pk_parse_keyfile(private_key,
+                                     key.key.define.private_key.s_byte, NULL);
+#elif defined(MBEDTLS_2_X_COMPAT)
       ret = mbedtls_pk_parse_keyfile(private_key,
                                      key.key.define.private_key.s_byte, NULL);
 #else
       ret = mbedtls_pk_parse_keyfile(private_key,
                                      key.key.define.private_key.s_byte,
                                      NULL, coap_rng, (void *)&m_env->ctr_drbg);
-#endif /* MBEDTLS_2_X_COMPAT */
+#endif
       if (ret < 0) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
@@ -652,15 +1043,21 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
         memcpy(buffer, key.key.define.private_key.u_byte, length);
         buffer[length] = '\000';
         length++;
-#ifdef MBEDTLS_2_X_COMPAT
+#if COAP_USE_PSA_CRYPTO
+        ret = mbedtls_pk_parse_key(private_key, buffer, length, NULL, 0);
+#elif defined(MBEDTLS_2_X_COMPAT)
         ret = mbedtls_pk_parse_key(private_key, buffer, length, NULL, 0);
 #else
         ret = mbedtls_pk_parse_key(private_key, buffer, length,
                                    NULL, 0, coap_rng, (void *)&m_env->ctr_drbg);
-#endif /* MBEDTLS_2_X_COMPAT */
+#endif
         mbedtls_free(buffer);
       } else {
-#ifdef MBEDTLS_2_X_COMPAT
+#if COAP_USE_PSA_CRYPTO
+        ret = mbedtls_pk_parse_key(private_key,
+                                   key.key.define.private_key.u_byte,
+                                   key.key.define.private_key_len, NULL, 0);
+#elif defined(MBEDTLS_2_X_COMPAT)
         ret = mbedtls_pk_parse_key(private_key,
                                    key.key.define.private_key.u_byte,
                                    key.key.define.private_key_len, NULL, 0);
@@ -669,7 +1066,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
                                    key.key.define.private_key.u_byte,
                                    key.key.define.private_key_len,
                                    NULL, 0, coap_rng, (void *)&m_env->ctr_drbg);
-#endif /* MBEDTLS_2_X_COMPAT */
+#endif
       }
       if (ret < 0) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
@@ -680,7 +1077,11 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
       break;
     case COAP_PKI_KEY_DEF_DER_BUF: /* define private key */
       mbedtls_pk_init(private_key);
-#ifdef MBEDTLS_2_X_COMPAT
+#if COAP_USE_PSA_CRYPTO
+      ret = mbedtls_pk_parse_key(private_key,
+                                 key.key.define.private_key.u_byte,
+                                 key.key.define.private_key_len, NULL, 0);
+#elif defined(MBEDTLS_2_X_COMPAT)
       ret = mbedtls_pk_parse_key(private_key,
                                  key.key.define.private_key.u_byte,
                                  key.key.define.private_key_len, NULL, 0);
@@ -689,7 +1090,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
                                  key.key.define.private_key.u_byte,
                                  key.key.define.private_key_len, NULL, 0, coap_rng,
                                  (void *)&m_env->ctr_drbg);
-#endif /* MBEDTLS_2_X_COMPAT */
+#endif
       if (ret < 0) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
                                       COAP_DEFINE_FAIL_BAD,
@@ -910,7 +1311,13 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     }
     mbedtls_ssl_conf_ca_chain(&m_env->conf, cacert, NULL);
   }
-  if (m_context->trust_store_defined) {
+#if MBEDTLS_VERSION_NUMBER >= 0x04000000
+  if (m_context->trust_store_defined)
+#else /* MBEDTLS_VERSION_NUMBER < 0x04000000 */
+  if (m_context->trust_store_defined ||
+      (role == COAP_DTLS_ROLE_CLIENT && !m_context->setup_data.verify_peer_cert))
+#endif /* MBEDTLS_VERSION_NUMBER < 0x04000000 */
+  {
     /* Until Trust Store is implemented in MbedTLS */
     const char *trust_list[] = {
       "/etc/ssl/ca-bundle.pem",
@@ -1117,9 +1524,14 @@ psk_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
                                 &m_context->psk_sni_entry_list[i].psk_info.hint);
   coap_session_refresh_psk_key(c_session,
                                &m_context->psk_sni_entry_list[i].psk_info.key);
+#if MBEDTLS_VERSION_NUMBER >= 0x04000000
+  (void)ssl;
+  return 0;
+#else /* MBEDTLS_VERSION_NUMBER < 0x04000000 */
   return mbedtls_ssl_set_hs_psk(ssl,
                                 m_context->psk_sni_entry_list[i].psk_info.key.s,
                                 m_context->psk_sni_entry_list[i].psk_info.key.length);
+#endif /* MBEDTLS_VERSION_NUMBER < 0x04000000 */
 }
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
 
@@ -1143,7 +1555,9 @@ setup_server_ssl_session(coap_session_t *c_session,
     goto fail;
   }
 
+#if !COAP_USE_PSA_CRYPTO
   mbedtls_ssl_conf_rng(&m_env->conf, mbedtls_ctr_drbg_random, &m_env->ctr_drbg);
+#endif /* !COAP_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
   mbedtls_ssl_conf_handshake_timeout(&m_env->conf, COAP_DTLS_RETRANSMIT_MS,
@@ -1178,9 +1592,13 @@ setup_server_ssl_session(coap_session_t *c_session,
     }
   }
 
+#if COAP_USE_PSA_CRYPTO
+  if ((ret = mbedtls_ssl_cookie_setup(&m_env->cookie_ctx)) != 0) {
+#else /* !COAP_USE_PSA_CRYPTO */
   if ((ret = mbedtls_ssl_cookie_setup(&m_env->cookie_ctx,
                                       mbedtls_ctr_drbg_random,
                                       &m_env->ctr_drbg)) != 0) {
+#endif /* !COAP_USE_PSA_CRYPTO */
     coap_log_err("mbedtls_ssl_cookie_setup: returned -0x%x: '%s'\n",
                  -ret, get_error_string(ret));
     goto fail;
@@ -1218,7 +1636,19 @@ static int processed_ciphers = 0;
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 static int
 coap_ssl_ciphersuite_uses_psk(const mbedtls_ssl_ciphersuite_t *info) {
-#if MBEDTLS_VERSION_NUMBER >= 0x03060000
+#if COAP_USE_PSA_CRYPTO
+  switch (info->key_exchange) {
+  case MBEDTLS_KEY_EXCHANGE_PSK:
+  case MBEDTLS_KEY_EXCHANGE_ECDHE_PSK:
+    return 1;
+  case MBEDTLS_KEY_EXCHANGE_NONE:
+  case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA:
+  case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
+  case MBEDTLS_KEY_EXCHANGE_ECJPAKE:
+  default:
+    return 0;
+  }
+#elif MBEDTLS_VERSION_NUMBER >= 0x03060000
   switch (info->key_exchange) {
   case MBEDTLS_KEY_EXCHANGE_PSK:
   case MBEDTLS_KEY_EXCHANGE_RSA_PSK:
@@ -1412,7 +1842,9 @@ setup_client_ssl_session(coap_session_t *c_session,
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
   mbedtls_ssl_conf_authmode(&m_env->conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+#if !COAP_USE_PSA_CRYPTO
   mbedtls_ssl_conf_rng(&m_env->conf, mbedtls_ctr_drbg_random, &m_env->ctr_drbg);
+#endif /* !COAP_USE_PSA_CRYPTO */
 
   if (m_context->psk_pki_enabled & IS_PSK) {
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
@@ -1527,9 +1959,11 @@ mbedtls_cleanup(coap_mbedtls_env_t *m_env) {
   mbedtls_x509_crt_free(&m_env->cacert);
   mbedtls_x509_crt_free(&m_env->public_cert);
   mbedtls_pk_free(&m_env->private_key);
+#if !COAP_USE_PSA_CRYPTO
   mbedtls_entropy_free(&m_env->entropy);
-  mbedtls_ssl_config_free(&m_env->conf);
   mbedtls_ctr_drbg_free(&m_env->ctr_drbg);
+#endif /* !COAP_USE_PSA_CRYPTO */
+  mbedtls_ssl_config_free(&m_env->conf);
   mbedtls_ssl_free(&m_env->ssl);
   mbedtls_ssl_cookie_free(&m_env->cookie_ctx);
 }
@@ -1838,7 +2272,9 @@ static coap_mbedtls_env_t *
 coap_dtls_new_mbedtls_env(coap_session_t *c_session,
                           coap_dtls_role_t role,
                           coap_proto_t proto) {
+#if !COAP_USE_PSA_CRYPTO
   int ret = 0;
+#endif /* !COAP_USE_PSA_CRYPTO */
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
   if (m_env)
@@ -1851,17 +2287,17 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
   memset(m_env, 0, sizeof(coap_mbedtls_env_t));
 
   mbedtls_ssl_init(&m_env->ssl);
+#if !COAP_USE_PSA_CRYPTO
   mbedtls_ctr_drbg_init(&m_env->ctr_drbg);
-  mbedtls_ssl_config_init(&m_env->conf);
   mbedtls_entropy_init(&m_env->entropy);
-
-#if defined(MBEDTLS_PSA_CRYPTO_C)
-  psa_crypto_init();
-#endif /* MBEDTLS_PSA_CRYPTO_C */
+#endif /* !COAP_USE_PSA_CRYPTO */
+  mbedtls_ssl_config_init(&m_env->conf);
 
 #if defined(ESPIDF_VERSION) && defined(CONFIG_MBEDTLS_DEBUG)
   mbedtls_esp_enable_debug_log(&m_env->conf, CONFIG_MBEDTLS_DEBUG_LEVEL);
 #endif /* ESPIDF_VERSION && CONFIG_MBEDTLS_DEBUG */
+
+#if !COAP_USE_PSA_CRYPTO
   if ((ret = mbedtls_ctr_drbg_seed(&m_env->ctr_drbg,
                                    mbedtls_entropy_func, &m_env->entropy, NULL, 0)) != 0) {
     if (ret != MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED) {
@@ -1872,6 +2308,7 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
     coap_log_err("mbedtls_ctr_drbg_seed returned -0x%x: '%s'\n",
                  -ret, get_error_string(ret));
   }
+#endif /* !COAP_USE_PSA_CRYPTO */
 
   if (role == COAP_DTLS_ROLE_CLIENT) {
 #if COAP_CLIENT_SUPPORT
@@ -2922,6 +3359,9 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
 
 void
 coap_dtls_startup(void) {
+#if COAP_USE_PSA_CRYPTO || defined(MBEDTLS_PSA_CRYPTO_C)
+  psa_crypto_init();
+#endif /* COAP_USE_PSA_CRYPTO || MBEDTLS_PSA_CRYPTO_C */
 }
 
 void
@@ -2936,6 +3376,9 @@ coap_dtls_shutdown(void) {
   processed_ciphers = 0;
 #endif /* COAP_CLIENT_SUPPORT */
   coap_dtls_set_log_level(COAP_LOG_EMERG);
+#if COAP_USE_PSA_CRYPTO || defined(MBEDTLS_PSA_CRYPTO_C)
+  mbedtls_psa_crypto_free();
+#endif /* COAP_USE_PSA_CRYPTO || MBEDTLS_PSA_CRYPTO_C */
 }
 
 void *
@@ -3011,15 +3454,10 @@ coap_get_tls_library_version(void) {
 #if COAP_SERVER_SUPPORT
 coap_digest_ctx_t *
 coap_digest_setup(void) {
-  mbedtls_sha256_context *digest_ctx = mbedtls_malloc(sizeof(mbedtls_sha256_context));
+  coap_crypto_sha256_ctx_t *digest_ctx = mbedtls_malloc(sizeof(coap_crypto_sha256_ctx_t));
 
   if (digest_ctx) {
-    mbedtls_sha256_init(digest_ctx);
-#ifdef MBEDTLS_2_X_COMPAT
-    if (mbedtls_sha256_starts_ret(digest_ctx, 0) != 0) {
-#else
-    if (mbedtls_sha256_starts(digest_ctx, 0) != 0) {
-#endif /* MBEDTLS_2_X_COMPAT */
+    if (coap_crypto_sha256_init(digest_ctx) != 0) {
       coap_digest_free(digest_ctx);
       return NULL;
     }
@@ -3030,7 +3468,7 @@ coap_digest_setup(void) {
 void
 coap_digest_free(coap_digest_ctx_t *digest_ctx) {
   if (digest_ctx) {
-    mbedtls_sha256_free(digest_ctx);
+    coap_crypto_sha256_free(digest_ctx);
     mbedtls_free(digest_ctx);
   }
 }
@@ -3039,129 +3477,57 @@ int
 coap_digest_update(coap_digest_ctx_t *digest_ctx,
                    const uint8_t *data,
                    size_t data_len) {
-#ifdef MBEDTLS_2_X_COMPAT
-  int ret = mbedtls_sha256_update_ret(digest_ctx, data, data_len);
-#else
-  int ret = mbedtls_sha256_update(digest_ctx, data, data_len);
-#endif /* MBEDTLS_2_X_COMPAT */
-
-  return ret == 0;
+  return coap_crypto_sha256_update(digest_ctx, data, data_len) == 0;
 }
 
 int
 coap_digest_final(coap_digest_ctx_t *digest_ctx,
                   coap_digest_t *digest_buffer) {
-#ifdef MBEDTLS_2_X_COMPAT
-  int ret = mbedtls_sha256_finish_ret(digest_ctx, (uint8_t *)digest_buffer);
-#else
-  int ret = mbedtls_sha256_finish(digest_ctx, (uint8_t *)digest_buffer);
-#endif /* MBEDTLS_2_X_COMPAT */
-
+  int ret = coap_crypto_sha256_finish(digest_ctx, (uint8_t *)digest_buffer) == 0;
   coap_digest_free(digest_ctx);
-  return ret == 0;
+  return ret;
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-#include <mbedtls/cipher.h>
-#include <mbedtls/md.h>
-
-#ifndef MBEDTLS_CIPHER_MODE_AEAD
-#error need MBEDTLS_CIPHER_MODE_AEAD, please enable MBEDTLS_CCM_C
-#endif /* MBEDTLS_CIPHER_MODE_AEAD */
-
-#ifdef MBEDTLS_ERROR_C
-#include <mbedtls/error.h>
-#endif /* MBEDTLS_ERROR_C */
-
-#ifdef MBEDTLS_ERROR_C
-#define C(Func)                                                                \
-  do {                                                                         \
-    int c_tmp = (int)(Func);                                                   \
-    if (c_tmp != 0) {                                                          \
-      char error_buf[64];                                                      \
-      mbedtls_strerror(c_tmp, error_buf, sizeof(error_buf));                   \
-      coap_log_err("mbedtls: -0x%04x: %s\n", -c_tmp, error_buf);               \
-      goto error;                                                              \
-    }                                                                          \
-  } while (0);
-#else /* !MBEDTLS_ERROR_C */
-#define C(Func)                                                                \
-  do {                                                                         \
-    int c_tmp = (int)(Func);                                                   \
-    if (c_tmp != 0) {                                                          \
-      coap_log_err("mbedtls: %d\n", tmp);                                      \
-      goto error;                                                              \
-    }                                                                          \
-  } while (0);
-#endif /* !MBEDTLS_ERROR_C */
-
 #if COAP_WS_SUPPORT
-/*
- * The struct hash_algs and the function get_hash_alg() are used to
- * determine which hash type to use for creating the required hash object.
- */
-static struct hash_algs {
-  cose_alg_t alg;
-  mbedtls_md_type_t hash_type;
-  size_t hash_size;
-} hashs[] = {
-  {COSE_ALGORITHM_SHA_1,       MBEDTLS_MD_SHA1,   20},
-  {COSE_ALGORITHM_SHA_256_256, MBEDTLS_MD_SHA256, 32},
-  {COSE_ALGORITHM_SHA_512,     MBEDTLS_MD_SHA512, 64},
-};
-
-static mbedtls_md_type_t
-get_hash_alg(cose_alg_t alg, size_t *hash_len) {
-  size_t idx;
-
-  for (idx = 0; idx < sizeof(hashs) / sizeof(struct hash_algs); idx++) {
-    if (hashs[idx].alg == alg) {
-      *hash_len = hashs[idx].hash_size;
-      return hashs[idx].hash_type;
-    }
-  }
-  coap_log_debug("get_hash_alg: COSE hash %d not supported\n", alg);
-  return MBEDTLS_MD_NONE;
-}
-
 int
 coap_crypto_hash(cose_alg_t alg,
                  const coap_bin_const_t *data,
                  coap_bin_const_t **hash) {
-  mbedtls_md_context_t ctx;
-  int ret = 0;
-  const mbedtls_md_info_t *md_info;
-  unsigned int len;
-  coap_binary_t *dummy = NULL;
-  size_t hash_length;
-  mbedtls_md_type_t dig_type = get_hash_alg(alg, &hash_length);
+  coap_crypto_md_type_t md_type;
+  size_t hash_len;
 
-  if (dig_type == MBEDTLS_MD_NONE) {
+  switch ((int)alg) {
+  case COSE_ALGORITHM_SHA_1:
+    md_type = COAP_CRYPTO_MD_SHA1;
+    break;
+  case COSE_ALGORITHM_SHA_256_256:
+    md_type = COAP_CRYPTO_MD_SHA256;
+    break;
+  case COSE_ALGORITHM_SHA_512:
+    md_type = COAP_CRYPTO_MD_SHA512;
+    break;
+  default:
     coap_log_debug("coap_crypto_hash: algorithm %d not supported\n", alg);
     return 0;
   }
-  md_info = mbedtls_md_info_from_type(dig_type);
 
-  len = mbedtls_md_get_size(md_info);
-  if (len == 0) {
+  hash_len = coap_crypto_hash_size(md_type);
+  if (hash_len == 0)
+    return 0;
+
+  coap_binary_t *dummy = coap_new_binary(hash_len);
+  if (dummy == NULL)
+    return 0;
+
+  if (coap_crypto_hash_compute(md_type, data->s, data->length,
+                               dummy->s, hash_len, NULL) != 0) {
+    coap_delete_binary(dummy);
     return 0;
   }
 
-  mbedtls_md_init(&ctx);
-  C(mbedtls_md_setup(&ctx, md_info, 0));
-
-  C(mbedtls_md_starts(&ctx));
-  C(mbedtls_md_update(&ctx, (const unsigned char *)data->s, data->length));
-  dummy = coap_new_binary(len);
-  if (dummy == NULL)
-    goto error;
-  C(mbedtls_md_finish(&ctx, dummy->s));
-
   *hash = (coap_bin_const_t *)dummy;
-  ret = 1;
-error:
-  mbedtls_md_free(&ctx);
-  return ret;
+  return 1;
 }
 #endif /* COAP_WS_SUPPORT */
 
@@ -3172,58 +3538,60 @@ coap_oscore_is_supported(void) {
 }
 
 /*
- * The struct cipher_algs and the function get_cipher_alg() are used to
- * determine which cipher type to use for creating the required cipher
- * suite object.
+ * Helper to check if COSE cipher algorithm is supported and get key size.
  */
-static struct cipher_algs {
-  cose_alg_t alg;
-  mbedtls_cipher_type_t cipher_type;
-} ciphers[] = {{COSE_ALGORITHM_AES_CCM_16_64_128, MBEDTLS_CIPHER_AES_128_CCM},
-  {COSE_ALGORITHM_AES_CCM_16_64_256, MBEDTLS_CIPHER_AES_256_CCM}
-};
-
-static mbedtls_cipher_type_t
-get_cipher_alg(cose_alg_t alg) {
-  size_t idx;
-
-  for (idx = 0; idx < sizeof(ciphers) / sizeof(struct cipher_algs); idx++) {
-    if (ciphers[idx].alg == alg)
-      return ciphers[idx].cipher_type;
+static int
+get_cipher_key_size(cose_alg_t alg, size_t *key_size) {
+  switch ((int)alg) {
+  case COSE_ALGORITHM_AES_CCM_16_64_128:
+    if (key_size)
+      *key_size = 16;
+    return 1;
+  case COSE_ALGORITHM_AES_CCM_16_64_256:
+    if (key_size)
+      *key_size = 32;
+    return 1;
+  default:
+    coap_log_debug("get_cipher_key_size: COSE cipher %d not supported\n", alg);
+    return 0;
   }
-  coap_log_debug("get_cipher_alg: COSE cipher %d not supported\n", alg);
-  return 0;
 }
 
 /*
- * The struct hmac_algs and the function get_hmac_alg() are used to
- * determine which hmac type to use for creating the required hmac
- * suite object.
+ * Helper to get HMAC algorithm parameters from COSE HMAC algorithm.
  */
-static struct hmac_algs {
-  cose_hmac_alg_t hmac_alg;
-  mbedtls_md_type_t hmac_type;
-} hmacs[] = {
-  {COSE_HMAC_ALG_HMAC256_256, MBEDTLS_MD_SHA256},
-  {COSE_HMAC_ALG_HMAC384_384, MBEDTLS_MD_SHA384},
-  {COSE_HMAC_ALG_HMAC512_512, MBEDTLS_MD_SHA512},
-};
-
-static mbedtls_md_type_t
-get_hmac_alg(cose_hmac_alg_t hmac_alg) {
-  size_t idx;
-
-  for (idx = 0; idx < sizeof(hmacs) / sizeof(struct hmac_algs); idx++) {
-    if (hmacs[idx].hmac_alg == hmac_alg)
-      return hmacs[idx].hmac_type;
+static int
+get_hmac_params(cose_hmac_alg_t hmac_alg,
+                coap_crypto_md_type_t *md_type,
+                size_t *mac_len) {
+  switch ((int)hmac_alg) {
+  case COSE_HMAC_ALG_HMAC256_256:
+    if (md_type)
+      *md_type = COAP_CRYPTO_MD_SHA256;
+    if (mac_len)
+      *mac_len = 32;
+    return 1;
+  case COSE_HMAC_ALG_HMAC384_384:
+    if (md_type)
+      *md_type = COAP_CRYPTO_MD_SHA384;
+    if (mac_len)
+      *mac_len = 48;
+    return 1;
+  case COSE_HMAC_ALG_HMAC512_512:
+    if (md_type)
+      *md_type = COAP_CRYPTO_MD_SHA512;
+    if (mac_len)
+      *mac_len = 64;
+    return 1;
+  default:
+    coap_log_debug("get_hmac_params: COSE HMAC %d not supported\n", hmac_alg);
+    return 0;
   }
-  coap_log_debug("get_hmac_alg: COSE HMAC %d not supported\n", hmac_alg);
-  return 0;
 }
 
 int
 coap_crypto_check_cipher_alg(cose_alg_t alg) {
-  return get_cipher_alg(alg) != 0;
+  return get_cipher_key_size(alg, NULL);
 }
 
 int
@@ -3232,53 +3600,7 @@ coap_crypto_check_hkdf_alg(cose_hkdf_alg_t hkdf_alg) {
 
   if (!cose_get_hmac_alg_for_hkdf(hkdf_alg, &hmac_alg))
     return 0;
-  return get_hmac_alg(hmac_alg) != 0;
-}
-
-/**
- * Initializes the cipher context @p ctx. On success, this function
- * returns true and @p ctx must be released by the caller using
- * mbedtls_ciper_free(). */
-static int
-setup_cipher_context(mbedtls_cipher_context_t *ctx,
-                     cose_alg_t coap_alg,
-                     const uint8_t *key_data,
-                     size_t key_length,
-                     mbedtls_operation_t mode) {
-  const mbedtls_cipher_info_t *cipher_info;
-  mbedtls_cipher_type_t cipher_type;
-  uint8_t key[COAP_CRYPTO_MAX_KEY_SIZE]; /* buffer for normalizing the key
-                                            according to its key length */
-  int klen;
-  memset(key, 0, sizeof(key));
-
-  if ((cipher_type = get_cipher_alg(coap_alg)) == 0) {
-    coap_log_debug("coap_crypto_encrypt: algorithm %d not supported\n",
-                   coap_alg);
-    return 0;
-  }
-  cipher_info = mbedtls_cipher_info_from_type(cipher_type);
-  if (!cipher_info) {
-    coap_log_crit("coap_crypto_encrypt: cannot get cipher info\n");
-    return 0;
-  }
-
-  mbedtls_cipher_init(ctx);
-
-  C(mbedtls_cipher_setup(ctx, cipher_info));
-  klen = mbedtls_cipher_get_key_bitlen(ctx);
-  if ((klen > (int)(sizeof(key) * 8)) || (key_length > sizeof(key))) {
-    coap_log_crit("coap_crypto: cannot set key\n");
-    goto error;
-  }
-  memcpy(key, key_data, key_length);
-  C(mbedtls_cipher_setkey(ctx, key, klen, mode));
-
-  /* On success, the cipher context is released by the caller. */
-  return 1;
-error:
-  mbedtls_cipher_free(ctx);
-  return 0;
+  return get_hmac_params(hmac_alg, NULL, NULL);
 }
 
 int
@@ -3287,14 +3609,7 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
                          coap_bin_const_t *aad,
                          uint8_t *result,
                          size_t *max_result_len) {
-  mbedtls_cipher_context_t ctx;
   const coap_crypto_aes_ccm_t *ccm;
-#if (MBEDTLS_VERSION_NUMBER < 0x02150000)
-  unsigned char tag[16];
-#endif /* MBEDTLS_VERSION_NUMBER < 0x02150000 */
-  int ret = 0;
-  size_t result_len = *max_result_len;
-  coap_bin_const_t laad;
 
   if (data == NULL)
     return 0;
@@ -3304,65 +3619,26 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
   if (!params) {
     return 0;
   }
-  ccm = &params->params.aes;
 
-  if (!setup_cipher_context(&ctx,
-                            params->alg,
-                            ccm->key.s,
-                            ccm->key.length,
-                            MBEDTLS_ENCRYPT)) {
+  if (!get_cipher_key_size(params->alg, NULL)) {
+    coap_log_debug("coap_crypto_aead_encrypt: algorithm %d not supported\n",
+                   params->alg);
     return 0;
   }
 
-  if (aad) {
-    laad = *aad;
-  } else {
-    laad.s = NULL;
-    laad.length = 0;
+  ccm = &params->params.aes;
+
+  if (coap_crypto_aead_encrypt_ccm(ccm->key.s, ccm->key.length,
+                                   ccm->nonce, 15 - ccm->l,
+                                   aad ? aad->s : NULL, aad ? aad->length : 0,
+                                   data->s, data->length,
+                                   result, *max_result_len, max_result_len,
+                                   ccm->tag_len) != 0) {
+    coap_log_debug("coap_crypto_aead_encrypt: encryption failed\n");
+    return 0;
   }
 
-#if (MBEDTLS_VERSION_NUMBER < 0x02150000)
-  C(mbedtls_cipher_auth_encrypt(&ctx,
-                                ccm->nonce,
-                                15 - ccm->l, /* iv */
-                                laad.s,
-                                laad.length, /* ad */
-                                data->s,
-                                data->length, /* input */
-                                result,
-                                &result_len, /* output */
-                                tag,
-                                ccm->tag_len /* tag */
-                               ));
-  /* check if buffer is sufficient to hold tag */
-  if ((result_len + ccm->tag_len) > *max_result_len) {
-    coap_log_err("coap_encrypt: buffer too small\n");
-    goto error;
-  }
-  /* append tag to result */
-  memcpy(result + result_len, tag, ccm->tag_len);
-  *max_result_len = result_len + ccm->tag_len;
-  ret = 1;
-#else /* MBEDTLS_VERSION_NUMBER >= 0x02150000 */
-  C(mbedtls_cipher_auth_encrypt_ext(&ctx,
-                                    ccm->nonce,
-                                    15 - ccm->l, /* iv */
-                                    laad.s,
-                                    laad.length, /* ad */
-                                    data->s,
-                                    data->length, /* input */
-                                    result,
-                                    result_len,
-                                    &result_len, /* output */
-                                    ccm->tag_len /* tag */
-                                   ));
-  *max_result_len = result_len;
-  ret = 1;
-#endif /* MBEDTLS_VERSION_NUMBER >= 0x02150000 */
-
-error:
-  mbedtls_cipher_free(&ctx);
-  return ret;
+  return 1;
 }
 
 int
@@ -3371,14 +3647,7 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
                          coap_bin_const_t *aad,
                          uint8_t *result,
                          size_t *max_result_len) {
-  mbedtls_cipher_context_t ctx;
   const coap_crypto_aes_ccm_t *ccm;
-#if (MBEDTLS_VERSION_NUMBER < 0x02150000)
-  const unsigned char *tag;
-#endif /* MBEDTLS_VERSION_NUMBER < 0x02150000 */
-  int ret = 0;
-  size_t result_len = *max_result_len;
-  coap_bin_const_t laad;
 
   if (data == NULL)
     return 0;
@@ -3389,63 +3658,30 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
     return 0;
   }
 
-  ccm = &params->params.aes;
-
-  if (!setup_cipher_context(&ctx,
-                            params->alg,
-                            ccm->key.s,
-                            ccm->key.length,
-                            MBEDTLS_DECRYPT)) {
+  if (!get_cipher_key_size(params->alg, NULL)) {
+    coap_log_debug("coap_crypto_aead_decrypt: algorithm %d not supported\n",
+                   params->alg);
     return 0;
   }
 
+  ccm = &params->params.aes;
+
   if (data->length < ccm->tag_len) {
     coap_log_err("coap_decrypt: invalid tag length\n");
-    goto error;
+    return 0;
   }
 
-  if (aad) {
-    laad = *aad;
-  } else {
-    laad.s = NULL;
-    laad.length = 0;
+  if (coap_crypto_aead_decrypt_ccm(ccm->key.s, ccm->key.length,
+                                   ccm->nonce, 15 - ccm->l,
+                                   aad ? aad->s : NULL, aad ? aad->length : 0,
+                                   data->s, data->length,
+                                   result, *max_result_len, max_result_len,
+                                   ccm->tag_len) != 0) {
+    coap_log_debug("coap_crypto_aead_decrypt: decryption failed\n");
+    return 0;
   }
 
-#if (MBEDTLS_VERSION_NUMBER < 0x02150000)
-  tag = data->s + data->length - ccm->tag_len;
-  C(mbedtls_cipher_auth_decrypt(&ctx,
-                                ccm->nonce,
-                                15 - ccm->l, /* iv */
-                                laad.s,
-                                laad.length, /* ad */
-                                data->s,
-                                data->length - ccm->tag_len, /* input */
-                                result,
-                                &result_len, /* output */
-                                tag,
-                                ccm->tag_len /* tag */
-                               ));
-#else /* MBEDTLS_VERSION_NUMBER >= 0x02150000 */
-  C(mbedtls_cipher_auth_decrypt_ext(&ctx,
-                                    ccm->nonce,
-                                    15 - ccm->l, /* iv */
-                                    laad.s,
-                                    laad.length, /* ad */
-                                    data->s,
-                                    //     data->length - ccm->tag_len, /* input */
-                                    data->length, /* input */
-                                    result,
-                                    result_len,
-                                    &result_len, /* output */
-                                    ccm->tag_len /* tag */
-                                   ));
-#endif /* MBEDTLS_VERSION_NUMBER >= 0x02150000 */
-
-  *max_result_len = result_len;
-  ret = 1;
-error:
-  mbedtls_cipher_free(&ctx);
-  return ret;
+  return 1;
 }
 
 int
@@ -3453,44 +3689,33 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
                  coap_bin_const_t *key,
                  coap_bin_const_t *data,
                  coap_bin_const_t **hmac) {
-  mbedtls_md_context_t ctx;
-  int ret = 0;
-  const int use_hmac = 1;
-  const mbedtls_md_info_t *md_info;
-  mbedtls_md_type_t mac_algo;
-  unsigned int len;
+  coap_crypto_md_type_t md_type;
+  size_t mac_len;
   coap_binary_t *dummy = NULL;
 
   assert(key);
   assert(data);
   assert(hmac);
 
-  if ((mac_algo = get_hmac_alg(hmac_alg)) == 0) {
+  if (!get_hmac_params(hmac_alg, &md_type, &mac_len)) {
     coap_log_debug("coap_crypto_hmac: algorithm %d not supported\n", hmac_alg);
     return 0;
   }
-  md_info = mbedtls_md_info_from_type(mac_algo);
 
-  len = mbedtls_md_get_size(md_info);
-  if (len == 0) {
+  dummy = coap_new_binary(mac_len);
+  if (dummy == NULL)
+    return 0;
+
+  if (coap_crypto_hmac_compute(md_type, key->s, key->length,
+                               data->s, data->length,
+                               dummy->s, mac_len, NULL) != 0) {
+    coap_log_debug("coap_crypto_hmac: computation failed\n");
+    coap_delete_binary(dummy);
     return 0;
   }
 
-  mbedtls_md_init(&ctx);
-  C(mbedtls_md_setup(&ctx, md_info, use_hmac));
-
-  C(mbedtls_md_hmac_starts(&ctx, key->s, key->length));
-  C(mbedtls_md_hmac_update(&ctx, (const unsigned char *)data->s, data->length));
-  dummy = coap_new_binary(len);
-  if (dummy == NULL)
-    goto error;
-  C(mbedtls_md_hmac_finish(&ctx, dummy->s));
-
   *hmac = (coap_bin_const_t *)dummy;
-  ret = 1;
-error:
-  mbedtls_md_free(&ctx);
-  return ret;
+  return 1;
 }
 
 #endif /* COAP_OSCORE_SUPPORT */
