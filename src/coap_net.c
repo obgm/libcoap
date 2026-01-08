@@ -1351,6 +1351,12 @@ coap_send_test_extended_token(coap_session_t *session) {
 int
 coap_client_delay_first(coap_session_t *session) {
 #if COAP_CLIENT_SUPPORT
+
+  /* Disable Capabilities and Settings Messages for non-reliable protocols */
+  if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+    session->doing_first = 0;
+  }
+
   if (session->type == COAP_SESSION_TYPE_CLIENT && session->doing_first) {
     int timeout_ms = 5000;
     coap_session_state_t current_state = session->state;
