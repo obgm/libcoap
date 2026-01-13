@@ -23,8 +23,9 @@ SYNOPSIS
               [*-f* scheme://addr[:port]] [*-g* group]
               [*-l* loss] [*-o*] [*-p* port] [*-q* tls_engine_conf_file]
               [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]] [*-x*]
-              [*-y* rec_secs] [*-z* scheme://addr[:port]]
-              [*-A* address] [*-E* oscore_conf_file[,seq_file]]
+              [*-y* rec_secs] [*-z* scheme://addr[:port][/resource[?query]]]
+              [*-A* address]
+              [*-B* resource[:check] [*-E* oscore_conf_file[,seq_file]]
               [*-G* group_if] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port] | allow-mcast,[name1[,name2..]]]
               [*-T* max_token_size] [*-U* type] [*-V* num] [*-X* size]
@@ -115,18 +116,27 @@ OPTIONS - General
    comma separated.
 
 *-x* ::
-  Disable output of PDU data when displaying PDUs.
+   Disable output of PDU data when displaying PDUs.
 
 *-y* rec_secs::
    Attempt to reconnect a failed proxy session every rec_secs.
 
-*-z* scheme://address[:port]::
+*-z* scheme://address[:port][/resource[?query]]::
    Initiate a call-home to the specified scheme, address and optional port
-   define how to connect to the call-home client. Scheme is one of coap,
-   coaps, coap+tcp and coaps+tcp.
+   which define how to connect to the call-home client.  Scheme is one of
+   coap, coaps, coap+tcp and coaps+tcp.  If resource and query (or queries)
+   are defined, then this is sent to the call-home client using a PUT request,
 
 *-A* address::
    The local address of the interface which the server has to listen on.
+
+*-B* resource[:check]::
+  For usage when setting up forward-dynamic proxy sessions with -P option.
+  This defines the resource to set up for registering a new outgoing session
+  via call-home for the forward-dynamic proxy entry (using PUT), along with an
+  optional check key as a query option (check=vvv). Query information in the
+  PUT request can define the IP (ip=xxx) and port (port=yyy) the downstream
+  client should be specifying to connect to in the proxy request.
 
 *-E* oscore_conf_file[,seq_file]::
    'oscore_conf_file' contains OSCORE configuration. See *coap-oscore-conf*(5)

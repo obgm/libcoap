@@ -1950,7 +1950,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:g:h:j:k:l:m:no:p:q:rs:t:u:v:wx:y:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y23")) != -1) {
+                       "a:b:c:d:e:f:g:h:j:k:l:m:no:p:q:rs:t:u:v:wxy:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y23")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);

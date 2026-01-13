@@ -210,7 +210,10 @@ https://rfc-editor.org/rfc/rfc7967[RFC7967] No-Response option) for multicast
 requests.
 
 *COAP_RESOURCE_USE_BLOCK_DATA_HANDLER*::
-Call the block data handler for this resource if one is registered for the context
+Call the block data handler for this resource if one is registered for the context.
+
+*COAP_RESOURCE_HIDE_WELLKNOWN_CORE*::
+Hide this resource from .well-known/core.
 
 *NOTE:* _uri_path_, if not 7 bit readable ASCII, binary bytes must be hex
 encoded according to the rules defined in

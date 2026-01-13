@@ -76,7 +76,7 @@ coap_proxy_log_entry(coap_session_t *incoming, const coap_pdu_t *pdu,
 }
 
 void
-coap_proxy_del_req(coap_proxy_list_t *proxy_entry, coap_proxy_req_t *proxy_req) {
+coap_proxy_del_req(coap_proxy_entry_t *proxy_entry, coap_proxy_req_t *proxy_req) {
   coap_proxy_log_entry(proxy_req->incoming, proxy_req->pdu,  proxy_req->token_used, "del");
 
   coap_delete_pdu_lkd(proxy_req->pdu);
@@ -116,7 +116,7 @@ coap_proxy_del_req(coap_proxy_list_t *proxy_entry, coap_proxy_req_t *proxy_req) 
 }
 
 static void
-coap_proxy_cleanup_entry(coap_proxy_list_t *proxy_entry, int send_failure) {
+coap_proxy_cleanup_entry(coap_proxy_entry_t *proxy_entry, int send_failure) {
   coap_proxy_req_t *proxy_req, *treq;
 
   LL_FOREACH_SAFE(proxy_entry->proxy_req, proxy_req, treq) {
@@ -164,7 +164,7 @@ coap_proxy_cleanup(coap_context_t *context) {
 }
 
 static int
-coap_proxy_check_observe(coap_proxy_list_t *proxy_entry) {
+coap_proxy_check_observe(coap_proxy_entry_t *proxy_entry) {
   if (proxy_entry && proxy_entry->ongoing) {
     /* Need to see if there are any Observes active */
     coap_lg_crcv_t *lg_crcv;
@@ -190,7 +190,7 @@ coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
 
   *tim_rem = COAP_MAX_DELAY_TICKS;
   for (i = 0; i < context->proxy_list_count; i++) {
-    coap_proxy_list_t *proxy_entry = &context->proxy_list[i];
+    coap_proxy_entry_t *proxy_entry = &context->proxy_list[i];
 
     if (coap_proxy_check_observe(proxy_entry))
       continue;
@@ -351,14 +351,84 @@ coap_proxy_map_type(coap_proxy_t proxy_type) {
   return proxy_type;
 }
 
-static coap_proxy_list_t *
+static coap_proxy_entry_t *
+coap_proxy_get_add_list_entry(coap_session_t *incoming, coap_session_t *ongoing,
+                              coap_uri_t uri, coap_proxy_server_list_t *server_list,
+                              int allow_add) {
+  coap_context_t *context = incoming ? incoming->context : ongoing->context;
+  coap_proxy_entry_t *proxy_list = context->proxy_list;
+  size_t proxy_list_count = context->proxy_list_count;
+  coap_proxy_entry_t *new_proxy_list;
+  size_t i;
+
+  /* See if we are already connected to the Server */
+  for (i = 0; i < proxy_list_count; i++) {
+    if (coap_string_equal(&proxy_list[i].uri.host, &uri.host) &&
+        proxy_list[i].uri.port == uri.port &&
+        proxy_list[i].uri.scheme == uri.scheme) {
+      if (!proxy_list[i].track_client_session && context->proxy_response_cb) {
+        coap_ticks(&proxy_list[i].last_used);
+        return &proxy_list[i];
+      } else {
+        if (proxy_list[i].incoming == incoming) {
+          coap_ticks(&proxy_list[i].last_used);
+          return &proxy_list[i];
+        }
+      }
+    }
+  }
+  if ((server_list->type & COAP_PROXY_DYN_DEFINED) && !allow_add)
+    return NULL;
+
+  /* Need to create a new forwarding mapping */
+  new_proxy_list = coap_realloc_type(COAP_STRING, proxy_list,
+                                     (proxy_list_count+1)*sizeof(proxy_list[0]));
+
+  if (new_proxy_list == NULL) {
+    return NULL;
+  }
+  context->proxy_list = proxy_list = new_proxy_list;
+  memset(&proxy_list[proxy_list_count], 0, sizeof(proxy_list[proxy_list_count]));
+
+  /* Keep a copy of the host as server_use->uri pointed to will be going away */
+  proxy_list[proxy_list_count].uri = uri;
+  proxy_list[proxy_list_count].uri_host_keep = coap_malloc_type(COAP_STRING,
+                                               uri.host.length);
+  if (!proxy_list[proxy_list_count].uri_host_keep) {
+    return NULL;
+  }
+  memcpy(proxy_list[proxy_list_count].uri_host_keep, uri.host.s, uri.host.length);
+  proxy_list[proxy_list_count].uri.host.s = proxy_list[proxy_list_count].uri_host_keep;
+  /* Unset uri parts which point to going away information */
+  proxy_list[proxy_list_count].uri.path.s = NULL;
+  proxy_list[proxy_list_count].uri.path.length = 0;
+  proxy_list[proxy_list_count].uri.query.s = NULL;
+  proxy_list[proxy_list_count].uri.query.length = 0;
+
+  proxy_list[proxy_list_count].ongoing = ongoing;
+  proxy_list[proxy_list_count].idle_timeout_ticks = server_list->idle_timeout_secs *
+                                                    COAP_TICKS_PER_SECOND;
+  proxy_list[proxy_list_count].track_client_session = server_list->track_client_session;
+  coap_ticks(&proxy_list[proxy_list_count].last_used);
+  if (incoming) {
+    incoming->proxy_entry = &proxy_list[proxy_list_count];
+    if (server_list->track_client_session)
+      proxy_list[proxy_list_count].incoming = incoming;
+    incoming->proxy_entry = &proxy_list[proxy_list_count];
+  }
+
+  context->proxy_list_count++;
+  return &proxy_list[proxy_list_count];
+}
+
+static coap_proxy_entry_t *
 coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
                        coap_pdu_t *response,
                        coap_proxy_server_list_t *server_list,
                        coap_proxy_server_t *server_use, int *proxy_entry_created) {
   size_t i;
-  coap_proxy_list_t *new_proxy_list;
-  coap_proxy_list_t *proxy_list = session->context->proxy_list;
+  coap_proxy_entry_t *proxy_entry;
+  coap_proxy_entry_t *proxy_list = session->context->proxy_list;
   size_t proxy_list_count = session->context->proxy_list_count;
   coap_opt_iterator_t opt_iter;
   coap_opt_t *proxy_scheme;
@@ -442,70 +512,27 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
     return NULL;
   }
 
-  /* See if we are already connected to the Server */
-  for (i = 0; i < proxy_list_count; i++) {
-    if (coap_string_equal(&proxy_list[i].uri.host, &server_use->uri.host) &&
-        proxy_list[i].uri.port == server_use->uri.port &&
-        proxy_list[i].uri.scheme == server_use->uri.scheme) {
-      if (!server_list->track_client_session && session->context->proxy_response_cb) {
-        coap_ticks(&proxy_list[i].last_used);
-        return &proxy_list[i];
-      } else {
-        if (proxy_list[i].incoming == session) {
-          coap_ticks(&proxy_list[i].last_used);
-          return &proxy_list[i];
-        }
-      }
-    }
-  }
+  /* Check if need to create a new forwarding mapping */
+  proxy_entry = coap_proxy_get_add_list_entry(session, NULL, server_use->uri, server_list, 0);
 
-  /* Need to create a new forwarding mapping */
-  new_proxy_list = coap_realloc_type(COAP_STRING, proxy_list, (i+1)*sizeof(proxy_list[0]));
-
-  if (new_proxy_list == NULL) {
+  if (proxy_entry == NULL) {
     response->code = COAP_RESPONSE_CODE(500);
     return NULL;
   }
-  session->context->proxy_list = proxy_list = new_proxy_list;
-  memset(&proxy_list[i], 0, sizeof(proxy_list[i]));
 
-  /* Keep a copy of the host as server_use->uri pointed to will be going away */
-  proxy_list[i].uri = server_use->uri;
-  proxy_list[i].uri_host_keep = coap_malloc_type(COAP_STRING,
-                                                 server_use->uri.host.length);
-  if (!proxy_list[i].uri_host_keep) {
-    response->code = COAP_RESPONSE_CODE(500);
-    return NULL;
-  }
-  memcpy(proxy_list[i].uri_host_keep, server_use->uri.host.s,
-         server_use->uri.host.length);
-  proxy_list[i].uri.host.s = proxy_list[i].uri_host_keep;
-  /* Unset uri parts which point to going away information */
-  proxy_list[i].uri.path.s = NULL;
-  proxy_list[i].uri.path.length = 0;
-  proxy_list[i].uri.query.s = NULL;
-  proxy_list[i].uri.query.length = 0;
-
-  if (server_list->track_client_session) {
-    proxy_list[i].incoming = session;
-  }
   *proxy_entry_created = 1;
-  session->context->proxy_list_count++;
-  proxy_list[i].idle_timeout_ticks = server_list->idle_timeout_secs * COAP_TICKS_PER_SECOND;
-  coap_ticks(&proxy_list[i].last_used);
-  session->proxy_entry = &proxy_list[i];
-  return &proxy_list[i];
+  return proxy_entry;
 }
 
 int
 coap_proxy_remove_association(coap_session_t *session, int send_failure) {
 
   size_t i;
-  coap_proxy_list_t *proxy_list = session->context->proxy_list;
+  coap_proxy_entry_t *proxy_list = session->context->proxy_list;
   size_t proxy_list_count = session->context->proxy_list_count;
 
   for (i = 0; i < proxy_list_count; i++) {
-    coap_proxy_list_t *proxy_entry = &proxy_list[i];
+    coap_proxy_entry_t *proxy_entry = &proxy_list[i];
     coap_proxy_req_t *proxy_req;
 
     /* Check for incoming match */
@@ -548,7 +575,7 @@ retry:
   return 0;
 }
 
-static coap_proxy_list_t *
+static coap_proxy_entry_t *
 coap_proxy_get_ongoing_session(coap_session_t *session,
                                const coap_pdu_t *request,
                                coap_pdu_t *response,
@@ -557,7 +584,7 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
   coap_address_t dst;
   coap_proto_t proto;
   coap_addr_info_t *info_list = NULL;
-  coap_proxy_list_t *proxy_entry;
+  coap_proxy_entry_t *proxy_entry;
   coap_context_t *context = session->context;
   static char client_sni[256];
   coap_proxy_server_t server_use;
@@ -716,8 +743,10 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
       return NULL;
     }
     if (proxy_entry_created) {
-      coap_log_debug("*  %s: proxy_entry %p created (tot count = % " PRIdS ")\n",
+      coap_log_debug("*  %s: proxy_entry %.*s:%d %p created (tot count = % " PRIdS ")\n",
                      coap_session_str(proxy_entry->ongoing),
+                     (int)proxy_entry->uri.host.length, proxy_entry->uri.host.s,
+                     proxy_entry->uri.port,
                      (void *)proxy_entry,
                      session->context->proxy_list_count);
     }
@@ -738,7 +767,7 @@ coap_proxy_release_body_data(coap_session_t *session COAP_UNUSED,
 }
 
 static coap_proxy_req_t *
-coap_proxy_get_req(coap_proxy_list_t *proxy_entry, coap_proxy_cache_t *proxy_cache,
+coap_proxy_get_req(coap_proxy_entry_t *proxy_entry, coap_proxy_cache_t *proxy_cache,
                    coap_session_t *session) {
   coap_proxy_req_t *proxy_req;
 
@@ -908,7 +937,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
                                coap_resource_t *resource,
                                coap_cache_key_t *cache_key,
                                coap_proxy_server_list_t *server_list) {
-  coap_proxy_list_t *proxy_entry;
+  coap_proxy_entry_t *proxy_entry;
   size_t size;
   size_t offset;
   size_t total;
@@ -1198,12 +1227,12 @@ return_cached_info:
 coap_proxy_req_t *
 coap_proxy_map_outgoing_request(coap_session_t *ongoing,
                                 const coap_pdu_t *received,
-                                coap_proxy_list_t **u_proxy_entry) {
-  coap_proxy_list_t *proxy_list = ongoing->context->proxy_list;
+                                coap_proxy_entry_t **u_proxy_entry) {
+  coap_proxy_entry_t *proxy_list = ongoing->context->proxy_list;
   size_t proxy_list_count = ongoing->context->proxy_list_count;
   size_t i;
   coap_bin_const_t rcv_token = coap_pdu_get_token(received);
-  coap_proxy_list_t *proxy_entry = NULL;
+  coap_proxy_entry_t *proxy_entry = NULL;
   coap_proxy_req_t *proxy_req;
 
   for (i = 0; i < proxy_list_count; i++) {
@@ -1267,7 +1296,7 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
   coap_opt_iterator_t opt_iter;
   size_t offset;
   size_t total;
-  coap_proxy_list_t *proxy_entry = NULL;
+  coap_proxy_entry_t *proxy_entry = NULL;
   uint16_t media_type = COAP_MEDIATYPE_TEXT_PLAIN;
   int maxage = -1;
   uint64_t etag = 0;
@@ -1397,7 +1426,7 @@ void
 coap_proxy_process_incoming(coap_session_t *session,
                             coap_pdu_t *rcvd,
                             void *body_data, coap_proxy_req_t *proxy_req,
-                            coap_proxy_list_t *proxy_entry) {
+                            coap_proxy_entry_t *proxy_entry) {
   coap_opt_t *obs_opt;
   coap_opt_t *option;
   coap_opt_iterator_t opt_iter;
@@ -1632,6 +1661,101 @@ coap_new_client_session_proxy_lkd(coap_context_t *ctx,
   return session;
 }
 
+COAP_API coap_proxy_entry_t *
+coap_proxy_fwd_add_client_session(coap_session_t *session, const char *use_ip,
+                                  uint16_t use_port,
+                                  coap_proxy_server_list_t *server_list) {
+  coap_proxy_entry_t *ret;
+
+  coap_lock_lock(return 0);
+  ret = coap_proxy_fwd_add_client_session_lkd(session, use_ip, use_port, server_list);
+  coap_lock_unlock();
+  return ret;
+}
+
+coap_proxy_entry_t *
+coap_proxy_fwd_add_client_session_lkd(coap_session_t *session, const char *use_ip,
+                                      uint16_t use_port,
+                                      coap_proxy_server_list_t *server_list) {
+#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+  char addr[INET6_ADDRSTRLEN];
+#else /* WITH_LWIP || WITH_CONTIKI */
+  char addr[40];
+#endif /* WITH_LWIP || WITH_CONTIKI */
+  coap_proxy_entry_t *proxy_entry;
+  coap_uri_t uri;
+
+  if (!use_ip && !coap_print_ip_addr(&session->addr_info.remote, addr, sizeof(addr))) {
+    return NULL;
+  }
+  if (!use_ip)
+    use_ip = addr;
+
+  memset(&uri, 0, sizeof(uri));
+  uri.port = use_port;
+  switch (session->proto) {
+  case COAP_PROTO_UDP:
+    uri.scheme = COAP_URI_SCHEME_COAP;
+    if (uri.port == 0)
+      uri.port = 5683;
+    break;
+  case COAP_PROTO_DTLS:
+    uri.scheme = COAP_URI_SCHEME_COAPS;
+    if (uri.port == 0)
+      uri.port = 5684;
+    break;
+  case COAP_PROTO_TCP:
+    uri.scheme = COAP_URI_SCHEME_COAP_TCP;
+    if (uri.port == 0)
+      uri.port = 5683;
+    break;
+  case COAP_PROTO_TLS:
+    uri.scheme = COAP_URI_SCHEME_COAPS_TCP;
+    if (uri.port == 0)
+      uri.port = 5684;
+    break;
+  case COAP_PROTO_WS:
+    uri.scheme = COAP_URI_SCHEME_COAP_WS;
+    if (uri.port == 0)
+      uri.port = 80;
+    break;
+  case COAP_PROTO_WSS:
+    uri.scheme = COAP_URI_SCHEME_COAPS_WS;
+    if (uri.port == 0)
+      uri.port = 443;
+    break;
+  case COAP_PROTO_LAST:
+  case COAP_PROTO_NONE:
+  default:
+    return NULL;
+  }
+  if (memcmp(use_ip, "::ffff:", 7) == 0) {
+    /* IPv4 in IPv6 format */
+    uri.host.s = (const uint8_t *)&use_ip[7];
+    uri.host.length = strlen(&use_ip[7]);
+  } else {
+    uri.host.s = (const uint8_t *)use_ip;
+    uri.host.length = strlen(use_ip);
+  }
+  if (!uri.host.length)
+    return NULL;
+
+  proxy_entry = coap_proxy_get_add_list_entry(NULL, session, uri, server_list, 1);
+  if (proxy_entry) {
+    coap_log_debug("*  %s: proxy_entry %.*s:%d %p created (tot count = % " PRIdS ")\n",
+                   coap_session_str(proxy_entry->ongoing),
+                   (int)proxy_entry->uri.host.length, proxy_entry->uri.host.s,
+                   proxy_entry->uri.port,
+                   (void *)proxy_entry,
+                   session->context->proxy_list_count);
+    proxy_entry->idle_timeout_ticks = 0;
+    proxy_entry->track_client_session = 0;
+    coap_session_set_type_client_lkd(session, 1);
+    return proxy_entry;
+  }
+  return NULL;
+}
+
 void
 coap_delete_proxy_subscriber(coap_session_t *session, coap_bin_const_t *token,
                              coap_mid_t mid, coap_proxy_subs_delete_t type) {
@@ -1640,7 +1764,7 @@ coap_delete_proxy_subscriber(coap_session_t *session, coap_bin_const_t *token,
   size_t i;
 
   for (i = 0; i < context->proxy_list_count; i++) {
-    coap_proxy_list_t *proxy_entry = &context->proxy_list[i];
+    coap_proxy_entry_t *proxy_entry = &context->proxy_list[i];
     coap_proxy_req_t *proxy_req, *treq;
 
     LL_FOREACH_SAFE(proxy_entry->proxy_req, proxy_req, treq) {

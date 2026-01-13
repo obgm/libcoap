@@ -13,6 +13,7 @@ global:
   coap_add_optlist_pdu;
   coap_add_resource;
   coap_add_token;
+  coap_address_clr_addr;
   coap_address_copy;
   coap_address_equals;
   coap_address_get_port;
@@ -228,6 +229,7 @@ global:
   coap_prng_init;
   coap_proxy_forward_request;
   coap_proxy_forward_response;
+  coap_proxy_fwd_add_client_session;
   coap_proxy_is_supported;
   coap_q_block_is_supported;
   coap_query_into_optlist;

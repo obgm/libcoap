@@ -4192,7 +4192,7 @@ coap_call_response_handler(coap_session_t *session,
 
 #if COAP_PROXY_SUPPORT
   if (context->proxy_response_cb) {
-    coap_proxy_list_t *proxy_entry;
+    coap_proxy_entry_t *proxy_entry;
     coap_proxy_req_t *proxy_req = coap_proxy_map_outgoing_request(session,
                                   rcvd,
                                   &proxy_entry);

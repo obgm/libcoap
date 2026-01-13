@@ -102,7 +102,7 @@ RETURN VALUES
 
 EXAMPLES
 --------
-CoAP-Client Set Up*
+*CoAP-Client Set Up*
 
 [source, c]
 ----
@@ -215,7 +215,7 @@ main(int argc, char **argv) {
 }
 ----
 
-CoAP-Server Set Up*
+*CoAP-Server Set Up*
 
 [source, c]
 ----

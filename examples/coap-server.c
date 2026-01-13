@@ -144,6 +144,8 @@ static uint32_t reconnect_secs = 0;
 static coap_uri_t call_home_uri;
 static int call_home = 0;
 #endif /* COAP_CLIENT_SUPPORT */
+static const char *proxy_add_resource = NULL;
+static const char *proxy_add_check = NULL;
 
 static coap_dtls_pki_t *setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
 
@@ -957,6 +959,79 @@ fail:
   return;
 }
 
+#if COAP_PROXY_SUPPORT
+/*
+ * PUT  handler - to register a forward-dynamic proxy session
+ */
+
+static void
+hnd_put_dyn_register(coap_resource_t *resource COAP_UNUSED,
+                     coap_session_t *session,
+                     const coap_pdu_t *request COAP_UNUSED,
+                     const coap_string_t *query,
+                     coap_pdu_t *response) {
+  uint16_t use_port = 0;
+  const char *use_ip = NULL;
+  const char *check = NULL;
+  char *p;
+  char *q;
+  char *rw = NULL;
+
+  if (query) {
+    rw = coap_malloc_type(COAP_STRING, query->length+1);
+    if (!rw) {
+      coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
+      return;
+    }
+
+    memcpy(rw, query->s, query->length);
+    rw[query->length] = '\000';
+
+    p = rw;
+    q = strchr(p, '&');
+    while (p) {
+      if (q)
+        *q = '\000';
+      if (strncmp(p, "port=", 5) == 0) {
+        use_port = atoi(&p[5]);
+      } else if (strncmp(p, "ip=", 3) == 0) {
+        use_ip = &p[3];
+      } else if (strncmp(p, "check=", 6) == 0) {
+        check = &p[6];
+      }
+      p = q;
+      if (p) {
+        p++;
+        q = strchr(p, '&');
+      }
+    }
+  }
+
+  if (!check && !proxy_add_check) {
+    goto valid;
+  }
+  if (check && proxy_add_check) {
+    if (strcmp(check, proxy_add_check) == 0) {
+      goto valid;
+    }
+  }
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_UNAUTHORIZED);
+  coap_free_type(COAP_STRING, rw);
+  return;
+
+valid:
+  if (!coap_proxy_fwd_add_client_session(session, use_ip, use_port, &forward_proxy)) {
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
+    coap_free_type(COAP_STRING, rw);
+    return;
+  }
+  coap_free_type(COAP_STRING, rw);
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
+  coap_add_data(response, sizeof("Registered")-1, (const uint8_t *)"Registered");
+  return;
+}
+#endif /* COAP_PROXY_SUPPORT */
+
 static coap_response_t
 individual_blocks(coap_session_t *session COAP_UNUSED,
                   coap_pdu_t *pdu COAP_UNUSED,
@@ -1109,6 +1184,8 @@ init_resources(coap_context_t *ctx) {
   if (reverse_proxy.entry_count) {
     /* Create a reverse proxy resource to handle PUTs */
     r = coap_resource_reverse_proxy_init(hnd_reverse_proxy_uri, 0);
+    if (!r)
+      return;
     coap_add_resource(ctx, r);
     coap_register_event_handler(ctx, proxy_event_handler);
     coap_register_proxy_response_handler(ctx, proxy_response_handler);
@@ -1116,6 +1193,8 @@ init_resources(coap_context_t *ctx) {
   } else {
 #endif /* COAP_PROXY_SUPPORT */
     r = coap_resource_init(NULL, COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT);
+    if (!r)
+      return;
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_index);
 
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
@@ -1126,6 +1205,8 @@ init_resources(coap_context_t *ctx) {
     my_clock_base = clock_offset;
 
     r = coap_resource_init(coap_make_str_const("time"), resource_flags);
+    if (!r)
+      return;
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_fetch_time);
     coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get_fetch_time);
     coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_time);
@@ -1150,6 +1231,8 @@ init_resources(coap_context_t *ctx) {
                              resource_flags |
                              COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT |
                              COAP_RESOURCE_FLAGS_LIB_DIS_MCAST_DELAYS);
+      if (!r)
+        return;
       coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_async);
 
       coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
@@ -1161,6 +1244,8 @@ init_resources(coap_context_t *ctx) {
                              resource_flags | COAP_RESOURCE_USE_BLOCK_DATA_HANDLER);
     else
       r = coap_resource_init(coap_make_str_const("example_data"), resource_flags);
+    if (!r)
+      return;
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_example_data);
     coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_example_data);
     coap_register_request_handler(r, COAP_REQUEST_FETCH, hnd_get_example_data);
@@ -1175,10 +1260,32 @@ init_resources(coap_context_t *ctx) {
   if (proxy_host_name_count) {
     r = coap_resource_proxy_uri_init2(hnd_forward_proxy_uri, proxy_host_name_count,
                                       proxy_host_name_list, 0);
+    if (!r)
+      return;
     coap_add_resource(ctx, r);
     coap_register_event_handler(ctx, proxy_event_handler);
     coap_register_proxy_response_handler(ctx, proxy_response_handler);
     coap_register_nack_handler(ctx, proxy_nack_handler);
+    if (proxy_add_resource) {
+      coap_str_const_t uri;
+
+      if (!(forward_proxy.type & COAP_PROXY_FWD_DYNAMIC)) {
+        return;
+      }
+      forward_proxy.type |= COAP_PROXY_DYN_DEFINED;
+      uri.s = (const uint8_t *)proxy_add_resource;
+      uri.length = strlen(proxy_add_resource);
+      /*
+       * Create a resource to the dynamic proxy setup handler
+       */
+      r = coap_resource_init(&uri, resource_flags | COAP_RESOURCE_HIDE_WELLKNOWN_CORE);
+      if (!r) {
+        return;
+      }
+      coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"Register DYN Proxy\""), 0);
+      coap_register_request_handler(r, COAP_REQUEST_PUT, hnd_put_dyn_register);
+      coap_add_resource(ctx, r);
+    }
   }
 #endif /* COAP_PROXY_SUPPORT */
   coap_resource_release_userdata_handler(ctx, resource_data_delete);
@@ -1551,9 +1658,10 @@ usage(const char *program, const char *version) {
           "Usage: %s [-a priority] [-b max_block_size] [-d max] [-e]\n"
           "\t\t[-f scheme://address[:port]] [-g group] -l loss] [-o] [-p port]\n"
           "\t\t[-q tls_engine_conf_file] [-r] [-v num] [-w [port][,secure_port]]\n"
-          "\t\t[-x] [-y rec_secs] [-z scheme://addr[:port]] [-A address]\n"
-          "\t\t[-E oscore_conf_file[,seq_file]] [-G group_if]\n"
-          "\t\t[-L value] [-N] [-P scheme://address[:port],[name1[,name2..]]]\n"
+          "\t\t[-x] [-y rec_secs] [-z scheme://addr[:port][/resource[?query]]]\n"
+          "\t\t[-A address] [-B resource[:check]] [-E oscore_conf_file[,seq_file]]\n"
+          "\t\t[-G group_if] [-L value] [-N]\n"
+          "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size] [-3]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
           "\t\t[-s match_psk_sni_file] [-u user] [-2]]\n"
@@ -1607,11 +1715,25 @@ usage(const char *program, const char *version) {
           "\t-x     \t\tDisable output of PDU data when displaying PDUs\n"
           "\t-y rec_secs\tAttempt to reconnect a failed proxy session every\n"
           "\t       \t\trec_secs\n"
-          "\t-z scheme://address[:port]\n"
+          "\t-z scheme://address[:port][/resource[?query]]\n"
           "\t       \t\tInitiate a call-home to the specified scheme, address and\n"
-          "\t       \t\toptional port define how to connect to the call-home client.\n"
-          "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp\n"
+          "\t       \t\toptional port which define how to connect to the call-home\n"
+          "\t       \t\tclient.\n"
+          "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp.\n"
+          "\t       \t\tIf resource and query (or queries) are defined, then this\n"
+          "\t       \t\tis sent to the call-home client using a PUT request\n"
           "\t-A address\tInterface address to bind to\n"
+          "\t-B resource[:check]\n"
+          "\t       \t\tFor usage when setting up forward-dynamic proxy sessions\n"
+          "\t       \t\twith -P option. This defines the resource to set up for\n"
+          "\t       \t\tregistering a new outgoing session via call-home for the\n"
+          "\t       \t\tforward-dynamic proxy entry (using PUT), along with an\n"
+          "\t       \t\toptional check key as a query option (check=vvv). Query\n"
+          "\t       \t\tinformation in the PUT request can define the IP (ip=xxx)\n"
+          "\t       \t\tand port (port=yyy) the downstream client should be\n"
+          "\t       \t\tspecifying to connect to in the proxy request\n"
+          , program);
+  fprintf(stderr,
           "\t-E oscore_conf_file[,seq_file]\n"
           "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
           "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
@@ -1623,8 +1745,6 @@ usage(const char *program, const char *version) {
           "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
           "\t       \t\t(Sum of one or more of 1,2,4 64, 128, 256 and 512)\n"
-          , program);
-  fprintf(stderr,
           "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
           "\t       \t\tevery fifth response will still be sent as a confirmable\n"
           "\t       \t\tresponse (RFC 7641 requirement)\n"
@@ -1748,7 +1868,7 @@ usage(const char *program, const char *version) {
 
 #if COAP_CLIENT_SUPPORT
 static int
-do_call_home(coap_context_t *ctx) {
+do_call_home(coap_context_t *ctx, const char *local_bind, const char *local_port) {
   coap_address_t dst;
   coap_uri_scheme_t scheme;
   coap_proto_t proto;
@@ -1757,10 +1877,12 @@ do_call_home(coap_context_t *ctx) {
   uint16_t port;
   coap_addr_info_t *info_list = NULL;
   coap_session_t *session = NULL;
+  coap_address_t *src = NULL;
+  coap_address_t local_addr;
 
+  scheme = call_home_uri.scheme;
   server = call_home_uri.host;
   port = call_home_uri.port;
-  scheme = call_home_uri.scheme;
 
   /* resolve destination address where call-home should be sent */
   info_list = coap_resolve_address_info(&server, port, port, port, port,
@@ -1774,11 +1896,37 @@ do_call_home(coap_context_t *ctx) {
   memcpy(&dst, &info_list->addr, sizeof(dst));
   coap_free_address_info(info_list);
 
+  if (local_bind && strcmp(local_bind, "::") != 0) {
+    coap_str_const_t local;
+
+    port = local_port ? atoi(local_port) : 0;
+    local.s = (const uint8_t *)local_bind;
+    local.length = strlen(local_bind);
+    /* resolve local address where data should be sent from (don't update port number */
+    info_list = coap_resolve_address_info(&local, port, port, port, port,
+                                          AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV | AI_ALL,
+                                          1 << scheme,
+                                          COAP_RESOLVE_TYPE_REMOTE);
+    if (!info_list) {
+      fprintf(stderr, "coap_resolve_address_info: %s: failed\n", local_bind);
+      return 0;
+    }
+    memcpy(&local_addr, &info_list->addr, sizeof(dst));
+    src = &local_addr;
+    coap_free_address_info(info_list);
+    info_list = NULL;
+  } else if (local_port) {
+    memcpy(&local_addr, &dst, sizeof(dst));
+    coap_address_set_port(&local_addr, atoi(local_port));
+    coap_address_clr_addr(&local_addr);
+    src = &local_addr;
+  }
+
   switch (scheme) {
   case COAP_URI_SCHEME_COAP:
   case COAP_URI_SCHEME_COAP_TCP:
   case COAP_URI_SCHEME_COAP_WS:
-    session = coap_new_client_session3(ctx, NULL, &dst, proto, NULL, NULL, NULL);
+    session = coap_new_client_session3(ctx, src, &dst, proto, NULL, NULL, NULL);
     break;
   case COAP_URI_SCHEME_COAPS:
   case COAP_URI_SCHEME_COAPS_TCP:
@@ -1788,12 +1936,12 @@ do_call_home(coap_context_t *ctx) {
       /* Use our defined PKI certs (or NULL)  */
       coap_dtls_pki_t *dtls_pki = setup_pki(ctx, COAP_DTLS_ROLE_CLIENT,
                                             client_sni);
-      session = coap_new_client_session_pki3(ctx, NULL, &dst, proto, dtls_pki, NULL, NULL, NULL);
+      session = coap_new_client_session_pki3(ctx, src, &dst, proto, dtls_pki, NULL, NULL, NULL);
     } else {
       /* Use our defined PSK */
       coap_dtls_cpsk_t *dtls_cpsk = setup_cpsk(client_sni);
 
-      session = coap_new_client_session_psk3(ctx, NULL, &dst, proto, dtls_cpsk, NULL, NULL, NULL);
+      session = coap_new_client_session_psk3(ctx, src, &dst, proto, dtls_cpsk, NULL, NULL, NULL);
     }
     break;
   case COAP_URI_SCHEME_HTTP:
@@ -1805,6 +1953,36 @@ do_call_home(coap_context_t *ctx) {
   }
   if (!session) {
     return 0;
+  }
+  if (call_home_uri.path.length) {
+    /* Send the register dynamic proxy upstream server */
+    coap_pdu_t *pdu = coap_new_pdu(COAP_MESSAGE_CON, COAP_REQUEST_CODE_PUT, session);
+
+    if (pdu) {
+      coap_optlist_t *optlist_chain = NULL;
+      int ret;
+      coap_pdu_t *resp_pdu = NULL;
+
+      if (!coap_path_into_optlist(call_home_uri.path.s, call_home_uri.path.length,
+                                  COAP_OPTION_URI_PATH, &optlist_chain))
+        return 0;
+
+      if (call_home_uri.query.length) {
+        if (!coap_query_into_optlist(call_home_uri.query.s, call_home_uri.query.length,
+                                     COAP_OPTION_URI_QUERY, &optlist_chain))
+          return 0;
+      }
+      if (optlist_chain) {
+        coap_add_optlist_pdu(pdu, &optlist_chain);
+        coap_delete_optlist(optlist_chain);
+      }
+      ret = coap_send_recv(session, pdu, &resp_pdu, 2000);
+      coap_delete_pdu(pdu);
+      coap_delete_pdu(resp_pdu);
+      if (ret < 0) {
+        return 0;
+      }
+    }
   }
   coap_session_set_type_server(session);
   return 1;
@@ -2056,6 +2234,21 @@ cmdline_oscore(char *arg) {
   }
   fprintf(stderr, "OSCORE support not enabled\n");
   return 0;
+}
+
+static int
+cmdline_proxy_add(char *arg) {
+  char *sep = strchr(arg, ':');
+
+  if (sep)
+    *sep = '\000';
+  proxy_add_resource = arg;
+
+  if (sep) {
+    sep++;
+    proxy_add_check = sep;
+  }
+  return 1;
 }
 
 static int
@@ -2429,7 +2622,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:y:z:A:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y23")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:xy:z:A:B:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y23")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2445,6 +2638,11 @@ main(int argc, char **argv) {
       break;
     case 'b':
       max_block_size = atoi(optarg);
+      break;
+    case 'B':
+      if (!cmdline_proxy_add(optarg)) {
+        goto failed;
+      }
       break;
     case 'c' :
       cert_file = optarg;
@@ -2624,8 +2822,7 @@ main(int argc, char **argv) {
       break;
     case 'z':
 #if COAP_CLIENT_SUPPORT
-      if (coap_split_uri((u_char *)optarg, strlen(optarg), &call_home_uri) < 0 ||
-          call_home_uri.path.length != 0 || call_home_uri.query.length != 0) {
+      if (coap_split_uri((u_char *)optarg, strlen(optarg), &call_home_uri) < 0) {
         fprintf(stderr, "invalid CoAP URI '%s'\n", optarg);
         exit(1);
       }
@@ -2732,7 +2929,7 @@ main(int argc, char **argv) {
 
 #if COAP_CLIENT_SUPPORT
   if (call_home) {
-    if (!do_call_home(ctx)) {
+    if (!do_call_home(ctx, addr_str, port_str)) {
       fprintf(stderr, "Unable to set up call home\n");
       goto finish;
     }

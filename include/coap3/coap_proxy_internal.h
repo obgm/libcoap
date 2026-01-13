@@ -55,13 +55,16 @@ typedef struct coap_proxy_req_t {
   unsigned doing_observe;       /**< Set if doing upstream observe */
 } coap_proxy_req_t;
 
-struct coap_proxy_list_t {
+struct coap_proxy_entry_t {
   coap_session_t *ongoing;    /**< Ongoing session */
   coap_session_t *incoming;   /**< Incoming session (used if client tracking( */
   coap_proxy_req_t *proxy_req; /**< Incoming list of request info */
   coap_proxy_cache_t *rsp_cache; /* Response cache list */
-  coap_uri_t uri;             /**< URI info for connection */
   uint8_t *uri_host_keep;     /**< memory for uri.host */
+  coap_uri_t uri;             /**< URI info for connection. */
+  int track_client_session;   /**< If 1, track individual connections to upstream
+                                   server, else 0 for all clients to be multiplexed
+                                   over the same upstream session */
   coap_tick_t idle_timeout_ticks; /**< Idle timeout (0 == no timeout). Timeout
                                        is ignored if there are any active
                                        upstream Observe requests */
@@ -178,6 +181,33 @@ coap_response_t coap_proxy_forward_response_lkd(coap_session_t *session,
 coap_session_t *coap_new_client_session_proxy_lkd(coap_context_t *context,
                                                   coap_proxy_server_list_t *server_list);
 
+
+/**
+ * Add a previously setup proxy-client session to use the proxy logic for forwarding
+ * subsequent dynamic proxy requests.
+ *
+ * Note: This function must be called in the locked state,
+ *
+ * The upstream server information is derived from @p session for the remote IP and
+ * @p use_port for the port, and proxy connection type is derived from @p server_list
+ * (track_client_session, and idle_timeout_secs are ignored and set to 0 and 0
+ * respectively). type must contain at least COAP_PROXY_FWD_DYNAMIC, and @p server_list
+ * must be the same as used in coap_proxy_forward_request().
+ *
+ * @param session The CoAP upstream proxy session previosly set up (e.g. via call-home).
+ * @param use_ip    The IP address to match on incoming proxy requests. If NULL, then
+ *                  the IP address is determined from @p session.
+ * @param use_port  The port number to match on incoming proxy requests. If 0, default
+ *                  port for protocol is used.
+ * @param server_list The upstream server connection characteristics.
+ *
+ * @return the proxy entry on success in adding session to the proxy list of upstream
+ * servers, else NULL.
+ */
+coap_proxy_entry_t *coap_proxy_fwd_add_client_session_lkd(coap_session_t *session,
+                                                          const char *use_ip,
+                                                          uint16_t use_port,
+                                                          coap_proxy_server_list_t *server_list);
 /**
  * coap_proxy_local_write() is used to send the PDU for a session created by
  * coap_new_client_session_proxy() into the proxy logic for onward transmittion.
@@ -201,7 +231,7 @@ coap_mid_t coap_proxy_local_write(coap_session_t *session, coap_pdu_t *pdu);
  */
 struct coap_proxy_req_t *coap_proxy_map_outgoing_request(coap_session_t *ongoing,
                                                          const coap_pdu_t *received,
-                                                         coap_proxy_list_t **proxy_entry);
+                                                         coap_proxy_entry_t **proxy_entry);
 
 /**
  * coap_proxy_process_incoming() handles the Server response back to P-Client.
@@ -217,7 +247,7 @@ struct coap_proxy_req_t *coap_proxy_map_outgoing_request(coap_session_t *ongoing
 void coap_proxy_process_incoming(coap_session_t *session,
                                  coap_pdu_t *rcvd, void *body_free,
                                  coap_proxy_req_t *proxy_req,
-                                 coap_proxy_list_t *proxy_entry);
+                                 coap_proxy_entry_t *proxy_entry);
 
 /**
  * coap_proxy_del_req() deletes the specific proxy request.
@@ -226,7 +256,7 @@ void coap_proxy_process_incoming(coap_session_t *session,
  * @param proxy_req The proxy request object to delete.
  *
  */
-void coap_proxy_del_req(coap_proxy_list_t *proxy_entry,  coap_proxy_req_t *proxy_req);
+void coap_proxy_del_req(coap_proxy_entry_t *proxy_entry,  coap_proxy_req_t *proxy_req);
 
 /**
  * coap_delete_proxy_subscriber() removes a proxy set up subscription.  If token

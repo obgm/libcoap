@@ -195,6 +195,9 @@ coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
       /* server app has defined a resource for .well-known/core - ignore */
       continue;
     }
+    if (r->flags & COAP_RESOURCE_HIDE_WELLKNOWN_CORE) {
+      continue;
+    }
 #ifndef WITHOUT_QUERY_FILTER
     if (resource_param.length) { /* there is a query filter */
 

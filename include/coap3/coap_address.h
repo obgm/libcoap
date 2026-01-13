@@ -54,6 +54,14 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
   addr->port = port;
 }
 
+/**
+ * Sets the addr field of @p addr to 0.
+ */
+COAP_STATIC_INLINE void
+coap_address_clr_addr(coap_address_t *addr) {
+  memset(&addr->addr, 0, sizeof(addr->addr));
+}
+
 #define _coap_address_equals_impl(A, B) \
   ((A)->port == (B)->port &&        \
    (!!ip_addr_cmp(&(A)->addr,&(B)->addr)))
@@ -83,6 +91,14 @@ coap_address_get_port(const coap_address_t *addr) {
 COAP_STATIC_INLINE void
 coap_address_set_port(coap_address_t *addr, uint16_t port) {
   addr->port = uip_htons(port);
+}
+
+/**
+ * Sets the addr field of @p addr to 0.
+ */
+COAP_STATIC_INLINE void
+coap_address_clr_addr(coap_address_t *addr) {
+  memset(&addr->addr, 0, sizeof(addr->addr));
 }
 
 #define _coap_address_equals_impl(A,B) \
@@ -133,6 +149,14 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
   addr->riot.port = port;
 }
 
+/**
+ * Sets the addr field of @p addr to 0.
+ */
+COAP_STATIC_INLINE void
+coap_address_clr_addr(coap_address_t *addr) {
+  memset(&addr->riot.addr, 0, sizeof(addr->riot.addr));
+}
+
 #else /* ! WITH_LWIP && ! WITH_CONTIKI && ! RIOT_VERSION */
 
 #ifdef _WIN32
@@ -166,6 +190,11 @@ uint16_t coap_address_get_port(const coap_address_t *addr);
  * Set the port field of @p addr to @p port (in host byte order).
  */
 void coap_address_set_port(coap_address_t *addr, uint16_t port);
+
+/**
+ * Sets the addr field of @p addr to 0.
+ */
+void coap_address_clr_addr(coap_address_t *addr);
 
 /**
  * Compares given address objects @p a and @p b. This function returns @c 1 if
