@@ -249,7 +249,7 @@ struct coap_session_t {
   coap_bin_const_t *req_token;    /**< Token in request pdu of coap_send_recv() */
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_PROXY_SUPPORT
-  coap_proxy_list_t *proxy_entry; /**< Pointer to upstream server */
+  coap_proxy_entry_t *proxy_entry; /**< Pointer to upstream server */
   coap_proxy_server_list_t *server_list; /**< Used for proxy internal session */
 #endif /* COAP_PROXY_SUPPORT */
 };

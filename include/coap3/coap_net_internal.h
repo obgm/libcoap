@@ -216,7 +216,7 @@ struct coap_context_t {
                                          5.03 will get sent */
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_PROXY_SUPPORT
-  coap_proxy_list_t *proxy_list;   /**< Set of active proxy sessions */
+  coap_proxy_entry_t *proxy_list;  /**< Set of active proxy sessions */
   size_t proxy_list_count;         /**< Number of active proxy sessions */
 #endif /* COAP_PROXY_SUPPORT */
 #if COAP_CLIENT_SUPPORT

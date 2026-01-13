@@ -124,6 +124,7 @@ const char *pointer_list[] = {
   "coap_opt_iterator_t ",
   "coap_opt_t ",
   "coap_pdu_t ",
+  "coap_proxy_entry_t ",
   "coap_resource_t ",
   "coap_subscription_t ",
   "coap_tls_version_t ",
@@ -363,7 +364,7 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
       if (lcp)
         *lcp = '\000';
       fprintf(stderr,
-              "man/examples-code-check.c: Function return type '%s' undefined in ptr_list[] or number_list[]\n",
+              "man/examples-code-check.c: Function return type '%s' undefined in pointer_list[] or number_list[]\n",
               &buffer[1]);
       if (lcp)
         *lcp = ' ';

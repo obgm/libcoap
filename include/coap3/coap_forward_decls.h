@@ -98,7 +98,7 @@ typedef struct coap_pdu_t coap_pdu_t;
 /**
  * Proxy information.
  */
-typedef struct coap_proxy_list_t coap_proxy_list_t;
+typedef struct coap_proxy_entry_t coap_proxy_entry_t;
 
 
 /* ************* coap_resource_internal.h ***************** */

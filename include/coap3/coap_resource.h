@@ -167,6 +167,11 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
 #define COAP_RESOURCE_USE_BLOCK_DATA_HANDLER 0x1000
 
 /**
+ * Hide this resource from .well-known/core
+ */
+#define COAP_RESOURCE_HIDE_WELLKNOWN_CORE 0x2000
+
+/**
  * Creates a new resource object and initializes the link field to the string
  * @p uri_path. This function returns the new coap_resource_t object.
  *

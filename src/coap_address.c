@@ -98,6 +98,25 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
   }
 }
 
+void
+coap_address_clr_addr(coap_address_t *addr) {
+  assert(addr != NULL);
+  switch (addr->addr.sa.sa_family) {
+#if COAP_IPV4_SUPPORT
+  case AF_INET:
+    memset(&addr->addr.sin.sin_addr, 0, sizeof(addr->addr.sin.sin_addr));
+    break;
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
+  case AF_INET6:
+    memset(&addr->addr.sin6.sin6_addr, 0, sizeof(addr->addr.sin6.sin6_addr));
+    break;
+#endif /* COAP_IPV6_SUPPORT */
+  default: /* undefined */
+    ;
+  }
+}
+
 int
 coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
   assert(a);

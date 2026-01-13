@@ -79,6 +79,13 @@ typedef enum {
    * else only unicast.
    * [ Ignored if not COAP_PROXY_FWD_DYNAMIC ]
    */
+  COAP_PROXY_DYN_DEFINED = (1 << 8),
+  /**<
+   * If COAP_PROXY_DYN_DEFINED set, then no new dynamic upstream servers will get
+   * automatically added.  All dynamic upstream servers mut be pre-allocated by
+   * using coap_proxy_fwd_add_client_session().
+   * [ Ignored if not COAP_PROXY_FWD_DYNAMIC ]
+   */
 } coap_proxy_t;
 
 #define COAP_PROXY_OLD_MASK 0x07 /**< Space used in coap_proxy_t for old types */
@@ -219,6 +226,30 @@ coap_response_t COAP_API coap_proxy_forward_response(coap_session_t *rsp_session
  */
 COAP_API coap_session_t *coap_new_client_session_proxy(coap_context_t *context,
                                                        coap_proxy_server_list_t *server_list);
+
+/**
+ * Add a previously setup proxy-client session to use the proxy logic for forwarding
+ * subsequent dynamic proxy requests.
+ *
+ * The upstream server information is derived from @p session for the remote IP and
+ * @p use_port for the port, and proxy connection type is derived from @p server_list
+ * (track_client_session, and idle_timeout_secs are ignored and set to 0 and 0
+ * respectively). type must contain at least COAP_PROXY_FWD_DYNAMIC, and @p server_list
+ * must be the same as used in coap_proxy_forward_request().
+ *
+ * @param session The CoAP upstream proxy session previosly set up (e.g. via call-home).
+ * @param use_ip    The IP address to match on incoming proxy requests. If NULL, then
+ *                  the IP address is determined from @p session.
+ * @param use_port  The port number to match on incoming proxy requests. If 0, default
+ *                  port for protocol is used.
+ * @param server_list The upstream server connection characteristics.
+ *
+ * @return the proxy entry on success in adding session to the proxy list of upstream
+ * servers, else NULL.
+ */
+COAP_API coap_proxy_entry_t *coap_proxy_fwd_add_client_session(coap_session_t *session,
+    const char *use_ip, uint16_t use_port,
+    coap_proxy_server_list_t *server_list);
 
 /** @} */
 
