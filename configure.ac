@@ -1573,9 +1573,10 @@ else
 fi
 
 mkdir -p include/coap$LIBCOAP_API_VERSION
-head -19 cmake_coap_defines.h.in > include/coap$LIBCOAP_API_VERSION/coap_defines.h
+DIR=`dirname $0`
+head -19 $DIR/cmake_coap_defines.h.in > include/coap$LIBCOAP_API_VERSION/coap_defines.h
 LT_TEMP=`grep -B2 " COAP_" coap_config.h >> include/coap$LIBCOAP_API_VERSION/coap_defines.h`
-tail -2 cmake_coap_defines.h.in >> include/coap$LIBCOAP_API_VERSION/coap_defines.h
+tail -2 $DIR/cmake_coap_defines.h.in >> include/coap$LIBCOAP_API_VERSION/coap_defines.h
 if test "x$LT_TEMP" != "x" ; then
     AC_MSG_ERROR([Unable to build coap_defines.h])
 fi
