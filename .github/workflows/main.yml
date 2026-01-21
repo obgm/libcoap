@@ -256,7 +256,8 @@ jobs:
       - name: build
         run: |
           make
-          make -C tests/oss-fuzz -f Makefile.ci check clean
+          make  EXTRA_CFLAGS=-Werror -C tests/oss-fuzz -f Makefile.ci check clean
+
   documentation:
     runs-on: ubuntu-latest
     steps:

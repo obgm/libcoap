@@ -27,7 +27,7 @@ PROGRAMS:=$(patsubst %_target.o, %_fuzzer, $(OBJECTS))
 all: $(PROGRAMS)
 
 $(OUT)/%.o: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $^ -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) -c $^ -o $@
 
 %_fuzzer: %_target.o
 	$(LINK.cc) $(CXXFLAGS) $^ $(top_builddir)/.libs/$(libcoap).a $(LDFLAGS) $(LDLIBS) $(DTLS_LIBS) -o $@
@@ -35,4 +35,4 @@ $(OUT)/%.o: %.c
 check: $(OBJECTS)
 
 clean:
-	@-$(RM) $(OBJECTS) $(PROGRAMS)
+	@-$(RM) -f $(OBJECTS) $(PROGRAMS)
