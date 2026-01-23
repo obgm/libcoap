@@ -6,7 +6,10 @@ on:
       - main
       - develop
       - release-*
-      - gh-workflows
+  pull_request:
+    branches:
+      - main
+      - develop
 
 jobs:
   Fuzzing:
