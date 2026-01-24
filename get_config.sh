@@ -8,7 +8,8 @@ TAGS=0
 if [ -f config.log ] ; then
   echo "Last ./configure build"
   echo ""
-  cat config.log | grep -E "      libcoap|      host s" | cut -d\  -f7-
+  cat config.log | grep -E "WARNING:" | cut -d\  -f2-
+  cat config.log | grep -E "      libcoap|      host s|      compiler" | cut -d\  -f7-
   cat config.log | grep -E "result:   " | cut -d\  -f3- | cut -d\  -f7-
   echo ""
   TAGS=1

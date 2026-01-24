@@ -241,9 +241,12 @@ WARNING_CFLAGS="\
 "
 
 # check whether or not the compiler supports -Wlogical-op (clang does not...)
-AX_CHECK_COMPILE_FLAG([-Wlogical-op], [WARNING_CFLAGS="$WARNING_CFLAGS -Wlogical-op"],,[-Werror])
+# Note oss-fuzz uses clang and adds in option -Wno-error=unknown-warning-option which overrides -Werror
+if test "x$CC" != "xclang"; then
+    AX_CHECK_COMPILE_FLAG([-Wlogical-op], [WARNING_CFLAGS="$WARNING_CFLAGS -Wlogical-op"],,[-Werror])
+fi
 AX_CHECK_COMPILE_FLAG([-fdiagnostics-color], [CFLAGS="$CFLAGS -fdiagnostics-color"],,[-Werror])
-AX_CHECK_COMPILE_FLAG([-Wunused-result], [WARNING_CFLAGS="$WARNING_CFLAGS -Wunused-result"])
+AX_CHECK_COMPILE_FLAG([-Wunused-result], [WARNING_CFLAGS="$WARNING_CFLAGS -Wunused-result"],,[-Werror])
 
 # clang 14+ generates dwarf-5, which is not currently supported by valgrind
 if test "x$CC" = "xclang"; then
@@ -1409,7 +1412,8 @@ libcoap Configuration Summary:
       libcoap ABI version            : "$LIBCOAP_ABI_VERSION"
       libcoap libtool SO version     : "$LIBCOAP_SO_VERSION"
       libcoap DTLS lib extn          : "$LIBCOAP_DTLS_LIB_EXTENSION_NAME"
-      host system                    : "$host"]);
+      host system                    : "$host"
+      compiler                       : "$CC"]);
 if test "x$enable_server_mode" = "xyes"; then
     AC_MSG_RESULT([      build with server support      : "yes"])
 else
