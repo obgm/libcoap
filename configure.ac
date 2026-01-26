@@ -1381,6 +1381,7 @@ if test "x$LIBCOAP_BUILD" = "x"; then
     LIBCOAP_BUILD=$PACKAGE_VERSION
 fi
 
+cat config.log | grep -E "WARNING:" | cut -d\  -f2-
 AC_MSG_RESULT([
 libcoap Configuration Summary:
       libcoap package version        : "$PACKAGE_VERSION"
