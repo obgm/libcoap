@@ -336,6 +336,8 @@ typedef enum {
   COAP_EVENT_PARTIAL_BLOCK     = 0x3001,
   /** Triggered when not all of a large body has been transmitted */
   COAP_EVENT_XMIT_BLOCK_FAIL   = 0x3002,
+  /** Triggered when a block transfer could not be handled */
+  COAP_EVENT_BLOCK_ISSUE       = 0x3003,
 
   /*
    * Server session events

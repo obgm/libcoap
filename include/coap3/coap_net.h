@@ -329,6 +329,15 @@ void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds);
 int coap_context_set_cid_tuple_change(coap_context_t *context, uint8_t every);
 
 /**
+ * Set the maximum supported body size.
+ *
+ * @param context       The coap_context_t object.
+ * @param max_body_size The maximum supported body size. 0 indicates unlimited.
+ */
+void coap_context_set_max_body_size(coap_context_t *context,
+                                    uint32_t max_body_size);
+
+/**
  * Set the maximum token size (RFC8974).
  *
  * @param context        The coap_context_t object.

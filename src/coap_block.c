@@ -15,6 +15,8 @@
 
 #include "coap3/coap_libcoap_build.h"
 
+#include <stdio.h>
+
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -824,19 +826,21 @@ coap_add_data_large_internal(coap_session_t *session,
   if (COAP_PROTO_RELIABLE(session->proto) && pdu->type == COAP_MESSAGE_NON)
     pdu->type = COAP_MESSAGE_CON;
 
-  /* Block NUM max 20 bits and block size is "2**(SZX + 4)"
+  /* Block NUM max 20 bits (starting from 0) and block size is "2**(SZX + 4)"
      and using SZX max of 6 gives maximum size = 1,073,740,800
      CSM Max-Message-Size theoretical maximum = 4,294,967,295
      So, if using blocks, we are limited to 1,073,740,800.
    */
-#define MAX_BLK_LEN (((1UL << 20) - 1) * (1 << (6 + 4)))
+#define MAX_BLK_LEN ((1UL << 20) * (1 << (6 + 4)))
+#if UINT_MAX < MAX_BLK_LEN
+#undef MAX_BLK_LEN
+#define MAX_BLK_LEN UINT_MAX
+#endif
 
-#if UINT_MAX > MAX_BLK_LEN
   if (length > MAX_BLK_LEN) {
     coap_log_warn("Size of large buffer restricted to 0x%lx bytes\n", MAX_BLK_LEN);
     length = MAX_BLK_LEN;
   }
-#endif /* UINT_MAX > MAX_BLK_LEN */
 
 #if COAP_SERVER_SUPPORT
   /* Possible response code not yet set, so check if not request */
@@ -3164,6 +3168,19 @@ coap_handle_request_put_block(coap_context_t *context,
   if (!block_option ||
       (block_option == COAP_OPTION_BLOCK1 && block.num == 0 && block.m == 0)) {
     /* Not blocked, or a single block */
+    if (context->max_body_size && total > context->max_body_size) {
+      uint8_t buf[4];
+
+      coap_update_option(response,
+                         COAP_OPTION_SIZE1,
+                         coap_encode_var_safe((uint8_t *)buf, sizeof(buf),
+                                              context->max_body_size),
+                         (uint8_t *)buf);
+      response->code = COAP_RESPONSE_CODE(413);
+      coap_log_warn("Unable to handle data size %" PRIuS " (max %" PRIu32 ")\n", total,
+                    context->max_body_size);
+      goto skip_app_handler;
+    }
     goto call_app_handler;
   }
 
@@ -3194,6 +3211,37 @@ coap_handle_request_put_block(coap_context_t *context,
   }
   total = size_opt ? coap_decode_var_bytes(coap_opt_value(size_opt),
                                            coap_opt_length(size_opt)) : 0;
+  if (total) {
+    uint32_t max_body;
+
+    max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
+    if (max_block_szx == 0 || max_block_szx > block.szx) {
+      max_block_szx =  block.szx;
+    }
+    max_body = ((1UL << 20) * (1 << (max_block_szx + 4)));
+    if (max_body > MAX_BLK_LEN)
+      max_body = MAX_BLK_LEN;
+    if ((context->max_body_size && total > context->max_body_size) ||
+        (total > max_body)) {
+      /* Suggested body size larger than allowed */
+      char buf[32];
+      uint32_t max_body_size = context->max_body_size;
+
+      if (max_body_size == 0 || max_body < max_body_size) {
+        max_body_size = max_body;
+      }
+      coap_update_option(response,
+                         COAP_OPTION_SIZE1,
+                         coap_encode_var_safe((uint8_t *)buf, sizeof(buf),
+                                              max_body_size),
+                         (uint8_t *)buf);
+      snprintf(buf, sizeof(buf), "Max body size %" PRIu32, max_body_size);
+      coap_add_data(response, strlen(buf), (uint8_t *)buf);
+      response->code = COAP_RESPONSE_CODE(413);
+      coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", total, max_body_size);
+      goto skip_app_handler;
+    }
+  }
   offset = block.num << (block.szx + 4);
 
   if (!(session->block_mode &
@@ -4190,6 +4238,31 @@ reinit:
         if (lg_crcv->total_len < size2)
           lg_crcv->total_len = size2;
 
+        /* Check whether we can handle this size */
+        uint32_t max_body;
+        uint8_t max_block_szx;
+
+        max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
+        if (max_block_szx == 0 || max_block_szx > block.szx) {
+          max_block_szx =  block.szx;
+        }
+        max_body = ((1UL << 20) * (1 << (max_block_szx + 4)));
+        if (max_body > MAX_BLK_LEN)
+          max_body = MAX_BLK_LEN;
+        if ((context->max_body_size && size2 > context->max_body_size) ||
+            (size2 > max_body)) {
+          uint32_t max_body_size = context->max_body_size;
+
+          if (max_body_size == 0 || max_body < max_body_size) {
+            max_body_size = max_body;
+          }
+          coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", size2, max_body_size);
+          /* Try to hint to the server thare is an issue */
+          coap_send_rst_lkd(session, rcvd);
+          coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
+          return 1;
+        }
+
         if (etag_opt) {
           if (!full_match(coap_opt_value(etag_opt),
                           coap_opt_length(etag_opt),
@@ -4481,6 +4554,14 @@ give_to_app:
         coap_opt_t *obs_opt = coap_check_option(rcvd,
                                                 COAP_OPTION_OBSERVE,
                                                 &opt_iter);
+        if (context->max_body_size && length > context->max_body_size) {
+          coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", length,
+                        context->max_body_size);
+          /* Try to hint to the server thare is an issue */
+          coap_send_rst_lkd(session, rcvd);
+          coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
+          return 1;
+        }
         if (obs_opt) {
           lg_crcv->observe_length = min(coap_opt_length(obs_opt), 3);
           memcpy(lg_crcv->observe, coap_opt_value(obs_opt), lg_crcv->observe_length);
@@ -4542,6 +4623,9 @@ fail_resp:
         goto skip_app_handler;
       }
     } else if (COAP_RESPONSE_CLASS(rcvd->code) == 2) {
+      const uint8_t *data;
+      size_t length;
+
       if (coap_get_block_b(session, rcvd, COAP_OPTION_BLOCK2, &block)) {
 #if COAP_Q_BLOCK_SUPPORT
         if (session->block_mode & COAP_BLOCK_PROBE_Q_BLOCK) {
@@ -4552,8 +4636,6 @@ fail_resp:
         have_block = 1;
         if (block.num != 0) {
           /* Assume random access and just give the single response to app */
-          size_t length;
-          const uint8_t *data;
           size_t chunk = (size_t)1 << (block.szx + 4);
 
           coap_get_data(rcvd, &length, &data);
@@ -4579,6 +4661,15 @@ fail_resp:
           return coap_handle_response_get_block(context, session, sent, rcvd,
                                                 COAP_RECURSE_NO);
         }
+      }
+      coap_get_data(rcvd, &length, &data);
+      if (context->max_body_size && length > context->max_body_size) {
+        coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", length,
+                      context->max_body_size);
+        /* Try to hint to the server thare is an issue */
+        coap_send_rst_lkd(session, rcvd);
+        coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
+        return 1;
       }
       track_echo(session, rcvd);
     } else if (rcvd->code == COAP_RESPONSE_CODE(401)) {
