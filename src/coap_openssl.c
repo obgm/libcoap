@@ -1143,6 +1143,8 @@ coap_dtls_new_context(coap_context_t *coap_context) {
       coap_prng_lkd(cookie_secret, sizeof(cookie_secret));
     }
     context->dtls.cookie_hmac = HMAC_CTX_new();
+    if (!context->dtls.cookie_hmac)
+      goto error;
     if (!HMAC_Init_ex(context->dtls.cookie_hmac, cookie_secret, (int)sizeof(cookie_secret),
                       EVP_sha256(), NULL))
       goto error;
@@ -1549,11 +1551,12 @@ load_in_cas_ctx(SSL_CTX *ctx,
   /* Add CA to the trusted root CA store */
   st = SSL_CTX_get_cert_store(ctx);
   in = BIO_new(BIO_s_file());
+  if (!in)
+    return 0;
   /* Need to do this to not get a compiler warning about const parameters */
   memcpy(&rw_var, &ca_file, sizeof(rw_var));
   if (!BIO_read_filename(in, rw_var)) {
     BIO_free(in);
-    X509_free(x);
     return 0;
   }
 
@@ -2005,6 +2008,8 @@ load_in_cas(SSL *ssl,
 
   /* Add CA to the trusted root CA store */
   in = BIO_new(BIO_s_file());
+  if (!in)
+    return 0;
   /* Need to do this to not get a compiler warning about const parameters */
   memcpy(&rw_var, &ca_file, sizeof(rw_var));
   if (!BIO_read_filename(in, rw_var)) {
@@ -2593,9 +2598,11 @@ tls_secret_call_back(SSL *ssl,
       X509_VERIFY_PARAM *param;
 
       param = X509_VERIFY_PARAM_new();
-      X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
-      SSL_set1_param(ssl, param);
-      X509_VERIFY_PARAM_free(param);
+      if (param) {
+        X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
+        SSL_set1_param(ssl, param);
+        X509_VERIFY_PARAM_free(param);
+      }
     }
     if (setup_data->additional_tls_setup_call_back) {
       /* Additional application setup wanted */
@@ -3037,9 +3044,11 @@ is_x509:
     X509_VERIFY_PARAM *param;
 
     param = X509_VERIFY_PARAM_new();
-    X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
-    SSL_set1_param(ssl, param);
-    X509_VERIFY_PARAM_free(param);
+    if (param) {
+      X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
+      SSL_set1_param(ssl, param);
+      X509_VERIFY_PARAM_free(param);
+    }
   }
   if (setup_data->additional_tls_setup_call_back) {
     /* Additional application setup wanted */
@@ -3547,9 +3556,11 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
       X509_VERIFY_PARAM *param;
 
       param = X509_VERIFY_PARAM_new();
-      X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
-      SSL_set1_param(ssl, param);
-      X509_VERIFY_PARAM_free(param);
+      if (param) {
+        X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
+        SSL_set1_param(ssl, param);
+        X509_VERIFY_PARAM_free(param);
+      }
     }
 
     /* Verify Peer */
@@ -4486,6 +4497,7 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
   const coap_crypto_aes_ccm_t *ccm;
   int tmp;
   int result_len = (int)(*max_result_len & INT_MAX);
+  EVP_CIPHER_CTX *ctx;
 
   if (data == NULL)
     return 0;
@@ -4498,7 +4510,9 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
   /* TODO: set evp_md depending on params->alg */
   ccm = &params->params.aes;
 
-  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  ctx = EVP_CIPHER_CTX_new();
+  if (!ctx)
+    return 0;
 
   /* EVP_CIPHER_CTX_init(ctx); */
   C(EVP_EncryptInit_ex(ctx, cipher, NULL, NULL, NULL));
@@ -4548,6 +4562,7 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
   int len;
   const uint8_t *tag;
   uint8_t *rwtag;
+  EVP_CIPHER_CTX *ctx;
 
   if (data == NULL)
     return 0;
@@ -4568,7 +4583,9 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
     memcpy(&rwtag, &tag, sizeof(rwtag));
   }
 
-  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  ctx = EVP_CIPHER_CTX_new();
+  if (!ctx)
+    return 0;
 
   C(EVP_DecryptInit_ex(ctx, cipher, NULL, NULL, NULL));
   C(EVP_CIPHER_CTX_ctrl(ctx,
