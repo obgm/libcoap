@@ -477,11 +477,23 @@ coap_context_set_cid_tuple_change(coap_context_t *context, uint8_t every) {
 }
 
 void
+coap_context_set_max_body_size(coap_context_t *context,
+                               uint32_t max_body_size) {
+  assert(max_body_size == 0 || max_body_size > 1024);
+  if (max_body_size == 0 || max_body_size > 1024) {
+    context->max_body_size = max_body_size;
+  }
+}
+
+void
 coap_context_set_max_token_size(coap_context_t *context,
                                 size_t max_token_size) {
   assert(max_token_size >= COAP_TOKEN_DEFAULT_MAX &&
          max_token_size <= COAP_TOKEN_EXT_MAX);
-  context->max_token_size = (uint32_t)max_token_size;
+  if (max_token_size >= COAP_TOKEN_DEFAULT_MAX &&
+      max_token_size <= COAP_TOKEN_EXT_MAX) {
+    context->max_token_size = (uint32_t)max_token_size;
+  }
 }
 
 void
@@ -4939,6 +4951,8 @@ coap_event_name(coap_event_t event) {
     return "COAP_EVENT_PARTIAL_BLOCK";
   case COAP_EVENT_XMIT_BLOCK_FAIL:
     return "COAP_EVENT_XMIT_BLOCK_FAIL";
+  case COAP_EVENT_BLOCK_ISSUE:
+    return "COAP_EVENT_BLOCK_ISSUE";
   case COAP_EVENT_SERVER_SESSION_NEW:
     return "COAP_EVENT_SERVER_SESSION_NEW";
   case COAP_EVENT_SERVER_SESSION_DEL:
@@ -5052,6 +5066,7 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
     case COAP_EVENT_SESSION_FAILED:
     case COAP_EVENT_PARTIAL_BLOCK:
     case COAP_EVENT_XMIT_BLOCK_FAIL:
+    case COAP_EVENT_BLOCK_ISSUE:
       break;
     case COAP_EVENT_SERVER_SESSION_NEW:
       /* Session will now be available as well - for call-home if not (D)TLS */
