@@ -1945,7 +1945,7 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
               coap_log_warn("oscore_conf: Keyword '%.*s' duplicated\n",
                             (int)keyword.length,
                             (const char *)keyword.s);
-              goto error;
+              goto error_free_value_bin;
             }
             memcpy(&(((char *)oscore_conf)[oscore_config[i].offset]),
                    &value.u.value_bin,
