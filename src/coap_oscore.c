@@ -2303,6 +2303,26 @@ coap_new_client_session_oscore(coap_context_t *ctx,
 }
 
 coap_session_t *
+coap_new_client_session_oscore3(coap_context_t *ctx,
+                                const coap_address_t *local_if,
+                                const coap_address_t *server,
+                                coap_proto_t proto,
+                                coap_oscore_conf_t *oscore_conf,
+                                void *app_data,
+                                coap_app_data_free_callback_t callback,
+                                coap_str_const_t *ws_host) {
+  (void)ctx;
+  (void)local_if;
+  (void)server;
+  (void)proto;
+  (void)oscore_conf;
+  (void)app_data;
+  (void)callback;
+  (void)ws_host;
+  return NULL;
+}
+
+coap_session_t *
 coap_new_client_session_oscore_psk(coap_context_t *ctx,
                                    const coap_address_t *local_if,
                                    const coap_address_t *server,
@@ -2319,6 +2339,28 @@ coap_new_client_session_oscore_psk(coap_context_t *ctx,
 }
 
 coap_session_t *
+coap_new_client_session_oscore_psk3(coap_context_t *ctx,
+                                    const coap_address_t *local_if,
+                                    const coap_address_t *server,
+                                    coap_proto_t proto,
+                                    coap_dtls_cpsk_t *psk_data,
+                                    coap_oscore_conf_t *oscore_conf,
+                                    void *app_data,
+                                    coap_app_data_free_callback_t callback,
+                                    coap_str_const_t *ws_host) {
+  (void)ctx;
+  (void)local_if;
+  (void)server;
+  (void)proto;
+  (void)psk_data;
+  (void)oscore_conf;
+  (void)app_data;
+  (void)callback;
+  (void)ws_host;
+  return NULL;
+}
+
+coap_session_t *
 coap_new_client_session_oscore_pki(coap_context_t *ctx,
                                    const coap_address_t *local_if,
                                    const coap_address_t *server,
@@ -2331,6 +2373,28 @@ coap_new_client_session_oscore_pki(coap_context_t *ctx,
   (void)proto;
   (void)pki_data;
   (void)oscore_conf;
+  return NULL;
+}
+
+coap_session_t *
+coap_new_client_session_oscore_pki3(coap_context_t *ctx,
+                                    const coap_address_t *local_if,
+                                    const coap_address_t *server,
+                                    coap_proto_t proto,
+                                    coap_dtls_pki_t *pki_data,
+                                    coap_oscore_conf_t *oscore_conf,
+                                    void *app_data,
+                                    coap_app_data_free_callback_t callback,
+                                    coap_str_const_t *ws_host) {
+  (void)ctx;
+  (void)local_if;
+  (void)server;
+  (void)proto;
+  (void)pki_data;
+  (void)oscore_conf;
+  (void)app_data;
+  (void)callback;
+  (void)ws_host;
   return NULL;
 }
 
