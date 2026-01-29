@@ -1,13 +1,17 @@
 ZEPHYR_PROJECT?=zephyrproject
 
-all: $(ZEPHYR_PROJECT) coap-client coap-cpp-test
+WITH_ZEPHYR_BRANCH?=v4.3.0
+
+export LCWD := $(shell pwd)
+
+all: $(ZEPHYR_PROJECT) check-version coap-client coap-cpp-test
 
 ${ZEPHYR_PROJECT}:
 	python3 -m venv ${ZEPHYR_PROJECT}/.venv ;\
 	ls -l ${ZEPHYR_PROJECT}/.venv/bin/activate ;\
 	. ${ZEPHYR_PROJECT}/.venv/bin/activate ;\
 	pip install west ;\
-	west init ${ZEPHYR_PROJECT} ;\
+	west init --mr ${WITH_ZEPHYR_BRANCH} ${ZEPHYR_PROJECT} ;\
 	cd ${ZEPHYR_PROJECT} ;\
 	west update -n ;\
 	west zephyr-export ;\
@@ -18,8 +22,33 @@ ${ZEPHYR_PROJECT}:
 	else \
 		west sdk install --install-base=$(ZEPHYR_PROJECT)/../ -t x86_64-zephyr-elf ;\
 	fi ;\
-        cd ../../ ;\
+	cd $(LPWD) ;\
 	deactivate
+
+check-version:
+	@(if [ -d $(ZEPHYR_PROJECT)/zephyr ] ; then \
+		cd $(ZEPHYR_PROJECT)/zephyr ; \
+		TAG=`git describe --tags --all`; \
+		if [ "$$TAG" != ${WITH_ZEPHYR_BRANCH} -a "$$TAG" != "tags/${WITH_ZEPHYR_BRANCH}" ] ; then \
+			git checkout ${WITH_ZEPHYR_BRANCH} ;\
+			TAG=`git describe --tags --all`; \
+			cd $(LPWD) ;\
+			if [ "$$TAG" != ${WITH_ZEPHYR_BRANCH} -a "$$TAG" != "tags/${WITH_ZEPHYR_BRANCH}" ] ; then \
+				echo "Updating zephyr to ${WITH_ZEPHYR_BRANCH}" ; \
+				cd $(ZEPHYR_PROJECT)/.. ; \
+				rm -rf $(ZEPHYR_PROJECT) ; \
+        			cd $(LPWD) ;\
+				${MAKE}; \
+			else \
+				. ${ZEPHYR_PROJECT}/.venv/bin/activate ;\
+				cd ${ZEPHYR_PROJECT} ;\
+				west update -n ;\
+				west zephyr-export ;\
+				deactivate ;\
+			fi ; \
+		fi ; \
+		cd $(LPWD) ;\
+	fi)
 
 coap-client: client-src/src/main.c client-src/* ../../src/*.c ../../include/*/*
 	@LIBCOAP_DIR=`pwd`/../.. ;\
