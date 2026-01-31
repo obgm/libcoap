@@ -240,6 +240,7 @@ setup_server_context(void) {
 
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 /* This need to be unique per endpoint */
 #define UNIX_DOMAIN_LISTEN_DGRAM "/tmp/server.dgram"
@@ -280,6 +281,9 @@ setup_server_context(void) {
 [source, c]
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <string.h>
+#include <strings.h>
 
 typedef struct valid_cns_t {
   size_t count;
@@ -422,6 +426,9 @@ setup_server_context_pki(const char *public_cert_file,
 [source, c]
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <string.h>
+#include <strings.h>
 
 typedef struct id_def_t {
   char *id;

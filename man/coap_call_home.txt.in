@@ -223,6 +223,9 @@ main(int argc, char **argv) {
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <stdlib.h>
 
 static int
 do_call_home(coap_context_t *ctx, coap_str_const_t host, uint16_t port, coap_uri_scheme_t scheme) {

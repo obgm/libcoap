@@ -47,7 +47,7 @@
   ((((a)->s6_addr32[0]) == 0) && (((a)->s6_addr32[1]) == 0) && \
    (((a)->s6_addr32[2]) == htonl(0xffff)))
 #endif
-#endif /* __ZEPHYR__ */
+#endif /* !__ZEPHYR__ */
 
 #ifdef RIOT_VERSION
 /* FIXME */

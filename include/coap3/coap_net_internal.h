@@ -18,9 +18,8 @@
 #ifndef COAP_NET_INTERNAL_H_
 #define COAP_NET_INTERNAL_H_
 
-#include "coap_internal.h"
 #include "coap_subscribe.h"
-#include "coap_threadsafe_internal.h"
+#include "coap_resource.h"
 
 #ifdef __cplusplus
 extern "C" {

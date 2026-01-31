@@ -57,8 +57,6 @@
  * @brief Provides SHA1 support for WebSockets
  */
 
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

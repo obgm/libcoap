@@ -16,8 +16,6 @@
 #ifndef COAP_CACHE_H_
 #define COAP_CACHE_H_
 
-#include "coap_forward_decls.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

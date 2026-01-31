@@ -31,8 +31,6 @@
 #include "clock.h"
 #elif defined(RIOT_VERSION)
 #include <xtimer.h>
-#else /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
-#include <stdint.h>
 #endif /* !WITH_LWIP && !WITH_CONTIKI && !RIOT_VERSION */
 
 #ifdef __cplusplus

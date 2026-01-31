@@ -17,10 +17,6 @@
 #ifndef COAP_HASHKEY_INTERNAL_H_
 #define COAP_HASHKEY_INTERNAL_H_
 
-#include "libcoap.h"
-#include "coap_uthash_internal.h"
-#include "coap_str.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

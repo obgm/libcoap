@@ -46,8 +46,6 @@
 #ifndef _OSCORE_COSE_H
 #define _OSCORE_COSE_H
 
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

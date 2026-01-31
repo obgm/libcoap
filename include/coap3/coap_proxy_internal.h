@@ -17,8 +17,6 @@
 #ifndef COAP_PROXY_INTERNAL_H_
 #define COAP_PROXY_INTERNAL_H_
 
-#include "coap_internal.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

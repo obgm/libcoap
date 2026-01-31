@@ -61,6 +61,7 @@ strndup(const char *s1, size_t n) {
 
 #include <coap3/coap.h>
 #include <coap3/coap_defines.h>
+#include <assert.h>
 
 static coap_context_t *global_context;
 #if COAP_THREAD_SAFE

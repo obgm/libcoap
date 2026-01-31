@@ -387,6 +387,8 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+
 #define INDEX "This is an example server using libcoap\n"
 
 static void

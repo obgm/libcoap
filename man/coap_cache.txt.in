@@ -247,6 +247,8 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+
 static coap_binary_t *example_data_ptr = NULL;
 static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
 

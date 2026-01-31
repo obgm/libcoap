@@ -17,9 +17,6 @@
 #ifndef COAP_ASYNC_INTERNAL_H_
 #define COAP_ASYNC_INTERNAL_H_
 
-#include "coap_internal.h"
-#include "coap_net.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -17,21 +17,9 @@
 #ifndef COAP_COAP_PDU_INTERNAL_H_
 #define COAP_COAP_PDU_INTERNAL_H_
 
-#include "coap_internal.h"
-
 #ifdef WITH_LWIP
 #include <lwip/pbuf.h>
 #endif
-
-#ifdef RIOT_VERSION
-#include <limits.h>
-#endif /* RIOT_VERSION */
-
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif /* HAVE_LIMITS_H */
-
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {

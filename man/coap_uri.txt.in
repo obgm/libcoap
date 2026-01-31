@@ -168,6 +168,8 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+
 /*
  * Returns 0 failure, 1 success
  */

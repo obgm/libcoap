@@ -17,9 +17,6 @@
 #ifndef COAP_STRM_INTERNAL_H_
 #define COAP_STRM_INTERNAL_H_
 
-#include "coap_internal.h"
-#include "coap_io.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

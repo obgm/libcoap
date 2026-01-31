@@ -1030,6 +1030,9 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+#include <strings.h>
+
 typedef struct valid_cns_t {
   int count;
   char **cn_list;
@@ -1211,6 +1214,9 @@ setup_server_context_pki(const char *public_cert_file,
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+#include <strings.h>
+
 typedef struct id_def_t {
   char *hint_match;
   coap_bin_const_t id;
@@ -1341,6 +1347,7 @@ setup_server_context_psk(const char *hint,
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <stdio.h>
+#include <string.h>
 
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))

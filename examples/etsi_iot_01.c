@@ -23,6 +23,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <signal.h>
+#include <assert.h>
 
 #include <coap3/coap.h>
 

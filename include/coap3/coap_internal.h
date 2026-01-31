@@ -35,6 +35,14 @@
 # include <assert.h>
 #endif
 
+#if defined(HAVE_ERRNO_H)
+# include <errno.h>
+#endif
+
+#if defined(HAVE_LIMITS_H)
+# include <limits.h>
+#endif
+
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #else /* ! HAVE_INTTYPES_H */
@@ -62,8 +70,32 @@
 #define PRIdS "zd"
 #endif /* PRIdS */
 
-#if defined(HAVE_ERRNO_H)
-# include <errno.h>
+#if defined(HAVE_STDDEF_H)
+# include <stddef.h>
+#endif
+
+#if defined(HAVE_STDLIB_H)
+# include <stdlib.h>
+#endif
+
+#if defined(HAVE_STDINT_H)
+# include <stdint.h>
+#endif
+
+#if defined(HAVE_STDIO_H)
+# include <stdio.h>
+#endif
+
+#if defined(HAVE_STRING_H)
+# include <string.h>
+#endif
+
+#if defined(HAVE_STRINGS_H)
+# include <strings.h>
+#endif
+
+#if defined(HAVE_SYS_TYPES_H)
+# include <sys/types.h>
 #endif
 
 /* By default without either configured, these need to be set */

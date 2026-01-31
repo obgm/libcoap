@@ -17,8 +17,6 @@
 #ifndef COAP_STR_H_
 #define COAP_STR_H_
 
-#include <string.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -17,8 +17,6 @@
 #ifndef COAP_ASN1_INTERNAL_H_
 #define COAP_ASN1_INTERNAL_H_
 
-#include "coap_internal.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

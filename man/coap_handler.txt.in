@@ -471,6 +471,7 @@ EXAMPLES
 
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 
 static void
 hnd_get_time(coap_resource_t *resource, coap_session_t *session,

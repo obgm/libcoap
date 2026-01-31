@@ -25,8 +25,6 @@
 #include <lwip/pbuf.h>
 #endif
 
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

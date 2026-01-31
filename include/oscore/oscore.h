@@ -47,7 +47,6 @@
 #ifndef _OSCORE_H
 #define _OSCORE_H
 
-#include <coap3/coap_internal.h>
 #include "oscore_cose.h"
 #include "oscore_context.h"
 

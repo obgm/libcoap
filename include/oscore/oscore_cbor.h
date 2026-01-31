@@ -46,8 +46,6 @@
 
 #ifndef _OSCORE_CBOR_H
 #define _OSCORE_CBOR_H
-#include <stddef.h>
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {

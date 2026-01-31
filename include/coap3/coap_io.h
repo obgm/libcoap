@@ -17,8 +17,6 @@
 #ifndef COAP_IO_H_
 #define COAP_IO_H_
 
-#include <sys/types.h>
-
 #include "coap_address.h"
 
 #ifdef RIOT_VERSION

@@ -390,6 +390,8 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+
 static const coap_uri_t uri = {
   .host = {sizeof("1.2.3.4")-1, (const uint8_t *)"1.2.3.4"},
   .port = 5683,
@@ -460,6 +462,9 @@ init_resources(coap_context_t *ctx) {
 [source, c]
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <string.h>
+#include <strings.h>
 
 static const coap_uri_t uri1 = {
   .host = {sizeof("1.2.3.4")-1, (const uint8_t *)"1.2.3.4"},
@@ -575,6 +580,8 @@ init_resources(coap_context_t *ctx) {
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+
 /* List of names / IP addresses that proxy server is known by */
 static const char *proxy_host_name_list[2] = {
   "myservername",
@@ -633,6 +640,9 @@ init_resources(coap_context_t *ctx) {
 [source, c]
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <string.h>
+#include <stdlib.h>
 
 /* List of names / IP addresses that proxy server is known by */
 static const char *proxy_host_name_list[2] = {
