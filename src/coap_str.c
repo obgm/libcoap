@@ -27,16 +27,20 @@ coap_new_string(size_t size) {
     return NULL;
   }
 #endif /* WITH_LWIP && MEMP_USE_CUSTOM_POOLS */
-  assert(size+1 != 0);
+  /* Check no overflow (including a 8 byte small headroom) */
+  if (size > SIZE_MAX - sizeof(coap_str_bin_union_t) - 1 - 8) {
+    return NULL;
+  }
+
   s = (coap_string_t *)coap_malloc_type(COAP_STRING,
-                                        sizeof(coap_string_t) + size + 1);
+                                        sizeof(coap_str_bin_union_t) + size + 1);
   if (!s) {
     coap_log_crit("coap_new_string: malloc: failed\n");
     return NULL;
   }
 
-  memset(s, 0, sizeof(coap_string_t));
-  s->s = ((unsigned char *)s) + sizeof(coap_string_t);
+  memset(s, 0, sizeof(coap_str_bin_union_t));
+  s->s = ((unsigned char *)s) + sizeof(coap_str_bin_union_t);
   s->s[size] = '\000';
   s->length = size;
   return s;
@@ -80,6 +84,11 @@ coap_new_binary(size_t size) {
 
 coap_binary_t *
 coap_resize_binary(coap_binary_t *s, size_t size) {
+  /* Check no overflow (including a 8 byte small headroom) */
+  if (size > SIZE_MAX - sizeof(coap_str_bin_union_t) - 1 - 8) {
+    return NULL;
+  }
+
 #if defined(RIOT_VERSION) || defined(WITH_LWIP)
   /* Unlikely to work as strings will not be large enough */
   coap_binary_t *new = coap_new_binary(size);
@@ -92,11 +101,11 @@ coap_resize_binary(coap_binary_t *s, size_t size) {
 #else /* ! RIOT_VERSION && ! WITH_LWIP */
   coap_binary_t *new = coap_realloc_type(COAP_STRING,
                                          s,
-                                         sizeof(coap_binary_t) + size);
+                                         sizeof(coap_str_bin_union_t) + size);
 #endif /* ! RIOT_VERSION && ! WITH_LWIP */
   if (new) {
     new->length = size;
-    new->s = ((unsigned char *)new) + sizeof(coap_string_t);
+    new->s = ((unsigned char *)new) + sizeof(coap_str_bin_union_t);
   }
   return new;
 }
