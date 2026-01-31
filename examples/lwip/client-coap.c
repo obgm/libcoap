@@ -10,13 +10,11 @@
  * of use.
  */
 
-#include "coap_config.h"
+#include "client-coap.h"
 
-#include <coap3/coap.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include "client-coap.h"
 
 #ifndef COAP_URI
 #define COAP_URI "coap://libcoap.net"

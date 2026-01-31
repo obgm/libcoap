@@ -18,8 +18,6 @@
 #ifndef COAP_SESSION_INTERNAL_H_
 #define COAP_SESSION_INTERNAL_H_
 
-#include "coap_internal.h"
-#include "coap_io_internal.h"
 #include "coap_ws_internal.h"
 
 #ifdef __cplusplus

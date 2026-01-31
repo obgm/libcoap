@@ -19,7 +19,6 @@
 
 #include "coap3/coap_oscore.h"
 #include "coap3/coap_proxy.h"
-#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {

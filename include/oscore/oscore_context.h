@@ -48,9 +48,7 @@
 #ifndef _OSCORE_CONTEXT_H
 #define _OSCORE_CONTEXT_H
 
-#include "coap3/coap_internal.h"
 #include "coap3/coap_uthash_internal.h"
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -17,14 +17,6 @@
 #ifndef COAP_ENCODE_H_
 #define COAP_ENCODE_H_
 
-#if (defined(BSD) && (BSD >= 199103)) || defined(_WIN32)
-# include <string.h>
-#else
-# include <strings.h>
-#endif
-
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

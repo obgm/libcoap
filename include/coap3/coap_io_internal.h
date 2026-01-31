@@ -17,11 +17,7 @@
 #ifndef COAP_IO_INTERNAL_H_
 #define COAP_IO_INTERNAL_H_
 
-#include "coap_internal.h"
 #include "coap_layers_internal.h"
-#include <sys/types.h>
-
-#include "coap_address.h"
 
 #ifdef WITH_CONTIKI
 struct uip_udp_conn;

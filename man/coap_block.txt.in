@@ -474,6 +474,8 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+
 static int
 build_send_pdu(coap_context_t *context, coap_session_t *session,
                uint8_t msgtype, uint8_t request_code, const char *path,
@@ -594,6 +596,7 @@ main(int argc, char *argv[]) {
 #define __USE_POSIX
 #include <stdio.h>
 #include <sys/stat.h>
+#include <string.h>
 
 static FILE *file_block = NULL;
 static size_t file_size = 0;
@@ -754,6 +757,7 @@ main(int argc, char *argv[]) {
 
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 
 static void
 hnd_get_time(coap_resource_t *resource, coap_session_t *session,

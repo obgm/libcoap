@@ -17,12 +17,6 @@
 #ifndef COAP_ADDRESS_H_
 #define COAP_ADDRESS_H_
 
-#include <assert.h>
-#include <stdint.h>
-#include <string.h>
-#include <sys/types.h>
-#include "libcoap.h"
-
 #include "coap3/coap_pdu.h"
 
 #ifdef __cplusplus
@@ -32,6 +26,7 @@ extern "C" {
 #if defined(WITH_LWIP)
 
 #include <lwip/ip_addr.h>
+#include <string.h>
 
 struct coap_address_t {
   uint16_t port;
@@ -114,6 +109,7 @@ coap_address_clr_addr(coap_address_t *addr) {
 
 #include "net/sock.h"
 #include "net/af.h"
+#include <string.h>
 
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN IPV6_ADDR_MAX_STR_LEN
@@ -312,9 +308,9 @@ void coap_address_copy(coap_address_t *dst, const coap_address_t *src);
  */
 COAP_STATIC_INLINE int
 coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
-  assert(a);
-  assert(b);
-  return _coap_address_equals_impl(a, b);
+  if (a && b)
+    return _coap_address_equals_impl(a, b);
+  return 0;
 }
 #endif
 
@@ -325,8 +321,9 @@ coap_address_equals(const coap_address_t *a, const coap_address_t *b) {
  */
 COAP_STATIC_INLINE int
 coap_address_isany(const coap_address_t *a) {
-  assert(a);
-  return _coap_address_isany_impl(a);
+  if (a)
+    return _coap_address_isany_impl(a);
+  return 0;
 }
 
 #if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION)

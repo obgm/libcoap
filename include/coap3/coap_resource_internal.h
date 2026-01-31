@@ -17,7 +17,6 @@
 #ifndef COAP_RESOURCE_INTERNAL_H_
 #define COAP_RESOURCE_INTERNAL_H_
 
-#include "coap_internal.h"
 #include "coap_uthash_internal.h"
 
 #ifdef __cplusplus

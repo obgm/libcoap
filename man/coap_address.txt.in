@@ -273,6 +273,8 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+
 static int
 get_address(coap_uri_t *uri, coap_address_t *dst) {
   coap_addr_info_t *info_list;

@@ -17,8 +17,6 @@
 #ifndef COAP_URI_H_
 #define COAP_URI_H_
 
-#include <stdint.h>
-
 #include "coap_str.h"
 
 #ifdef __cplusplus

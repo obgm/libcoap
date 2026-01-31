@@ -49,6 +49,7 @@ strndup(const char *s1, size_t n) {
 
 #include <coap3/coap.h>
 #include <coap3/coap_defines.h>
+#include <assert.h>
 
 #define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
                       * identity) in bytes. */

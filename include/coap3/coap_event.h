@@ -18,8 +18,6 @@
 #ifndef COAP_EVENT_H_
 #define COAP_EVENT_H_
 
-#include "libcoap.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

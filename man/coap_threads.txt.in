@@ -148,6 +148,7 @@ EXAMPLES
 [source, c]
 ----
 #include <inttypes.h>
+#include <string.h>
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>

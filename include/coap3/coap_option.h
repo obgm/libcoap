@@ -17,6 +17,19 @@
 #ifndef COAP_OPTION_H_
 #define COAP_OPTION_H_
 
+#if defined(RIOT_VERSION)
+#include <thread.h>
+#endif /* RIOT_VERSION */
+
+#if defined(_WIN32)
+#include <stddef.h>
+#include <stdint.h>
+#endif /* _WIN32 */
+
+#ifndef NULL
+#define NULL 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

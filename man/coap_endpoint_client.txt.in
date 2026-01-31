@@ -352,6 +352,7 @@ setup_client_session(const char *server_ud) {
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <stdio.h>
+#include <string.h>
 #include <netinet/in.h>
 
 static int
@@ -452,6 +453,7 @@ setup_client_session_pki(const char *host,
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <stdio.h>
+#include <string.h>
 #include <netinet/in.h>
 
 #ifndef min

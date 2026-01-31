@@ -107,14 +107,19 @@
 /* it's just provided by libc. i hope we don't get too many of those, as
  * actually we'd need autotools again to find out what environment we're
  * building in */
-#define HAVE_STRNLEN 1
+/* Header files */
+#define HAVE_ERRNO_H
 
 #define HAVE_LIMITS_H
 
 #define HAVE_NETDB_H
 
-#define HAVE_SNPRINTF
+#define HAVE_STRING_H
 
-#define HAVE_ERRNO_H
+/* Functions */
+#define HAVE_STRNLEN 1
+
+#define HAVE_SNPRINTF 1
+
 
 #endif /* COAP_CONFIG_H_ */

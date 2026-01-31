@@ -48,8 +48,6 @@
 #ifndef _OSCORE_CRYPTO_H
 #define _OSCORE_CRYPTO_H
 
-#include <coap3/coap_internal.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

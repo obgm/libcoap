@@ -27,8 +27,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define UTLIST_VERSION 2.3.0
 
-#include <assert.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

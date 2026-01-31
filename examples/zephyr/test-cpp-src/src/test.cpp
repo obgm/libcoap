@@ -17,5 +17,5 @@ coap_str_const_t *xxx_libcoap_get_version() {
 int main()
 {
   xxx_libcoap_get_version();
-  exit(0);
+  return 0;
 }

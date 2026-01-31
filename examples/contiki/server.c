@@ -31,8 +31,9 @@
  */
 
 #include "contiki-net.h"
-#include "coap3/coap.h"
 #include <time.h>
+#include <assert.h>
+#include "coap3/coap.h"
 
 static coap_context_t *coap_context;
 

@@ -156,6 +156,8 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+
 #define ENGINE_CONFIG \
   "engine:pkcs11\n" \
   "enable-methods:0xffff\n" \

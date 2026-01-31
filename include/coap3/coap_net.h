@@ -17,9 +17,6 @@
 #ifndef COAP_NET_H_
 #define COAP_NET_H_
 
-#include <stdlib.h>
-#include <string.h>
-
 #if !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(RIOT_VERSION) && !defined(_WIN32)
 #include <sys/select.h>
 #endif /* ! WITH_LWIP && ! WITH_CONTIKI && ! RIOT_VERSION && ! _WIN32 */

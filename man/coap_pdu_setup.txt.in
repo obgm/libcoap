@@ -598,6 +598,8 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <string.h>
+
 static int
 build_send_pdu(coap_context_t *context, coap_session_t *session,
                uint8_t msgtype, uint8_t request_code, const char *path,
@@ -682,6 +684,7 @@ error:
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 static void

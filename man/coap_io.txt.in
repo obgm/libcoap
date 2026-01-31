@@ -288,6 +288,8 @@ EXAMPLES
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
+#include <stdlib.h>
+
 int
 main(int argc, char *argv[]) {
 
@@ -337,6 +339,8 @@ main(int argc, char *argv[]) {
 [source, c]
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
+
+#include <stdlib.h>
 
 int
 main(int argc, char *argv[]) {
@@ -396,6 +400,7 @@ main(int argc, char *argv[]) {
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <errno.h>
+#include <stdlib.h>
 
 int
 main(int argc, char *argv[]) {
@@ -463,14 +468,14 @@ main(int argc, char *argv[]) {
 }
 ----
 
-*Method Two - epoll_wait() based on monitorable file descriptor*
+*Method Three - epoll_wait() based on monitorable file descriptor*
 
 [source, c]
 ----
 #include <coap@LIBCOAP_API_VERSION@/coap.h>
 
 #include <sys/epoll.h>
-
+#include <stdlib.h>
 #include <errno.h>
 
 #define MAX_EVENTS 10

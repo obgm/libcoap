@@ -21,8 +21,6 @@
 #ifndef COAP_OSCORE_INTERNAL_H_
 #define COAP_OSCORE_INTERNAL_H_
 
-#include "oscore/oscore_context.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

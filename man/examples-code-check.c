@@ -190,6 +190,7 @@ check_synopsis(const char *file) {
     fprintf(fpcode, "#define WITH_LWIP_MAN_CHECK\n");
   }
   fprintf(fpcode, "#include <coap3/coap.h>\n");
+  fprintf(fpcode, "#include <string.h>\n");
   fprintf(fpcode, "#ifdef __GNUC__\n");
   fprintf(fpcode, "#define U __attribute__ ((unused))\n");
   fprintf(fpcode, "#else /* not a GCC */\n");
