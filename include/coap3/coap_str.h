@@ -70,6 +70,16 @@ typedef struct coap_bin_const_t {
 } coap_bin_const_t;
 
 /**
+ * CoAP union for binary, string etc.
+ */
+typedef union {
+  coap_string_t st;
+  coap_str_const_t sc;
+  coap_binary_t bt;
+  coap_bin_const_t bc;
+} coap_str_bin_union_t;
+
+/**
  * CoAP union for handling signed / unsigned chars
  */
 typedef union {
