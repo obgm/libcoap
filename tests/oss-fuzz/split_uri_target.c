@@ -1,4 +1,4 @@
-#include <coap3/coap.h>
+#include "coap3/coap_internal.h"
 
 int
 LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {

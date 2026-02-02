@@ -14,7 +14,7 @@ libcoap?=libcoap-@LIBCOAP_NAME_SUFFIX@
 WARNING_CFLAGS?=@WARNING_CFLAGS@
 DTLS_CFLAGS?=@DTLS_CFLAGS@
 DTLS_LIBS?=@DTLS_LIBS@
-CPPFLAGS=-I$(top_builddir)/include -I$(top_srcdir)/include
+CPPFLAGS=-I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)
 CFLAGS=$(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
 CFLAGS+=-Wno-missing-prototypes -Wno-missing-declarations
 
