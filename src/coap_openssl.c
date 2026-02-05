@@ -2668,25 +2668,25 @@ tls_server_name_call_back(SSL *ssl,
     const char *sni = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
     size_t i;
 
-    if !context)
-    return SSL_TLSEXT_ERR_NOACK;
+    if (!context)
+      return SSL_TLSEXT_ERR_NOACK;
 
     if (!sni || !sni[0]) {
-        sni = "";
-      }
+      sni = "";
+    }
     for (i = 0; i < context->sni_count; i++) {
-    if (!strcasecmp(sni, context->sni_entry_list[i].sni)) {
+      if (!strcasecmp(sni, context->sni_entry_list[i].sni)) {
         break;
       }
     }
     if (i == context->sni_count) {
-    SSL_CTX *ctx;
-    coap_dtls_pki_t sni_setup_data;
-    coap_dtls_key_t *new_entry;
+      SSL_CTX *ctx;
+      coap_dtls_pki_t sni_setup_data;
+      coap_dtls_key_t *new_entry;
 
-    coap_lock_callback_ret(new_entry,
-                           setup_data->validate_sni_call_back(sni,
-                                                              setup_data->sni_call_back_arg));
+      coap_lock_callback_ret(new_entry,
+                             setup_data->validate_sni_call_back(sni,
+                                                                setup_data->sni_call_back_arg));
       if (!new_entry) {
         return SSL_TLSEXT_ERR_ALERT_FATAL;
       }
