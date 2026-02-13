@@ -67,6 +67,9 @@
  * The PKCSLL engine ID can be defined by (example)
  + -DCOAP_OPENSSL_PKCS11_ENGINE_ID='\"pkcs11\"'
  *
+ * The PSK security level can be defined by (example)
+ + -DCOAP_OPENSSL_PSK_SECURITY_LEVEL=0
+ *
  */
 #include <openssl/ssl.h>
 #include <openssl/engine.h>
@@ -2625,6 +2628,14 @@ tls_secret_call_back(SSL *ssl,
      * Force a PSK algorithm to be used, so we do PSK
      */
     SSL_set_cipher_list(ssl, COAP_OPENSSL_PSK_CIPHERS);
+#ifdef COAP_OPENSSL_PSK_SECURITY_LEVEL
+    /*
+     * Set to 0 if, for example, PSK-AES128-CCM8 is to be supported (64 bits).
+     * Potentially opens up security vulnerabilities.
+     * Default value is 1.
+    */
+    SSL_set_security_level(ssl, COAP_OPENSSL_PSK_SECURITY_LEVEL);
+#endif /* COAP_OPENSSL_PSK_SECURITY_LEVEL */
     SSL_set_psk_server_callback(ssl, coap_dtls_psk_server_callback);
   }
   return 0;
@@ -3503,6 +3514,14 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
     SSL_set_psk_server_callback(ssl, coap_dtls_psk_server_callback);
 #endif /* COAP_SERVER_SUPPORT */
     SSL_set_cipher_list(ssl, COAP_OPENSSL_PSK_CIPHERS);
+#ifdef COAP_OPENSSL_PSK_SECURITY_LEVEL
+    /*
+     * Set to 0 if, for example, PSK-AES128-CCM8 is to be supported (64 bits).
+     * Potentially opens up security vulnerabilities.
+     * Default value is 1.
+    */
+    SSL_set_security_level(ssl, COAP_OPENSSL_PSK_SECURITY_LEVEL);
+#endif /* COAP_OPENSSL_PSK_SECURITY_LEVEL */
     if (setup_data->validate_ih_call_back) {
       if (session->proto == COAP_PROTO_DTLS) {
         SSL_set_max_proto_version(ssl, DTLS1_2_VERSION);
