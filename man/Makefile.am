@@ -232,6 +232,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_session.3" > coap_session_get_state.3
 	@echo ".so man3/coap_session.3" > coap_session_get_tls.3
 	@echo ".so man3/coap_session.3" > coap_session_get_type.3
+	@echo ".so man3/coap_session.3" > coap_session_is_oscore.3
 	@echo ".so man3/coap_string.3" > coap_delete_bin_const.3
 	@echo ".so man3/coap_string.3" > coap_make_str_const.3
 	@echo ".so man3/coap_string.3" > coap_string_equal.3

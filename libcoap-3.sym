@@ -297,6 +297,7 @@ coap_session_get_state
 coap_session_get_tls
 coap_session_get_type
 coap_session_init_token
+coap_session_is_oscore
 coap_session_max_pdu_size
 coap_session_new_token
 coap_session_reference

@@ -199,6 +199,15 @@ coap_proto_t coap_session_get_proto(const coap_session_t *session);
 coap_session_type_t coap_session_get_type(const coap_session_t *session);
 
 /**
+ * Check if the session is using OSCORE.
+ *
+ * @param session The CoAP session.
+ *
+ * @return @c 1 if the session is using OSCORE, @c 0 otherwise.
+ */
+int coap_session_is_oscore(const coap_session_t *session);
+
+/**
  * Get the session state
  *
  * @param session The CoAP session.
