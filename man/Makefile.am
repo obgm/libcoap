@@ -39,6 +39,7 @@ TXT3 = coap_address.txt \
 	coap_observe.txt \
 	coap_oscore.txt \
 	coap_pdu_access.txt \
+	coap_pdu_options.txt \
 	coap_pdu_setup.txt \
 	coap_pdu_transmit.txt \
 	coap_persist.txt \
@@ -190,19 +191,10 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_token.3
 	@echo ".so man3/coap_pdu_access.3" > coap_pdu_get_type.3
 	@echo ".so man3/coap_pdu_access.3" > coap_get_uri_path.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_insert_optlist.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_delete_optlist.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_sort_optlist.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_encode_var_safe8.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_add_optlist_pdu.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_add_option.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_add_data.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_add_data_blocked_response.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_path_into_optlist.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_split_path.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_query_into_optlist.3
-	@echo ".so man3/coap_pdu_setup.3" > coap_split_query.3
+	@echo ".so man3/coap_pdu_options.3" > coap_path_into_optlist.3
+	@echo ".so man3/coap_pdu_options.3" > coap_split_path.3
+	@echo ".so man3/coap_pdu_options.3" > coap_query_into_optlist.3
+	@echo ".so man3/coap_pdu_options.3" > coap_split_query.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_mid.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_code.3
 	@echo ".so man3/coap_pdu_setup.3" > coap_pdu_set_type.3
