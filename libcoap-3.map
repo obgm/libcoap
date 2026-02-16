@@ -333,6 +333,7 @@ global:
   coap_socket_get_flags;
   coap_socket_set_flags;
   coap_socket_strerror;
+  coap_sort_optlist;
   coap_split_path;
   coap_split_proxy_uri;
   coap_split_query;

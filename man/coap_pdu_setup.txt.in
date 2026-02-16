@@ -20,6 +20,7 @@ coap_add_token,
 coap_new_optlist,
 coap_insert_optlist,
 coap_delete_optlist,
+coap_sort_optlist,
 coap_encode_var_safe,
 coap_encode_var_safe8,
 coap_add_optlist_pdu,
@@ -63,6 +64,8 @@ const uint8_t *_data_);*
 coap_optlist_t *_optlist_);*
 
 *void coap_delete_optlist(coap_optlist_t *_optlist_chain_);*
+
+*int coap_sort_optlist(coap_optlist_t **_options_);*
 
 *unsigned int coap_encode_var_safe(uint8_t *_buffer_, size_t _size_,
 unsigned int _value_);*
@@ -383,6 +386,17 @@ off all the _optlist_chain_ entries.
 The *coap_delete_optlist*() function deletes and frees off all the optlist
 entries in the _optlist_chain_.
 
+*Function: coap_sort_optlist()*
+
+The *coap_sort_optlist*() function sorts the optlist chain pointed to by
+_options_ into ascending option number order (RFC 7252 ordering for delta
+encoding).  The chain is reordered in place.  Use this when the list was
+built with *coap_insert_optlist*() and you need it ordered before use (for
+example, before adding options to a PDU manually or for inspection).
+*coap_add_optlist_pdu*() sorts internally, so calling *coap_sort_optlist*()
+is not required when using that function.  Returns 1 if sorted successfully,
+0 if _options_ is NULL or the chain is empty.
+
 *Function: coap_add_optlist_pdu()*
 
 The *coap_add_optlist_pdu*() function sorts all of the entries in
@@ -570,8 +584,8 @@ _PDU_ or NULL if there is a malloc or parameter failure.
 *coap_new_optlist*() returns a newly created _optlist_ or NULL
 if there is a malloc failure.
 
-*coap_add_token*(), *coap_insert_optlist*(), *coap_add_optlist_pdu*()
-and *coap_add_data*() return 0 on failure, 1 on success.
+*coap_add_token*(), *coap_insert_optlist*(), *coap_sort_optlist*(),
+*coap_add_optlist_pdu*() and *coap_add_data*() return 0 on failure, 1 on success.
 
 *coap_encode_var_safe*() returns either the length of bytes
 encoded (which can be 0 when encoding 0) or 0 on failure.

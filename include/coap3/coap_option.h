@@ -376,6 +376,16 @@ coap_optlist_t *coap_new_optlist(uint16_t number,
  */
 int coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t **optlist_chain);
 
+
+/**
+ * @brief Sorts the optlist chain
+ *
+ * @param options The optlist chain to sort
+ *
+ * @return @c 1 if sorted successfully, @c 0 otherwise.
+ */
+int coap_sort_optlist(coap_optlist_t **options);
+
 /**
  * Adds @p optlist to the given @p optlist_chain. The optlist_chain variable
  * be set to NULL before the initial call to coap_insert_optlist().
