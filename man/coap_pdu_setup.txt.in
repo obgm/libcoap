@@ -17,20 +17,8 @@ coap_new_message_id,
 coap_session_init_token,
 coap_session_new_token,
 coap_add_token,
-coap_new_optlist,
-coap_insert_optlist,
-coap_delete_optlist,
-coap_sort_optlist,
-coap_encode_var_safe,
-coap_encode_var_safe8,
-coap_add_optlist_pdu,
-coap_add_option,
 coap_add_data,
 coap_add_data_blocked_response,
-coap_path_into_optlist,
-coap_split_path,
-coap_query_into_optlist,
-coap_split_query,
 coap_pdu_set_mid,
 coap_pdu_set_code,
 coap_pdu_set_type
@@ -57,44 +45,11 @@ uint8_t *_token_);*
 *int coap_add_token(coap_pdu_t *_pdu_, size_t _length_,
 const uint8_t *_data_);*
 
-*coap_optlist_t *coap_new_optlist(uint16_t _number_, size_t _length_,
-const uint8_t *_data_);*
-
-*int coap_insert_optlist(coap_optlist_t **_optlist_chain_,
-coap_optlist_t *_optlist_);*
-
-*void coap_delete_optlist(coap_optlist_t *_optlist_chain_);*
-
-*int coap_sort_optlist(coap_optlist_t **_options_);*
-
-*unsigned int coap_encode_var_safe(uint8_t *_buffer_, size_t _size_,
-unsigned int _value_);*
-
-*unsigned int coap_encode_var_safe8(uint8_t *_buffer_, size_t _size_,
-uint64_t _value_);*
-
-*int coap_add_optlist_pdu(coap_pdu_t *_pdu_, coap_optlist_t **_optlist_chain_);*
-
-*size_t coap_add_option(coap_pdu_t *_pdu_, uint16_t _number_, size_t _length_,
-const uint8_t *_data_);*
-
 *int coap_add_data(coap_pdu_t *_pdu_, size_t _length_, const uint8_t *_data_);*
 
 *void coap_add_data_blocked_response(const coap_pdu_t *_request_,
 coap_pdu_t *_response_, uint16_t _media_type_, int _maxage_, size_t _length_,
 const uint8_t *_data_);*
-
-*int coap_path_into_optlist(const uint8_t *_path_, size_t _length_,
-coap_option_num_t _optnum_, coap_optlist_t **_optlist_chain_);*
-
-*int coap_split_path(const uint8_t *_path_, size_t _length_, uint8_t *_buffer_,
-size_t *_buflen_);*
-
-*int coap_query_into_optlist(const uint8_t *_path_, size_t _length_,
-coap_option_num_t _optnum_, coap_optlist_t **_optlist_chain_);*
-
-*int coap_split_query(const uint8_t *_query_, size_t _length_,
-uint8_t *_buffer_, size_t *_buflen_);*
 
 *void coap_pdu_set_mid(coap_pdu_t *_pdu_, coap_mid_t _mid_);*
 
@@ -140,6 +95,8 @@ packet. The response pdu is always freed off by the underlying library.
 
 For handling situations where the data to be transmitted does not fit into a
 single packet, see *coap_block*(3).
+
+See *coap_pdu_options*(3) for handling the PDU options.
 
 PDU CREATE AND HEADER FUNCTIONS
 -------------------------------
@@ -303,242 +260,7 @@ corrected token in the response PDU.
 PDU OPTIONS FUNCTIONS
 ---------------------
 
-The following is the current list of options with their numeric value
-----
-/*
- * The C, U, and N flags indicate the properties
- * Critical, Unsafe, and NoCacheKey, respectively.
- * If U is set, then N has no meaning as per
- * https://rfc-editor.org/rfc/rfc7252#section-5.10
- * and is set to a -.
- * Separately, R is for the options that can be repeated
- *
- * The least significant byte of the option is set as followed
- * as per https://rfc-editor.org/rfc/rfc7252#section-5.4.6
- *
- *   0   1   2   3   4   5   6   7
- * --+---+---+---+---+---+---+---+
- *           | NoCacheKey| U | C |
- * --+---+---+---+---+---+---+---+
- *
- * https://rfc-editor.org/rfc/rfc8613#section-4 goes on to define E, I and U
- * properties Encrypted and Integrity Protected, Integrity Protected Only and
- * Unprotected respectively.  Integrity Protected Only is not currently used.
- *
- * An Option is tagged with CUNREIU with any of the letters replaced with _ if
- * not set, or - for N if U is set (see above) for aiding understanding of the
- * Option.
- */
-
-COAP_OPTION_IF_MATCH        1 /* C__RE__, opaque,    0-8 B, RFC7252 */
-COAP_OPTION_URI_HOST        3 /* CU-___U, String,  1-255 B, RFC7252 */
-COAP_OPTION_ETAG            4 /* ___RE__, opaque,    1-8 B, RFC7252 */
-COAP_OPTION_IF_NONE_MATCH   5 /* C___E__, empty,       0 B, RFC7252 */
-COAP_OPTION_OBSERVE         6 /* _U-_E_U, empty/uint,  0 B/0-3 B, RFC7641 */
-COAP_OPTION_URI_PORT        7 /* CU-___U, uint,      0-2 B, RFC7252 */
-COAP_OPTION_LOCATION_PATH   8 /* ___RE__, String,  0-255 B, RFC7252 */
-COAP_OPTION_OSCORE          9 /* C_____U, *,       0-255 B, RFC8613 */
-COAP_OPTION_URI_PATH       11 /* CU-RE__, String,  0-255 B, RFC7252 */
-COAP_OPTION_CONTENT_FORMAT 12 /* ____E__, uint,      0-2 B, RFC7252 */
-/* COAP_OPTION_MAXAGE default 60 seconds if not set */
-COAP_OPTION_MAXAGE         14 /* _U-_E_U, uint,      0-4 B, RFC7252 */
-COAP_OPTION_URI_QUERY      15 /* CU-RE__, String,  1-255 B, RFC7252 */
-COAP_OPTION_HOP_LIMIT      16 /* ______U, uint,        1 B, RFC8768 */
-COAP_OPTION_ACCEPT         17 /* C___E__, uint,      0-2 B, RFC7252 */
-COAP_OPTION_Q_BLOCK1       19 /* CU__E_U, uint,      0-3 B, RFC8177 */
-COAP_OPTION_LOCATION_QUERY 20 /* ___RE__, String,  0-255 B, RFC7252 */
-COAP_OPTION_BLOCK2         23 /* CU-_E_U, uint,      0-3 B, RFC7959 */
-COAP_OPTION_BLOCK1         27 /* CU-_E_U, uint,      0-3 B, RFC7959 */
-COAP_OPTION_SIZE2          28 /* __N_E_U, uint,      0-4 B, RFC7959 */
-COAP_OPTION_Q_BLOCK2       31 /* CU_RE_U, uint,      0-3 B, RFC9177 */
-COAP_OPTION_PROXY_URI      35 /* CU-___U, String, 1-1034 B, RFC7252 */
-COAP_OPTION_PROXY_SCHEME   39 /* CU-___U, String,  1-255 B, RFC7252 */
-COAP_OPTION_SIZE1          60 /* __N_E_U, uint,      0-4 B, RFC7252 */
-COAP_OPTION_ECHO          252 /* _N__E_U, opaque,   0-40 B, RFC9175 */
-COAP_OPTION_NORESPONSE    258 /* _U-_E_U, uint,      0-1 B, RFC7967 */
-COAP_OPTION_RTAG          292 /* ___RE_U, opaque,    0-8 B, RFC9175 */
-----
-See FURTHER INFORMATION as to how to get the latest list.
-
-*Function: coap_new_optlist()*
-
-The *coap_new_optlist*() function returns a newly created _optlist_ entry of
-type _coap_optlist_t_*.  The _number_ specifies which CoAP option is to be
-used, and is one of the COAP_OPTION_* definitions.  The _length_ is the length
-of the data of the option, and _data_ points to the content of the option.
-
-*NOTE:* Where possible, the option data needs to be stripped of leading zeros
-(big endian) to reduce the amount of data needed in the PDU, as well as in
-some cases the maximum data size of an option can be exceeded if not stripped
-and hence be illegal.  This is done by using *coap_encode_var_safe*() or
-*coap_encode_var_safe8*().
-
-*Function: coap_insert_optlist()*
-
-The *coap_insert_optlist*() function adds the _optlist_ entry onto the
-end of the _optlist_chain_.
-The initial _optlist_chain_ entry needs to be set to NULL before this function
-is first called.  The *coap_delete_optlist*() function has to be called to free
-off all the _optlist_chain_ entries.
-
-*Function: coap_delete_optlist()*
-
-The *coap_delete_optlist*() function deletes and frees off all the optlist
-entries in the _optlist_chain_.
-
-*Function: coap_sort_optlist()*
-
-The *coap_sort_optlist*() function sorts the optlist chain pointed to by
-_options_ into ascending option number order (RFC 7252 ordering for delta
-encoding).  The chain is reordered in place.  Use this when the list was
-built with *coap_insert_optlist*() and you need it ordered before use (for
-example, before adding options to a PDU manually or for inspection).
-*coap_add_optlist_pdu*() sorts internally, so calling *coap_sort_optlist*()
-is not required when using that function.  Returns 1 if sorted successfully,
-0 if _options_ is NULL or the chain is empty.
-
-*Function: coap_add_optlist_pdu()*
-
-The *coap_add_optlist_pdu*() function sorts all of the entries in
-_optlist_chain_ into ascending option numeric order and adds all the entries
-to the _pdu_.  This function does not free off the entries in _optlist_chain_.
-This function must be called after adding any token and before adding in the
-payload data.
-
-*Function: coap_add_option()*
-
-The *coap_add_option*() function adds in the specified option of type _number_
-with _data_ of length _length_ to the PDU _pdu_.
-It is important that options are added to the _pdu_ with _number_ either
-being the same or greater than the previous option _number_ that was added.
-
-*NOTE:* Where possible, the option data needs to be stripped of leading zeros
-(big endian) to reduce the amount of data needed in the PDU, as well as in
-some cases the maximum data size of an option can be exceeded if not stripped
-and hence be illegal.  This is done by using *coap_encode_var_safe*() or
-*coap_encode_var_safe8*().
-
-*Function: coap_encode_var_safe()*
-
-The *coap_encode_var_safe*() function encodes _value_ into _buffer_ which has
-a size of _size_ in bytes.  Normally, the _buffer_ size should be at least
-the sizeof(int) bytes unless you definitely know less space is required.
-
-*Function: coap_encode_var_safe8()*
-
-The *coap_encode_var_safe8*() function encodes 8 byte _value_ into _buffer_
-which has a size of _size_ in bytes.  Normally, the _buffer_ size should be at
-least 8 bytes unless you definitely know less space is required.
-
-*Function: coap_path_into_optlist()*
-
-The *coap_path_into_optlist*() function splits up _path_ of length _length_
-into '/' separated segments and then appends the _optnum_ option for each
-segment to _optlist_chain_. _optlist_chain_ can contain previous optlist
-entries or the parent has to be initialized to NULL. Any segment that is
-just "." is not appended. Any segment that is just ".." causes the previous
-segment (if just added by *coap_path_into_optlist*()) to be removed from
-_optlist_chain_. Any %<hex><hex> definitions are replaced by the actual byte.
-_optnum_ should be one of COAP_OPTION_URI_PATH or COAP_OPTION_LOCATION_PATH.
-
-*Function: coap_split_path()*
-
-The *coap_split_path*() function splits up _path_ of length _length_ into
-'/' separated segments and places the result in _buffer_ which has a size
-of _buflen_ with a dummy option separating each path segment.
-_buflen_ needs to be preset with the size of _buffer_ before the function call,
-and then _buflen_ is updated with the actual size of _buffer_ used.
-_buflen_ needs to be at least _length_ with an extra 2 bytes per segment to
-handle long segments.
-Any segment that is just "." is not appended. Any segment that is just ".."
-causes the previous segment (if any) to be removed from _buffer_.
-Any %<hex><hex> definitions are replaced by the actual byte.
-The return value indicates the number of components that individual
-COAP_OPTION_URI_PATH (or COAP_OPTION_LOCATION_PATH) options need to be
-created for.
-
-Note: For simplicity, use *coap_path_into_optlist*() instead.
-
-*Function: coap_query_into_optlist()*
-
-The *coap_query_into_optlist*() function splits up _query_ of length _length_
-into '&' separated segments and then appends the _optnum_ option for each
-segment to _optlist_chain_. _optlist_chain_ can contain previous optlist
-entries or the parent has to be initialized to NULL.  _optnum_ should be one of
-COAP_OPTION_URI_QUERY or COAP_OPTION_LOCATION_QUERY.
-
-*Function: coap_split_query()*
-
-The *coap_split_query*() function splits up _query_ of length _length_ into
-'&' separated segments and
-places the result in _buffer_ which has a size of _buflen_ with a dummy
-option separating each query segment.  _buflen_ needs
-to be preset with the size of _buffer_ before the function call, and then
-_buflen_ is updated with the actual size of _buffer_ used. _buflen_ needs
-to be at least _length_ with an extra 2 bytes per segment to handle long
-segments. The return
-value indicates the number of components that individual COAP_OPTION_URI_QUERY
-(or COAP_OPTION_LOCATION_QUERY) options need to be created for.
-
-Note: For simplicity, use *coap_query_into_optlist*() instead.
-
-PDU OPTIONS - LIBCOAP HANDLING
-------------------------------
-Most of the options are under the control of the applications, but the
-following are primarily used internally by libcoap.
-
-*COAP_OPTION_BLOCK1* and *COAP_OPTION_BLOCK2*
-
-These Block options are used when a large body needs to be split up into
-multiple payloads.  Following the introduction of
-*coap_context_set_block_mode*(3), libcoap can internally handle the setting
-of these options (see *coap_block*(3)). Applications can continue to include
-these options to set hint block size values.
-
-It is recommended that
-*coap_context_set_block_mode(context, COAP_BLOCK_USE_LIBCOAP|COAP_BLOCK_SINGLE_BODY)*
-is used to reduce the programming requirements for block handling within
-the applications.
-
-*COAP_OPTION_ECHO*
-
-This option can be set by the server application to indicate that the state of
-the client's freshness is confirmed. The libcoap client logic will detect the
-use of the Echo option by the server and reflect back the Echo value in the
-next request without involving the client application.  The opaque
-option Echo may be seen by the client application.
-
-*COAP_OPTION_ETAG*
-
-This option is normally set by the server libcoap logic when sending back
-multiple payloads so that the (libcoap logic) client can re-assemble the
-correct body.
-
-*COAP_OPTION_HOP_LIMIT*
-
-When using proxy logic, the value of the Hop-Limit option is decremented by
-one for each proxy hop. If the count decrements to zero, then a 5.08 (Hop
-Limit Reached) error code is returned to the sender.  The initial count is
-16, unless the client application sets its own limit using the Hop-Limit option.
-
-*COAP_OPTION_RTAG*
-
-This option is set by the libcoap client logic when transmitting multiple
-bodies with multiple payloads so that the (libcoap logic) server can
-differentiate and re-assemble the correct body.
-
-*COAP_OPTION_SIZE1* and *COAP_OPTION_SIZE2*
-
-These options are added by the libcoap logic to provide a size (Size1 by
-libcoap client logic, Size2 by libcoap server logic) indication to the
-recipient of the size of the large body that is to be transferred. See
-*coap_block*(3).
-
-*COAP_OPTION_OSCORE*
-
-This option is used during OSCORE enabled communications.  It should not be
-set by any application, but is used internally.  See *coap_oscore*(3) for
-further information on how to set up OSCORE.
+See *coap_pdu_options*(3).
 
 PDU PAYLOAD FUNCTIONS
 ---------------------
@@ -581,26 +303,7 @@ RETURN VALUES
 *coap_new_pdu*() and *coap_pdu_init*() return a newly created
 _PDU_ or NULL if there is a malloc or parameter failure.
 
-*coap_new_optlist*() returns a newly created _optlist_ or NULL
-if there is a malloc failure.
-
-*coap_add_token*(), *coap_insert_optlist*(), *coap_sort_optlist*(),
-*coap_add_optlist_pdu*() and *coap_add_data*() return 0 on failure, 1 on success.
-
-*coap_encode_var_safe*() returns either the length of bytes
-encoded (which can be 0 when encoding 0) or 0 on failure.
-
-*coap_encode_var_safe8*() returns either the length of bytes
-encoded (which can be 0 when encoding 0) or 0 on failure.
-
-*coap_add_option*() returns the size of option added, or 0 on
-failure.
-
-*coap_path_into_optlist*() and *coap_query_into_optlist*() return 1 on
-success or 0 on failure.
-
-*coap_split_path*() and *coap_split_query*() return the number
-of components found.
+*coap_add_token*() and *coap_add_data*() return 0 on failure, 1 on success.
 
 *coap_new_message_id*() returns the next CoAP message ID to use.
 
@@ -759,7 +462,7 @@ hnd_get_time(coap_resource_t *resource, coap_session_t *session,
 SEE ALSO
 --------
 *coap_block*(3), *coap_observe*(3), *coap_oscore*(3), *coap_pdu_access*(3),
-*coap_pdu_transmit*(3) and *coap_resource*(3)
+*coap_pdu_options*(3), *coap_pdu_transmit*(3) and *coap_resource*(3)
 
 FURTHER INFORMATION
 -------------------
