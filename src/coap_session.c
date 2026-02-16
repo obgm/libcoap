@@ -2338,6 +2338,16 @@ coap_session_get_type(const coap_session_t *session) {
   return 0;
 }
 
+int
+coap_session_is_oscore(const coap_session_t *session) {
+#if COAP_OSCORE_SUPPORT
+  return (session && session->oscore_encryption != 0) ? 1 : 0;
+#else
+  (void)session;
+  return 0;
+#endif
+}
+
 COAP_API int
 coap_session_set_type_client(coap_session_t *session) {
   int ret;
