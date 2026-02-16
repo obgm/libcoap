@@ -568,6 +568,16 @@ coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t **options) {
 }
 
 int
+coap_sort_optlist(coap_optlist_t **options) {
+  if (options && *options) {
+    /* sort options for delta encoding */
+    LL_SORT((*options), order_opts);
+    return 1;
+  }
+  return 0;
+}
+
+int
 coap_insert_optlist(coap_optlist_t **head, coap_optlist_t *node) {
   if (!node) {
     coap_log_debug("optlist not provided\n");
