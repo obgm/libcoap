@@ -1775,7 +1775,7 @@ typedef struct {
 } oscore_value_t;
 
 static uint8_t
-hex2char(char c) {
+hex_to_char(char c) {
   assert(isxdigit(c));
   if ('a' <= c && c <= 'f')
     return c - 'a' + 10;
@@ -1799,7 +1799,7 @@ parse_hex_bin(const char *begin, const char *end) {
   for (i = 0; (i < (size_t)(end - begin)) && isxdigit((uint8_t)begin[i]) &&
        isxdigit((uint8_t)begin[i + 1]);
        i += 2) {
-    binary->s[i / 2] = (hex2char(begin[i]) << 4) + hex2char(begin[i + 1]);
+    binary->s[i / 2] = (hex_to_char(begin[i]) << 4) + hex_to_char(begin[i + 1]);
   }
   if (i != (size_t)(end - begin))
     goto bad_entry;
