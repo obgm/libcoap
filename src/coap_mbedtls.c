@@ -975,6 +975,7 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
   return 0;
 }
 
+#if defined(COAP_WITH_DTLS)
 static int
 setup_pki_credentials(mbedtls_x509_crt *cacert,
                       mbedtls_x509_crt *public_cert,
@@ -1381,7 +1382,9 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
 
   return 1;
 }
+#endif /* COAP_WITH_DTLS */
 
+#if defined(COAP_WITH_DTLS)
 #if defined(MBEDTLS_SSL_SRV_C)
 /*
  * PKI SNI callback.
@@ -1626,6 +1629,7 @@ fail:
   return ret;
 }
 #endif /* MBEDTLS_SSL_SRV_C */
+#endif /* COAP_WITH_DTLS */
 
 #if COAP_CLIENT_SUPPORT
 static int *psk_ciphers = NULL;
@@ -1815,6 +1819,7 @@ set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
   }
 }
 
+#if defined(COAP_WITH_DTLS)
 static int
 setup_client_ssl_session(coap_session_t *c_session,
                          coap_mbedtls_env_t *m_env) {
@@ -1948,8 +1953,10 @@ setup_client_ssl_session(coap_session_t *c_session,
 fail:
   return ret;
 }
+#endif /* COAP_WITH_DTLS */
 #endif /* COAP_CLIENT_SUPPORT */
 
+#if defined(COAP_WITH_DTLS)
 static void
 mbedtls_cleanup(coap_mbedtls_env_t *m_env) {
   if (!m_env) {
@@ -1977,6 +1984,7 @@ coap_dtls_free_mbedtls_env(coap_mbedtls_env_t *m_env) {
     mbedtls_free(m_env);
   }
 }
+#endif /* COAP_WITH_DTLS */
 
 #if COAP_MAX_LOGGING_LEVEL > 0
 static const char *
@@ -2009,6 +2017,7 @@ report_mbedtls_alert(unsigned char alert) {
  *         0  not completed
  *         1  established
  */
+#if defined(COAP_WITH_DTLS)
 static int
 do_mbedtls_handshake(coap_session_t *c_session,
                      coap_mbedtls_env_t *m_env) {
@@ -2140,6 +2149,7 @@ reset:
 #endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
   return -1;
 }
+#endif /* COAP_WITH_DTLS */
 
 static void
 mbedtls_debug_out(void *ctx COAP_UNUSED, int level,
@@ -2268,6 +2278,7 @@ coap_sock_write(void *context, const unsigned char *in, size_t inl) {
 }
 #endif /* !COAP_DISABLE_TCP */
 
+#if defined(COAP_WITH_DTLS)
 static coap_mbedtls_env_t *
 coap_dtls_new_mbedtls_env(coap_session_t *c_session,
                           coap_dtls_role_t role,
@@ -2428,9 +2439,11 @@ fail:
   }
   return NULL;
 }
+#endif /* COAP_WITH_DTLS */
 
 int
 coap_dtls_is_supported(void) {
+#if defined(COAP_WITH_DTLS)
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
   return 1;
 #else /* !MBEDTLS_SSL_PROTO_DTLS */
@@ -2442,6 +2455,9 @@ coap_dtls_is_supported(void) {
   }
   return 0;
 #endif /* !MBEDTLS_SSL_PROTO_DTLS */
+#else
+  return 0;
+#endif /* COAP_WITH_DTLS */
 }
 
 int
@@ -2733,7 +2749,8 @@ coap_dtls_free_context(void *dtls_context) {
 #if COAP_CLIENT_SUPPORT
 void *
 coap_dtls_new_client_session(coap_session_t *c_session) {
-#if !defined(MBEDTLS_SSL_CLI_C)
+#if defined(COAP_WITH_DTLS)
+  #if !defined(MBEDTLS_SSL_CLI_C)
   (void)c_session;
   coap_log_emerg("coap_dtls_new_client_session:"
                  " libcoap not compiled for Client Mode for Mbed TLS"
@@ -2758,12 +2775,17 @@ coap_dtls_new_client_session(coap_session_t *c_session) {
   }
   return m_env;
 #endif /* MBEDTLS_SSL_CLI_C */
+#else
+  (void)c_session;
+  return NULL;
+#endif /* COAP_WITH_DTLS */
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
 void *
 coap_dtls_new_server_session(coap_session_t *c_session) {
+#if defined(COAP_WITH_DTLS)
 #if !defined(MBEDTLS_SSL_SRV_C)
   (void)c_session;
   coap_log_emerg("coap_dtls_new_server_session:"
@@ -2782,21 +2804,30 @@ coap_dtls_new_server_session(coap_session_t *c_session) {
   }
   return m_env;
 #endif /* MBEDTLS_SSL_SRV_C */
+#else
+  (void)c_session;
+  return NULL;
+#endif /* COAP_WITH_DTLS */
 }
 #endif /* COAP_SERVER_SUPPORT */
 
 void
 coap_dtls_free_session(coap_session_t *c_session) {
+#if defined(COAP_WITH_DTLS)
   if (c_session && c_session->context && c_session->tls) {
     coap_dtls_free_mbedtls_env(c_session->tls);
     c_session->tls = NULL;
     coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CLOSED, c_session);
   }
+#else
+  (void)c_session;
+#endif /* COAP_WITH_DTLS */
   return;
 }
 
 void
 coap_dtls_session_update_mtu(coap_session_t *c_session) {
+#if defined(COAP_WITH_DTLS)
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
   coap_mbedtls_env_t *m_env =
       (coap_mbedtls_env_t *)c_session->tls;
@@ -2808,11 +2839,15 @@ coap_dtls_session_update_mtu(coap_session_t *c_session) {
 #else /* ! MBEDTLS_SSL_PROTO_DTLS */
   (void)c_session;
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+#else
+  (void)c_session;
+#endif /* COAP_WITH_DTLS */
 }
 
 ssize_t
 coap_dtls_send(coap_session_t *c_session,
                const uint8_t *data, size_t data_len) {
+#if defined(COAP_WITH_DTLS)
   int ret;
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
@@ -2867,6 +2902,12 @@ coap_dtls_send(coap_session_t *c_session,
     }
   }
   return ret;
+#else
+  (void)c_session;
+  (void)data;
+  (void)data_len;
+  return -1;
+#endif /* COAP_WITH_DTLS */
 }
 
 int
@@ -2881,6 +2922,7 @@ coap_dtls_get_context_timeout(void *dtls_context COAP_UNUSED) {
 
 coap_tick_t
 coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
+#if defined(COAP_WITH_DTLS)
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 #ifdef __ZEPHYR__
   int ret = zephyr_timing_get_delay(&m_env->timer);
@@ -2920,6 +2962,11 @@ coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
   }
 
   return 0;
+#else
+  (void)c_session;
+  (void)now;
+  return 0;
+#endif /* COAP_WITH_DTLS */
 }
 
 /*
@@ -2928,6 +2975,7 @@ coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
  */
 int
 coap_dtls_handle_timeout(coap_session_t *c_session) {
+#if defined(COAP_WITH_DTLS)
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
   assert(m_env != NULL && c_session->state == COAP_SESSION_STATE_HANDSHAKE);
@@ -2939,6 +2987,10 @@ coap_dtls_handle_timeout(coap_session_t *c_session) {
     return 1;
   }
   return 0;
+#else
+  (void)c_session;
+  return 0;
+#endif /* COAP_WITH_DTLS */
 }
 
 /*
@@ -2950,6 +3002,7 @@ int
 coap_dtls_receive(coap_session_t *c_session,
                   const uint8_t *data,
                   size_t data_len) {
+#if defined(COAP_WITH_DTLS)
   int ret = 1;
 
   c_session->dtls_event = -1;
@@ -3038,6 +3091,12 @@ finish:
     ssl_data->pdu = NULL;
   }
   return ret;
+#else
+  (void)c_session;
+  (void)data;
+  (void)data_len;
+  return -1;
+#endif /* COAP_WITH_DTLS */
 }
 
 #if COAP_SERVER_SUPPORT
@@ -3050,6 +3109,7 @@ int
 coap_dtls_hello(coap_session_t *c_session,
                 const uint8_t *data,
                 size_t data_len) {
+#if defined(COAP_WITH_DTLS)
 #if !defined(MBEDTLS_SSL_PROTO_DTLS) || !defined(MBEDTLS_SSL_SRV_C)
   (void)c_session;
   (void)data;
@@ -3111,11 +3171,18 @@ coap_dtls_hello(coap_session_t *c_session,
   }
   return ret;
 #endif /* MBEDTLS_SSL_PROTO_DTLS && MBEDTLS_SSL_SRV_C */
+#else
+  (void)c_session;
+  (void)data;
+  (void)data_len;
+  return -1;
+#endif /* COAP_WITH_DTLS */
 }
 #endif /* COAP_SERVER_SUPPORT */
 
 unsigned int
 coap_dtls_get_overhead(coap_session_t *c_session) {
+#if defined(COAP_WITH_DTLS)
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
   int expansion = mbedtls_ssl_get_record_expansion(&m_env->ssl);
 
@@ -3123,6 +3190,10 @@ coap_dtls_get_overhead(coap_session_t *c_session) {
     return 13 + 8 + 8;
   }
   return expansion;
+#else
+  (void)c_session;
+  return 0;
+#endif /* COAP_WITH_DTLS */
 }
 
 #if !COAP_DISABLE_TCP

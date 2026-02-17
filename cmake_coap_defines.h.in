@@ -77,6 +77,9 @@
 /* Define to 1 if the system has libtinydtls */
 #cmakedefine COAP_WITH_LIBTINYDTLS @COAP_WITH_LIBTINYDTLS@
 
+/* Define to 1 if the system has DTLS support */
+#cmakedefine COAP_WITH_DTLS @COAP_WITH_DTLS@
+
 /* Define to 1 if the system has wolfSSL */
 #cmakedefine COAP_WITH_LIBWOLFSSL @COAP_WITH_LIBWOLFSSL@
 

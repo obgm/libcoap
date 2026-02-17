@@ -561,6 +561,10 @@ if(ENABLE_DTLS)
     )
   endif()
 
+  if(DTLS_FOUND)
+    set(COAP_WITH_DTLS 1)
+  endif()
+
 endif()
 
 execute_process(COMMAND git describe --tags --dirty --always
