@@ -12,7 +12,12 @@
 cmake_minimum_required(VERSION 3.20.0)
 
 if(CONFIG_LIBCOAP)
-  if(CONFIG_MBEDTLS AND NOT CONFIG_WOLFSSL)
+  if(CONFIG_LIBCOAP_WITH_PSA_CRYPTO)
+    set(COAP_USE_PSA_CRYPTO 1)
+    set(COAP_WITH_LIBMBEDTLS 1)
+    set(ENABLE_DTLS OFF)
+    message(STATUS "libcoap: Using PSA crypto (coap_psa.c)")
+  elseif(CONFIG_MBEDTLS AND NOT CONFIG_WOLFSSL)
     set(ENABLE_DTLS ON)
     set(DTLS_BACKEND "zephyr" CACHE STRING "Zephyr build")
     set_property(CACHE DTLS_BACKEND PROPERTY STRINGS zephyr wolfssl)

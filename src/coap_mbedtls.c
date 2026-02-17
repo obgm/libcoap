@@ -2750,7 +2750,7 @@ coap_dtls_free_context(void *dtls_context) {
 void *
 coap_dtls_new_client_session(coap_session_t *c_session) {
 #if defined(COAP_WITH_DTLS)
-  #if !defined(MBEDTLS_SSL_CLI_C)
+#if !defined(MBEDTLS_SSL_CLI_C)
   (void)c_session;
   coap_log_emerg("coap_dtls_new_client_session:"
                  " libcoap not compiled for Client Mode for Mbed TLS"
