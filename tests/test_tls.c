@@ -46,7 +46,9 @@
 #endif /* COAP_WITH_LIBGNUTLS */
 
 #ifdef COAP_WITH_LIBMBEDTLS
+#ifdef COAP_WITH_DTLS
 #define HAVE_DTLS 1
+#endif /* COAP_WITH_DTLS */
 #include <mbedtls/version.h>
 #endif /* COAP_WITH_LIBMBEDTLS */
 
