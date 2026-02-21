@@ -340,20 +340,40 @@ oscore_prepare_aad(const uint8_t *external_aad_buffer,
  * oscore_generate_nonce
  *
  * Creates Nonce
+ * See https://datatracker.ietf.org/doc/html/rfc8613#section-5.2 and Figure 8.
  */
 void
 oscore_generate_nonce(cose_encrypt0_t *ptr,
                       oscore_ctx_t *ctx,
                       uint8_t *buffer,
                       uint8_t size) {
+  size_t tmp_len;
+
   memset(buffer, 0, size);
-  buffer[0] = (uint8_t)(ptr->key_id.length);
-  memcpy(&(buffer[((size - 5) - ptr->key_id.length)]),
+  /* ID_PIV */
+  if (ptr->key_id.length > size - 6UL) {
+    tmp_len = size - 6;
+  } else {
+    tmp_len = ptr->key_id.length;
+  }
+  memcpy(&(buffer[((size - 5) - tmp_len)]),
          ptr->key_id.s,
-         ptr->key_id.length);
-  memcpy(&(buffer[size - ptr->partial_iv.length]),
+         tmp_len);
+  /* S */
+  buffer[0] = (uint8_t)tmp_len;
+  /* PIV */
+  if (ptr->partial_iv.length > size) {
+    tmp_len = size;
+  } else {
+    tmp_len = ptr->partial_iv.length;
+  }
+  if (tmp_len > 5) {
+    tmp_len = 5;
+  }
+  memcpy(&(buffer[size - tmp_len]),
          ptr->partial_iv.s,
-         ptr->partial_iv.length);
+         tmp_len);
+  /* XOR */
   for (int i = 0; i < size; i++) {
     buffer[i] = buffer[i] ^ (uint8_t)ctx->common_iv->s[i];
   }
