@@ -1,12 +1,12 @@
 /* coap_asn1.c -- ASN.1 handling functions
-*
-* Copyright (C) 2020-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
-*
+ *
+ * Copyright (C) 2020-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
+ *
  * SPDX-License-Identifier: BSD-2-Clause
  *
-* This file is part of the CoAP library libcoap. Please see
-* README for terms of use.
-*/
+ * This file is part of the CoAP library libcoap. Please see
+ * README for terms of use.
+ */
 
 /**
  * @file coap_asn1.c
@@ -16,46 +16,69 @@
 #include "coap3/coap_libcoap_build.h"
 
 size_t
-asn1_len(const uint8_t **ptr) {
+asn1_len(const uint8_t **ptr, size_t *plen) {
   size_t len = 0;
 
+  if (*plen == 0)
+    return 0;
   if ((**ptr) & 0x80) {
     size_t octets = (**ptr) & 0x7f;
+    (*plen)--;
     (*ptr)++;
     while (octets) {
+      if (*plen == 0)
+        return 0;
       len = (len << 8) + (**ptr);
+      (*plen)--;
       (*ptr)++;
       octets--;
     }
   } else {
+    if (*plen == 0)
+      return 0;
     len = (**ptr) & 0x7f;
+    (*plen)--;
     (*ptr)++;
   }
+  if (len > *plen)
+    return *plen;
   return len;
 }
 
 coap_asn1_tag_t
-asn1_tag_c(const uint8_t **ptr, int *constructed, int *cls) {
+asn1_tag_c(const uint8_t **ptr, size_t *plen, int *constructed, int *cls) {
   coap_asn1_tag_t tag = 0;
   uint8_t byte;
 
+  if (*plen == 0) {
+    *constructed = 0;
+    *cls = 0;
+    return COAP_ASN1_FAIL;
+  }
   byte = (**ptr);
   *constructed = (byte & 0x20) ? 1 : 0;
   *cls = byte >> 6;
   tag = byte & 0x1F;
+  (*plen)--;
   (*ptr)++;
   if (tag < 0x1F)
     return tag;
 
   /* Tag can be one byte or more based on B8 */
+  if (*plen == 0)
+    return COAP_ASN1_FAIL;
   byte = (**ptr);
   while (byte & 0x80) {
     tag = (tag << 7) + (byte & 0x7F);
+    (*plen)--;
     (*ptr)++;
+    if (*plen == 0)
+      return COAP_ASN1_FAIL;
     byte = (**ptr);
   }
   /* Do the final one */
   tag = (tag << 7) + (byte & 0x7F);
+  (*plen)--;
   (*ptr)++;
   return tag;
 }
@@ -66,37 +89,45 @@ get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr, size_t tlen,
              asn1_validate validate) {
   int constructed;
   int class;
-  const uint8_t *acp = ptr;
-  uint8_t tag = asn1_tag_c(&acp, &constructed, &class);
-  size_t len = asn1_len(&acp);
+  coap_asn1_tag_t tag = asn1_tag_c(&ptr, &tlen, &constructed, &class);
+  size_t len;
   coap_binary_t *tag_data;
+
+  if (tag == COAP_ASN1_FAIL)
+    return NULL;
+  len = asn1_len(&ptr, &tlen);
 
   while (tlen > 0 && len <= tlen) {
     if (class == 2 && constructed == 1) {
       /* Skip over element description */
-      tag = asn1_tag_c(&acp, &constructed, &class);
-      len = asn1_len(&acp);
+      tag = asn1_tag_c(&ptr, &tlen, &constructed, &class);
+      if (tag == COAP_ASN1_FAIL)
+        return NULL;
+      len = asn1_len(&ptr, &tlen);
     }
     if (tag == ltag) {
-      if (!validate || validate(acp, len)) {
+      if (!validate || validate(ptr, len)) {
         tag_data = coap_new_binary(len);
         if (tag_data == NULL)
           return NULL;
         tag_data->length = len;
-        memcpy(tag_data->s, acp, len);
+        memcpy(tag_data->s, ptr, len);
         return tag_data;
       }
     }
     if (tag == 0x10 && constructed == 1) {
       /* SEQUENCE or SEQUENCE OF */
-      tag_data = get_asn1_tag(ltag, acp, len, validate);
+      tag_data = get_asn1_tag(ltag, ptr, len, validate);
       if (tag_data)
         return tag_data;
     }
-    acp += len;
+    /* Skip over non matching tag */
+    ptr += len;
     tlen -= len;
-    tag = asn1_tag_c(&acp, &constructed, &class);
-    len = asn1_len(&acp);
+    tag = asn1_tag_c(&ptr, &tlen, &constructed, &class);
+    if (tag == COAP_ASN1_FAIL)
+      return NULL;
+    len = asn1_len(&ptr, &tlen);
   }
   return NULL;
 }

@@ -27,6 +27,7 @@
  */
 
 typedef enum {
+  COAP_ASN1_FAIL = -1,
   COAP_ASN1_NONE = 0,
   COAP_ASN1_INTEGER = 2,
   COAP_ASN1_BITSTRING = 3,
@@ -51,11 +52,13 @@ typedef int (*asn1_validate)(const uint8_t *data, size_t size);
  *
  * Internal function.
  *
- * @param ptr  The current asn.1 object length pointer
+ * @param ptr  The current asn.1 object length pointer.
+ * @param plen The current ptr size.
  *
- * @return The length of the asn.1 object. @p ptr is updated to be after the length.
+ * @return The length of the asn.1 object. @p ptr is updated to be after the
+ *         length and plen is decremented as appropriate..
  */
-size_t asn1_len(const uint8_t **ptr);
+size_t asn1_len(const uint8_t **ptr, size_t *plen);
 
 /**
  * Get the asn1 tag from the current @p ptr.
@@ -63,12 +66,14 @@ size_t asn1_len(const uint8_t **ptr);
  * Internal function.
  *
  * @param ptr  The current asn.1 object tag pointer
- * @param constructed  1 if current tag is constructed
- * @param cls  The current class of the tag
+ * @param plen The current ptr size.
+ * @param constructed Updated: 1 if current tag is constructed
+ * @param cls         Updated: The current class of the tag
  *
- * @return The tag value.@p ptr is updated to be after the tag.
+ * @return The tag value. @p ptr is updated to be after the tag, and plen is
+ *         decremented as appropriate.
  */
-coap_asn1_tag_t asn1_tag_c(const uint8_t **ptr, int *constructed, int *cls);
+coap_asn1_tag_t asn1_tag_c(const uint8_t **ptr, size_t *plen, int *constructed, int *cls);
 
 /**
  * Get the asn1 tag and data from the current @p ptr.
