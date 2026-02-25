@@ -83,7 +83,7 @@ config LIBCOAP_ASYNC_SUPPORT
     help
         Enable async separate responses functionality for CoAP.
 
-        If this option is disabled, redundent CoAP async separate responses code is removed.
+        If this option is disabled, redundant CoAP async separate responses code is removed.
 
 config LIBCOAP_THREAD_SAFE_SUPPORT
     bool "Enable thread safe support within CoAP"
@@ -121,7 +121,7 @@ config LIBCOAP_CLIENT_SUPPORT
         If this option is disabled, redundant CoAP client only code is
         removed.
         If both this option and LIBCOAP_SERVER_SUPPORT are disabled, then
-        both are automatically enabled for backwards compatability.
+        both are automatically enabled for backwards compatibility.
 
 config LIBCOAP_SERVER_SUPPORT
     bool "Enable Server functionality within CoAP"
@@ -133,7 +133,7 @@ config LIBCOAP_SERVER_SUPPORT
         If this option is disabled, redundant CoAP server only code is
         removed.
         If both this option and LIBCOAP_CLIENT_SUPPORT are disabled, then
-        both are automatically enabled for backwards compatability.
+        both are automatically enabled for backwards compatibility.
 
 config LIBCOAP_DEBUGGING
     bool "Enable CoAP debugging"
@@ -185,6 +185,42 @@ config LIBCOAP_LOG_DEFAULT_LEVEL
     default 6 if LIBCOAP_LOG_INFO
     default 7 if LIBCOAP_LOG_DEBUG
     default 8 if LIBCOAP_LOG_OSCORE
+
+config LIBCOAP_DEFAULT_MAX_PDU_RX_SIZE
+    int "Default max PDU RX size in bytes"
+    default 1152
+    help
+        Maximum size of incoming CoAP PDU. RFC7252 4.6 suggests 1152.
+        Increase for larger block-wise transfers (e.g. 1024-4096).
+
+config LIBCOAP_RXBUFFER_SIZE
+    int "Receive buffer size in bytes"
+    default 1472
+    help
+        Size of the socket receive buffer for incoming CoAP/UDP packets.
+        Should be at least as large as the largest expected PDU (e.g. 1472
+        for typical Ethernet MTU minus headers).
+
+config LIBCOAP_DEFAULT_MTU
+    int "Default MTU in bytes"
+    default 1152
+    help
+        Default path/session MTU used for CoAP (RFC7252 4.6 suggests 1152).
+        Used for session MTU and PDU sizing; increase for larger block-wise
+        transfers.
+
+config LIBCOAP_OBS_MAX_NON
+    int "Observe: max NON notifications before CON"
+    default 5
+    range 1 255
+    help
+        Number of NON notifications before sending a CON (RFC7641 4.5).
+
+config LIBCOAP_DEFAULT_SESSION_TIMEOUT
+    int "Default session timeout"
+    default 300
+    help
+        This setting refers to the COAP_DEFAULT_SESSION_TIMEOUT, which defines server session's timeout.
 
 if MBEDTLS
 
