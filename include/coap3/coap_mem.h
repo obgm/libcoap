@@ -176,6 +176,7 @@ COAP_STATIC_INLINE void *
 coap_malloc(size_t size) {
   (void)size;
   LWIP_ASSERT("coap_malloc must not be used in lwIP", 0);
+  return NULL;
 }
 
 COAP_STATIC_INLINE void
