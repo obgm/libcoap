@@ -7,6 +7,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   coap_pdu_t *pdu = NULL;
   coap_address_t addr;
 
+  if (size <= 4)
+    return 0;
+
   coap_startup();
   coap_set_log_level(COAP_LOG_EMERG);
 
