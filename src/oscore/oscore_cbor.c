@@ -109,7 +109,8 @@ oscore_cbor_put_bytes(uint8_t **buffer,
   assert(*buf_size >= bytes_len);
   (*buf_size) -= bytes_len;
   *pt = (*pt | 0x40);
-  memcpy(*buffer, bytes, bytes_len);
+  if (bytes_len)
+    memcpy(*buffer, bytes, bytes_len);
   (*buffer) += bytes_len;
   return nb + bytes_len;
 }
