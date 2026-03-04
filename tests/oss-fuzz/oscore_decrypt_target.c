@@ -45,17 +45,18 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       if (session) {
         /* Calculate OSCORE option length based on RFC 8613 Section 6.1 */
         partial_iv_len = data[0] & 0x7;
-        if (1UL + partial_iv_len > size)
+        if (1UL + partial_iv_len >= size)
           goto cleanup;
 
         kid_context_len = data[0] & 0x10 ? 1 + data[1 + partial_iv_len] : 0;
-        /* 1s are byte 0 and kid length to be added */
-        if (1UL + partial_iv_len + kid_context_len + 1 > size)
-          goto cleanup;
 
         /* Build option with KID forced to one byte to match recipient_id in oscore_conf_str */
         kid_len = 1;
+        /* Include byte 0 in the length */
         opt_len = 1 + partial_iv_len + kid_context_len + kid_len;
+        /* Max allowed option size is 256 */
+        if (opt_len >= sizeof(oscore_option) || opt_len > size)
+          goto cleanup;
         memcpy(oscore_option, data, opt_len - 1);
         oscore_option[opt_len - 1] = 0x01;
 
@@ -83,9 +84,6 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 cleanup:
         coap_session_release(session);
       }
-    } else {
-      /* coap_context_oscore_server failed, oscore_conf not consumed */
-      coap_delete_oscore_conf(oscore_conf);
     }
   } else if (oscore_conf) {
     /* ctx creation failed, need to free oscore_conf */
