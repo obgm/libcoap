@@ -2258,11 +2258,15 @@ void
 coap_session_init_token(coap_session_t *session, size_t len,
                         const uint8_t *data) {
   session->tx_token = coap_decode_var_bytes8(data, len);
-  /*
-   * Decrement as when first used by coap_session_new_token() it will
-   * get incremented
-   */
-  session->tx_token--;
+  if (session->tx_token > 0) {
+    /*
+     * If the token was populated from coap-client CLI option (-T) decrement it here as
+     * when first used by coap_session_new_token() it will get incremented.
+     * As 0 is a special value for empty token (Token Length = 0) we want to avoid
+     * starting at -1.
+     */
+    session->tx_token--;
+  }
 }
 
 void
