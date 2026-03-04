@@ -170,7 +170,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   }
 
   /* Test PSK configuration conditionally */
-  if (size >= 32 && data[0] % 4 == 0) {
+  if (size >= 32) {
     test_psk_config(ctx, data, size);
   }
 
