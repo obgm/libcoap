@@ -4618,6 +4618,10 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
   switch (pdu->type) {
   case COAP_MESSAGE_ACK:
+    if (sent != NULL) {
+      coap_delete_node_lkd(sent);
+    }
+
     /* find message id in sendqueue to stop retransmission */
     coap_remove_from_queue(&context->sendqueue, session, pdu->mid, &sent);
 
