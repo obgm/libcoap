@@ -1452,7 +1452,8 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
             ok = ok && write_prefix(&obp, &outbuflen, " ", 1);
           }
           tlen = opt - opt_last;
-          while (tlen--) {
+          while (tlen) {
+            tlen--;
             ok = ok && write_char(&obp, &outbuflen, *opt_last, i);
             opt_last++;
           }

@@ -3611,7 +3611,7 @@ derive_cbor_value(const uint8_t **bp, size_t rem_len) {
   }
   if (rem_len < 4)
     return (uint32_t)-1;
-  value = **bp << 24;
+  value = (uint32_t)(**bp) << 24;
   (*bp)++;
   value |= **bp << 16;
   (*bp)++;

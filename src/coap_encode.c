@@ -58,7 +58,8 @@ coap_encode_var_safe(uint8_t *buf, size_t length, unsigned int val) {
     return 0;
   }
   i = n;
-  while (i--) {
+  while (i) {
+    i--;
     buf[i] = val & 0xff;
     val >>= 8;
   }
@@ -92,7 +93,8 @@ coap_encode_var_safe8(uint8_t *buf, size_t length, uint64_t val) {
     return 0;
   }
   i = n;
-  while (i--) {
+  while (i) {
+    i--;
     buf[i] = val & 0xff;
     val >>= 8;
   }
