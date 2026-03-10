@@ -116,12 +116,12 @@ coap_free_node(coap_queue_t *node) {
 unsigned int
 coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now) {
   unsigned int result = 0;
-  coap_tick_diff_t delta = now - ctx->sendqueue_basetime;
+  coap_tick_diff_t delta = (coap_tick_diff_t)now - (coap_tick_diff_t)ctx->sendqueue_basetime;
 
   if (ctx->sendqueue) {
     /* delta < 0 means that the new time stamp is before the old. */
     if (delta <= 0) {
-      ctx->sendqueue->t -= delta;
+      ctx->sendqueue->t = (coap_tick_diff_t)ctx->sendqueue->t - delta;
     } else {
       /* This case is more complex: The time must be advanced forward,
        * thus possibly leading to timed out elements at the queue's
@@ -145,7 +145,7 @@ coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now) {
   }
 
   /* adjust basetime */
-  ctx->sendqueue_basetime += delta;
+  ctx->sendqueue_basetime = (coap_tick_diff_t)ctx->sendqueue_basetime + delta;
 
   return result;
 }

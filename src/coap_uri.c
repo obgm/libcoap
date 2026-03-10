@@ -439,9 +439,12 @@ coap_host_is_unix_domain(const coap_str_const_t *host) {
 static void
 decode_segment(const uint8_t *seg, size_t length, unsigned char *buf) {
 
-  while (length--) {
+  while (length) {
+    length--;
 
     if (*seg == '%') {
+      if (length < 2)
+        return;
       *buf = (hexchar_to_dec(seg[1]) << 4) + hexchar_to_dec(seg[2]);
 
       seg += 2;

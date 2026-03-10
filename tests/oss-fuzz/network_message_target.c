@@ -91,14 +91,14 @@ test_context_config(coap_context_t *ctx, const uint8_t *data, size_t size) {
   coap_context_set_max_token_size(ctx, token_size);
 
   if (size >= 20) {
-    size_t csm_max_message_size = (data[16] << 24) | (data[17] << 16) |
+    size_t csm_max_message_size = ((uint32_t)data[16] << 24) | (data[17] << 16) |
                                   (data[18] << 8) | data[19];
     /* CSM max message size must be >= 64 per spec */
     if (csm_max_message_size >= 64) {
       coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
     }
 
-    uint32_t timeout = (data[12] << 24) | (data[13] << 16) |
+    uint32_t timeout = ((uint32_t)data[12] << 24) | (data[13] << 16) |
                        (data[14] << 8) | data[15];
     coap_context_set_csm_timeout_ms(ctx, timeout);
   }

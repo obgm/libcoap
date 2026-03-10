@@ -36,7 +36,8 @@ coap_queue_t *node[5];
 static coap_tick_t
 add_timestamps(coap_queue_t *queue, size_t num) {
   coap_tick_t t = 0;
-  while (queue && num--) {
+  while (queue && num) {
+    num--;
     t += queue->t;
     queue = queue->next;
   }
@@ -133,7 +134,7 @@ t_sendqueue5(void) {
   coap_ticks(&now);
   ctx->sendqueue_basetime = now;
 
-  now -= delta1;
+  now = (coap_tick_diff_t)now - (coap_tick_diff_t)delta1;
   result = coap_adjust_basetime(ctx, now);
 
   CU_ASSERT(result == 0);
@@ -141,7 +142,7 @@ t_sendqueue5(void) {
   CU_ASSERT(ctx->sendqueue_basetime == now);
   CU_ASSERT(ctx->sendqueue->t == timestamp[3] + delta1);
 
-  now += delta2;
+  now = (coap_tick_diff_t)now + (coap_tick_diff_t)delta2;
   result = coap_adjust_basetime(ctx, now);
   CU_ASSERT(result == 2);
   CU_ASSERT(ctx->sendqueue_basetime == now);
