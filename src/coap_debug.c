@@ -1384,7 +1384,7 @@ coap_debug_set_packet_loss(const char *loss_level) {
   if (*end == '%') {
     if (n > 100)
       n = 100;
-    packet_loss_level = n * 65536 / 100;
+    packet_loss_level = n * 0xffff / 100;
     coap_log_debug("packet loss level set to %d%%\n", n);
   } else {
     if (n <= 0)
