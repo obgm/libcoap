@@ -1274,17 +1274,25 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
 #if COAP_Q_BLOCK_SUPPORT
 finish:
 #endif /* COAP_Q_BLOCK_SUPPORT */
-      if (COAP_INVALID_MID == mid && obs) {
-        coap_subscription_t *s;
-        coap_log_debug("coap_check_notify: sending failed, resource stays "
-                       "partially dirty\n");
-        LL_FOREACH(r->subscribers, s) {
-          if (s == obs) {
-            /* obs not deleted during coap_send_internal() */
-            obs->dirty = 1;
-            break;
+      if (COAP_INVALID_MID == mid) {
+        coap_log_debug("*  %s: coap_check_notify: sending failed, resource stays "
+                       "partially dirty\n", coap_session_str(obs_session));
+        if (obs) {
+          coap_subscription_t *s;
+          /*
+           * obs may have been deleted in coap_send_internal() or
+           * coap_send_q_block2().
+           */
+          LL_FOREACH(r->subscribers, s) {
+            if (s == obs) {
+              break;
+            }
           }
+          if (s == NULL)
+            obs = NULL;
         }
+        if (obs)
+          obs->dirty = 1;
         r->partiallydirty = 1;
         context->observe_pending = 1;
       }
