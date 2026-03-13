@@ -23,8 +23,13 @@ conditions, as these are most often innocuous.
 
 If you believe that you've found a vulnerability which meets all of these
 conditions, please email a brief description of the suspected bug and
-instructions for reproduction to **libcoap-security@tzi.org**. Please do NOT
-create a public GitHub issue.
+instructions for reproduction to **libcoap-security@tzi.org**. Please do **NOT**
+create a public GitHub issue or send an email to the general mailing list
+libcoap-developers@lists.sourceforge.net.
+
+This then allows the security team time to come up with a suitable fix, along
+with a new release if appropriate, before the issue is released into the public
+domain with potential mitigations / workarounds.
 
 ### Bug Bounties
 
