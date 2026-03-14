@@ -101,6 +101,9 @@ const char *define_list[] = {
   "coap_lock_callback_ret(",
   "coap_lock_callback_ret_release(",
   "coap_lock_invert(",
+  "coap_lock_specific_lock(",
+  "coap_lock_specific_unlock(",
+  "coap_lock_specific_callback_release(",
 };
 
 /* xxx *function */

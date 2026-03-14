@@ -18,66 +18,66 @@
 #if COAP_THREAD_SAFE
 #if COAP_THREAD_RECURSIVE_CHECK
 void
-coap_lock_unlock_func(const char *file, int line) {
-  assert(coap_thread_pid == global_lock.pid);
-  if (global_lock.in_callback) {
-    assert(global_lock.lock_count > 0);
-    global_lock.lock_count--;
+coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line) {
+  assert(coap_thread_pid == lock->pid);
+  if (lock->in_callback) {
+    assert(lock->lock_count > 0);
+    lock->lock_count--;
   } else {
-    global_lock.pid = 0;
-    global_lock.unlock_file = file;
-    global_lock.unlock_line = line;
-    coap_mutex_unlock(&global_lock.mutex);
+    lock->pid = 0;
+    lock->unlock_file = file;
+    lock->unlock_line = line;
+    coap_mutex_unlock(&lock->mutex);
   }
 }
 
 int
-coap_lock_lock_func(const char *file, int line) {
+coap_lock_lock_func(coap_lock_t *lock, const char *file, int line) {
   if (!coap_started) {
     /* libcoap not initialized with coap_startup() */
     return 0;
   }
-  if (coap_mutex_trylock(&global_lock.mutex)) {
-    if (coap_thread_pid == global_lock.pid) {
+  if (coap_mutex_trylock(&lock->mutex)) {
+    if (coap_thread_pid == lock->pid) {
       /* This thread locked the mutex */
-      if (global_lock.in_callback) {
+      if (lock->in_callback) {
         /* This is called from within an app callback */
-        global_lock.lock_count++;
-        assert(global_lock.in_callback == global_lock.lock_count);
+        lock->lock_count++;
+        assert(lock->in_callback == lock->lock_count);
         return 1;
       } else {
         coap_log_alert("Thread Deadlock: Last %s: %u, this %s: %u\n",
-                       global_lock.lock_file, global_lock.lock_line, file, line);
+                       lock->lock_file, lock->lock_line, file, line);
         assert(0);
       }
     }
     /* Wait for the other thread to unlock */
-    coap_mutex_lock(&global_lock.mutex);
+    coap_mutex_lock(&lock->mutex);
   }
   /* Just got the lock, so should not be in a locked callback */
-  assert(!global_lock.in_callback);
-  global_lock.pid = coap_thread_pid;
-  global_lock.lock_file = file;
-  global_lock.lock_line = line;
+  assert(!lock->in_callback);
+  lock->pid = coap_thread_pid;
+  lock->lock_file = file;
+  lock->lock_line = line;
   return 1;
 }
 
 #else /* ! COAP_THREAD_RECURSIVE_CHECK */
 
 void
-coap_lock_unlock_func(void) {
-  assert(coap_thread_pid == global_lock.pid);
-  if (global_lock.in_callback) {
-    assert(global_lock.lock_count > 0);
-    global_lock.lock_count--;
+coap_lock_unlock_func(coap_lock_t *lock) {
+  assert(coap_thread_pid == lock->pid);
+  if (lock->in_callback) {
+    assert(lock->lock_count > 0);
+    lock->lock_count--;
   } else {
-    global_lock.pid = 0;
-    coap_mutex_unlock(&global_lock.mutex);
+    lock->pid = 0;
+    coap_mutex_unlock(&lock->mutex);
   }
 }
 
 int
-coap_lock_lock_func(void) {
+coap_lock_lock_func(coap_lock_t *lock) {
   if (!coap_started) {
     /* libcoap not initialized with coap_startup() */
     return 0;
@@ -86,15 +86,15 @@ coap_lock_lock_func(void) {
    * Some OS do not have support for coap_mutex_trylock() so
    * cannot use that here and have to rely on lock-pid being stable
    */
-  if (global_lock.in_callback && coap_thread_pid == global_lock.pid) {
-    global_lock.lock_count++;
-    assert(global_lock.in_callback == global_lock.lock_count);
+  if (lock->in_callback && coap_thread_pid == lock->pid) {
+    lock->lock_count++;
+    assert(lock->in_callback == lock->lock_count);
     return 1;
   }
-  coap_mutex_lock(&global_lock.mutex);
+  coap_mutex_lock(&lock->mutex);
   /* Just got the lock, so should not be in a locked callback */
-  assert(!global_lock.in_callback);
-  global_lock.pid = coap_thread_pid;
+  assert(!lock->in_callback);
+  lock->pid = coap_thread_pid;
   return 1;
 }
 #endif /* ! COAP_THREAD_RECURSIVE_CHECK */
