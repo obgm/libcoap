@@ -110,35 +110,37 @@ typedef struct coap_lock_t {
 } coap_lock_t;
 
 /**
- * Unlock the global_lock lock.
+ * Unlock the specific lock.
  *
  * If this is a nested lock (Public API - libcoap - app call-back - Public API),
- * then the lock remains locked, but global_lock.in_callback is decremented.
+ * then the lock remains locked, but lock->in_callback is decremented.
  *
  * Note: Invoked by wrapper macro, not used directly.
  *
+ * @param lock The lock to act on.
  * @param file The file from which coap_lock_unlock_func() is getting called.
  * @param line The line no from which coap_lock_unlock_func() is getting called.
  */
-void coap_lock_unlock_func(const char *file, int line);
+void coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line);
 
 /**
- * Lock the global_lock lock.
+ * Lock the specfic lock.
  *
  * If this is a nested lock (Public API - libcoap - app call-back - Public API),
- * then increment the global_lock.in_callback.
+ * then increment the lock->in_callback.
  *
  * Note: Invoked by wrapper macro, not used directly.
  *
+ * @param lock The lock to act on.
  * @param file The file from which coap_lock_lock_func() is getting called.
  * @param line The line no from which coap_lock_lock_func() is getting called.
  *
  * @return @c 0 if libcoap has not started (coap_startup() not called), else @c 1.
  */
-int coap_lock_lock_func(const char *file, int line);
+int coap_lock_lock_func(coap_lock_t *lock, const char *file, int line);
 
 /**
- * libcoap library code. Lock The global_lock.
+ * libcoap library code. Lock the global_lock.
  *
  * Invoked when
  *   Not locked at all
@@ -154,13 +156,13 @@ int coap_lock_lock_func(const char *file, int line);
  *
  */
 #define coap_lock_lock(c,failed) do { \
-    if (!coap_lock_lock_func(__FILE__, __LINE__)) { \
+    if (!coap_lock_lock_func(&global_lock, __FILE__, __LINE__)) { \
       failed; \
     } \
   } while (0)
 
 /**
- * libcoap library code. Unlock The global_lock.
+ * libcoap library code. Unlock the global_lock.
  *
  * Unlocked when
  *   Same thread locked context
@@ -169,7 +171,43 @@ int coap_lock_lock_func(const char *file, int line);
  * @param c Context.
  */
 #define coap_lock_unlock(c) do { \
-    coap_lock_unlock_func(__FILE__, __LINE__); \
+    coap_lock_unlock_func(&global_lock, __FILE__, __LINE__); \
+  } while (0)
+
+/**
+ * libcoap library code. Lock a specific lock.
+ *
+ * Invoked when
+ *   Not locked at all
+ *   Locked, app call-back, call from app call-back
+ *   Locked, app call-back, call from app call-back, app call-back, call from app call-back
+ * Result
+ *   global_lock locked.
+ *   global_lock not locked if libcoap not started and @p failed is executed. @p failed must
+ *   be code that skips doing the lock protected code.
+ *
+ * @param lock The specifc lock to lock.
+ * @param failed Code to execute on lock failure.
+ *
+ */
+#define coap_lock_specific_lock(lock, failed) do { \
+    if (!coap_lock_lock_func(lock, __FILE__, __LINE__)) { \
+      failed; \
+    } \
+  } while (0)
+
+/**
+ * libcoap library code. Unlock a specific lock.
+ *
+ * Unlocked when
+ *   Same thread locked context
+ *   Not when called from app call-back
+ *
+ * @param lock The specifc lock to unlock.
+ *
+ */
+#define coap_lock_specific_unlock(lock) do { \
+    coap_lock_unlock_func(lock, __FILE__, __LINE__); \
   } while (0)
 
 /**
@@ -250,6 +288,32 @@ int coap_lock_lock_func(const char *file, int line);
     coap_lock_lock(c,failed); \
   } while (0)
 
+/**
+ * libcoap library code. Invoke an app callback, unlocking global_lock first,
+ * followed by locking specified lock, and after callback unlock specified lock
+ * and lock global_lock..
+ *
+ * Called when
+ *   Locked
+ *
+ * @param lock lock to lock before callback.
+ * @param func app call-back function to invoke.
+ * @param failed Code to execute on (re-)lock failure.
+ *
+ */
+#define coap_lock_specific_callback_release(lock,func,failed) do { \
+    coap_lock_check_locked(NULL); \
+    coap_lock_unlock(NULL); \
+    coap_lock_specific_lock(lock, failed); \
+    (lock)->in_callback++; \
+    (lock)->callback_file = __FILE__; \
+    (lock)->callback_line = __LINE__; \
+    func; \
+    (lock)->in_callback--; \
+    coap_lock_specific_unlock(lock); \
+    coap_lock_lock(NULL, failed); \
+  } while (0)
+
 extern coap_lock_t global_lock;
 
 # else /* ! COAP_THREAD_RECURSIVE_CHECK */
@@ -272,8 +336,10 @@ typedef struct coap_lock_t {
  *
  * Note: Invoked by wrapper macro, not used directly.
  *
+ * @param lock The lock to act on.
+ *
  */
-void coap_lock_unlock_func(void);
+void coap_lock_unlock_func(coap_lock_t *lock);
 
 /**
  * Lock the global_lock lock.
@@ -283,12 +349,14 @@ void coap_lock_unlock_func(void);
  *
  * Note: Invoked by wrapper macro, not used directly.
  *
+ * @param lock The lock to act on.
+ *
  * @return @c 0 if libcoap has not started (coap_startup() not called), else @c 1.
  */
-int coap_lock_lock_func(void);
+int coap_lock_lock_func(coap_lock_t *lock);
 
 /**
- * libcoap library code. Lock The global_lock.
+ * libcoap library code. Lock the global_lock.
  *
  * Invoked when
  *   Not locked at all
@@ -304,13 +372,35 @@ int coap_lock_lock_func(void);
  *
  */
 #define coap_lock_lock(c,failed) do { \
-    if (!coap_lock_lock_func()) { \
+    if (!coap_lock_lock_func(&global_lock)) { \
       failed; \
     } \
   } while (0)
 
 /**
- *  libcoap library code. Unlock The global_lock.
+ * libcoap library code. Lock the specific lock.
+ *
+ * Invoked when
+ *   Not locked at all
+ *   Locked, app call-back, call from app call-back
+ *   Locked, app call-back, call from app call-back, app call-back, call from app call-back
+ * Result
+ *   global_lock locked.
+ *   global not locked if libcoap not started and @p failed is executed. @p failed must
+ *   be code that skips doing the lock protected code.
+ *
+ * @param lock The specifc lock to lock.
+ * @param failed Code to execute on lock failure
+ *
+ */
+#define coap_lock_specific_lock(lock, failed) do { \
+    if (!coap_lock_lock_func(lock)) { \
+      failed; \
+    } \
+  } while (0)
+
+/**
+ *  libcoap library code. Unlock the global_lock.
  *
  * Unlocked when
  *   Same thread locked context.
@@ -319,8 +409,21 @@ int coap_lock_lock_func(void);
  * @param c Context.
  */
 #define coap_lock_unlock(c) do { \
-    assert(c); \
-    coap_lock_unlock_func(); \
+    coap_lock_unlock_func(&global_lock); \
+  } while (0)
+
+/**
+ *  libcoap library code. Unlock the specific lock..
+ *
+ * Unlocked when
+ *   Same thread locked context.
+ *   Not when called from app call-back.
+ *
+ * @param lock The specifc lock to unlock.
+ *
+ */
+#define coap_lock_specific_unlock(lock) do { \
+    coap_lock_unlock_func(lock); \
   } while (0)
 
 /**
@@ -378,6 +481,30 @@ int coap_lock_lock_func(void);
   } while (0)
 
 /**
+ * libcoap library code. Invoke an app callback, unlocking global_lock first,
+ * followed by locking specified lock, and after callback unlock specified lock
+ * and lock global_lock..
+ *
+ * Called when
+ *   Locked (need to unlock over app call-back)
+ *
+ * @param lock lock to lock before callback.
+ * @param func app call-back function to invoke.
+ * @param failed Code to execute on (re-)lock failure.
+ *
+ */
+#define coap_lock_specific_callback_release(lock,func,failed) do { \
+    coap_lock_check_locked(NULL); \
+    coap_lock_unlock(NULL); \
+    coap_lock_specific_lock(lock, failed); \
+    (lock)->in_callback++; \
+    func; \
+    (lock)->in_callback--; \
+    coap_lock_specific_unlock(lock); \
+    coap_lock_lock(NULL,failed); \
+  } while (0)
+
+/**
  * libcoap library code. Invoke an app callback that has a return value,
  * unlocking global_lock first.
  *
@@ -400,11 +527,11 @@ int coap_lock_lock_func(void);
 # endif /* ! COAP_THREAD_RECURSIVE_CHECK */
 
 /**
- * libcoap library code. Initialize the global_lock.
+ * libcoap library code. Initialize the specified lock.
  */
-#define coap_lock_init() do { \
-    memset(&global_lock.mutex, 0, sizeof(global_lock.mutex)); \
-    coap_mutex_init(&global_lock.mutex); \
+#define coap_lock_init(lock) do { \
+    memset(&(lock)->mutex, 0, sizeof((lock)->mutex)); \
+    coap_mutex_init(&(lock)->mutex); \
   } while (0)
 
 /**
@@ -446,7 +573,7 @@ typedef coap_mutex_t coap_lock_t;
 /**
  * Dummy for no thread-safe code
  *
- * libcoap library code. Lock The global_lock.
+ * libcoap library code. Lock the global_lock.
  *
  * Invoked when
  *   Not locked at all
@@ -466,7 +593,27 @@ typedef coap_mutex_t coap_lock_t;
 /**
  * Dummy for no thread-safe code
  *
- * libcoap library code. Unlock The global_lock.
+ * libcoap library code. Lock the specific lock.
+ *
+ * Invoked when
+ *   Not locked at all
+ *   Locked, app call-back, call from app call-back
+ *   Locked, app call-back, call from app call-back, app call-back, call from app call-back
+ * Result
+ *   global_lock locked.
+ *   global_lock not locked if libcoap not started and @p failed is executed. @p failed must
+ *   be code that skips doing the lock protected code.
+ *
+ * @param lock The specifc lock to lock.
+ * @param failed Code to execute on lock failure.
+ *
+ */
+#define coap_lock_specific_lock(lock,failed)
+
+/**
+ * Dummy for no thread-safe code
+ *
+ * libcoap library code. Unlock the global_lock.
  *
  * Unlocked when
  *   Same thread locked context
@@ -478,9 +625,21 @@ typedef coap_mutex_t coap_lock_t;
 /**
  * Dummy for no thread-safe code
  *
+ * libcoap library code. Unlock the specific lock.
+ *
+ * Unlocked when
+ *   Same thread locked context
+ *
+ * @param lock The specifc lock to unlock.
+ */
+#define coap_lock_specific_unlock(lock)
+
+/**
+ * Dummy for no thread-safe code
+ *
  * libcoap library code. Initialize the global_lock.
  */
-#define coap_lock_init()
+#define coap_lock_init(lock)
 
 /**
  * Dummy for no thread-safe code
@@ -533,6 +692,18 @@ typedef coap_mutex_t coap_lock_t;
  *
  */
 #define coap_lock_callback_release(c,func,failed) func
+
+/**
+ * Dummy for no thread-safe code
+ *
+ * libcoap library code. Invoke an app callback.
+ *
+ * @param lock lock to unlock before callback.
+ * @param func app call-back function to invoke.
+ * @param failed Code to execute on (re-)lock failure.
+ *
+ */
+#define coap_lock_specific_callback_release(lock,func,failed) func
 
 /**
  * Dummy for no thread-safe code

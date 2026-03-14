@@ -1,6 +1,6 @@
 # -*- Mode: Makefile for CI checks -*-
 #
-# Copyright (C) 2019--2025 Olaf Bergmann <bergmann@tzi.org> and others
+# Copyright (C) 2019--2026 Olaf Bergmann <bergmann@tzi.org> and others
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -14,8 +14,8 @@ libcoap?=libcoap-@LIBCOAP_NAME_SUFFIX@
 WARNING_CFLAGS?=@WARNING_CFLAGS@
 DTLS_CFLAGS?=@DTLS_CFLAGS@
 DTLS_LIBS?=@DTLS_LIBS@
-CPPFLAGS=-I$(top_builddir)/include -I$(top_srcdir)/include
-CFLAGS=$(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
+CPPFLAGS=-I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)
+CFLAGS+=$(WARNING_CFLAGS) $(DTLS_CFLAGS) -std=c99
 CFLAGS+=-Wno-missing-prototypes -Wno-missing-declarations
 
 SOURCES:=$(wildcard *_target.c)
@@ -27,12 +27,16 @@ PROGRAMS:=$(patsubst %_target.o, %_fuzzer, $(OBJECTS))
 all: $(PROGRAMS)
 
 $(OUT)/%.o: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $^ -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) -c $^ -o $@
 
 %_fuzzer: %_target.o
 	$(LINK.cc) $(CXXFLAGS) $^ $(top_builddir)/.libs/$(libcoap).a $(LDFLAGS) $(LDLIBS) $(DTLS_LIBS) -o $@
+	@if [ -d "$(top_srcdir)/tests/oss-fuzz/$(notdir $*)_seed_corpus" ]; then \
+		echo "Found seed corpus for $@, creating zip..."; \
+		cd $(top_srcdir)/tests/oss-fuzz && zip -rj $@_seed_corpus.zip $(notdir $*)_seed_corpus/; \
+	fi
 
 check: $(OBJECTS)
 
 clean:
-	@-$(RM) $(OBJECTS) $(PROGRAMS)
+	@-$(RM) -f $(OBJECTS) $(PROGRAMS)

@@ -2504,6 +2504,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
     if (base_buf) {
       /* base_buf2 gets moved to the end */
       assert(i2d_X509(x509, &base_buf2) > 0);
+      (void)base_buf2;
       coap_lock_callback_ret(ret, c_session->context,
                              setup_data->validate_cn_call_back(cn, base_buf, length, session,
                                                                depth, preverify_ok,

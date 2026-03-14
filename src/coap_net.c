@@ -3482,10 +3482,17 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     coap_log_debug("call custom handler for resource '%*.*s' (3)\n",
                    (int)resource->uri_path->length, (int)resource->uri_path->length,
                    resource->uri_path->s);
-    coap_lock_callback_release(context,
-                               h(resource, session, pdu, query, response),
-                               /* context is being freed off */
-                               goto finish);
+    if (resource->flags & COAP_RESOURCE_SAFE_REQUEST_HANDLER) {
+      coap_lock_callback_release(context,
+                                 h(resource, session, pdu, query, response),
+                                 /* context is being freed off */
+                                 goto finish);
+    } else {
+      coap_lock_specific_callback_release(&resource->lock,
+                                          h(resource, session, pdu, query, response),
+                                          /* context is being freed off */
+                                          goto finish);
+    }
   }
 
   /* Check validity of response code */
@@ -4464,7 +4471,7 @@ coap_startup(void) {
   coap_started = 1;
 
 #if COAP_THREAD_SAFE
-  coap_lock_init();
+  coap_lock_init(&global_lock);
 #endif /* COAP_THREAD_SAFE */
 
 #if defined(HAVE_WINSOCK2_H)

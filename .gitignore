@@ -99,6 +99,7 @@ include/coap3/coap_defines.h
 tests/.deps
 tests/Makefile
 tests/oss-fuzz/Makefile.ci
+tests/oss-fuzz/*.o
 tests/testdriver
 tests/*.o
 tests/test_common.h

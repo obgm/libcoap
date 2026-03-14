@@ -265,6 +265,9 @@ coap_resource_init(coap_str_const_t *uri_path, int flags) {
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
+#if COAP_THREAD_SAFE
+    coap_lock_init(&r->lock);
+#endif /* COAP_THREAD_SAFE */
 
     if (!(flags & COAP_RESOURCE_FLAGS_RELEASE_URI)) {
       /* Need to take a copy if caller is not providing a release request */
@@ -299,6 +302,9 @@ coap_resource_unknown_init2(coap_method_handler_t put_handler, int flags) {
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
+#if COAP_THREAD_SAFE
+    coap_lock_init(&r->lock);
+#endif /* COAP_THREAD_SAFE */
     r->is_unknown = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_unknown_resource_uri, sizeof(coap_unknown_resource_uri)-1);
@@ -333,6 +339,9 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
   if (r) {
     size_t i;
     memset(r, 0, sizeof(coap_resource_t));
+#if COAP_THREAD_SAFE
+    coap_lock_init(&r->lock);
+#endif /* COAP_THREAD_SAFE */
     r->is_proxy_uri = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_proxy_resource_uri, sizeof(coap_proxy_resource_uri)-1);
@@ -385,6 +394,9 @@ coap_resource_reverse_proxy_init(coap_method_handler_t handler, int flags) {
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
+#if COAP_THREAD_SAFE
+    coap_lock_init(&r->lock);
+#endif /* COAP_THREAD_SAFE */
     r->is_unknown = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_rev_proxy_resource_uri,
@@ -1215,10 +1227,25 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         coap_log_debug("call custom handler for resource '%*.*s' (4)\n",
                        (int)r->uri_path->length, (int)r->uri_path->length,
                        r->uri_path->s);
-        coap_lock_callback_release(obs->session->context,
-                                   h(r, obs->session, obs->pdu, query, response),
-                                   /* context is being freed off */
-                                   return);
+
+        /* obs may get deleted during callback (potentially by another thread) */
+        if (r->flags & COAP_RESOURCE_SAFE_REQUEST_HANDLER) {
+          coap_lock_callback_release(obs->session->context,
+                                     h(r, obs->session, obs->pdu, query, response),
+                                     /* context is being freed off */
+                                     coap_delete_string(query);
+                                     coap_delete_pdu(response);
+                                     coap_session_release_lkd(obs_session);
+                                     return);
+        } else {
+          coap_lock_specific_callback_release(&r->lock,
+                                              h(r, obs->session, obs->pdu, query, response),
+                                              /* context is being freed off */
+                                              coap_delete_string(query);
+                                              coap_delete_pdu(response);
+                                              coap_session_release_lkd(obs_session);
+                                              return);
+        }
 
         /* Check validity of response code */
         if (!coap_check_code_class(obs->session, response)) {

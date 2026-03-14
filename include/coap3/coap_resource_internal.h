@@ -17,7 +17,7 @@
 #ifndef COAP_RESOURCE_INTERNAL_H_
 #define COAP_RESOURCE_INTERNAL_H_
 
-#include "coap_internal.h"
+#include "coap_threadsafe_internal.h"
 #include "coap_uthash_internal.h"
 
 #if COAP_SERVER_SUPPORT
@@ -108,6 +108,9 @@ struct coap_resource_t {
    * the coap handler.
    */
   void *user_data;
+#if COAP_THREAD_SAFE
+  coap_lock_t lock;
+#endif /* COAP_THREAD_SAFE */
 
 };
 
