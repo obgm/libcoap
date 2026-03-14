@@ -989,11 +989,20 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
         goto fail;
       query = coap_get_query(request);
       /* Call the application handler to set up this dynamic resource */
-      coap_lock_callback_release(r->handler[request->code-1](r,
-                                                             session, request,
-                                                             query, response),
-                                 /* context is being freed off */
-                                 goto fail);
+      if (r->flags & COAP_RESOURCE_SAFE_REQUEST_HANDLER) {
+        coap_lock_callback_release(r->handler[request->code-1](r,
+                                                               session, request,
+                                                               query, response),
+                                   /* context is being freed off */
+                                   goto fail);
+      } else {
+        coap_lock_specific_callback_release(&r->lock,
+                                            r->handler[request->code-1](r,
+                                                session, request,
+                                                query, response),
+                                            /* context is being freed off */
+                                            goto fail);
+      }
       coap_delete_string(query);
       query = NULL;
       coap_delete_pdu_lkd(response);

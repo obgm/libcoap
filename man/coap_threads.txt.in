@@ -59,6 +59,9 @@ library. There are several things that can cause thread interaction issues.
 Any application thread that is not executing in the libcoap library or in
 a libcoap call-back function must not modify any libcoap structure other
 than by calling a libcoap Public API as there is no locking protection.
+Furthermore, if a reference to some libcoap held data item is obtained, and then
+data associated with reference is modified (even with a Public API call) then
+this is not thread safe.
 
 There are two types of libcoap call-back.
 
@@ -67,9 +70,10 @@ and so changes can safely be made to any structure that libcoap is using includi
 invoking any libcoap Public API calls.
 
 The second type of call-back is executing without the libcoap lock protections and
-so no mofications must take place other than by using the libcoap Public API. The
-second type is used when there is a likelyhood that the call-back may block on an
-external event and libcoap in general should not be blocked.
+so no modications must take place other than by using the libcoap Public API that
+is not modifying a determined reference. The second type is used when there is a
+likelyhood that the call-back may block on an external event and libcoap in general
+should not be blocked.
 
 The list of the second type of call-backs are set up by the following functions:
 

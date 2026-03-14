@@ -172,6 +172,15 @@ typedef void (*coap_method_handler_t)(coap_resource_t *resource,
 #define COAP_RESOURCE_HIDE_WELLKNOWN_CORE 0x2000
 
 /**
+ * Don't lock this resource when calling app call-back handler for requests
+ * as handler will not be manipulating any resource held data.
+ * Not locking the resource (if safe) can save lock contention on a busy system.
+ * Caution: If there is a POST or PUT handler, then it is likely this should
+ * not be set.
+ */
+#define COAP_RESOURCE_SAFE_REQUEST_HANDLER 0x4000
+
+/**
  * Creates a new resource object and initializes the link field to the string
  * @p uri_path. This function returns the new coap_resource_t object.
  *

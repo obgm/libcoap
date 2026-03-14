@@ -1073,7 +1073,9 @@ dyn_create_handler(coap_session_t *session, const coap_pdu_t *request) {
 
   /*
    * Create a resource to handle the new URI
-   * uri_path will get deleted when the resource is removed
+   * uri_path will get deleted when the resource is removed.
+   * Not safe to set COAP_RESOURCE_SAFE_REQUEST_HANDLER here as
+   * hnd_put_post() manipulates resource associated information..
    */
   r = coap_resource_init((coap_str_const_t *)uri_path,
                          COAP_RESOURCE_FLAGS_RELEASE_URI | resource_flags);
@@ -1185,7 +1187,7 @@ init_resources(coap_context_t *ctx) {
 #if COAP_PROXY_SUPPORT
   if (reverse_proxy.entry_count) {
     /* Create a reverse proxy resource to handle PUTs */
-    r = coap_resource_reverse_proxy_init(hnd_reverse_proxy_uri, 0);
+    r = coap_resource_reverse_proxy_init(hnd_reverse_proxy_uri, COAP_RESOURCE_SAFE_REQUEST_HANDLER);
     if (!r)
       return;
     coap_add_resource(ctx, r);
@@ -1194,7 +1196,8 @@ init_resources(coap_context_t *ctx) {
     coap_register_nack_handler(ctx, proxy_nack_handler);
   } else {
 #endif /* COAP_PROXY_SUPPORT */
-    r = coap_resource_init(NULL, COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT);
+    r = coap_resource_init(NULL,
+                           COAP_RESOURCE_FLAGS_HAS_MCAST_SUPPORT | COAP_RESOURCE_SAFE_REQUEST_HANDLER);
     if (!r)
       return;
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_index);
@@ -1206,7 +1209,8 @@ init_resources(coap_context_t *ctx) {
     /* store clock base to use in /time */
     my_clock_base = clock_offset;
 
-    r = coap_resource_init(coap_make_str_const("time"), resource_flags);
+    r = coap_resource_init(coap_make_str_const("time"),
+                           COAP_RESOURCE_SAFE_REQUEST_HANDLER | resource_flags);
     if (!r)
       return;
     coap_register_request_handler(r, COAP_REQUEST_GET, hnd_get_fetch_time);
@@ -1261,7 +1265,7 @@ init_resources(coap_context_t *ctx) {
   }
   if (proxy_host_name_count) {
     r = coap_resource_proxy_uri_init2(hnd_forward_proxy_uri, proxy_host_name_count,
-                                      proxy_host_name_list, 0);
+                                      proxy_host_name_list, COAP_RESOURCE_SAFE_REQUEST_HANDLER);
     if (!r)
       return;
     coap_add_resource(ctx, r);
