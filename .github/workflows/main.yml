@@ -15,20 +15,21 @@ on:
 env:
   PLATFORM: posix
   TESTS: yes
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: 3.x
       - uses: pre-commit/action@v3.0.1
   scan-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags clang-tools
@@ -40,7 +41,7 @@ jobs:
   check-missing-updates:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags clang-tools
@@ -58,7 +59,7 @@ jobs:
         CC: ["gcc", "clang"]
         TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags valgrind
@@ -86,7 +87,7 @@ jobs:
   tinydtls-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
@@ -108,7 +109,7 @@ jobs:
       matrix:
         TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl", "tinydtls"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
@@ -133,7 +134,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: macOS CMake setup
       run: |
         cmake -E make_directory build_test
@@ -149,7 +150,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: install macOS software
       run: |
         brew install make automake libtool
@@ -162,10 +163,10 @@ jobs:
       matrix:
         OS: ["contiki", "lwip", "riot"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libc6-dev-i386
+          sudo apt-get update && sudo apt-get install -y libc6-dev-i386 lib32stdc++-13-dev
       - name: compile
         run: |
           make -C examples/${{matrix.OS}} EXTRA_CFLAGS=-Werror
@@ -173,7 +174,7 @@ jobs:
     runs-on: windows-2025
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -188,7 +189,7 @@ jobs:
   ms-cmake:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install OpenSSL on Windows (choco)
       run: call .\scripts\msinstallopenssl.cmd
@@ -200,32 +201,51 @@ jobs:
     - name: MS CMake configure
       run: |
         cd build_test
-        cmake .. -DWARNING_TO_ERROR=ON -DWITH_OPENSSL=YES
+        cmake .. -DWARNING_TO_ERROR=ON -DWITH_OPENSSL=YES -DENABLE_THREAD_SAFE=OFF
     - name: MS CMake build
       run: |
         cd build_test
         cmake --build .
   mingw-cmake:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        OS: ["UCRT64", "CLANG64", "MINGW64", "MINGW32"]
     defaults:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - name: Environment Setup
+        shell: bash
+        run: |
+          if [ "${{matrix.OS}}" = "UCRT64" ]; then
+            mingw_var="ucrt-x86_64"
+          elif [ "${{matrix.OS}}" = "CLANG64" ]; then
+            mingw_var="clang-x86_64"
+          elif [ "${{matrix.OS}}" = "MINGW64" ]; then
+            mingw_var="x86_64"
+          elif [ "${{matrix.OS}}" = "MINGW32" ]; then
+            mingw_var="i686"
+          else
+            echo "Unsupported MinGW variant: ${{matrix.OS}}"
+            mingw_var=""
+          fi
+          echo "MINGW_VARIANT=${mingw_var}" >> $GITHUB_ENV
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
+          msystem: ${{matrix.OS}}
           update: true
-          install: git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl
-      - name: MinGW build
+          install: git mingw-w64-${{env.MINGW_VARIANT}}-gcc mingw-w64-${{env.MINGW_VARIANT}}-cmake mingw-w64-${{env.MINGW_VARIANT}}-openssl
+      - name: MinGW ${{matrix.OS}} build
         run: |
-          echo 'Running in MSYS2!'
+          echo 'Running in MSYS2 ${{matrix.OS}}!'
           scripts/mingw-cmake.sh
 
   additional-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
@@ -237,11 +257,12 @@ jobs:
       - name: build
         run: |
           make
-          make -C tests/oss-fuzz -f Makefile.ci check clean
+          make  EXTRA_CFLAGS=-Werror -C tests/oss-fuzz -f Makefile.ci check clean
+
   documentation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
@@ -265,7 +286,7 @@ jobs:
   distribution:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
