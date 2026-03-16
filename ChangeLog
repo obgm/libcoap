@@ -3,6 +3,7 @@
 	Change summary for version 4.3.5a:
 
         * Fixes the following CVEs
+          CVE-2025-34468
           CVE-2025-59391
           CVE-2025-65493
           CVE-2025-65494
