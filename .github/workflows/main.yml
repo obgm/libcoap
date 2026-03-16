@@ -15,20 +15,21 @@ on:
 env:
   PLATFORM: posix
   TESTS: yes
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: 3.x
       - uses: pre-commit/action@v3.0.1
   scan-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags clang-tools
@@ -40,7 +41,7 @@ jobs:
   check-missing-updates:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags clang-tools
@@ -58,7 +59,7 @@ jobs:
         CC: ["gcc", "clang"]
         TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags valgrind
@@ -86,7 +87,7 @@ jobs:
   tinydtls-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
@@ -108,7 +109,7 @@ jobs:
       matrix:
         TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl", "tinydtls"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
@@ -133,7 +134,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: macOS CMake setup
       run: |
         cmake -E make_directory build_test
@@ -149,7 +150,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: install macOS software
       run: |
         brew install make automake libtool
@@ -162,7 +163,7 @@ jobs:
       matrix:
         OS: ["contiki", "lwip", "riot", "zephyr"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libc6-dev-i386 lib32stdc++-13-dev
@@ -173,7 +174,7 @@ jobs:
     runs-on: windows-2025
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -188,7 +189,7 @@ jobs:
   ms-cmake:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install OpenSSL on Windows (choco)
       run: call .\scripts\msinstallopenssl.cmd
@@ -214,7 +215,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Environment Setup
         shell: bash
         run: |
@@ -244,7 +245,7 @@ jobs:
   additional-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
@@ -261,7 +262,7 @@ jobs:
   documentation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
@@ -285,7 +286,7 @@ jobs:
   distribution:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: setup
