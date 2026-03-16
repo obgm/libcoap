@@ -368,9 +368,11 @@ oscore_generate_nonce(cose_encrypt0_t *ptr,
   if (tmp_len > 5) {
     tmp_len = 5;
   }
-  memcpy(&(buffer[size - tmp_len]),
-         ptr->partial_iv.s,
-         tmp_len);
+  if (tmp_len) {
+    memcpy(&(buffer[size - tmp_len]),
+           ptr->partial_iv.s,
+           tmp_len);
+  }
   /* XOR */
   for (int i = 0; i < size; i++) {
     buffer[i] = buffer[i] ^ (uint8_t)ctx->common_iv->s[i];
