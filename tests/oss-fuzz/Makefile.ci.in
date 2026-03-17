@@ -31,6 +31,10 @@ $(OUT)/%.o: %.c
 
 %_fuzzer: %_target.o
 	$(LINK.cc) $(CXXFLAGS) $^ $(top_builddir)/.libs/$(libcoap).a $(LDFLAGS) $(LDLIBS) $(DTLS_LIBS) -o $@
+	@if [ -d "$(top_srcdir)/tests/oss-fuzz/$(notdir $*)_seed_corpus" ]; then \
+		echo "Found seed corpus for $@, creating zip..."; \
+		cd $(top_srcdir)/tests/oss-fuzz && zip -rj $@_seed_corpus.zip $(notdir $*)_seed_corpus/; \
+	fi
 
 check: $(OBJECTS)
 

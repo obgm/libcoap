@@ -1,104 +1,103 @@
 #include "coap3/coap_internal.h"
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+
+/* Resource handler - exercises coap_add_data_large_response() */
+static void
+block_handler(coap_resource_t *resource, coap_session_t *session,
+              const coap_pdu_t *request, const coap_string_t *query,
+              coap_pdu_t *response) {
+  (void)query;
+  size_t len;
+  const uint8_t *databuf;
+
+  response->code = COAP_RESPONSE_CODE(205);
+
+  if (coap_get_data(request, &len, &databuf) && len > 64) {
+    /* Large payload - use block transfer API */
+    coap_add_data_large_response(resource, session, request, response,
+                                 query, 0, -1, 0, len, databuf,
+                                 NULL, NULL);
+  } else if (len > 0) {
+    coap_add_data(response, len, databuf);
+  } else {
+    /* Generate 256-byte response to trigger BLOCK2 */
+    static const uint8_t large_data[256] = {
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'
+    };
+    coap_add_data_large_response(resource, session, request, response,
+                                 query, 0, -1, 0, sizeof(large_data), large_data,
+                                 NULL, NULL);
+  }
+}
 
 int
 LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   coap_context_t *ctx = NULL;
   coap_session_t *session = NULL;
-  coap_pdu_t *pdu = NULL;
+  coap_resource_t *resource = NULL;
   coap_address_t addr;
+  uint8_t *dgram = NULL;
 
-  if (size <= 4)
+  if (size < 32)
     return 0;
 
   coap_startup();
   coap_set_log_level(COAP_LOG_EMERG);
 
   ctx = coap_new_context(NULL);
-  if (!ctx) {
+  if (!ctx)
     goto cleanup;
+
+  /* Configure block mode and max block size */
+  uint32_t block_mode = ((uint32_t)data[0] << 8) | data[1];
+  coap_context_set_block_mode(ctx, block_mode & 0x0F);
+
+  uint16_t max_block = ((uint16_t)data[2] << 8) | data[3];
+  if (max_block >= 16 && max_block <= 1024) {
+    coap_context_set_max_block_size(ctx, max_block);
   }
 
-  uint32_t block_mode = ((uint32_t)data[0] << 24) |
-                        ((uint32_t)data[1] << 16) |
-                        ((uint32_t)data[2] << 8) |
-                        data[3];
-  coap_context_set_block_mode(ctx, block_mode);
+  /* Create resource */
+  resource = coap_resource_init(coap_make_str_const("data"), 0);
+  if (resource) {
+    coap_register_request_handler(resource, COAP_REQUEST_GET, block_handler);
+    coap_register_request_handler(resource, COAP_REQUEST_PUT, block_handler);
+    coap_register_request_handler(resource, COAP_REQUEST_POST, block_handler);
+    coap_add_resource(ctx, resource);
+  }
 
+  /* Create session */
   coap_address_init(&addr);
   addr.addr.sa.sa_family = AF_INET;
   session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
-  if (!session) {
+  if (!session)
     goto cleanup;
-  }
+  session->state = COAP_SESSION_STATE_ESTABLISHED;
 
-  /* Test 1: Parse input as PDU and test block option extraction */
-  pdu = coap_pdu_init(0, 0, 0, size);
-  if (pdu) {
-    if (coap_pdu_parse(COAP_PROTO_UDP, data, size, pdu)) {
-      coap_block_t block;
-      coap_block_b_t block_b;
-      coap_opt_iterator_t opt_iter;
-      coap_opt_t *option;
-
-      /* Test coap_get_block() and coap_write_block_opt() */
-      if (coap_get_block(pdu, COAP_OPTION_BLOCK1, &block)) {
-        coap_write_block_opt(&block, COAP_OPTION_BLOCK1, pdu, size);
-        coap_add_block(pdu, size, data, block.num, block.szx);
-      }
-      if (coap_get_block(pdu, COAP_OPTION_BLOCK2, &block)) {
-        coap_write_block_opt(&block, COAP_OPTION_BLOCK2, pdu, size);
-        coap_add_block(pdu, size, data, block.num, block.szx);
-      }
-
-      /* Test coap_get_block_b() and coap_write_block_b_opt() */
-      if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK1, &block_b)) {
-        coap_write_block_b_opt(session, &block_b, COAP_OPTION_BLOCK1, pdu, size);
-        coap_add_block_b_data(pdu, size, data, &block_b);
-      }
-      if (coap_get_block_b(session, pdu, COAP_OPTION_BLOCK2, &block_b)) {
-        coap_write_block_b_opt(session, &block_b, COAP_OPTION_BLOCK2, pdu, size);
-        coap_add_block_b_data(pdu, size, data, &block_b);
-      }
-      if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK1, &block_b)) {
-        coap_write_block_b_opt(session, &block_b, COAP_OPTION_Q_BLOCK1, pdu, size);
-        coap_add_block_b_data(pdu, size, data, &block_b);
-      }
-      if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK2, &block_b)) {
-        coap_write_block_b_opt(session, &block_b, COAP_OPTION_Q_BLOCK2, pdu, size);
-        coap_add_block_b_data(pdu, size, data, &block_b);
-      }
-
-      /* Test coap_opt_block_num() on all block options */
-      if (coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL)) {
-        while ((option = coap_option_next(&opt_iter))) {
-          if (opt_iter.number == COAP_OPTION_BLOCK1 ||
-              opt_iter.number == COAP_OPTION_BLOCK2 ||
-              opt_iter.number == COAP_OPTION_Q_BLOCK1 ||
-              opt_iter.number == COAP_OPTION_Q_BLOCK2) {
-            coap_opt_block_num(option);
-          }
-        }
-      }
-
-      /* Test 2: Generate blocked response with fuzzer-controlled parameters */
-      coap_pdu_t *response = coap_pdu_init(COAP_MESSAGE_ACK,
-                                           COAP_RESPONSE_CODE(205),
-                                           0, 1152);
-      if (response) {
-        /* Use fuzzer input to control response parameters */
-        uint16_t media_type = ((uint16_t)data[4] << 8) | data[5];
-        int maxage = (int)data[6];
-        size_t resp_len = (size > 8) ? (size - 8) : 0;
-        const uint8_t *resp_data = (size > 8) ? &data[8] : data;
-
-        /* Test coap_add_data_blocked_response() */
-        coap_add_data_blocked_response(pdu, response,
-                                       media_type, maxage,
-                                       resp_len, resp_data);
-        coap_delete_pdu(response);
-      }
-    }
-    coap_delete_pdu(pdu);
+  /* Process datagram */
+  size_t dgram_len = size - 4;
+  dgram = (uint8_t *)malloc(dgram_len);
+  if (dgram) {
+    memcpy(dgram, data + 4, dgram_len);
+    coap_handle_dgram(ctx, session, dgram, dgram_len);
+    free(dgram);
   }
 
 cleanup:
