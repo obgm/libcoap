@@ -516,6 +516,9 @@ coap_find_lg_xmit(coap_session_t *session, coap_pdu_t *pdu) {
     lg_xmit->b.b1.app_token = coap_new_binary(m_lg_xmit->b.b1.app_token->length);
     if (!lg_xmit->b.b1.app_token)
       goto fail;
+    if (m_lg_xmit->b.b1.app_token->length)
+      memcpy(lg_xmit->b.b1.app_token->s, m_lg_xmit->b.b1.app_token->s,
+             m_lg_xmit->b.b1.app_token->length);
     LL_PREPEND(session->lg_xmit, lg_xmit);
     coap_log_debug("** %s: lg_xmit %p mcast slave initialized\n",
                    coap_session_str(session), (void *)lg_xmit);
