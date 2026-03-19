@@ -1048,10 +1048,11 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                0);
       goto error_no_ack;
     }
-
-    incoming_seq =
-        coap_decode_var_bytes8(cose->partial_iv.s, cose->partial_iv.length);
-    rcp_ctx->last_seq = incoming_seq;
+    if (rcp_ctx->initial_state == 1) {
+      incoming_seq =
+          coap_decode_var_bytes8(cose->partial_iv.s, cose->partial_iv.length);
+      rcp_ctx->last_seq = incoming_seq;
+    }
   } else { /* !coap_request */
     /*
      * 8.4 Step 2
