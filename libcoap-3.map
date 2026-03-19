@@ -79,6 +79,7 @@ global:
   coap_context_set_session_reconnect_time;
   coap_context_set_session_timeout;
   coap_context_set_shutdown_no_observe;
+  coap_debug_set_packet_fail;
   coap_debug_set_packet_loss;
   coap_decode_var_bytes8;
   coap_decode_var_bytes;

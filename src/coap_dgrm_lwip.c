@@ -311,8 +311,12 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
                  const uint8_t *data, size_t data_len) {
   struct pbuf *pbuf;
   int err;
+  int r;
 
-  if (coap_debug_send_packet()) {
+  if ((r = coap_debug_send_packet()) != 1) {
+    if (r)
+      data_len = -1;
+  } else {
     pbuf = pbuf_alloc(PBUF_TRANSPORT, data_len, PBUF_RAM);
     if (pbuf == NULL) {
       errno = ENOMEM;

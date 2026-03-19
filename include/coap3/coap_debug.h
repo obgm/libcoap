@@ -408,6 +408,21 @@ const char *coap_print_ip_addr(const coap_address_t *address,
  */
 int coap_debug_set_packet_loss(const char *loss_level);
 
+/**
+ * Set the packet transmit fail level for testing.  This can be in one of two forms.
+ *
+ * Percentage : 0% to 100%.  Use the specified probability.
+ * 0% is send all packets, 100% is fail all packets.
+ *
+ * List: A comma separated list of numbers or number ranges that are the
+ * packets to fail.
+ *
+ * @param fail_level The defined fail level (percentage or list).
+ *
+ * @return @c 1 If fail level set, @c 0 if there is an error.
+ */
+int coap_debug_set_packet_fail(const char *fail_level);
+
 #ifdef __cplusplus
 }
 #endif

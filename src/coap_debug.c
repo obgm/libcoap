@@ -1373,6 +1373,9 @@ static struct packet_num_interval {
 static int num_packet_loss_intervals = 0;
 static uint16_t packet_loss_level = 0;
 static int send_packet_count = 0;
+struct packet_num_interval packet_fail_intervals[10];
+static int num_packet_fail_intervals = 0;
+static uint16_t packet_fail_level = 0;
 
 int
 coap_debug_set_packet_loss(const char *loss_level) {
@@ -1436,6 +1439,67 @@ coap_debug_send_packet(void) {
       return 0;
     }
   }
+  if (num_packet_fail_intervals > 0) {
+    int i;
+    for (i = 0; i < num_packet_fail_intervals; i++) {
+      if (send_packet_count >= packet_fail_intervals[i].start &&
+          send_packet_count <= packet_fail_intervals[i].end) {
+        coap_log_debug("Packet %u failed\n", send_packet_count);
+        errno = ECONNREFUSED;
+        return -1;
+      }
+    }
+  }
+  if (packet_fail_level > 0) {
+    uint16_t r = 0;
+    coap_prng_lkd((uint8_t *)&r, 2);
+    if (r < packet_fail_level) {
+      coap_log_debug("Packet %u failed\n", send_packet_count);
+      errno = ECONNREFUSED;
+      return -1;
+    }
+  }
+  return 1;
+}
+
+int
+coap_debug_set_packet_fail(const char *fail_level) {
+  const char *p = fail_level;
+  char *end = NULL;
+  int n = (int)strtol(p, &end, 10), i = 0;
+  if (end == p || n < 0)
+    return 0;
+  if (*end == '%') {
+    if (n > 100)
+      n = 100;
+    packet_fail_level = n * 0xffff / 100;
+    coap_log_debug("packet fail level set to %d%%\n", n);
+  } else {
+    if (n <= 0)
+      return 0;
+    while (i < 10) {
+      packet_fail_intervals[i].start = n;
+      if (*end == '-') {
+        p = end + 1;
+        n = (int)strtol(p, &end, 10);
+        if (end == p || n <= 0)
+          return 0;
+      }
+      packet_fail_intervals[i++].end = n;
+      if (*end == 0)
+        break;
+      if (*end != ',')
+        return 0;
+      p = end + 1;
+      n = (int)strtol(p, &end, 10);
+      if (end == p || n <= 0)
+        return 0;
+    }
+    if (i == 10)
+      return 0;
+    num_packet_fail_intervals = i;
+  }
+  send_packet_count = 0;
   return 1;
 }
 
@@ -1447,5 +1511,7 @@ coap_debug_reset(void) {
   memset(&packet_loss_intervals, 0, sizeof(packet_loss_intervals));
   num_packet_loss_intervals = 0;
   packet_loss_level = 0;
+  num_packet_fail_intervals = 0;
+  packet_fail_level = 0;
   send_packet_count = 0;
 }

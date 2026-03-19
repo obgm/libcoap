@@ -106,9 +106,13 @@ ssize_t
 coap_socket_send(coap_socket_t *sock, coap_session_t *session, const uint8_t *data,
                  size_t datalen) {
   ssize_t bytes_written = 0;
+  int r;
 
-  if (!coap_debug_send_packet()) {
-    bytes_written = (ssize_t)datalen;
+  if ((r = coap_debug_send_packet()) != 1) {
+    if (r)
+      bytes_written = -1;
+    else
+      bytes_written = (ssize_t)datalen;
   } else {
     uip_udp_packet_sendto(sock->udp_conn, data, datalen,
                           &session->addr_info.remote.addr, session->addr_info.remote.port);
