@@ -276,6 +276,49 @@ t_sendqueue10(void) {
   CU_ASSERT(tmp_node->t == timestamp[2]);
 }
 
+/*
+ * Regression guard for ACK handling: exercise the real coap_dispatch()
+ * ACK path and ensure the retransmission node is consumed exactly once.
+ */
+static void
+t_sendqueue11(void) {
+  int result;
+  coap_queue_t *queued = NULL;
+  coap_pdu_t *sent_pdu = NULL;
+  uint8_t ack_data[] = { 0x60, 0x00, 0x12, 0x34 };
+
+  CU_ASSERT_PTR_NULL(ctx->sendqueue);
+
+  queued = coap_new_node();
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(queued);
+
+  sent_pdu = coap_pdu_init(COAP_MESSAGE_CON,
+                           COAP_REQUEST_CODE_GET,
+                           0x1234,
+                           64);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(sent_pdu);
+
+  queued->next = NULL;
+  queued->session = coap_session_reference(session);
+  queued->pdu = sent_pdu;
+  queued->id = 0x1234;
+  queued->t = timestamp[1];
+
+  result = coap_insert_node(&ctx->sendqueue, queued);
+  CU_ASSERT(result > 0);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx->sendqueue);
+
+  session->state = COAP_SESSION_STATE_ESTABLISHED;
+  coap_lock_lock(return);
+  coap_handle_dgram(ctx, session, ack_data, sizeof(ack_data));
+  CU_ASSERT_PTR_NULL(ctx->sendqueue);
+
+  /* Re-dispatch another ACK with the same mid to ensure idempotent behavior. */
+  coap_handle_dgram(ctx, session, ack_data, sizeof(ack_data));
+  coap_lock_unlock();
+  CU_ASSERT_PTR_NULL(ctx->sendqueue);
+}
+
 /* This function creates a set of nodes for testing. These nodes
  * will exist for all tests and are modified by coap_insert_node()
  * and coap_remove_from_queue().
@@ -361,6 +404,7 @@ t_init_sendqueue_tests(void) {
   SENDQUEUE_TEST(suite, t_sendqueue8);
   SENDQUEUE_TEST(suite, t_sendqueue9);
   SENDQUEUE_TEST(suite, t_sendqueue10);
+  SENDQUEUE_TEST(suite, t_sendqueue11);
 
   return suite;
 }
