@@ -3077,8 +3077,10 @@ finish:
 #endif
   coap_free(proxy_host_name_list);
 #endif /* COAP_PROXY_SUPPORT */
-  if (oscore_seq_num_fp)
+  if (oscore_seq_num_fp) {
     fclose(oscore_seq_num_fp);
+    oscore_seq_num_fp = NULL;
+  }
 
   /* Clean up library usage */
   coap_free_context(ctx);

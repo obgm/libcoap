@@ -188,12 +188,12 @@ void coap_delete_observer_internal(coap_resource_t *resource,
  * Note: This function must be called in the locked state.
  *
  * @param resource The CoAP resource to use.
- * @param query    The Query to match against or NULL
+ * @param deleting Indicate whether deleting or not.
  *
  * @return         @c 1 if the Observe has been triggered, @c 0 otherwise.
  */
 int coap_resource_notify_observers_lkd(coap_resource_t *resource,
-                                       const coap_string_t *query);
+                                       coap_deleting_resource_t deleting);
 
 /**
  * Checks all known resources to see if they are dirty and then notifies

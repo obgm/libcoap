@@ -268,7 +268,6 @@ coap_resource_init(coap_str_const_t *uri_path, int flags) {
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
-    r->ref = 1;
 
     if (!(flags & COAP_RESOURCE_FLAGS_RELEASE_URI)) {
       /* Need to take a copy if caller is not providing a release request */
@@ -303,7 +302,6 @@ coap_resource_unknown_init2(coap_method_handler_t put_handler, int flags) {
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
-    r->ref = 1;
     r->is_unknown = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_unknown_resource_uri, sizeof(coap_unknown_resource_uri)-1);
@@ -334,7 +332,6 @@ coap_resource_proxy_uri_init2(coap_method_handler_t handler,
   if (r) {
     size_t i;
     memset(r, 0, sizeof(coap_resource_t));
-    r->ref = 1;
     r->is_proxy_uri = 1;
     /* Something unlikely to be used, but it shows up in the logs */
     r->uri_path = coap_new_str_const(coap_proxy_resource_uri, sizeof(coap_proxy_resource_uri)-1);
@@ -387,7 +384,6 @@ coap_resource_reverse_proxy_init(coap_method_handler_t handler, int flags) {
   r = (coap_resource_t *)coap_malloc_type(COAP_RESOURCE, sizeof(coap_resource_t));
   if (r) {
     memset(r, 0, sizeof(coap_resource_t));
-    r->ref = 1;
     r->is_unknown = 1;
     r->is_reverse_proxy = 1;
     /* Something unlikely to be used, but it shows up in the logs */
@@ -481,12 +477,6 @@ coap_delete_attr(coap_attr_t *attr) {
   coap_free_type(COAP_RESOURCEATTR, attr);
 }
 
-typedef enum coap_deleting_resource_t {
-  COAP_DELETING_RESOURCE,
-  COAP_NOT_DELETING_RESOURCE,
-  COAP_DELETING_RESOURCE_ON_EXIT
-} coap_deleting_resource_t;
-
 static void coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                                   coap_deleting_resource_t deleting);
 
@@ -494,21 +484,25 @@ static void
 coap_free_resource(coap_resource_t *resource, coap_deleting_resource_t deleting) {
   coap_attr_t *attr, *tmp;
   coap_subscription_t *obs, *otmp;
+  coap_context_t *context;
 
   assert(resource);
 
-  if (!resource->context->observe_no_clear) {
-    coap_resource_notify_observers_lkd(resource, NULL);
-    coap_notify_observers(resource->context, resource, deleting);
-  }
+  context = resource->context;
+  if (context) {
+    if (context->observe_no_clear) {
+      coap_resource_notify_observers_lkd(resource, deleting);
+      coap_notify_observers(context, resource, deleting);
+    }
 
-  if (resource->context->resource_deleted_cb)
-    coap_lock_callback(resource->context->resource_deleted_cb(resource->context,
-                                                              resource->uri_path,
-                                                              resource->context->observe_user_data));
+    if (context->resource_deleted_cb)
+      coap_lock_callback(context->resource_deleted_cb(context,
+                                                      resource->uri_path,
+                                                      context->observe_user_data));
 
-  if (resource->context->release_userdata_cb && resource->user_data) {
-    coap_lock_callback(resource->context->release_userdata_cb(resource->user_data));
+    if (context->release_userdata_cb && resource->user_data) {
+      coap_lock_callback(context->release_userdata_cb(resource->user_data));
+    }
   }
 
   /* delete registered attributes */
@@ -521,18 +515,6 @@ coap_free_resource(coap_resource_t *resource, coap_deleting_resource_t deleting)
   LL_FOREACH_SAFE(resource->subscribers, obs, otmp) {
     coap_delete_observer_internal(resource, obs->session, obs);
   }
-  coap_resource_release_lkd(resource);
-}
-
-void
-coap_resource_release_lkd(coap_resource_t *resource) {
-
-#ifndef __COVERITY__
-  assert(resource->ref);
-  resource->ref--;
-  if (resource->ref)
-    return;
-
   if (resource->proxy_name_count && resource->proxy_name_list) {
     size_t i;
 
@@ -543,14 +525,6 @@ coap_resource_release_lkd(coap_resource_t *resource) {
   }
 
   coap_free_type(COAP_RESOURCE, resource);
-#else /* __COVERITY__ */
-  /* Coverity scan is fooled by the reference counter leading to
-   * false positives for USE_AFTER_FREE. */
-  --resource->ref;
-  __coverity_negative_sink__(resource->ref);
-  /* Indicate that resources are released properly. */
-  __coverity_free__(resource);
-#endif /* __COVERITY__ */
 }
 
 COAP_API void
@@ -579,7 +553,7 @@ coap_add_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
       coap_log_warn("coap_add_resource: Duplicate uri_path '%*.*s', old resource deleted\n",
                     (int)resource->uri_path->length, (int)resource->uri_path->length,
                     resource->uri_path->s);
-      coap_delete_resource_lkd(context, r);
+      coap_delete_resource_lkd(r);
     }
     RESOURCES_ADD(context->resources, resource);
 #if COAP_WITH_OBSERVE_PERSIST
@@ -606,12 +580,12 @@ COAP_API int
 coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
   int ret;
 
+  (void)context;
   if (!resource)
     return 0;
 
-  context = resource->context;
   coap_lock_lock(return 0);
-  ret = coap_delete_resource_lkd(context, resource);
+  ret = coap_delete_resource_lkd(resource);
   coap_lock_unlock();
   return ret;
 }
@@ -620,14 +594,25 @@ coap_delete_resource(coap_context_t *context, coap_resource_t *resource) {
  * Input context is ignored, but param left there to keep API consistent
  */
 int
-coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
-  (void)context;
+coap_delete_resource_lkd(coap_resource_t *resource) {
+  coap_context_t *context;
+  coap_deleting_resource_t deleting;
 
   if (!resource)
     return 0;
 
+  context = resource->context;
   coap_lock_check_locked();
 
+  if (resource->ref) {
+    resource->ref--;
+    return 1;
+  }
+  if (context && context->context_going_away) {
+    deleting = COAP_DELETING_RESOURCE_ON_EXIT;
+  } else {
+    deleting = COAP_DELETING_RESOURCE;
+  }
   if (resource->is_unknown) {
     if (context && context->unknown_resource == resource) {
       context->unknown_resource = NULL;
@@ -648,32 +633,28 @@ coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource) {
   }
 
   /* and free its allocated memory */
-  coap_free_resource(resource, COAP_DELETING_RESOURCE);
+  coap_free_resource(resource, deleting);
 
   return 1;
 }
 
 void
 coap_delete_all_resources(coap_context_t *context) {
-  coap_resource_t *res;
-  coap_resource_t *rtmp;
+  coap_resource_t *r;
+  coap_resource_t *tmp;
 
-  /* Cannot call RESOURCES_ITER because coap_free_resource() releases
-   * the allocated storage. */
-
-  HASH_ITER(hh, context->resources, res, rtmp) {
-    HASH_DELETE(hh, context->resources, res);
-    coap_free_resource(res, COAP_DELETING_RESOURCE_ON_EXIT);
+  RESOURCE_ITER_SAFE(context->resources, r, tmp) {
+    coap_delete_resource_lkd(r);
   }
 
   context->resources = NULL;
 
   if (context->unknown_resource) {
-    coap_free_resource(context->unknown_resource, COAP_DELETING_RESOURCE_ON_EXIT);
+    coap_delete_resource_lkd(context->unknown_resource);
     context->unknown_resource = NULL;
   }
   if (context->proxy_uri_resource) {
-    coap_free_resource(context->proxy_uri_resource, COAP_DELETING_RESOURCE_ON_EXIT);
+    coap_delete_resource_lkd(context->proxy_uri_resource);
     context->proxy_uri_resource = NULL;
   }
 }
@@ -1402,9 +1383,10 @@ cleanup:
 COAP_API int
 coap_resource_set_dirty(coap_resource_t *r, const coap_string_t *query) {
   int ret;
+  (void)query;
 
   coap_lock_lock(return 0);
-  ret = coap_resource_notify_observers_lkd(r, query);
+  ret = coap_resource_notify_observers_lkd(r, COAP_NOT_DELETING_RESOURCE);
   coap_lock_unlock();
   return ret;
 }
@@ -1414,15 +1396,16 @@ coap_resource_notify_observers(coap_resource_t *r,
                                const coap_string_t *query) {
   int ret;
 
+  (void)query;
   coap_lock_lock(return 0);
-  ret = coap_resource_notify_observers_lkd(r, query);
+  ret = coap_resource_notify_observers_lkd(r, COAP_NOT_DELETING_RESOURCE);
   coap_lock_unlock();
   return ret;
 }
 
 int
 coap_resource_notify_observers_lkd(coap_resource_t *r,
-                                   const coap_string_t *query COAP_UNUSED) {
+                                   coap_deleting_resource_t deleting) {
   coap_lock_check_locked();
   if (!r->observable)
     return 0;
@@ -1443,8 +1426,7 @@ coap_resource_notify_observers_lkd(coap_resource_t *r,
                                                             r->context->observe_user_data));
   }
 
-  r->context->observe_pending = 1;
-  coap_check_notify_lkd(r->context);
+  coap_notify_observers(r->context, r, deleting);
   return 1;
 }
 

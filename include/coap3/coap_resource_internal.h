@@ -118,6 +118,12 @@ struct coap_resource_t {
 
 };
 
+typedef enum coap_deleting_resource_t {
+  COAP_DELETING_RESOURCE,
+  COAP_NOT_DELETING_RESOURCE,
+  COAP_DELETING_RESOURCE_ON_EXIT
+} coap_deleting_resource_t;
+
 /**
  * Registers the given @p resource for @p context. The resource must have been
  * created by coap_resource_init() or coap_resource_unknown_init(), the
@@ -136,14 +142,27 @@ void coap_add_resource_lkd(coap_context_t *context, coap_resource_t *resource);
  *
  * Note: This function must be called in the locked state.
  *
- * @param context  This parameter is ignored, but kept for backward
- *                 compatibility.
  * @param resource The resource to delete.
  *
  * @return         @c 1 if the resource was found (and destroyed),
  *                 @c 0 otherwise.
  */
-int coap_delete_resource_lkd(coap_context_t *context, coap_resource_t *resource);
+int coap_delete_resource_lkd(coap_resource_t *resource);
+
+/**
+ * Decrement reference counter on a resource.
+ * Note that the resource storage may be deleted as a result and should not be
+ * used after this call.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param resource The CoAP resource.
+ */
+COAP_STATIC_INLINE int
+coap_resource_release_lkd(coap_resource_t *resource) {
+  return coap_delete_resource_lkd(resource);
+}
+
 
 /**
  * Deletes all resources from given @p context and frees their storage.
@@ -161,17 +180,6 @@ void coap_delete_all_resources(coap_context_t *context);
  */
 void coap_resource_reference_lkd(coap_resource_t *resource);
 
-/**
- * Decrement reference counter on a resource.
- * Note that the resource storage may be deleted as a result and should not be
- * used after this call.
- *
- * Note: This function must be called in the locked state.
- *
- * @param resource The CoAP resource.
- */
-void coap_resource_release_lkd(coap_resource_t *resource);
-
 #define RESOURCES_ADD(r, obj) \
   HASH_ADD(hh, (r), uri_path->s[0], (obj)->uri_path->length, (obj))
 
@@ -181,6 +189,9 @@ void coap_resource_release_lkd(coap_resource_t *resource);
 #define RESOURCES_ITER(r,tmp)  \
   coap_resource_t *tmp, *rtmp; \
   HASH_ITER(hh, (r), tmp, rtmp)
+
+#define RESOURCE_ITER_SAFE(e, el, rtmp) \
+  for ((el) = (e); (el) && ((rtmp) = (el)->hh.next, 1); (el) = (rtmp))
 
 #define RESOURCES_FIND(r, k, res) {                     \
     HASH_FIND(hh, (r), (k)->s, (k)->length, (res)); \
