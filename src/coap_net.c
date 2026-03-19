@@ -837,6 +837,7 @@ coap_free_context_lkd(coap_context_t *context) {
   coap_lock_check_locked();
 #if COAP_SERVER_SUPPORT
   /* Removing a resource may cause a NON unsolicited observe to be sent */
+  context->context_going_away = 1;
   if (context->shutdown_no_send_observe)
     context->observe_no_clear = 1;
   coap_delete_all_resources(context);
