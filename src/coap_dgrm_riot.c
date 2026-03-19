@@ -41,9 +41,13 @@ coap_socket_send(coap_socket_t *sock,
                  const uint8_t *data,
                  size_t datalen) {
   ssize_t bytes_written = 0;
+  int r;
 
-  if (!coap_debug_send_packet()) {
-    bytes_written = (ssize_t)datalen;
+  if ((r = coap_debug_send_packet()) != 1) {
+    if (r)
+      bytes_written = -1;
+    else
+      bytes_written = (ssize_t)datalen;
   } else if (sock->flags & COAP_SOCKET_CONNECTED) {
     bytes_written = sock_udp_send(&sock->udp, data, datalen, NULL);
   } else {

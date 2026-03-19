@@ -478,13 +478,17 @@ ssize_t
 coap_socket_send(coap_socket_t *sock, coap_session_t *session,
                  const uint8_t *data, size_t datalen) {
   ssize_t bytes_written = 0;
+  int r;
 
 #if COAP_CLIENT_SUPPORT
   coap_test_cid_tuple_change(session);
 #endif /* COAP_CLIENT_SUPPORT */
 
-  if (!coap_debug_send_packet()) {
-    bytes_written = (ssize_t)datalen;
+  if ((r = coap_debug_send_packet()) != 1) {
+    if (r)
+      bytes_written = -1;
+    else
+      bytes_written = (ssize_t)datalen;
   } else if (sock->flags & COAP_SOCKET_CONNECTED) {
 #ifdef _WIN32
     bytes_written = send(sock->fd, (const char *)data, (int)datalen, 0);
@@ -494,7 +498,6 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
   } else {
 #if defined(_WIN32)
     DWORD dwNumberOfBytesSent = 0;
-    int r;
 #endif /* _WIN32 */
 #ifdef HAVE_STRUCT_CMSGHDR
     /* a buffer large enough to hold all packet info types, ipv6 is the largest */
