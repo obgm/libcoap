@@ -253,9 +253,9 @@ coap_dtls_get_log_level(void) {
 
 static void
 get_session_addr(const session_t *s, coap_address_t *a) {
+  coap_address_init(a);
 #if defined(WITH_CONTIKI) || defined(WITH_LWIP)
 #if LWIP_SOCKET
-  memset(&a->addr, 0, sizeof(a->addr));
   switch (s->addr.sa.sa_family) {
 #if LWIP_IPV4
   case AF_INET:
