@@ -1749,12 +1749,12 @@ coap_oscore_is_supported(void) {
  */
 static struct cipher_algs {
   cose_alg_t alg;
-  u_int cipher_type;
+  uint32_t cipher_type;
 } ciphers[] = {
   { COSE_ALGORITHM_AES_CCM_16_64_128, 1 },
 };
 
-static u_int
+static uint32_t
 get_cipher_alg(cose_alg_t alg) {
   size_t idx;
 
@@ -1773,12 +1773,12 @@ get_cipher_alg(cose_alg_t alg) {
  */
 static struct hmac_algs {
   cose_hmac_alg_t hmac_alg;
-  u_int hmac_type;
+  uint32_t hmac_type;
 } hmacs[] = {
   {COSE_HMAC_ALG_HMAC256_256, 1},
 };
 
-static u_int
+static uint32_t
 get_hmac_alg(cose_hmac_alg_t hmac_alg) {
   size_t idx;
 
