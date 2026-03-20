@@ -590,6 +590,7 @@ coap_dgram_destroy(BIO *a) {
   data = (coap_ssl_data *)BIO_get_data(a);
   if (data != NULL)
     free(data);
+  BIO_set_data(a, NULL);
   return 1;
 }
 
