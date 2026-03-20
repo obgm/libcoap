@@ -72,6 +72,17 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
   endif()
 endif()
 
+if(ENABLE_SANITIZER)
+  if(MSVC)
+    add_compile_options(/fsanitize=address,undefined)
+    add_link_options(/fsanitize=address,undefined)
+  else()
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -fsanitize-address-use-after-scope)
+    add_link_options(-fsanitize=address,undefined)
+  endif()
+  message(STATUS "AddressSanitizer (ASan) and UndefinedBehaviorSanitizer (UBSan) enabled")
+endif()
+
 #
 # The libcoap library
 #
@@ -200,6 +211,10 @@ option(
 option(
   WARNING_TO_ERROR
   "force all compiler warnings to be errors"
+  OFF)
+option(
+  ENABLE_SANITIZER
+  "enable AddressSanitizer (ASan) and UndefinedBehaviorSanitizer (UBSan)"
   OFF)
 set(MAX_LOGGING_LEVEL
     "8"
@@ -687,6 +702,7 @@ message(STATUS "ENABLE_THREAD_SAFE:..............${ENABLE_THREAD_SAFE}")
 message(STATUS "ENABLE_THREAD_RECURSIVE_CHECK....${ENABLE_THREAD_RECURSIVE_LOCK_CHECK}")
 message(STATUS "ENABLE_DOCS:.....................${ENABLE_DOCS}")
 message(STATUS "ENABLE_EXAMPLES:.................${ENABLE_EXAMPLES}")
+message(STATUS "ENABLE_SANITIZER:................${ENABLE_SANITIZER}")
 message(STATUS "DTLS_BACKEND:....................${DTLS_BACKEND}")
 message(STATUS "WITH_GNUTLS:.....................${WITH_GNUTLS}")
 message(STATUS "WITH_TINYDTLS:...................${WITH_TINYDTLS}")
