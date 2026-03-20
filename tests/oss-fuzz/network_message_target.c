@@ -224,7 +224,8 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   /* Initialize CoAP library */
   coap_startup();
   coap_set_log_level(COAP_LOG_EMERG);
-  coap_debug_set_packet_loss("100%");
+  coap_debug_set_packet_loss("50%");
+  coap_debug_set_packet_fail("100%");
 
   /* Setup local address */
   coap_address_init(&local_addr);

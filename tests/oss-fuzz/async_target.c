@@ -51,7 +51,8 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   coap_startup();
   coap_set_log_level(COAP_LOG_EMERG);
-  coap_debug_set_packet_loss("100%");
+  coap_debug_set_packet_loss("50%");
+  coap_debug_set_packet_fail("100%");
 
   ctx = coap_new_context(NULL);
   if (!ctx)
