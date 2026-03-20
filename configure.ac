@@ -949,6 +949,20 @@ if test "x$build_gcov" = "xyes"; then
 fi
 
 # configure options
+# __sanitize__
+AC_ARG_ENABLE([sanitize],
+              [AS_HELP_STRING([--enable-sanitize],
+                              [Enable building with sanitize=address,undefined coverage support [default=no]])],
+              [build_sanitize="$enableval"],
+              [build_sanitize="no"])
+
+if test "x$build_sanitize" = "xyes"; then
+   AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined], [CFLAGS="$CFLAGS -fsanitize=address,undefined"])
+   AX_CHECK_COMPILE_FLAG([-fno-omit-frame-pointer], [CFLAGS="$CFLAGS -fno-omit-frame-pointer"])
+   AX_CHECK_COMPILE_FLAG([-fsanitize-address-use-after-scope], [CFLAGS="$CFLAGS -fsanitize-address-use-after-scope"])
+fi
+
+# configure options
 # __license-install__
 AC_ARG_ENABLE([license-install],
               [AS_HELP_STRING([--enable-license-install],
@@ -1576,6 +1590,11 @@ if test "x$enable_static" = "xyes"; then
     AC_MSG_RESULT([      build static library           : "yes"])
 else
     AC_MSG_RESULT([      build static library           : "no"])
+fi
+if test "x$enable_sanitize" = "xyes"; then
+    AC_MSG_RESULT([      build with sanitize            : "yes"])
+else
+    AC_MSG_RESULT([      build with sanitize            : "no"])
 fi
 
 mkdir -p include/coap$LIBCOAP_API_VERSION
