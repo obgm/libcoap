@@ -26,7 +26,8 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   coap_oscore_conf_t *oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
 
   /* Stop transmission of any error packets */
-  coap_debug_set_packet_loss("1-10");
+  coap_debug_set_packet_loss("50%");
+  coap_debug_set_packet_fail("100%");
 
   /* Set up OSCORE context */
   ctx = coap_new_context(NULL);
