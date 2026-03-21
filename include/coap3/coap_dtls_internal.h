@@ -452,9 +452,17 @@ void coap_dtls_startup(void);
 
 /**
  * Close down the underlying (D)TLS Library layer.
+ * [Done usually by main thread closing down]
  *
  */
 void coap_dtls_shutdown(void);
+
+/**
+ * Close down the underlying (D)TLS Library layer.
+ * [Thread sensitive]
+ *
+ */
+void coap_dtls_thread_shutdown(void);
 
 /**
  * Get the actual (D)TLS object for the session.

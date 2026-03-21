@@ -496,6 +496,10 @@ coap_dtls_shutdown(void) {
   coap_dtls_set_log_level(COAP_LOG_EMERG);
 }
 
+void
+coap_dtls_thread_shutdown(void) {
+}
+
 void *
 coap_dtls_get_tls(const coap_session_t *c_session,
                   coap_tls_library_t *tls_lib) {

@@ -1037,7 +1037,7 @@ coap_get_uri_path(const coap_pdu_t *request) {
       return NULL;
     }
     uri_path = coap_new_string(uri.path.length);
-    if (uri_path) {
+    if (uri_path && uri.path.length) {
       memcpy(uri_path->s, uri.path.s, uri.path.length);
     }
     return uri_path;

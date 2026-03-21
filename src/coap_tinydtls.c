@@ -195,6 +195,10 @@ coap_dtls_shutdown(void) {
   coap_dtls_set_log_level(COAP_LOG_EMERG);
 }
 
+void
+coap_dtls_thread_shutdown(void) {
+}
+
 void *
 coap_dtls_get_tls(const coap_session_t *c_session,
                   coap_tls_library_t *tls_lib) {
@@ -298,6 +302,13 @@ get_session_addr(const session_t *s, coap_address_t *a) {
   } else if (s->addr.sa.sa_family == AF_INET) {
     a->size = (socklen_t)sizeof(a->addr.sin);
     a->addr.sin = s->addr.sin;
+#if COAP_AF_UNIX_SUPPORT
+  } else if (s->addr.sa.sa_family == AF_UNIX) {
+    /* a->addr.cun does not exist */
+    a->size = s->size;
+    a->addr.sin6 = s->addr.sin6;
+#endif /* COAP_AF_UNIX_SUPPORT */
+
   } else {
     a->size = (socklen_t)s->size;
     a->addr.sa = s->addr.sa;
@@ -360,6 +371,12 @@ put_session_addr(const coap_address_t *a, session_t *s) {
   } else if (a->addr.sa.sa_family == AF_INET) {
     s->size = (socklen_t)sizeof(s->addr.sin);
     s->addr.sin = a->addr.sin;
+#if COAP_AF_UNIX_SUPPORT
+  } else if (a->addr.sa.sa_family == AF_UNIX) {
+    /* s->addr.cun does not exist */
+    s->size = a->size;
+    s->addr.sin6 = a->addr.sin6;
+#endif /* COAP_AF_UNIX_SUPPORT */
   } else {
     s->size = (socklen_t)a->size;
     s->addr.sa = a->addr.sa;
@@ -814,7 +831,8 @@ coap_dtls_new_client_session(coap_session_t *session) {
   dtls_peer_t *peer;
   coap_tiny_context_t *t_context = (coap_tiny_context_t *)session->context->dtls_context;
   dtls_context_t *dtls_context = t_context ? t_context->dtls_context : NULL;
-  session_t *dtls_session = dtls_context ? coap_dtls_new_session(session) : NULL;
+  int is_af_unix = coap_is_af_unix(&session->addr_info.remote);
+  session_t *dtls_session = dtls_context ? !is_af_unix ? coap_dtls_new_session(session) : NULL : NULL;
 
   if (!dtls_session)
     return NULL;

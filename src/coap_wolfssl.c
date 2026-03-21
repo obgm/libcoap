@@ -459,6 +459,18 @@ coap_dtls_shutdown(void) {
   wolfSSL_ERR_free_strings();
   coap_dtls_set_log_level(COAP_LOG_EMERG);
   wolfSSL_Debugging_OFF();
+#ifdef FP_ECC
+  wc_ecc_fp_free();
+#endif /* FP_ECC */
+  wolfCrypt_Cleanup();
+  wolfSSL_Cleanup();
+}
+
+void
+coap_dtls_thread_shutdown(void) {
+#ifdef FP_ECC
+  wc_ecc_fp_free();
+#endif /* FP_ECC */
 }
 
 void *
@@ -2235,6 +2247,8 @@ coap_dtls_new_client_session(coap_session_t *session) {
 error:
   if (ssl)
     wolfSSL_free(ssl);
+  coap_dtls_free_wolfssl_env(w_env);
+  session->tls = NULL;
   return NULL;
 }
 

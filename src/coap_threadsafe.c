@@ -140,6 +140,7 @@ coap_io_process_worker_thread(void *arg) {
     if (result < 0 || coap_thread_quit)
       break;
   }
+  coap_dtls_thread_shutdown();
   coap_log_debug("Thread %lx exit\n", thread_pid);
   return 0;
 }
