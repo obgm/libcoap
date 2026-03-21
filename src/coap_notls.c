@@ -168,6 +168,10 @@ coap_dtls_shutdown(void) {
 }
 
 void
+coap_dtls_thread_shutdown(void) {
+}
+
+void
 coap_dtls_set_log_level(coap_log_t level) {
   dtls_log_level = level;
 }

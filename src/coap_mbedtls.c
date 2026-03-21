@@ -3381,6 +3381,10 @@ coap_dtls_shutdown(void) {
 #endif /* COAP_USE_PSA_CRYPTO || MBEDTLS_PSA_CRYPTO_C */
 }
 
+void
+coap_dtls_thread_shutdown(void) {
+}
+
 void *
 coap_dtls_get_tls(const coap_session_t *c_session,
                   coap_tls_library_t *tls_lib) {
