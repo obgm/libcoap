@@ -297,6 +297,7 @@ coap_dtls_startup(void) {
 
 void
 coap_dtls_shutdown(void) {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
   if (pkcs11_engine) {
     /* Release the functional reference from ENGINE_init() */
     ENGINE_finish(pkcs11_engine);
@@ -307,8 +308,16 @@ coap_dtls_shutdown(void) {
     ENGINE_finish(defined_engine);
     defined_engine = NULL;
   }
+#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+  pkcs11_engine = NULL;
+  defined_engine = NULL;
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
   ERR_free_strings();
   coap_dtls_set_log_level(COAP_LOG_EMERG);
+}
+
+void
+coap_dtls_thread_shutdown(void) {
 }
 
 void *
@@ -3783,9 +3792,8 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
   uint8_t pdu[COAP_RXBUFFER_SIZE];
   rbio = ssl ? SSL_get_rbio(ssl) : NULL;
   ssl_data = rbio ? (coap_ssl_data *)BIO_get_data(rbio) : NULL;
-  assert(ssl_data != NULL);
   if (!ssl_data) {
-    errno = ENOMEM;
+    errno = ENOTCONN;
     return -1;
   }
 

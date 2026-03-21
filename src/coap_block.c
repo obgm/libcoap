@@ -2086,7 +2086,8 @@ track_fetch_observe(coap_pdu_t *pdu, coap_lg_crcv_t *lg_crcv,
       }
       coap_delete_bin_const(lg_crcv->obs_token[block_num]);
 
-      lg_crcv->obs_token_cnt = block_num + 1;
+      if (lg_crcv->obs_token_cnt <= block_num)
+        lg_crcv->obs_token_cnt = block_num + 1;
       lg_crcv->obs_token[block_num] = coap_new_bin_const(token->s,
                                                          token->length);
       if (lg_crcv->obs_token[block_num] == NULL)
@@ -3039,8 +3040,8 @@ coap_handle_request_put_block(coap_context_t *context,
     if (lg_srcv->total_len < saved_offset + length) {
       lg_srcv->total_len = saved_offset + length;
     }
-    lg_srcv->body_data = coap_block_build_body(lg_srcv->body_data, length, data,
-                                               saved_offset, lg_srcv->total_len);
+    lg_srcv->body_data = coap_block_build_body_lkd(lg_srcv->body_data, length, data,
+                                                   saved_offset, lg_srcv->total_len);
     if (!lg_srcv->body_data) {
       coap_add_data(response, sizeof("Memory issue")-1,
                     (const uint8_t *)"Memory issue");
@@ -3063,8 +3064,11 @@ coap_handle_request_put_block(coap_context_t *context,
         if (lg_srcv->rec_blocks.used == 1 &&
             (lg_srcv->rec_blocks.range[0].end % COAP_MAX_PAYLOADS(session)) + 1
             == COAP_MAX_PAYLOADS(session)) {
-          /* Blocks could arrive in wrong order */
-          block.num = lg_srcv->rec_blocks.range[0].end;
+          if (block.num != lg_srcv->rec_blocks.range[0].end) {
+            /* Blocks could arrive in wrong order */
+            block.num = lg_srcv->rec_blocks.range[0].end;
+            goto skip_app_handler;
+          }
         } else {
           /* The remote end will be sending the next one unless this
              is a MAX_PAYLOADS and all previous have been received */
@@ -3630,12 +3634,23 @@ lg_xmit_finished:
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
+COAP_API coap_binary_t *
+coap_block_build_body(coap_binary_t *body_data, size_t length,
+                      const uint8_t *data, size_t offset, size_t total) {
+  coap_binary_t *ret;
+
+  coap_lock_lock(NULL, return NULL);
+  ret = coap_block_build_body_lkd(body_data, length, data, offset, total);
+  coap_lock_unlock(NULL);
+  return ret;
+}
+
 /*
  * Re-assemble payloads into a body
  */
 coap_binary_t *
-coap_block_build_body(coap_binary_t *body_data, size_t length,
-                      const uint8_t *data, size_t offset, size_t total) {
+coap_block_build_body_lkd(coap_binary_t *body_data, size_t length,
+                          const uint8_t *data, size_t offset, size_t total) {
   if (data == NULL)
     return NULL;
   if (body_data == NULL && total) {
@@ -3924,8 +3939,8 @@ reinit:
             if (size2 < saved_offset + length) {
               size2 = saved_offset + length;
             }
-            lg_crcv->body_data = coap_block_build_body(lg_crcv->body_data, length, data,
-                                                       saved_offset, size2);
+            lg_crcv->body_data = coap_block_build_body_lkd(lg_crcv->body_data, length, data,
+                                                           saved_offset, size2);
             if (lg_crcv->body_data == NULL) {
               goto fail_resp;
             }

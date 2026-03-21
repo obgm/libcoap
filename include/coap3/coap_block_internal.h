@@ -453,8 +453,6 @@ void coap_context_set_block_mode_lkd(coap_context_t *context,
  *
  * Note: This function must be called before the session is set up.
  *
- * Note: This function must be called before the session is set up.
- *
  * Note: COAP_BLOCK_USE_LIBCOAP must be set using coap_context_set_block_mode()
  * if libcoap is to do this work.
  *
@@ -463,6 +461,24 @@ void coap_context_set_block_mode_lkd(coap_context_t *context,
  *                       (reset), or must be 16, 32, 64, 128, 256, 512 or 1024.
  */
 int coap_context_set_max_block_size_lkd(coap_context_t *context, size_t max_block_size);
+
+/**
+ * Re-assemble payloads into a body.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param body_data The pointer to the data for the body holding the
+ *                  representation so far or NULL if the first time.
+ * @param length    The length of @p data.
+ * @param data      The payload data to update the body with.
+ * @param offset    The offset of the @p data into the body.
+ * @param total     The estimated total size of the body.
+ *
+ * @return          The current representation of the body or @c NULL if error.
+ *                  If NULL, @p body_data will have been de-allocated.
+ */
+coap_binary_t *coap_block_build_body_lkd(coap_binary_t *body_data, size_t length,
+                                         const uint8_t *data, size_t offset, size_t total);
 
 #if COAP_CLIENT_SUPPORT
 /**

@@ -2734,7 +2734,8 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
   response = coap_pdu_init(type, code, request->mid, size);
   if (response) {
     /* copy token */
-    if (!coap_add_token(response, request->actual_token.length,
+    if (request->actual_token.length &&
+        !coap_add_token(response, request->actual_token.length,
                         request->actual_token.s)) {
       coap_log_debug("cannot add token to error response\n");
       coap_delete_pdu(response);

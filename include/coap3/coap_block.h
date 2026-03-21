@@ -246,8 +246,8 @@ int coap_add_block_b_data(coap_pdu_t *pdu, size_t len, const uint8_t *data,
  * @return          The current representation of the body or @c NULL if error.
  *                  If NULL, @p body_data will have been de-allocated.
  */
-coap_binary_t *coap_block_build_body(coap_binary_t *body_data, size_t length,
-                                     const uint8_t *data, size_t offset, size_t total);
+COAP_API coap_binary_t *coap_block_build_body(coap_binary_t *body_data, size_t length,
+                                              const uint8_t *data, size_t offset, size_t total);
 
 /**
  * Adds the appropriate part of @p data to the @p response pdu.  If blocks are
