@@ -192,19 +192,7 @@ coap_new_cache_entry_lkd(coap_session_t *session, const coap_pdu_t *pdu,
   memset(entry, 0, sizeof(coap_cache_entry_t));
   entry->session = session;
   if (record_pdu == COAP_CACHE_RECORD_PDU) {
-    entry->pdu = coap_pdu_init(pdu->type, pdu->code, pdu->mid, pdu->alloc_size);
-    if (entry->pdu) {
-      if (!coap_pdu_resize(entry->pdu, pdu->alloc_size)) {
-        coap_delete_pdu_lkd(entry->pdu);
-        coap_free_type(COAP_CACHE_ENTRY, entry);
-        return NULL;
-      }
-      /* Need to get the appropriate data across */
-      memcpy(entry->pdu, pdu, offsetof(coap_pdu_t, token));
-      memcpy(entry->pdu->token, pdu->token, pdu->used_size);
-      /* And adjust all the pointers etc. */
-      entry->pdu->data = entry->pdu->token + (pdu->data - pdu->token);
-    }
+    entry->pdu = coap_const_pdu_reference_lkd(pdu);
   }
   entry->cache_key = coap_cache_derive_key(session, pdu, session_based);
   if (!entry->cache_key) {
