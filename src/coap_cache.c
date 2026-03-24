@@ -203,7 +203,8 @@ coap_new_cache_entry_lkd(coap_session_t *session, const coap_pdu_t *pdu,
       memcpy(entry->pdu, pdu, offsetof(coap_pdu_t, token));
       memcpy(entry->pdu->token, pdu->token, pdu->used_size);
       /* And adjust all the pointers etc. */
-      entry->pdu->data = entry->pdu->token + (pdu->data - pdu->token);
+      if (pdu->data)
+        entry->pdu->data = entry->pdu->token + (pdu->data - pdu->token);
     }
   }
   entry->cache_key = coap_cache_derive_key(session, pdu, session_based);
