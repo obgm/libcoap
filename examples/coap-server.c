@@ -1966,23 +1966,24 @@ do_call_home(coap_context_t *ctx, const char *local_bind, const char *local_port
 
     if (pdu) {
       coap_optlist_t *optlist_chain = NULL;
-      int ret;
+      int ret = -1;
       coap_pdu_t *resp_pdu = NULL;
 
       if (!coap_path_into_optlist(call_home_uri.path.s, call_home_uri.path.length,
                                   COAP_OPTION_URI_PATH, &optlist_chain))
-        return 0;
+        goto error;
 
       if (call_home_uri.query.length) {
         if (!coap_query_into_optlist(call_home_uri.query.s, call_home_uri.query.length,
                                      COAP_OPTION_URI_QUERY, &optlist_chain))
-          return 0;
+          goto error;
       }
       if (optlist_chain) {
         coap_add_optlist_pdu(pdu, &optlist_chain);
         coap_delete_optlist(optlist_chain);
       }
       ret = coap_send_recv(session, pdu, &resp_pdu, 2000);
+error:
       coap_delete_pdu(pdu);
       coap_delete_pdu(resp_pdu);
       if (ret < 0) {
