@@ -19,6 +19,13 @@
   CU_ASSERT_PTR_NOT_NULL(value); \
   if ((void*)value == NULL) return;
 
+#define ReturnIf_CU_ASSERT_PTR_NOT_NULL_Code(value,code) \
+  CU_ASSERT_PTR_NOT_NULL(value); \
+  if ((void*)value == NULL) { \
+    code; \
+    return; \
+  }
+
 static coap_context_t *ctx; /* Holds the coap context for most tests */
 static coap_session_t *session; /* Holds a reference-counted session object */
 
@@ -296,7 +303,7 @@ t_sendqueue11(void) {
                            COAP_REQUEST_CODE_GET,
                            0x1234,
                            64);
-  ReturnIf_CU_ASSERT_PTR_NOT_NULL(sent_pdu);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL_Code(sent_pdu, coap_delete_node(queued));
 
   queued->next = NULL;
   queued->session = coap_session_reference(session);
