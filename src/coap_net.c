@@ -3859,11 +3859,13 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     goto fail_response;
   }
   if (pdu->code == COAP_REQUEST_CODE_FETCH) {
-    opt = coap_check_option(pdu, COAP_OPTION_CONTENT_FORMAT, &opt_iter);
-    if (opt == NULL) {
-      /* RFC 8132 2.3.1 */
-      resp = 415;
-      goto fail_response;
+    if (coap_check_option(pdu, COAP_OPTION_OSCORE, &opt_iter) == NULL) {
+      opt = coap_check_option(pdu, COAP_OPTION_CONTENT_FORMAT, &opt_iter);
+      if (opt == NULL) {
+        /* RFC 8132 2.3.1 */
+        resp = 415;
+        goto fail_response;
+      }
     }
   }
   if (context->mcast_per_resource &&
