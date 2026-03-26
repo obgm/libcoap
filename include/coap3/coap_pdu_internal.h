@@ -145,6 +145,7 @@ struct coap_pdu_t {
   uint16_t max_opt;         /**< highest option number in PDU */
   uint32_t e_token_length;  /**< length of Token space (includes leading
                                  extended bytes */
+  unsigned ref;             /**< reference count */
   coap_bin_const_t actual_token; /**< Actual token in pdu */
   size_t alloc_size;        /**< allocated storage for token, options and
                                  payload */
@@ -165,13 +166,15 @@ struct coap_pdu_t {
                              *   to the pdu, and the pbuf stays exclusive to
                              *   this pdu. */
 #endif
-  const uint8_t *body_data; /**< Holds ptr to re-assembled data or NULL */
+  const uint8_t *body_data; /**< Holds ptr to re-assembled data or NULL. This
+                                 does not get released by coap_delete_pdu() */
   size_t body_length;       /**< Holds body data length */
   size_t body_offset;       /**< Holds body data offset */
   size_t body_total;        /**< Holds body data total size */
   coap_lg_xmit_t *lg_xmit;  /**< Holds ptr to lg_xmit if sending a set of
                                  blocks */
   coap_session_t *session;  /**< Session responsible for PDU or NULL */
+  coap_binary_t *data_free; /**< Data to be freed off by coap_delete_pdu() */
 };
 
 /**
@@ -372,6 +375,23 @@ coap_pdu_t *coap_new_pdu_lkd(coap_pdu_type_t type, coap_pdu_code_t code,
                              coap_session_t *session);
 
 /**
+ * Dispose of an CoAP PDU and free off associated storage.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * Note: In general you should not call this function directly.
+ * When a PDU is sent with coap_send(), coap_delete_pdu() will be called
+ * automatically for you. This is not for the case for coap_send_recv()
+ * where the sending and receiving PDUs need to be explicitly deleted.
+ *
+ * Note: If called with a reference count > 0, the reference count is
+ * decremented and the PDU still exists.
+ *
+ * @param pdu The PDU for free off.
+ */
+void coap_delete_pdu_lkd(coap_pdu_t *pdu);
+
+/**
  * Duplicate an existing PDU. Specific options can be ignored and not copied
  * across.  The PDU data payload is not copied across.
  *
@@ -392,6 +412,20 @@ coap_pdu_t *coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
                                    const uint8_t *token,
                                    coap_opt_filter_t *drop_options);
 
+/**
+ * Increment reference counter on a pdu to stop it prematurely getting freed off
+ * when coap_delete_pdu() is called.
+ *
+ * In other words, if coap_pdu_reference_lkd() is called once, then the first call
+ * to coap_delete_pdu() will decrement the reference counter, but not delete the PDU
+ * and the second call to coap_delete_pdu() then actually deletes the PDU.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param pdu The CoAP PDU.
+ * @return same as PDU
+ */
+coap_pdu_t *coap_pdu_reference_lkd(coap_pdu_t *pdu);
 /** @} */
 
 #endif /* COAP_COAP_PDU_INTERNAL_H_ */

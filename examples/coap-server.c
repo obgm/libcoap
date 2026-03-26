@@ -60,6 +60,8 @@ strndup(const char *s1, size_t n) {
 #include <coap3/coap.h>
 #include <coap3/coap_defines.h>
 
+static coap_context_t *global_context;
+
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -2561,7 +2563,7 @@ main(int argc, char **argv) {
   coap_set_log_level(log_level);
   coap_dtls_set_log_level(dtls_log_level);
 
-  ctx = get_context(addr_str, port_str);
+  global_context = ctx = get_context(addr_str, port_str);
   if (!ctx)
     return -1;
 

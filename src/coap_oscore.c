@@ -660,7 +660,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
   coap_free_type(COAP_OSCORE_BUF, ciphertext_buffer);
   ciphertext_buffer = NULL;
 
-  coap_delete_pdu(plain_pdu);
+  coap_delete_pdu_lkd(plain_pdu);
   plain_pdu = NULL;
 
   if (association && association->is_observe == 0)
@@ -718,7 +718,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
       if (association->partial_iv == NULL)
         goto error;
       association->recipient_ctx = rcp_ctx;
-      coap_delete_pdu(association->sent_pdu);
+      coap_delete_pdu_lkd(association->sent_pdu);
       if (session->b_2_step != COAP_OSCORE_B_2_NONE && !session->done_b_1_2) {
         size_t size;
 
@@ -750,8 +750,8 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
 error:
   if (ciphertext_buffer)
     coap_free_type(COAP_OSCORE_BUF, ciphertext_buffer);
-  coap_delete_pdu(osc_pdu);
-  coap_delete_pdu(plain_pdu);
+  coap_delete_pdu_lkd(osc_pdu);
+  coap_delete_pdu_lkd(plain_pdu);
   return NULL;
 }
 
@@ -800,7 +800,7 @@ build_and_send_error_pdu(coap_session_t *session,
       goto fail_resp;
     session->oscore_encryption = 0;
     coap_send_internal(session, osc_pdu);
-    coap_delete_pdu(err_pdu);
+    coap_delete_pdu_lkd(err_pdu);
     err_pdu = NULL;
   } else {
     coap_send_internal(session, err_pdu);
@@ -808,7 +808,7 @@ build_and_send_error_pdu(coap_session_t *session,
   }
 fail_resp:
   session->oscore_encryption = oscore_encryption;
-  coap_delete_pdu(err_pdu);
+  coap_delete_pdu_lkd(err_pdu);
   return;
 }
 
@@ -1603,7 +1603,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       goto error;
     }
   }
-  coap_delete_pdu(plain_pdu);
+  coap_delete_pdu_lkd(plain_pdu);
   plain_pdu = NULL;
 
   /* Make sure headers are correctly set up */
@@ -1648,8 +1648,8 @@ error:
 error_no_ack:
   if (association && association->is_observe == 0)
     oscore_delete_association(session, association);
-  coap_delete_pdu(decrypt_pdu);
-  coap_delete_pdu(plain_pdu);
+  coap_delete_pdu_lkd(decrypt_pdu);
+  coap_delete_pdu_lkd(plain_pdu);
   return NULL;
 }
 

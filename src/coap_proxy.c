@@ -35,9 +35,10 @@ coap_proxy_cleanup(coap_context_t *context) {
 
   for (i = 0; i < context->proxy_list_count; i++) {
     for (j = 0; j < context->proxy_list[i].req_count; j++) {
-      coap_delete_pdu(context->proxy_list[i].req_list[j].pdu);
+      coap_delete_pdu_lkd(context->proxy_list[i].req_list[j].pdu);
       coap_delete_cache_key(context->proxy_list[i].req_list[j].cache_key);
     }
+    coap_free_type(COAP_STRING, context->proxy_list[i].uri_host_keep);
     coap_free_type(COAP_STRING, context->proxy_list[i].req_list);
   }
   coap_free_type(COAP_STRING, context->proxy_list);
@@ -307,6 +308,16 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
   memset(&proxy_list[i], 0, sizeof(proxy_list[i]));
 
   proxy_list[i].uri = server_use->uri;
+  proxy_list[i].uri_host_keep = coap_malloc_type(COAP_STRING,
+                                                 server_use->uri.host.length);
+  if (!proxy_list[i].uri_host_keep) {
+    return NULL;
+  }
+  if (server_use->uri.host.length) {
+    memcpy(proxy_list[i].uri_host_keep, server_use->uri.host.s, server_use->uri.host.length);
+  }
+  proxy_list[proxy_list_count].uri.host.s = proxy_list[proxy_list_count].uri_host_keep;
+
   if (server_list->track_client_session) {
     proxy_list[i].incoming = session;
   }
@@ -328,7 +339,7 @@ coap_proxy_remove_association(coap_session_t *session, int send_failure) {
     /* Check for incoming match */
     for (j = 0; j < proxy_list[i].req_count; j++) {
       if (proxy_list[i].req_list[j].incoming == session) {
-        coap_delete_pdu(proxy_list[i].req_list[j].pdu);
+        coap_delete_pdu_lkd(proxy_list[i].req_list[j].pdu);
         coap_delete_bin_const(proxy_list[i].req_list[j].token_used);
         coap_delete_cache_key(proxy_list[i].req_list[j].cache_key);
         if (proxy_list[i].req_count-j > 1) {
@@ -374,7 +385,7 @@ coap_proxy_remove_association(coap_session_t *session, int send_failure) {
             coap_log_info("Failed to send PDU with 5.02 gateway issue\n");
           }
 cleanup:
-          coap_delete_pdu(proxy_list[i].req_list[j].pdu);
+          coap_delete_pdu_lkd(proxy_list[i].req_list[j].pdu);
           coap_delete_bin_const(proxy_list[i].req_list[j].token_used);
           coap_delete_cache_key(proxy_list[i].req_list[j].cache_key);
         }
@@ -626,8 +637,24 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
     /* Copy the remaining options across */
     coap_option_iterator_init(request, &opt_iter, COAP_OPT_ALL);
     while ((option = coap_option_next(&opt_iter))) {
+      coap_uri_t proxy_uri;
+
       switch (opt_iter.number) {
       case COAP_OPTION_PROXY_URI:
+        coap_log_info("Proxy URI '%.*s'\n",
+                      (int)coap_opt_length(option),
+                      (const char *)coap_opt_value(option));
+        if (coap_split_proxy_uri(coap_opt_value(option),
+                                 coap_opt_length(option),
+                                 &proxy_uri) < 0) {
+          goto failed;
+        }
+        if (!coap_uri_into_optlist(&proxy_uri,
+                                   &proxy_entry->ongoing->addr_info.remote,
+                                   &optlist, 0)) {
+          coap_log_err("Failed to create options for URI\n");
+          goto failed;
+        }
         break;
       case COAP_OPTION_PROXY_SCHEME:
         break;
@@ -700,7 +727,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
 
 failed:
   response->code = COAP_RESPONSE_CODE(500);
-  coap_delete_pdu(pdu);
+  coap_delete_pdu_lkd(pdu);
   return 0;
 }
 
@@ -855,7 +882,7 @@ remove_match:
   option = coap_check_option(received, COAP_OPTION_OBSERVE, &opt_iter);
   /* Need to remove matching token entry (apart from on Observe response) */
   if (option == NULL && proxy_entry->req_count) {
-    coap_delete_pdu(proxy_entry->req_list[j].pdu);
+    coap_delete_pdu_lkd(proxy_entry->req_list[j].pdu);
     coap_delete_bin_const(proxy_entry->req_list[j].token_used);
     /* Do not delete cache key here - caller's responsibility */
     proxy_entry->req_count--;

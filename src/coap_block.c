@@ -1871,7 +1871,7 @@ coap_send_q_blocks(coap_session_t *session,
   if (send_pdu == COAP_SEND_INC_PDU &&
       (mid = coap_send_internal(session, pdu)) == COAP_INVALID_MID) {
     /* Not expected, underlying issue somewhere */
-    coap_delete_pdu(block_pdu);
+    coap_delete_pdu_lkd(block_pdu);
     return COAP_INVALID_MID;
   }
 
@@ -1914,8 +1914,8 @@ coap_send_q_blocks(coap_session_t *session,
                                                  block.szx),
                             buf)) {
       coap_log_warn("Internal update issue option\n");
-      coap_delete_pdu(block_pdu);
-      coap_delete_pdu(t_pdu);
+      coap_delete_pdu_lkd(block_pdu);
+      coap_delete_pdu_lkd(t_pdu);
       break;
     }
 
@@ -1925,8 +1925,8 @@ coap_send_q_blocks(coap_session_t *session,
                         block.num,
                         block.szx)) {
       coap_log_warn("Internal update issue data\n");
-      coap_delete_pdu(block_pdu);
-      coap_delete_pdu(t_pdu);
+      coap_delete_pdu_lkd(block_pdu);
+      coap_delete_pdu_lkd(t_pdu);
       break;
     }
     if (COAP_PDU_IS_RESPONSE(block_pdu)) {
@@ -1935,7 +1935,7 @@ coap_send_q_blocks(coap_session_t *session,
     mid = coap_send_internal(session, block_pdu);
     if (mid == COAP_INVALID_MID) {
       /* Not expected, underlying issue somewhere */
-      coap_delete_pdu(t_pdu);
+      coap_delete_pdu_lkd(t_pdu);
       return COAP_INVALID_MID;
     }
     block_pdu = t_pdu;

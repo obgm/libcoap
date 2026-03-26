@@ -518,7 +518,7 @@ coap_session_mfree(coap_session_t *session) {
 #endif /* COAP_CLIENT_SUPPORT */
 
   if (session->partial_pdu)
-    coap_delete_pdu(session->partial_pdu);
+    coap_delete_pdu_lkd(session->partial_pdu);
   if (session->sock.lfunc[COAP_LAYER_SESSION].l_close)
     session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
   if (session->psk_identity)
@@ -778,7 +778,7 @@ coap_session_send_csm(coap_session_t *session) {
     }
   }
   if (pdu)
-    coap_delete_pdu(pdu);
+    coap_delete_pdu_lkd(pdu);
 }
 #endif /* !COAP_DISABLE_TCP */
 
@@ -993,7 +993,7 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
   session->con_active = 0;
 
   if (session->partial_pdu) {
-    coap_delete_pdu(session->partial_pdu);
+    coap_delete_pdu_lkd(session->partial_pdu);
     session->partial_pdu = NULL;
   }
   session->partial_read = 0;

@@ -186,7 +186,7 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *s) {
       coap_session_release_lkd(s->session);
     }
     if (s->pdu) {
-      coap_delete_pdu(s->pdu);
+      coap_delete_pdu_lkd(s->pdu);
       s->pdu = NULL;
     }
     coap_free_type(COAP_STRING, s);

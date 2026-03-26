@@ -39,6 +39,7 @@ struct coap_proxy_list_t {
   coap_session_t *incoming;  /**< Incoming session (used if client tracking( */
   coap_proxy_req_t *req_list; /**< Incoming list of request info */
   size_t req_count;          /**< Count of incoming request info */
+  uint8_t *uri_host_keep;     /**< memory for uri.host */
   coap_uri_t uri;            /**< URI info for connection */
   coap_tick_t idle_timeout_ticks; /**< Idle timeout (0 == no timeout) */
   coap_tick_t last_used;     /**< Last time entry was used */
