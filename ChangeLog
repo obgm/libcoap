@@ -1,5 +1,15 @@
 2025-09-15  Olaf Bergmann  <bergmann@tzi.org>
 
+	Change summary for version 4.3.5b:
+
+        * Add in sanitizer build support.
+        * Fix issues raised by sanitizer builds.
+        * Protect request handlers multi-thread usage by locking the resource.
+        * Add reference counting to coap_pdu_t to prevent early removal.
+        * Add PSA support for later MbedTLS libraries.
+        * Fix disabling IPv4 / IPv6 builds
+        * Critical reported bugs fixed.
+
 	Change summary for version 4.3.5a:
 
         * Fixes the following CVEs

@@ -19,7 +19,7 @@ m4_define([libcoap_micro_version], [5])
 
 # define an appending release state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
-m4_define([libcoap_release_state], [a])
+m4_define([libcoap_release_state], [b])
 
 # Define the previous full libcoap software release version here.
 # Used if libcoap_release_state is not empty for LIBCOAP_VERSION and LIBCOAP_PACKAGE_BASE.
@@ -152,7 +152,7 @@ LT_INIT([shared static])
 #
 
 LT_LIBCOAP_CURRENT=5
-LT_LIBCOAP_REVISION=1
+LT_LIBCOAP_REVISION=2
 LT_LIBCOAP_AGE=2
 LIBCOAP_SO_VERSION=$LT_LIBCOAP_CURRENT.$LT_LIBCOAP_REVISION.$LT_LIBCOAP_AGE
 
