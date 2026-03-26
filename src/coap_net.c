@@ -700,8 +700,7 @@ coap_new_context(const coap_address_t *listen_addr) {
     c->dtls_context = coap_dtls_new_context(c);
     if (!c->dtls_context) {
       coap_log_emerg("coap_init: no DTLS context available\n");
-      coap_free_context_lkd(c);
-      return NULL;
+      goto onerror;
     }
   }
 
@@ -723,11 +722,10 @@ coap_new_context(const coap_address_t *listen_addr) {
   coap_lock_unlock(c);
   return c;
 
-#if defined(COAP_EPOLL_SUPPORT) || COAP_SERVER_SUPPORT
 onerror:
+  coap_lock_unlock();
   coap_free_type(COAP_CONTEXT, c);
   return NULL;
-#endif /* COAP_EPOLL_SUPPORT || COAP_SERVER_SUPPORT */
 }
 
 void
@@ -3579,8 +3577,6 @@ skip_handler:
                                COAP_SEND_INC_PDU) == COAP_INVALID_MID)
           coap_log_debug("cannot send response for mid=0x%x\n", mid);
         response = NULL;
-        if (query)
-          coap_delete_string(query);
         goto finish;
       }
 #endif /* COAP_Q_BLOCK_SUPPORT */
@@ -3643,9 +3639,9 @@ drop_it_no_debug:
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
-#if COAP_Q_BLOCK_SUPPORT || COAP_THREAD_SAFE
 finish:
-#endif /* COAP_Q_BLOCK_SUPPORT || COAP_THREAD_SAFE */
+  if (query)
+    coap_delete_string(query);
   coap_delete_string(uri_path);
   return;
 

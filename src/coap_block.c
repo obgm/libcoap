@@ -3659,6 +3659,12 @@ coap_block_build_body_lkd(coap_binary_t *body_data, size_t length,
   if (body_data == NULL)
     return NULL;
 
+  /* Check no overflow (including a 8 byte small headroom) */
+  if (SIZE_MAX - length < 8 || offset > SIZE_MAX - length - 8) {
+    coap_delete_binary(body_data);
+    return NULL;
+  }
+
   /* Update saved data */
   if (offset + length <= total && body_data->length >= total) {
     memcpy(&body_data->s[offset], data, length);
