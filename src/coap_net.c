@@ -723,7 +723,7 @@ coap_new_context(const coap_address_t *listen_addr) {
   return c;
 
 onerror:
-  coap_lock_unlock();
+  coap_lock_unlock(c);
   coap_free_type(COAP_CONTEXT, c);
   return NULL;
 }
@@ -3638,9 +3638,9 @@ drop_it_no_debug:
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
-#if COAP_THREAD_SAFE
+#if COAP_THREAD_SAFE || COAP_Q_BLOCK_SUPPORT
 finish:
-#endif /* COAP_THREAD_SAFE */
+#endif /* COAP_THREAD_SAFE || COAP_Q_BLOCK_SUPPORT */
   if (query)
     coap_delete_string(query);
   coap_delete_string(uri_path);
