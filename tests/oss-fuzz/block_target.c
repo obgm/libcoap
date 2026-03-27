@@ -17,8 +17,8 @@ block_handler(coap_resource_t *resource, coap_session_t *session,
   if (coap_get_data(request, &len, &databuf) && len > 64) {
     /* Large payload - use block transfer API */
     coap_add_data_large_response(resource, session, request, response,
-                                 query, 0, -1, 0, len, databuf,
-                                 NULL, NULL);
+                                 query, COAP_MEDIATYPE_TEXT_PLAIN, -1, 0,
+                                 len, databuf, NULL, NULL);
   } else if (len > 0) {
     coap_add_data(response, len, databuf);
   } else {
@@ -42,8 +42,9 @@ block_handler(coap_resource_t *resource, coap_session_t *session,
       '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'
     };
     coap_add_data_large_response(resource, session, request, response,
-                                 query, 0, -1, 0, sizeof(large_data), large_data,
-                                 NULL, NULL);
+                                 query, COAP_MEDIATYPE_TEXT_PLAIN, -1, 0,
+                                 sizeof(large_data), large_data, NULL,
+                                 NULL);
   }
 }
 
@@ -55,11 +56,13 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   coap_address_t addr;
   uint8_t *dgram = NULL;
 
-  if (size < 32)
+  if (size < 8)
     return 0;
 
   coap_startup();
   coap_set_log_level(COAP_LOG_EMERG);
+  coap_debug_set_packet_loss("50%");
+  coap_debug_set_packet_fail("100%");
 
   ctx = coap_new_context(NULL);
   if (!ctx)
