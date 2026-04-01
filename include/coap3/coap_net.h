@@ -1067,7 +1067,7 @@ int coap_io_process_configure_threads(coap_context_t *context,
  *
  * @param context Context.
  */
-void coap_io_process_remove_threads(coap_context_t *context);
+COAP_API void coap_io_process_remove_threads(coap_context_t *context);
 
 /**
  * Get the libcoap internal file descriptor for a socket. This can be used to

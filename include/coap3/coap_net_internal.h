@@ -828,6 +828,15 @@ int coap_io_process_loop_lkd(coap_context_t *context,
                              void *main_loop_code_arg, uint32_t timeout_ms,
                              uint32_t thread_count);
 
+/**
+ * Release the coap_io_process() worker threads.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param context Context.
+ */
+void coap_io_process_remove_threads_lkd(coap_context_t *context);
+
 #if !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
 /**
  * The main message processing loop with additional fds for internal select.
