@@ -147,6 +147,10 @@ static int call_home = 0;
 #endif /* COAP_CLIENT_SUPPORT */
 static const char *proxy_add_resource = NULL;
 static const char *proxy_add_check = NULL;
+#if COAP_CLIENT_SUPPORT || COAP_PROXY_SUPPORT
+static unsigned char *user = NULL;
+static ssize_t user_length = -1;
+#endif /* COAP_CLIENT_SUPPORT || COAP_PROXY_SUPPORT */
 
 static coap_dtls_pki_t *setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
 
@@ -668,23 +672,7 @@ hnd_put_example_data(coap_resource_t *resource,
   }
 }
 
-#if COAP_PROXY_SUPPORT
-
-#define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
-                      * identity) in bytes. */
-static unsigned char *user = NULL;
-static ssize_t user_length = -1;
-
-static size_t proxy_host_name_count = 0;
-static const char **proxy_host_name_list = NULL;
-static coap_proxy_server_list_t forward_proxy = { NULL, 0, 0,
-                                                  COAP_PROXY_FWD_STATIC,
-                                                  0, 300
-                                                };
-static coap_proxy_server_list_t reverse_proxy = { NULL, 0, 0,
-                                                  COAP_PROXY_REV | COAP_PROXY_BIT_STRIP,
-                                                  0, 10
-                                                };
+#if COAP_CLIENT_SUPPORT || COAP_PROXY_SUPPORT
 
 static coap_dtls_cpsk_t *
 setup_cpsk(char *client_sni) {
@@ -699,6 +687,24 @@ setup_cpsk(char *client_sni) {
   dtls_cpsk.psk_info.key.length = key_length;
   return &dtls_cpsk;
 }
+
+#endif /* COAP_CLIENT_SUPPORT || COAP_PROXY_SUPPORT */
+
+#if COAP_PROXY_SUPPORT
+
+#define MAX_USER 128 /* Maximum length of a user name (i.e., PSK
+                      * identity) in bytes. */
+
+static size_t proxy_host_name_count = 0;
+static const char **proxy_host_name_list = NULL;
+static coap_proxy_server_list_t forward_proxy = { NULL, 0, 0,
+                                                  COAP_PROXY_FWD_STATIC,
+                                                  0, 300
+                                                };
+static coap_proxy_server_list_t reverse_proxy = { NULL, 0, 0,
+                                                  COAP_PROXY_REV | COAP_PROXY_BIT_STRIP,
+                                                  0, 10
+                                                };
 
 static void
 hnd_forward_proxy_uri(coap_resource_t *resource,
