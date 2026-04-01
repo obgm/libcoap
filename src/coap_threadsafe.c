@@ -179,11 +179,18 @@ coap_io_process_configure_threads(coap_context_t *context, uint32_t thread_count
   return 1;
 }
 
+COAP_API void
+coap_io_process_remove_threads(coap_context_t *context) {
+  coap_lock_lock();
+  coap_io_process_remove_threads_lkd(context);
+  coap_lock_unlock();
+}
+
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
 #endif /* HAVE_SIGNAL_H */
 void
-coap_io_process_remove_threads(coap_context_t *context) {
+coap_io_process_remove_threads_lkd(coap_context_t *context) {
   uint32_t i;
 
   (void)context;

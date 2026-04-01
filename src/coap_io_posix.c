@@ -627,7 +627,7 @@ coap_io_process_loop_lkd(coap_context_t *context,
     }
   }
 #if COAP_THREAD_SAFE
-  coap_io_process_remove_threads(context);
+  coap_io_process_remove_threads_lkd(context);
 #endif /* COAP_THREAD_SAFE */
   coap_thread_quit = 0;
   return ret;
