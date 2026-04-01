@@ -124,6 +124,10 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
   case AF_UNIX:
     break;
 #endif /* COAP_AF_UNIX_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+  case AF_LLC:
+    break;
+#endif /* COAP_AF_LLC_SUPPORT */
   default:
     coap_log_alert("coap_socket_connect_tcp1: unsupported sa_family\n");
     break;
@@ -171,6 +175,17 @@ coap_socket_connect_tcp1(coap_socket_t *sock,
     coap_log_warn("coap_socket_connect_tcp1: getsockname: %s\n",
                   coap_socket_strerror());
   }
+
+#if COAP_AF_LLC_SUPPORT
+  /* Current (7.0, 6.19.12 and similar vintage) Linux kernels do not return
+   * -EINPROGRESS for AF_LLC sockets with zero timeouts, as with AF_INET, so
+   *  let’s assume we are connected, because getpeername() will error out.
+   */
+  if (coap_is_af_llc(remote_addr)) {
+    sock->flags |= COAP_SOCKET_CONNECTED;
+    return 1;
+  }
+#endif /* COAP_AF_LLC_SUPPORT */
 
   if (getpeername(sock->fd, &remote_addr->addr.sa, &remote_addr->size) == COAP_SOCKET_ERROR) {
     coap_log_warn("coap_socket_connect_tcp1: getpeername: %s\n",
@@ -289,6 +304,10 @@ coap_socket_bind_tcp(coap_socket_t *sock,
   case AF_UNIX:
     break;
 #endif /* COAP_AF_UNIX_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+  case AF_LLC:
+    break;
+#endif /* COAP_AF_LLC_SUPPORT */
   default:
     coap_log_alert("coap_socket_bind_tcp: unsupported sa_family\n");
   }

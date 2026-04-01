@@ -137,7 +137,7 @@ static uint32_t block_mode = COAP_BLOCK_USE_LIBCOAP;
 static int echo_back = 0;
 static uint32_t csm_max_message_size = 0;
 static size_t extended_token_size = COAP_TOKEN_DEFAULT_MAX;
-static coap_proto_t use_unix_proto = COAP_PROTO_NONE;
+static coap_proto_t use_proto = COAP_PROTO_NONE;
 static int enable_ws = 0;
 static int ws_port = 80;
 static int wss_port = 443;
@@ -1739,6 +1739,22 @@ usage(const char *program, const char *version) {
           "\t-A address\tInterface address to bind to\n"
           , program);
   fprintf(stderr,
+          "\t       \t\tExamples:\n"
+#if COAP_IPV4_SUPPORT
+          "\t       \t\t\tIPv4:        0.0.0.0\n"
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
+          "\t       \t\t\tIPv6:        ::1\n"
+#endif /* COAP_IPV6_SUPPORT */
+#if COAP_AF_UNIX_SUPPORT
+          "\t       \t\t\tUnix domain: /run/user/1000/coap.sock\n"
+#endif /* COAP_AF_UNIX_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+          "\t       \t\t\tLLC:         llc[70:d8:23:16:52:b5]:ac\n"
+          "\t       \t\t\t                 ^ interface MAC    ^ SAP\n"
+#endif /* COAP_AF_LLC_SUPPORT */
+         );
+  fprintf(stderr,
           "\t-B resource[:check]\n"
           "\t       \t\tFor usage when setting up forward-dynamic proxy sessions\n"
           "\t       \t\twith -P option. This defines the resource to set up for\n"
@@ -1784,7 +1800,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tThis option can be repeated to provide multiple upstream\n"
           "\t       \t\tservers that are round-robin load balanced\n"
           "\t-T max_token_length\tSet the maximum token length (8-65804)\n"
-          "\t-U type\t\tTreat address defined by -A as a Unix socket address.\n"
+          "\t-U type\t\tDefine server listening protocol for Unix domain/LLC\n"
+          "\t       \t\taddresses specified by the -A option. Default is 'coap'.\n"
           "\t       \t\ttype is 'coap', 'coaps', 'coap+tcp' or 'coaps+tcp'\n"
           "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
           "\t       \t\tlibrary logging\n"
@@ -2058,7 +2075,7 @@ get_context(const char *node, const char *port) {
   }
   scheme_hint_bits =
       coap_get_available_scheme_hint_bits(cert_file != NULL || key_defined != 0,
-                                          enable_ws, use_unix_proto);
+                                          enable_ws, use_proto);
   info_list = coap_resolve_address_info(node ? &local : NULL, u_s_port, s_port,
                                         ws_port, wss_port,
                                         AI_PASSIVE | AI_NUMERICHOST,
@@ -2458,30 +2475,30 @@ cmdline_read_identity_check(char *arg) {
 }
 
 static int
-cmdline_unix(char *arg) {
+cmdline_proto(char *arg) {
   if (!strcmp("coap", arg)) {
-    use_unix_proto = COAP_PROTO_UDP;
+    use_proto = COAP_PROTO_UDP;
     return 1;
   } else if (!strcmp("coaps", arg)) {
     if (!coap_dtls_is_supported()) {
-      coap_log_err("unix with dtls is not supported\n");
+      coap_log_err("dtls is not supported\n");
       return 0;
     }
-    use_unix_proto = COAP_PROTO_DTLS;
+    use_proto = COAP_PROTO_DTLS;
     return 1;
   } else if (!strcmp("coap+tcp", arg)) {
     if (!coap_tcp_is_supported()) {
-      coap_log_err("unix with stream is not supported\n");
+      coap_log_err("tcp is not supported\n");
       return 0;
     }
-    use_unix_proto = COAP_PROTO_TCP;
+    use_proto = COAP_PROTO_TCP;
     return 1;
   } else if (!strcmp("coaps+tcp", arg)) {
     if (!coap_tls_is_supported()) {
-      coap_log_err("unix with tls is not supported\n");
+      coap_log_err("tls is not supported\n");
       return 0;
     }
-    use_unix_proto = COAP_PROTO_TLS;
+    use_proto = COAP_PROTO_TLS;
     return 1;
   }
   return 0;
@@ -2829,7 +2846,7 @@ main(int argc, char **argv) {
 #endif /* COAP_PROXY_SUPPORT */
       break;
     case 'U':
-      if (!cmdline_unix(optarg)) {
+      if (!cmdline_proto(optarg)) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
         goto failed;
       }

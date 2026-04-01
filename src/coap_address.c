@@ -73,6 +73,10 @@ coap_address_get_port(const coap_address_t *addr) {
   case AF_INET6:
     return ntohs(addr->addr.sin6.sin6_port);
 #endif /* COAP_IPV6_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+  case AF_LLC:
+    return addr->addr.llc.sllc_sap;
+#endif /* COAP_AF_LLC_SUPPORT */
   default: /* undefined */
     ;
   }
@@ -93,6 +97,10 @@ coap_address_set_port(coap_address_t *addr, uint16_t port) {
     addr->addr.sin6.sin6_port = htons(port);
     break;
 #endif /* COAP_IPV6_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+  case AF_LLC:
+    addr->addr.llc.sllc_sap = port & 0xFF;
+#endif /* COAP_AF_LLC_SUPPORT */
   default: /* undefined */
     ;
   }
@@ -158,6 +166,16 @@ coap_is_af_unix(const coap_address_t *a) {
   (void)a;
   return 0;
 #endif /* ! COAP_AF_UNIX_SUPPORT */
+}
+
+int
+coap_is_af_llc(const coap_address_t *a) {
+#if COAP_AF_LLC_SUPPORT
+  return a->addr.sa.sa_family == AF_LLC;
+#else /* ! COAP_AF_LLC_SUPPORT */
+  (void)a;
+  return 0;
+#endif /* ! COAP_AF_LLC_SUPPORT */
 }
 
 int
@@ -404,6 +422,57 @@ coap_address_set_unix_domain(coap_address_t *addr,
 #endif /* ! COAP_AF_UNIX_SUPPORT */
 }
 
+#if COAP_AF_LLC_SUPPORT
+/* Needed for ether_aton() and ARPHRD_ETHER. */
+#include <netinet/ether.h>
+#endif /* ! COAP_AF_LLC_SUPPORT */
+
+int
+coap_address_set_llc(coap_address_t *addr,
+                     const uint8_t *host, size_t host_len) {
+#if COAP_AF_LLC_SUPPORT
+  char addrstr[HW_ADDRSTRLEN + 1] = { 0 };
+  struct ether_addr *ether_addr = NULL;
+  char sapstr[3] = { 0 };
+  unsigned long sap;
+
+  if (host_len < LLC_HOST_LEN)
+    coap_log_err("%s(): Invalid address length (%zu)\n", __func__, host_len);
+
+  host += 4;
+  strncpy(addrstr, (const char *)host, HW_ADDRSTRLEN);
+
+  ether_addr = ether_aton(addrstr);
+  if (!ether_addr)
+    return 0;
+
+  host += HW_ADDRSTRLEN + 2;
+  strncpy(sapstr, (const char *)host, 2);
+
+  sap = strtoul(sapstr, NULL, 16);
+  if (sap == ULONG_MAX)
+    return 0;
+
+  coap_address_init(addr);
+
+  addr->size = sizeof(addr->addr.llc);
+
+  addr->addr.llc.sllc_family = AF_LLC;
+  addr->addr.llc.sllc_arphrd = ARPHRD_ETHER;
+  addr->addr.llc.sllc_sap = sap & 0xFF;
+
+  memcpy(addr->addr.llc.sllc_mac, ether_addr, IFHWADDRLEN);
+
+  return 1;
+#else /* ! COAP_AF_LLC_SUPPORT */
+  (void)addr;
+  (void)host;
+  (void)host_len;
+
+  return 0;
+#endif /* ! COAP_AF_LLC_SUPPORT */
+}
+
 static void
 update_port(coap_address_t *addr, uint16_t port, uint16_t default_port,
             int update_port0) {
@@ -421,7 +490,7 @@ update_port(coap_address_t *addr, uint16_t port, uint16_t default_port,
 
 uint32_t
 coap_get_available_scheme_hint_bits(int have_pki_psk, int ws_check,
-                                    coap_proto_t use_unix_proto) {
+                                    coap_proto_t use_proto) {
   uint32_t scheme_hint_bits = 0;
   coap_uri_scheme_t scheme;
 
@@ -463,7 +532,7 @@ coap_get_available_scheme_hint_bits(int have_pki_psk, int ws_check,
     }
   }
 
-  switch (use_unix_proto) {
+  switch (use_proto) {
   /* For AF_UNIX, can only listen on a single endpoint */
   case COAP_PROTO_UDP:
     scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP;
@@ -483,7 +552,7 @@ coap_get_available_scheme_hint_bits(int have_pki_psk, int ws_check,
   case COAP_PROTO_WSS:
     scheme_hint_bits = 1 << COAP_URI_SCHEME_COAPS_WS;
     break;
-  case COAP_PROTO_NONE: /* If use_unix_proto was not defined */
+  case COAP_PROTO_NONE: /* If use_proto was not defined */
   case COAP_PROTO_LAST:
   default:
     break;
@@ -697,6 +766,29 @@ coap_resolve_address_info(const coap_str_const_t *address,
     return info;
   }
 #endif /* COAP_AF_UNIX_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+  if (address && coap_host_is_llc(address)) {
+    for (scheme = 0; scheme < COAP_URI_SCHEME_LAST; scheme++) {
+      if (scheme_hint_bits & (1 << scheme)) {
+        break;
+      }
+    }
+    if (scheme == COAP_URI_SCHEME_LAST) {
+      return NULL;
+    }
+    info = get_coap_addr_info(scheme);
+    if (info == NULL) {
+      return NULL;
+    }
+
+    if (!coap_address_set_llc(&info->addr, address->s, address->length)) {
+      coap_free_type(COAP_STRING, info);
+      return NULL;
+    }
+
+    return info;
+  }
+#endif /* COAP_AF_LLC_SUPPORT */
 
   memset(addrstr, 0, sizeof(addrstr));
   if (address && address->length) {

@@ -155,6 +155,21 @@ coap_address_clr_addr(coap_address_t *addr) {
 
 #else /* ! WITH_LWIP && ! WITH_CONTIKI && ! RIOT_VERSION */
 
+#if COAP_AF_LLC_SUPPORT
+
+/* Including net/if.h after linux/llc.h results in redefinitions of numerous
+ * symbols.
+ */
+#include <net/if.h>
+#include <linux/llc.h>
+
+/* 00:11:22:33:44:55 */
+#define HW_ADDRSTRLEN 17
+/* llc[00:11:22:33:44:55]:DC */
+#define LLC_HOST_LEN (4 + HW_ADDRSTRLEN + 4)
+
+#endif /* COAP_AF_LLC_SUPPORT */
+
 #ifdef _WIN32
 #define sa_family_t short
 #endif /* _WIN32 */
@@ -174,6 +189,9 @@ struct coap_address_t {
     struct sockaddr_in      sin;
     struct sockaddr_in6     sin6;
     struct coap_sockaddr_un cun; /* CoAP shortened special */
+#if COAP_AF_LLC_SUPPORT
+    struct sockaddr_llc     llc;
+#endif /* COAP_AF_LLC_SUPPORT */
   } addr;
 };
 
@@ -217,14 +235,14 @@ typedef struct coap_addr_info_t {
  * @param have_pki_psk Set to @c 1 if PSK/PKI information is known else @c 0.
  * @param ws_check Set to @c 1 is WebSockets is to be included in the list
  *                  else @c 0.
- * @param use_unix_proto Set to the appropriate protocol to use for Unix
+ * @param use_proto Set to the appropriate protocol to use for Unix/LLC
  *                       sockets, else set to COAP_PROTO_NONE for INET / INET6
  *                       sockets.
  * @return A bit mask of the available CoAP protocols (can be @c 0 if none)
  *         suitable for passing to coap_resolve_address_info().
  */
 uint32_t coap_get_available_scheme_hint_bits(int have_pki_psk, int ws_check,
-                                             coap_proto_t use_unix_proto);
+                                             coap_proto_t use_proto);
 
 /**
  * coap_resolve_type_t values
@@ -290,6 +308,18 @@ void coap_address_init(coap_address_t *addr);
 int coap_address_set_unix_domain(coap_address_t *addr,
                                  const uint8_t *host, size_t host_len);
 
+/**
+ * Copy the parsed LLC host into @p addr, setting other fields as appropriate.
+ *
+ * @param addr coap_address_t to update.
+ * @param host The parsed host from the CoAP URI.
+ * @param host_len The length of the parsed host from the CoAP URI.
+ *
+ * @return @c 1 success, @c 0 failure.
+ */
+int coap_address_set_llc(coap_address_t *addr,
+                         const uint8_t *host, size_t host_len);
+
 /* Convenience function to copy IPv6 addresses without garbage. */
 #if defined(WITH_LWIP) || defined(WITH_CONTIKI) || defined(RIOT_VERSION)
 COAP_STATIC_INLINE void
@@ -345,6 +375,12 @@ int coap_is_bcast(const coap_address_t *a);
  * returns @c 1 if @p a is of type AF_UNIX, @c 0 otherwise.
  */
 int coap_is_af_unix(const coap_address_t *a);
+
+/**
+ * Checks if given address @p a denotes an AF_LLC address. This function
+ * returns @c 1 if @p a is of type AF_LLC, @c 0 otherwise.
+ */
+int coap_is_af_llc(const coap_address_t *a);
 
 #else /* WITH_CONTIKI || RIOT_VERSION */
 

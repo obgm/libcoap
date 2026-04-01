@@ -384,6 +384,15 @@ Put the contents of file 'to_upload' with content type 'binary' (i.e.
 application/octet-stream) into resource 'ck' on 'fec0::3' using a token of
 '3a' via the 'PUT' method.
 
+* Example
+----
+coap-client -a llc[70:d8:23:16:52:b5]:3e coaps://llc[9c:6b:00:12:59:17]:3e/time
+----
+Query the resource '/time' on server on a hardware interface with the MAC
+address '9c:6b:00:12:59:17' on the Service Access Point (SAP) '3e' using DTLS,
+receiving the response on a local hardware interface with the MAC address
+'70:d8:23:16:52:b5' on the SAP '3e'.
+
 FILES
 ------
 There are no configuration files.

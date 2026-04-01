@@ -2223,6 +2223,13 @@ main(int argc, char **argv) {
   memcpy(&dst, &info_list->addr, sizeof(dst));
   coap_free_address_info(info_list);
 
+#if COAP_AF_LLC_SUPPORT
+  if (coap_is_af_llc(&dst) && !node_str[0]) {
+    coap_log_err("-a option is required for LLC requests\n");
+    goto failed;
+  }
+#endif /* ! COAP_AF_LLC_SUPPORT */
+
   ctx = coap_new_context(NULL);
   if (!ctx) {
     coap_log_emerg("cannot create context\n");

@@ -190,6 +190,12 @@ option(
   ENABLE_IPV6
   "enable building with IPv6 support"
   ON)
+if(LINUX)
+option(
+  ENABLE_AF_LLC
+  "enable building with LLC socket support"
+  ON)
+endif()
 option(
   ENABLE_AF_UNIX
   "enable building with Unix socket support"
@@ -417,6 +423,24 @@ else()
   message(STATUS "compiling without IPv6 support")
 endif()
 
+if(LINUX)
+if(${ENABLE_AF_LLC})
+  check_include_file(linux/llc.h HAVE_LINUX_LLC_H)
+  if(NOT HAVE_LINUX_LLC_H)
+    message(FATAL_ERROR "linux/llc.h is required for LLC socket support")
+  endif()
+  check_include_file(netinet/ether.h HAVE_NETINET_ETHER_H)
+  if(NOT HAVE_NETINET_ETHER_H)
+    message(FATAL_ERROR "netinet/ether.h is required for LLC socket support")
+  endif()
+
+  set(COAP_AF_LLC_SUPPORT "1")
+  message(STATUS "compiling with LLC socket support")
+else()
+  message(STATUS "compiling without LLC socket support")
+endif()
+endif()
+
 if(${ENABLE_AF_UNIX})
   set(COAP_AF_UNIX_SUPPORT "1")
   message(STATUS "compiling with Unix socket support")
@@ -613,6 +637,9 @@ message(STATUS "ENABLE_DTLS:.....................${ENABLE_DTLS}")
 message(STATUS "ENABLE_TCP:......................${ENABLE_TCP}")
 message(STATUS "ENABLE_IPV4:.....................${ENABLE_IPV4}")
 message(STATUS "ENABLE_IPV6:.....................${ENABLE_IPV6}")
+if(LINUX)
+message(STATUS "ENABLE_AF_LLC:...................${ENABLE_AF_LLC}")
+endif()
 message(STATUS "ENABLE_AF_UNIX:..................${ENABLE_AF_UNIX}")
 message(STATUS "ENABLE_WEBSOCKETS:...............${ENABLE_WS}")
 message(STATUS "ENABLE_Q_BLOCK:..................${ENABLE_Q_BLOCK}")
