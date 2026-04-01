@@ -190,9 +190,10 @@ OPTIONS - General
    Set the maximum token length (8-65804).
 
 *-U* type::
-   Treat address defined by *-A* as a Unix socket address.
+   Define server listening protocol (if *-A* is a Unix domain or LLC socket
+   address).
    Type is 'coap' (using datagram), 'coap+tcp' (using stream), 'coaps'
-   (DTLS using datagram) or 'coaps+tcp' (TLS using stream).
+   (DTLS using datagram) or 'coaps+tcp' (TLS using stream). Default is 'coap'.
 
 *-V* num::
    The verbosity level to use (default 3, maximum is 7) for (D)TLS
@@ -373,6 +374,14 @@ coap-server -P coap://upstream-proxy, -A ::1
 Let the server listen on localhost (port '5683') for UDP/TCP, and then
 open an upstream coap session to 'upstream-proxy' for proxying onwards
 the CoAP client's request.
+
+* Example
+----
+coap-server -U coaps -A llc[9c:6b:00:12:59:17]:3e
+----
+Let the server listen on a hardware interface with the MAC address
+'9c:6b:00:12:59:17' on a Service Access Point (SAP) '3e' (in hexadecimal),
+accepting only DTLS connections.
 
 FILES
 ------

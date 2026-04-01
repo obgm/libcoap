@@ -70,8 +70,9 @@ coap_uri_info_t coap_uri_scheme[COAP_URI_SCHEME_LAST] = {
  *         -2 No '://'
  *         -3 Ipv6 definition error or no host defined after scheme://
  *         -4 Invalid port value
- *         -5 Port defined for Unix domain
+ *         -5 Port defined for Unix domain or LLC host
  *         -6 Hostname > 255 chars
+ *         -7 Invalid LLC address
  */
 static int
 coap_split_uri_sub(const uint8_t *str_var,
@@ -82,6 +83,7 @@ coap_split_uri_sub(const uint8_t *str_var,
   int res = 0;
   size_t i;
   int is_unix_domain = 0;
+  int is_llc = 0;
 
   if (!str_var || !uri || len == 0)
     return -1;
@@ -178,6 +180,7 @@ coap_split_uri_sub(const uint8_t *str_var,
 
   /* p points to beginning of Uri-Host */
   q = p;
+
   if (len && *p == '[') {
     /* IPv6 address reference or Unix domain */
     ++p;
@@ -197,6 +200,52 @@ coap_split_uri_sub(const uint8_t *str_var,
     COAP_SET_STR(&uri->host, q - p, p);
     ++q;
     --len;
+#if COAP_AF_LLC_SUPPORT
+  } else if ((len >= LLC_HOST_LEN) && strncmp((const char *)p, "llc[", 4) == 0) {
+    unsigned long sap = 0;
+
+    is_llc = 1;
+
+    while (len && *q != ']') {
+      ++q;
+      --len;
+    }
+
+    if (!len || *q != ']' || p == q) {
+      res = -7;
+      goto error;
+    }
+
+    ++q;
+    --len;
+
+    if (!len || *q != ':') {
+      coap_log_warn("LLC SAP missing in URI\n");
+      res = -7;
+      goto error;
+    }
+
+    ++q;
+    --len;
+
+    while (len && isxdigit(*q)) {
+      if (*q >= 'a' && *q <= 'f')
+        sap = sap * 16 + (*q - 'a' + 10);
+      else if (*q >= 'A' && *q <= 'F')
+        sap = sap * 16 + (*q - 'A' + 10);
+
+      ++q;
+      --len;
+    }
+
+    if (sap > UINT8_MAX) {
+      coap_log_warn("LLC SAP invalid (%lu > 255)\n", sap);
+      res = -7;
+      goto error;
+    }
+
+    COAP_SET_STR(&uri->host, q - p, p);
+#endif /* COAP_AF_LLC_SUPPORT */
   } else {
     /* IPv4 address, FQDN or Unix domain socket */
     if (len >= 3 && p[0] == '%' && p[1] == '2' &&
@@ -226,7 +275,7 @@ coap_split_uri_sub(const uint8_t *str_var,
 
   /* check for Uri-Port (invalid for Unix) */
   if (len && *q == ':') {
-    if (is_unix_domain) {
+    if (is_unix_domain || is_llc) {
       res = -5;
       goto error;
     }
@@ -413,6 +462,54 @@ coap_host_is_unix_domain(const coap_str_const_t *host) {
   if (host->length >= 1 && host->s[0] == '/')
     return 1;
   return 0;
+}
+
+int
+coap_host_is_llc(const coap_str_const_t *host) {
+#if COAP_AF_LLC_SUPPORT
+  size_t length;
+  const uint8_t *s = NULL;
+  int i = 0;
+
+  length = host->length;
+  if (length != LLC_HOST_LEN)
+    return 0;
+
+  s = host->s;
+
+  if (strncmp((const char *)s, "llc[", 4) != 0)
+    return 0;
+
+  length -= 4;
+  s += 4;
+
+  while (length) {
+    if (!isxdigit(s[0]) || !isxdigit(s[1]))
+      return 0;
+
+    length -= 2;
+    s += 2;
+
+    i++;
+
+    if (length <= 0 || i >= 6)
+      break;
+
+    if (s[0] != ':')
+      return 0;
+
+    length--;
+    s++;
+  }
+
+  if (s[0] != ']' || s[1] != ':' || !isxdigit(s[2]) || !isxdigit(s[3]))
+    return 0;
+
+  return 1;
+#else /* COAP_AF_LLC_SUPPORT */
+  (void)host;
+  return 0;
+#endif /* COAP_AF_LLC_SUPPORT */
 }
 
 /**

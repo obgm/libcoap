@@ -266,6 +266,13 @@ coap_print_addr(const coap_address_t *addr, unsigned char *buf, size_t len) {
     snprintf((char *)buf, len, "%s", addr->addr.cun.sun_path);
     break;
 #endif /* COAP_AF_UNIX_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+  case AF_LLC:
+    snprintf((char *)buf, len, "%s:%02x",
+             coap_print_ip_addr(addr, scratch, sizeof(scratch)),
+             coap_address_get_port(addr));
+    break;
+#endif /* COAP_AF_LLC_SUPPORT */
   default:
     /* Include trailing NULL if possible */
     memcpy(buf, "(unknown address type)", min(22+1, len));
@@ -442,6 +449,17 @@ coap_print_ip_addr(const coap_address_t *addr, char *buf, size_t len) {
     snprintf(buf, len, "%s", addr->addr.cun.sun_path);
     return buf;
 #endif /* COAP_AF_UNIX_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+  case AF_LLC:
+    snprintf((char *)buf, len, "llc[%02x:%02x:%02x:%02x:%02x:%02x]",
+             addr->addr.llc.sllc_mac[0],
+             addr->addr.llc.sllc_mac[1],
+             addr->addr.llc.sllc_mac[2],
+             addr->addr.llc.sllc_mac[3],
+             addr->addr.llc.sllc_mac[4],
+             addr->addr.llc.sllc_mac[5]);
+    return buf;
+#endif /* COAP_AF_LLC_SUPPORT */
   default:
     /* Include trailing NULL if possible */
     memcpy(buf, "(unknown address type)", min(22+1, len));

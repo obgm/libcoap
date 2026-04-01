@@ -161,6 +161,10 @@ coap_socket_bind_udp(coap_socket_t *sock,
   case AF_UNIX:
     break;
 #endif /* COAP_AF_UNIX_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+  case AF_LLC:
+    break;
+#endif /* COAP_AF_LLC_SUPPORT */
   default:
     coap_log_alert("coap_socket_bind_udp: unsupported sa_family\n");
     break;
@@ -258,6 +262,10 @@ coap_socket_connect_udp(coap_socket_t *sock,
   case AF_UNIX:
     break;
 #endif /* COAP_AF_UNIX_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+  case AF_LLC:
+    break;
+#endif /* COAP_AF_LLC_SUPPORT */
   default:
     coap_log_alert("coap_socket_connect_udp: unsupported sa_family %d\n",
                    connect_addr.addr.sa.sa_family);
@@ -325,18 +333,35 @@ coap_socket_connect_udp(coap_socket_t *sock,
     return 1;
   }
 
-  if (connect(sock->fd, &connect_addr.addr.sa, connect_addr.size) == COAP_SOCKET_ERROR) {
+  switch (connect_addr.addr.sa.sa_family) {
+#if COAP_AF_LLC_SUPPORT
+  /* Only SOCK_STREAM type AF_LLC sockets can be connect()ed. */
+  case AF_LLC:
+    break;
+#endif /* COAP_AF_LLC_SUPPORT */
 #if COAP_AF_UNIX_SUPPORT
-    if (connect_addr.addr.sa.sa_family == AF_UNIX) {
-      coap_log_warn("coap_socket_connect_udp: connect: %s: %s\n",
-                    connect_addr.addr.cun.sun_path, coap_socket_strerror());
-    } else
+  case AF_UNIX:
 #endif /* COAP_AF_UNIX_SUPPORT */
-    {
-      coap_log_warn("coap_socket_connect_udp: connect: %s (%d)\n",
-                    coap_socket_strerror(), connect_addr.addr.sa.sa_family);
+  default:
+    if (connect(sock->fd, &connect_addr.addr.sa, connect_addr.size) == COAP_SOCKET_ERROR) {
+#if COAP_AF_UNIX_SUPPORT
+      if (connect_addr.addr.sa.sa_family == AF_UNIX) {
+        coap_log_warn("coap_socket_connect_udp: connect: %s: %s\n",
+                      connect_addr.addr.cun.sun_path, coap_socket_strerror());
+      } else
+#endif /* COAP_AF_UNIX_SUPPORT */
+      {
+        coap_log_warn("coap_socket_connect_udp: connect: %s (%d)\n",
+                      coap_socket_strerror(), connect_addr.addr.sa.sa_family);
+      }
+      goto error;
     }
-    goto error;
+
+    if (getpeername(sock->fd, &remote_addr->addr.sa, &remote_addr->size) == COAP_SOCKET_ERROR) {
+      coap_log_warn("coap_socket_connect_udp: getpeername: %s\n",
+                    coap_socket_strerror());
+    }
+    break;
   }
 
   if (getsockname(sock->fd, &local_addr->addr.sa, &local_addr->size) == COAP_SOCKET_ERROR) {
@@ -344,10 +369,11 @@ coap_socket_connect_udp(coap_socket_t *sock,
                   coap_socket_strerror());
   }
 
-  if (getpeername(sock->fd, &remote_addr->addr.sa, &remote_addr->size) == COAP_SOCKET_ERROR) {
-    coap_log_warn("coap_socket_connect_udp: getpeername: %s\n",
-                  coap_socket_strerror());
-  }
+#if COAP_AF_LLC_SUPPORT
+  /* AF_LLC sockets send to the local address without an explicit destination. */
+  if (coap_is_af_llc(&connect_addr))
+    sock->flags |= COAP_SOCKET_WANT_SENDTO;
+#endif /* COAP_AF_LLC_SUPPORT */
 
   sock->flags |= COAP_SOCKET_CONNECTED;
   return 1;
@@ -489,7 +515,8 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
       bytes_written = -1;
     else
       bytes_written = (ssize_t)datalen;
-  } else if (sock->flags & COAP_SOCKET_CONNECTED) {
+  } else if (sock->flags & COAP_SOCKET_CONNECTED &&
+             !(sock->flags & COAP_SOCKET_WANT_SENDTO)) {
 #ifdef _WIN32
     bytes_written = send(sock->fd, (const char *)data, (int)datalen, 0);
 #else
@@ -628,6 +655,10 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
       case AF_UNIX:
         break;
 #endif /* COAP_AF_UNIX_SUPPORT */
+#if COAP_AF_LLC_SUPPORT
+      case AF_LLC:
+        break;
+#endif /* COAP_AF_LLC_SUPPORT */
       default:
         /* error */
         coap_log_warn("protocol not supported\n");

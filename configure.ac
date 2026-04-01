@@ -995,6 +995,22 @@ AS_IF([test "x$build_ipv6" = "xyes"],
       [AC_DEFINE(COAP_IPV6_SUPPORT, [1], [Define to build support for IPv6 packets.])])
 
 # configure options
+# __af_llc__
+AC_ARG_ENABLE([af_llc],
+              [AS_HELP_STRING([--enable-af-llc],
+                              [Enable building with support for LLC sockets [default=yes]])],
+              [build_af_llc="$enableval"],
+              [build_af_llc="yes"])
+
+AS_IF([test "x$build_af_llc" = "xyes"],
+      [AC_DEFINE(COAP_AF_LLC_SUPPORT, [1], [Define to build support for LLC sockets.])])
+
+if test "x$with_epoll" = "xyes"; then
+    AC_CHECK_HEADER([netinet/ether.h])
+    AC_CHECK_HEADER([linux/llc.h])
+fi
+
+# configure options
 # __af_unix__
 AC_ARG_ENABLE([af_unix],
               [AS_HELP_STRING([--enable-af-unix],
@@ -1454,6 +1470,11 @@ if test "x$build_ipv6" != "xno"; then
     AC_MSG_RESULT([      build with IPv6 support        : "yes"])
 else
     AC_MSG_RESULT([      build with IPv6 support        : "no"])
+fi
+if test "x$build_af_llc" != "xno"; then
+    AC_MSG_RESULT([      build with LLC socket support  : "yes"])
+else
+    AC_MSG_RESULT([      build with LLC socket support  : "no"])
 fi
 if test "x$build_af_unix" != "xno"; then
     AC_MSG_RESULT([      build with Unix socket support : "yes"])

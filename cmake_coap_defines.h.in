@@ -17,6 +17,9 @@
 #ifndef COAP_DEFINES_H_
 #define COAP_DEFINES_H_
 
+/* Define to 1 to build with LLC socket support. */
+#cmakedefine COAP_AF_LLC_SUPPORT @COAP_AF_LLC_SUPPORT@
+
 /* Define to 1 to build with Unix socket support. */
 #cmakedefine COAP_AF_UNIX_SUPPORT @COAP_AF_UNIX_SUPPORT@
 

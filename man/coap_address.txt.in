@@ -50,7 +50,7 @@ SYNOPSIS
 *void coap_address_set_port(coap_address_t *_addr_, uint16_t _port_);*
 
 *uint32_t coap_get_available_scheme_hint_bits(int _have_pki_psk_,
-int _ws_check_, coap_proto_t _use_unix_proto_);*
+int _ws_check_, coap_proto_t _use_proto_);*
 
 *coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *_address_,
 uint16_t _port_, uint16_t _secure_port_, uint16_t _ws_port_,
@@ -193,9 +193,9 @@ The *coap_get_available_scheme_hint_bits*() function is used for servers to
 determine what coap schemes are supported in the underlying libcoap library.
 _have_pki_psk_ can be set to 1 to check for (D)DTLS support, else 0.
 _ws_check_ can be set to 1 to check for WebSockets support, else 0.
-_use_unix_proto_, if not set to COAP_PROTO_NONE, hints at the specific CoAP
-protocol to use over a Unix socket. The output is suitable for input for the
-*coap_address_resolve_info*()'s _scheme_hint_bits_.
+_use_proto_, if not set to COAP_PROTO_NONE, hints at the specific CoAP
+protocol to use over a Unix/LLC socket. The output is suitable for input for
+the *coap_address_resolve_info*()'s _scheme_hint_bits_.
 
 *Function: coap_resolve_address_info()*
 

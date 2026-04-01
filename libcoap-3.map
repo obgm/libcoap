@@ -18,6 +18,7 @@ global:
   coap_address_equals;
   coap_address_get_port;
   coap_address_init;
+  coap_address_set_llc;
   coap_address_set_port;
   coap_address_set_unix_domain;
   coap_af_unix_is_supported;
@@ -133,6 +134,7 @@ global:
   coap_get_tls_library_version;
   coap_get_uri_path;
   coap_handle_event;
+  coap_host_is_llc;
   coap_host_is_unix_domain;
   coap_insert_optlist;
   coap_io_do_epoll;
@@ -149,6 +151,7 @@ global:
   coap_io_process_with_fds;
   coap_ipv4_is_supported;
   coap_ipv6_is_supported;
+  coap_is_af_llc;
   coap_is_af_unix;
   coap_is_bcast;
   coap_is_mcast;

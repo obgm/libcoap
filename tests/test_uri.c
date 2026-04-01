@@ -1048,6 +1048,26 @@ t_parse_uri33(void) {
   coap_delete_pdu(pdu);
 }
 
+static void
+t_parse_uri34(void) {
+  const char *uri_s = "coap://llc[00:11:22:33:44:55]:DC/time";
+  coap_uri_t uri;
+
+  if (coap_split_uri((const uint8_t *)uri_s, strlen(uri_s), &uri))
+    CU_FAIL("LLC URI parsing failed");
+
+  CU_ASSERT(uri.host.length == LLC_HOST_LEN);
+  CU_ASSERT_NSTRING_EQUAL(uri.host.s, "llc[00:11:22:33:44:55]:DC", 25);
+
+  CU_ASSERT(uri.port == COAP_DEFAULT_PORT);
+
+  CU_ASSERT(uri.path.length == 4);
+  CU_ASSERT_NSTRING_EQUAL(uri.path.s, "time", 4);
+
+  CU_ASSERT(uri.query.length == 0);
+  CU_ASSERT(uri.query.s == NULL);
+}
+
 CU_pSuite
 t_init_uri_tests(void) {
   CU_pSuite suite;
@@ -1099,6 +1119,7 @@ t_init_uri_tests(void) {
   URI_TEST(suite, t_parse_uri31);
   URI_TEST(suite, t_parse_uri32);
   URI_TEST(suite, t_parse_uri33);
+  URI_TEST(suite, t_parse_uri34);
 
   return suite;
 }
