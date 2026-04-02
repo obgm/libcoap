@@ -1048,6 +1048,11 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
           coap_bin_const_t kid_context;
 
           kid_context.length = oscore_cbor_get_element_size(&ptr, &length);
+          /* This has to fit into an OSCORE option max 255.
+           * Initial byte, kid_context size, partial IV size and kid size have to be there
+           */
+          if (kid_context.length >= 255 - 1 - 1 - cose->partial_iv.length - cose->key_id.length)
+            goto error;
           kid_context.s = ptr;
           cose_encrypt0_set_kid_context(cose, (coap_bin_const_t *)&kid_context);
 
@@ -1158,6 +1163,11 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
           coap_bin_const_t kid_context;
 
           kid_context.length = oscore_cbor_get_element_size(&ptr, &length);
+          /* This has to fit into an OSCORE option max 255.
+           * Initial byte, kid_context size, partial IV size and kid size have to be there
+           */
+          if (kid_context.length >= 255 - 1 - 1 - cose->partial_iv.length - cose->key_id.length)
+            goto error;
           kid_context.s = ptr;
           cose_encrypt0_set_kid_context(cose, &kid_context);
         }
