@@ -17,7 +17,7 @@ coap_include_dir = $(libcoap_dir)/include/coap$(LIBCOAP_API_VERSION)
 
 WITH_LWIP_BRANCH=STABLE-2_2_0_RELEASE
 # Update to latest TinyDTLS submodule as defined for libcoap
-WITH_TINYDTLS_BRANCH=4a6a78236043da7f8af9ad7be8488aeed6884eda
+WITH_TINYDTLS_BRANCH=194d827b129769cc096ed94ad8a4257443d67413
 
 # Need to determine which library clock_gettime() resides in (as found by ./autogen.sh)
 LDLIBS := $(shell if [ -f $(libcoap_dir)/config.log ] ; then \
