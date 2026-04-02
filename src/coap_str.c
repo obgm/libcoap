@@ -111,7 +111,8 @@ coap_new_bin_const(const uint8_t *data, size_t size) {
   coap_string_t *s = coap_new_string(size);
   if (!s)
     return NULL;
-  memcpy(s->s, data, size);
+  if (data)
+    memcpy(s->s, data, size);
   s->length = size;
   return (coap_bin_const_t *)s;
 }
