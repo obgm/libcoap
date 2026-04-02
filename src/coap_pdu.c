@@ -41,7 +41,7 @@
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
-static int coap_pdu_parse_opt_csm(coap_pdu_code_t code, coap_option_num_t option, uint16_t len);
+static int coap_pdu_parse_opt_csm(coap_pdu_code_t code, coap_option_num_t option, size_t len);
 
 void
 coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
@@ -702,6 +702,12 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   if (number >= pdu->max_opt)
     return coap_add_option_internal(pdu, number, len, data);
 
+  if (COAP_PDU_IS_SIGNALING(pdu) ?
+      !coap_pdu_parse_opt_csm(pdu->code, number, len) :
+      !coap_pdu_parse_opt_base(number, len, data)) {
+    coap_log_debug("coap_insert_option: Option %u has invalid length %" PRIuS "\n", number, len);
+    return 0;
+  }
   /* Need to locate where in current options to insert this one */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
   while ((option = coap_option_next(&opt_iter))) {
@@ -800,6 +806,12 @@ coap_update_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   if (!option)
     return coap_insert_option(pdu, number, len, data);
 
+  if (COAP_PDU_IS_SIGNALING(pdu) ?
+      !coap_pdu_parse_opt_csm(pdu->code, number, len) :
+      !coap_pdu_parse_opt_base(number, len, data)) {
+    coap_log_debug("coap_update_option: Option %u has invalid length %" PRIuS "\n", number, len);
+    return 0;
+  }
   old_length = coap_opt_parse(option, (size_t)-1, &decode);
   if (old_length == 0)
     return 0;
@@ -840,10 +852,6 @@ coap_add_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
     coap_log_warn("coap_add_option: PDU already contains data\n");
     return 0;
   }
-  if (!coap_pdu_parse_opt_base(number, len, data)) {
-    coap_log_warn("qcoap_add_option: %d: Invalid option length / data\n", number);
-    return 0;
-  }
   return coap_add_option_internal(pdu, number, len, data);
 }
 
@@ -854,6 +862,13 @@ coap_add_option_internal(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   coap_opt_t *opt;
 
   assert(pdu);
+
+  if (COAP_PDU_IS_SIGNALING(pdu) ?
+      !coap_pdu_parse_opt_csm(pdu->code, number, len) :
+      !coap_pdu_parse_opt_base(number, len, data)) {
+    coap_log_debug("coap_add_option: Option %u has invalid length %" PRIuS "\n", number, len);
+    return 0;
+  }
 
   if (number == pdu->max_opt) {
     if (!coap_option_check_repeatable(pdu, number))
@@ -1204,7 +1219,7 @@ bad_ext_token:
 }
 
 static int
-coap_pdu_parse_opt_csm(coap_pdu_code_t code, coap_option_num_t option, uint16_t len) {
+coap_pdu_parse_opt_csm(coap_pdu_code_t code, coap_option_num_t option, size_t len) {
   switch ((coap_pdu_signaling_proto_t)code) {
   case COAP_SIGNALING_CSM:
     switch ((coap_sig_csm_opt_t)option) {
