@@ -305,8 +305,14 @@ coap_socket_accept_tcp(coap_socket_t *server,
   new_client->fd = accept(server->fd, &remote_addr->addr.sa,
                           &remote_addr->size);
   if (new_client->fd == COAP_INVALID_SOCKET) {
-    coap_log_warn("coap_socket_accept_tcp: accept: %s\n",
-                  coap_socket_strerror());
+    if (errno != EAGAIN
+#if EAGAIN != EWOULDBLOCK
+        && errno != EWOULDBLOCK
+#endif
+       ) {
+      coap_log_warn("coap_socket_accept_tcp: accept: %s\n",
+                    coap_socket_strerror());
+    }
     return 0;
   }
 
