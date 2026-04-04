@@ -239,6 +239,8 @@ coap_persist_observe_add_lkd(coap_context_t *context,
       goto oscore_fail;
     oscore_key_id.length = oscore_cbor_get_element_size(&info_buf,
                                                         &info_buf_len);
+    if (oscore_key_id.length > info_buf_len)
+      goto oscore_fail;
     oscore_key_id.s = info_buf;
     info_buf += oscore_key_id.length;
 
@@ -247,6 +249,8 @@ coap_persist_observe_add_lkd(coap_context_t *context,
     if (ret == CBOR_BYTE_STRING) {
       id_context.length = oscore_cbor_get_element_size(&info_buf,
                                                        &info_buf_len);
+      if (id_context.length > info_buf_len)
+        goto oscore_fail;
       id_context.s = info_buf;
       info_buf += id_context.length;
       have_id_context = 1;
@@ -260,6 +264,8 @@ coap_persist_observe_add_lkd(coap_context_t *context,
     ret = oscore_cbor_get_next_element(&info_buf, &info_buf_len);
     if (ret == CBOR_BYTE_STRING) {
       aad.length = oscore_cbor_get_element_size(&info_buf, &info_buf_len);
+      if (aad.length > info_buf_len)
+        goto oscore_fail;
       aad.s = info_buf;
       info_buf += aad.length;
       have_aad = 1;
@@ -274,6 +280,8 @@ coap_persist_observe_add_lkd(coap_context_t *context,
     if (ret == CBOR_BYTE_STRING) {
       partial_iv.length = oscore_cbor_get_element_size(&info_buf,
                                                        &info_buf_len);
+      if (partial_iv.length > info_buf_len)
+        goto oscore_fail;
       partial_iv.s = info_buf;
       info_buf += partial_iv.length;
       have_partial_iv = 1;
@@ -288,6 +296,8 @@ coap_persist_observe_add_lkd(coap_context_t *context,
     if (ret == CBOR_BYTE_STRING) {
       nonce.length = oscore_cbor_get_element_size(&info_buf,
                                                   &info_buf_len);
+      if (nonce.length > info_buf_len)
+        goto oscore_fail;
       nonce.s = info_buf;
       info_buf += nonce.length;
       have_nonce = 1;
