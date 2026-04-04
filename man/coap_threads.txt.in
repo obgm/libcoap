@@ -128,17 +128,28 @@ thread that called *coap_io_process_loop*() to return.
 *Function: coap_io_process_configure_threads()*
 
 The *coap_io_process_configure_threads*() function is used to set up
-an additional _thread_count_ threads for _context_. Usually
-*coap_io_process_loop*() would be called, but can be used to wrap with
-*coap_io_process_remove_threads*() a complex version of _main_loop_code_.
+an additional _thread_count_ threads for _context_ which loop doing a
+*coap_io_process*(3) until told to exit. Usually *coap_io_process_loop*()
+would be called, but *coap_io_process_configure_threads*() can be used to wrap
+with *coap_io_process_remove_threads*() a complex version
+of _main_loop_code_.
+
+*NOTE:* *coap_io_process_configure_threads*() sets up its own *signal*(3) /
+*sigaction*(3) handler to handle the additional threads shutdown using SIGINT.
+This handler will also call any handler set up by *signal*(3) / *sigaction*(3)
+for SIGINT prior to the call to *coap_io_process_configure_threads*().
+Ideally, *signal*(3) / *sigaction*(3) for SIGINT should not be called after
+calling *coap_io_process_configure_threads*().
 
 *coap_io_process_loop*() uses *coap_io_process_configure_threads*() and
-*coap_io_process_remove_threads*() to wrap the call to _main_loop_code_.
+*coap_io_process_remove_threads*() to wrap the call to _main_loop_code_ until
+told to exit..
 
 *Function: coap_io_process_remove_threads()*
 
 The *coap_io_process_remove_threads*() function is used stop and remove
 threads created by *coap_io_process_configure_threads*() for _context_.
+For most environments, the additional threads are killed off with SIGINT.
 
 RETURN VALUES
 -------------
