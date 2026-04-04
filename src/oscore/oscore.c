@@ -356,9 +356,10 @@ oscore_generate_nonce(cose_encrypt0_t *ptr,
   } else {
     tmp_len = ptr->key_id.length;
   }
-  memcpy(&(buffer[((size - 5) - tmp_len)]),
-         ptr->key_id.s,
-         tmp_len);
+  if (ptr->key_id.s)
+    memcpy(&(buffer[((size - 5) - tmp_len)]),
+           ptr->key_id.s,
+           tmp_len);
   /* S */
   buffer[0] = (uint8_t)tmp_len;
   /* PIV */

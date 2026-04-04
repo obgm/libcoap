@@ -358,6 +358,8 @@ oscore_cbor_get_string_array(const uint8_t **data, size_t *buf_len,
 
   uint8_t elem = oscore_cbor_get_next_element(data, buf_len);
   *len = oscore_cbor_get_element_size(data, buf_len);
+  if (*len > *buf_len)
+    return 1;
   *result = NULL;
   void *rs = coap_malloc_type(COAP_STRING, *len);
   *result = (uint8_t *)rs;
