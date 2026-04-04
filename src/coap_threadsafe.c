@@ -145,11 +145,68 @@ coap_io_process_worker_thread(void *arg) {
   return 0;
 }
 
+#if defined(HAVE_SIGNAL_H) || defined(__ZEPHYR__)
+#include <signal.h>
+#endif /* HAVE_SIGNAL_H || __ZEPHYR__ */
+
+/* sighandler_t is not defined is all OS */
+typedef void (*coap_sig_handler_t)(int);
+
+static coap_sig_handler_t old_sigint_handler = SIG_IGN;
+
+static void
+coap_thread_sigint_handler(int signum) {
+  coap_thread_quit = 1;
+  if (old_sigint_handler != SIG_IGN && old_sigint_handler != SIG_DFL) {
+    old_sigint_handler(signum);
+  }
+}
+
+#ifndef _WIN32
+typedef void (*coap_sig_action_t)(int, siginfo_t *, void *);
+static coap_sig_action_t old_sigint_action = NULL;
+
+static void
+coap_thread_sigint_action(int signum, siginfo_t *siginfo, void *ptr) {
+  coap_thread_quit = 1;
+  if (old_sigint_action != NULL) {
+    old_sigint_action(signum, siginfo, ptr);
+  }
+}
+#endif /*! _WIN32 */
+
 int
 coap_io_process_configure_threads(coap_context_t *context, uint32_t thread_count) {
   uint32_t i;
 
   coap_mutex_lock(&m_io_threads);
+#ifdef _WIN32
+  old_sigint_handler = signal(SIGINT, coap_thread_sigint_handler);
+#else /* ! _WIN32 */
+  struct sigaction oldact;
+  struct sigaction newact;
+
+  /* Get the old handler / action */
+  if (sigaction(SIGINT, NULL, &oldact) != -1) {
+    if (oldact.sa_flags & SA_SIGINFO) {
+      memset(&newact, 0, sizeof(newact));
+      sigemptyset(&newact.sa_mask);
+      newact.sa_sigaction = coap_thread_sigint_action;
+      newact.sa_flags = SA_SIGINFO;
+      if (sigaction(SIGINT, &newact, &oldact) != -1) {
+        old_sigint_action = oldact.sa_sigaction;
+      }
+    } else {
+      memset(&newact, 0, sizeof(newact));
+      sigemptyset(&newact.sa_mask);
+      newact.sa_handler = coap_thread_sigint_handler;
+      newact.sa_flags = 0;
+      if (sigaction(SIGINT, &newact, &oldact) != -1) {
+        old_sigint_handler = oldact.sa_handler;
+      }
+    }
+  }
+#endif /* ! _WIN32 */
 
   thread_no = 1;
   max_thread_no = 1 + thread_count;
@@ -186,9 +243,6 @@ coap_io_process_remove_threads(coap_context_t *context) {
   coap_lock_unlock();
 }
 
-#ifdef HAVE_SIGNAL_H
-#include <signal.h>
-#endif /* HAVE_SIGNAL_H */
 void
 coap_io_process_remove_threads_lkd(coap_context_t *context) {
   uint32_t i;
