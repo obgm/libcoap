@@ -35,16 +35,19 @@ coap_oscore_initiate(coap_session_t *session, coap_oscore_conf_t *oscore_conf) {
   if (oscore_conf) {
     oscore_ctx_t *osc_ctx;
 
-    if (oscore_conf->recipient_id_count == 0) {
+    if (oscore_conf->recipient_chain == NULL) {
       coap_log_warn("OSCORE: Recipient ID must be defined for a client\n");
+      coap_delete_oscore_conf(oscore_conf);
       return 0;
     }
     if (oscore_conf->rfc8613_b_2) {
       /* Need to replace id_context with random value */
       coap_binary_t *id_context = coap_new_binary(8);
 
-      if (id_context == NULL)
+      if (id_context == NULL) {
+        coap_delete_oscore_conf(oscore_conf);
         return 0;
+      }
       coap_delete_bin_const(oscore_conf->id_context);
       coap_prng_lkd(id_context->s, id_context->length);
       oscore_conf->id_context = (coap_bin_const_t *)id_context;
@@ -344,7 +347,7 @@ dump_cose(cose_encrypt0_t *cose, const char *message) {
   if (coap_get_log_level() >= COAP_LOG_OSCORE) {
     char buffer[30];
 
-    coap_log_oscore("%s Cose information\n", message);
+    coap_log_oscore("%s COSE information\n", message);
     oscore_log_char_value(COAP_LOG_OSCORE, "alg",
                           cose_get_alg_name(cose->alg, buffer, sizeof(buffer)));
     oscore_log_hex_value(COAP_LOG_OSCORE, "key", &cose->key);
@@ -551,33 +554,24 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
    * Compose the External AAD and then AAD
    *
    * OSCORE_option requires
-   *  partial_iv                  (cose partial_iv)
-   *  kid_context                 (cose kid_context)
-   *  key_id                      (cose key_id)
+   *  partial_iv                    (cose partial_iv)
+   *  kid_context                   (cose kid_context)
+   *  key_id                        (cose key_id)
    *  group_flag
    *
-   * Non Group (based on osc_tx->mode) requires the following
-   *   aead_alg                   (osc_ctx)
-   *   request_kid                (request key_id using cose)
-   *   request_piv                (request partial_iv using cose)
-   *   options                    (none at present)
-   * Group (based on osc_tx->mode) requires the following
-   *   aead_alg                   (osc_ctx) (pairwise mode)
-   *   sign_enc_alg               (osc_ctx) (group mode)
-   *   sign_alg                   (osc_ctx) (group mode)
-   *   alg_pairwise_key_agreement (osc_ctx) (pairwise mode)
-   *   request_kid                (request key_id using cose)
-   *   request_piv                (request partial_iv using cose)
-   *   options                    (none at present)
-   *   request_kid_context        (osc_ctx id_context)
-   *   OSCORE_option              (parameter)
-   *   test_gs_public_key         (osc_ctx sender_context public_key)
-   *   gm_public_key              (osc_ctx gm_public_key)
+   * Non Group requires the following
+   *   RFC8613 5.4
+   *   oscore_version               1
+   *   algorithms [
+   *     aead_alg                   (osc_ctx)
+   *   ]
+   *   request_kid                  (request key_id using cose)
+   *   request_piv                  (request partial_iv using cose)
+   *   options                      (none at present)
    *
    * Note: No I options at present
    */
-  if (coap_request || osc_ctx->mode != OSCORE_MODE_SINGLE ||
-      send_partial_iv == OSCORE_SEND_PARTIAL_IV) {
+  if (coap_request || send_partial_iv == OSCORE_SEND_PARTIAL_IV) {
     /* External AAD */
     external_aad.s = external_aad_buffer;
     external_aad.length = oscore_prepare_e_aad(osc_ctx,
@@ -1024,7 +1018,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                0);
       goto error_no_ack;
     }
-    osc_ctx = oscore_find_context(session->context,
+    osc_ctx = oscore_find_context(session,
                                   cose->key_id,
                                   &cose->kid_context,
                                   NULL,
@@ -1034,15 +1028,14 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
         const uint8_t *ptr;
         size_t length;
         /* Appendix B.2 protocol check - Is the recipient key_id known */
-        osc_ctx = oscore_find_context(session->context,
+        osc_ctx = oscore_find_context(session,
                                       cose->key_id,
                                       NULL,
                                       session->oscore_r2 != 0 ? (uint8_t *)&session->oscore_r2 : NULL,
                                       &rcp_ctx);
         ptr = cose->kid_context.s;
         length = cose->kid_context.length;
-        if (ptr && osc_ctx && osc_ctx->rfc8613_b_2 &&
-            osc_ctx->mode == OSCORE_MODE_SINGLE) {
+        if (ptr && osc_ctx && osc_ctx->rfc8613_b_2) {
           /* Processing Appendix B.2 protocol */
           /* Need to CBOR unwrap kid_context */
           coap_bin_const_t kid_context;
@@ -1218,23 +1211,21 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
      * RFC8613 8.2 Step 4.
      * Compose the External AAD and then AAD
      *
-     * Non Group (based on osc_tx->mode) requires the following
-     *   aead_alg                   (osc_ctx)
-     *   request_kid                (request key_id using cose)
-     *   request_piv                (request partial_iv using cose)
-     *   options                    (none at present)
-     * Group (based on osc_tx->mode) requires the following
-     *   aead_alg                   (osc_ctx) (pairwise mode)
-     *   sign_enc_alg               (osc_ctx) (group mode)
-     *   sign_alg                   (osc_ctx) (group mode)
-     *   alg_pairwise_key_agreement (osc_ctx) (pairwise mode)
-     *   request_kid                (request key_id using cose)
-     *   request_piv                (request partial_iv using cose)
-     *   options                    (none at present)
-     *   request_kid_context        (osc_ctx id_context)
-     *   OSCORE_option              (as received in request)
-     *   test_gs_public_key         (recipient public key)
-     *   gm_public_key              (osc_ctx gm_public_key)
+     * OSCORE_option requires
+     *  partial_iv                    (cose partial_iv)
+     *  kid_context                   (cose kid_context)
+     *  key_id                        (cose key_id)
+     *  group_flag
+     *
+     * Non Group requires the following
+     *   RFC8613 5.4
+     *   oscore_version               1
+     *   algorithms [
+     *     aead_alg                   (osc_ctx)
+     *   ]
+     *   request_kid                  (request key_id using cose)
+     *   request_piv                  (request partial_iv using cose)
+     *   options                      (none at present)
      *
      * Note: No I options at present
      */
@@ -1293,6 +1284,8 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       if (association->aad == NULL)
         goto error;
       association->recipient_ctx = rcp_ctx;
+      /* So association is not released when handling decrypt */
+      association = NULL;
     } else if (!oscore_new_association(session,
                                        NULL,
                                        &pdu_token,
@@ -1347,25 +1340,23 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
 #endif /* OSCORE_EXTRA_DEBUG */
     /*
      * 8.4 Step 3.
-     * Compose the External AAD and then AAD (same as request non-group (5.4)
+     * Compose the External AAD and then AAD
      *
-     * Non Group (based on osc_tx->mode) requires the following
-     *   aead_alg                   (osc_ctx)
-     *   request_kid                (request key_id using cose)
-     *   request_piv                (request partial_iv using cose)
-     *   options                    (none at present)
-     * Group (based on osc_tx->mode) requires the following
-     *   aead_alg                   (osc_ctx) (pairwise mode)
-     *   sign_enc_alg               (osc_ctx) (group mode)
-     *   sign_alg                   (osc_ctx) (group mode)
-     *   alg_pairwise_key_agreement (osc_ctx) (pairwise mode)
-     *   request_kid                (request key_id using cose)
-     *   request_piv                (request partial_iv using cose)
-     *   options                    (none at present)
-     *   request_kid_context        (osc_ctx id_context)
-     *   OSCORE_option              (as received in request)
-     *   test_gs_public_key         (recipient public key)
-     *   gm_public_key              (osc_ctx gm_public_key)
+     * OSCORE_option requires
+     *  partial_iv                    (cose partial_iv)
+     *  kid_context                   (cose kid_context)
+     *  key_id                        (cose key_id)
+     *  group_flag
+     *
+     * Non Group requires the following
+     *   RFC8613 5.4
+     *   oscore_version               1
+     *   algorithms [
+     *     aead_alg                   (osc_ctx)
+     *   ]
+     *   request_kid                  (request key_id using cose)
+     *   request_piv                  (request partial_iv using cose)
+     *   options                      (none at present)
      *
      * Note: No I options at present
      */
@@ -1755,11 +1746,12 @@ error_no_ack:
 }
 
 typedef enum {
-  COAP_ENC_ASCII = 0x01,
-  COAP_ENC_HEX = 0x02,
-  COAP_ENC_INTEGER = 0x08,
-  COAP_ENC_TEXT = 0x10,
-  COAP_ENC_BOOL = 0x20,
+  COAP_ENC_ASCII = 0x001,
+  COAP_ENC_HEX = 0x002,
+  COAP_ENC_CONFIG = 0x0200,
+  COAP_ENC_INTEGER = 0x400,
+  COAP_ENC_TEXT = 0x800,
+  COAP_ENC_BOOL = 0x1000,
   COAP_ENC_LAST
 } coap_oscore_coding_t;
 
@@ -1773,6 +1765,7 @@ static struct coap_oscore_encoding_t {
 } oscore_encoding[] = {
   TEXT_MAPPING(ascii, COAP_ENC_ASCII),
   TEXT_MAPPING(hex, COAP_ENC_HEX),
+  TEXT_MAPPING(config, COAP_ENC_CONFIG),
   TEXT_MAPPING(integer, COAP_ENC_INTEGER),
   TEXT_MAPPING(text, COAP_ENC_TEXT),
   TEXT_MAPPING(bool, COAP_ENC_BOOL),
@@ -1789,15 +1782,23 @@ typedef struct {
   } u;
 } oscore_value_t;
 
-static uint8_t
-hex_to_char(char c) {
-  assert(isxdigit(c));
-  if ('a' <= c && c <= 'f')
-    return c - 'a' + 10;
-  else if ('A' <= c && c <= 'F')
-    return c - 'A' + 10;
-  else
-    return c - '0';
+/*
+ * Return 1 if hex character
+ *        0 not hex character
+ */
+static int
+hex_to_char(char c, uint8_t *value) {
+  if ('a' <= c && c <= 'f') {
+    *value = c - 'a' + 10;
+  } else if ('A' <= c && c <= 'F') {
+    *value = c - 'A' + 10;
+  } else if ('0' <= c && c <= '9') {
+    *value = c - '0';
+  } else {
+    *value = 0;
+    return 0;
+  }
+  return 1;
 }
 
 /* Parse the hex into binary */
@@ -1805,16 +1806,39 @@ static coap_bin_const_t *
 parse_hex_bin(const char *begin, const char *end) {
   coap_binary_t *binary = NULL;
   size_t i;
+  size_t o = 0;
 
-  if ((end - begin) % 2 != 0)
-    goto bad_entry;
   binary = coap_new_binary((end - begin) / 2);
   if (binary == NULL)
     goto bad_entry;
-  for (i = 0; (i < (size_t)(end - begin)) && isxdigit((uint8_t)begin[i]) &&
-       isxdigit((uint8_t)begin[i + 1]);
-       i += 2) {
-    binary->s[i / 2] = (hex_to_char(begin[i]) << 4) + hex_to_char(begin[i + 1]);
+  for (i = 0; (i < (size_t)(end - begin)); i++) {
+    while ((i < (size_t)(end - begin)) &&
+           (begin[i] == '\r' || begin[i] == '\n' || begin[i] == ' ')) {
+      i++;
+    }
+    if (i == (size_t)(end - begin))
+      break;
+    if (isxdigit((uint8_t)begin[i])) {
+      uint8_t value;
+
+      if (!hex_to_char(begin[i], &value)) {
+        goto bad_entry;
+      }
+      binary->s[o] = value << 4;
+      i++;
+      while ((i < (size_t)(end - begin)) &&
+             (begin[i] == '\r' || begin[i] == '\n' || begin[i] == ' ')) {
+        i++;
+      }
+      if (i == (size_t)(end - begin))
+        goto bad_entry;
+      if (!hex_to_char(begin[i], &value)) {
+        goto bad_entry;
+      }
+      binary->s[o++] += value;
+    } else {
+      break;
+    }
   }
   if (i != (size_t)(end - begin))
     goto bad_entry;
@@ -1835,18 +1859,36 @@ static int
 get_split_entry(const char **start,
                 size_t size,
                 coap_str_const_t *keyword,
-                oscore_value_t *value) {
+                oscore_value_t *value,
+                cose_curve_t sign_curve) {
   const char *begin = *start;
+  const char *keep_start = *start;
   const char *end;
   const char *kend;
+  const char *tend;
   const char *split;
   size_t i;
   size_t len;
+  (void)sign_curve;
 
 retry:
   kend = end = memchr(begin, '\n', size);
   if (end == NULL)
     return 0;
+
+  /* Check for multi-line */
+  if ((tend = memchr(begin, '"', end - begin))) {
+    /* See if " terminator is on the same line */
+    if (!memchr(tend + 1, '"', end - tend -1)) {
+      /* Over multiple lines */
+      kend = end = memchr(end, '"', size - (end - begin));
+      if (end == NULL)
+        return 0;
+      kend = end = memchr(kend, '\n', size - (kend - begin));
+      if (end == NULL)
+        return 0;
+    }
+  }
 
   /* Track beginning of next line */
   *start = end + 1;
@@ -1857,6 +1899,7 @@ retry:
     /* Skip comment / blank line */
     size -= kend - begin + 1;
     begin = *start;
+    keep_start = *start;
     goto retry;
   }
 
@@ -1892,17 +1935,32 @@ retry:
   if ((end - begin) == 0)
     goto bad_entry;
   /* Get in the keyword's value */
-  if (begin[0] == '"') {
-    split = memchr(&begin[1], '"', end - split - 1);
+  if (value->encoding == COAP_ENC_CONFIG && begin[0] == '\'') {
+    split = memchr(&begin[1], '\'', size - (begin - keep_start) - 1);
     if (split == NULL)
       goto bad_entry;
+    end = memchr(split, '\n', size - (split - keep_start));
+    if (end == NULL)
+      return 0;
+    *start = end + 1;
     end = split;
     begin++;
+  } else {
+    if (begin[0] == '"') {
+      split = memchr(&begin[1], '"', end - split - 1);
+      if (split == NULL)
+        goto bad_entry;
+      end = split;
+      begin++;
+    }
   }
   switch (value->encoding) {
+  case COAP_ENC_CONFIG:
   case COAP_ENC_ASCII:
     value->u.value_bin =
         coap_new_bin_const((const uint8_t *)begin, end - begin);
+    if (value->u.value_bin == NULL)
+      goto bad_entry;
     break;
   case COAP_ENC_HEX:
     /* Parse the hex into binary */
@@ -1937,12 +1995,27 @@ bad_entry:
                 (int)(end - begin),
                 begin);
   return -1;
+
 }
 
 #undef CONFIG_ENTRY
-#define CONFIG_ENTRY(n, e, t)                                                  \
-  { { sizeof(#n)-1, (const uint8_t *)#n }, e, \
+#define CONFIG_ENTRY(n, e, t)                          \
+  { { sizeof(#n)-1, (const uint8_t *)#n }, e,          \
     offsetof(coap_oscore_conf_t, n), t }
+
+#undef CONFIG_SND_ENTRY
+#define CONFIG_SND_ENTRY(n, e, t)                      \
+  { { sizeof(#n)-1, (const uint8_t *)#n }, e,          \
+    offsetof(coap_oscore_snd_conf_t, n), t }
+
+#undef CONFIG_RCP_ENTRY
+#define CONFIG_RCP_ENTRY(n, e, t)                      \
+  { { sizeof(#n)-1, (const uint8_t *)#n }, e,          \
+    offsetof(coap_oscore_rcp_conf_t, n), t }
+
+#undef CONFIG_DUMMY_ENTRY
+#define CONFIG_DUMMY_ENTRY(n, e, t)                    \
+  {  { sizeof(#n)-1, (const uint8_t *)#n }, e, 0, t }
 
 typedef struct oscore_text_mapping_t {
   coap_str_const_t text;
@@ -1961,44 +2034,287 @@ static oscore_text_mapping_t text_hkdf_alg[] = {
   {{0, NULL}, 0}
 };
 
-static struct oscore_config_t {
+typedef struct oscore_config_t {
   coap_str_const_t str_keyword;
   coap_oscore_coding_t encoding;
   size_t offset;
   oscore_text_mapping_t *text_mapping;
-} oscore_config[] = {
-  CONFIG_ENTRY(master_secret, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
-  CONFIG_ENTRY(master_salt, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
-  CONFIG_ENTRY(sender_id, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
-  CONFIG_ENTRY(id_context, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
-  CONFIG_ENTRY(recipient_id, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
-  CONFIG_ENTRY(replay_window, COAP_ENC_INTEGER, NULL),
-  CONFIG_ENTRY(ssn_freq, COAP_ENC_INTEGER, NULL),
+} oscore_config_t;
+
+static oscore_config_t oscore_config[] = {
   CONFIG_ENTRY(aead_alg, COAP_ENC_INTEGER | COAP_ENC_TEXT, text_aead_alg),
   CONFIG_ENTRY(hkdf_alg, COAP_ENC_INTEGER | COAP_ENC_TEXT, text_hkdf_alg),
+  CONFIG_ENTRY(master_secret, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
+  CONFIG_ENTRY(master_salt, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
+  CONFIG_ENTRY(id_context, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
+
+  CONFIG_DUMMY_ENTRY(sender_id, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
+
+  CONFIG_DUMMY_ENTRY(recipient_id, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
+
+  CONFIG_ENTRY(replay_window, COAP_ENC_INTEGER, NULL),
+  CONFIG_ENTRY(ssn_freq, COAP_ENC_INTEGER, NULL),
   CONFIG_ENTRY(rfc8613_b_1_2, COAP_ENC_BOOL, NULL),
   CONFIG_ENTRY(rfc8613_b_2, COAP_ENC_BOOL, NULL),
   CONFIG_ENTRY(break_sender_key, COAP_ENC_BOOL, NULL),
   CONFIG_ENTRY(break_recipient_key, COAP_ENC_BOOL, NULL),
+  CONFIG_DUMMY_ENTRY(complex_sender, COAP_ENC_CONFIG, NULL),
+  CONFIG_DUMMY_ENTRY(complex_recipient, COAP_ENC_CONFIG, NULL),
 };
+
+static oscore_config_t oscore_snd_config[] = {
+  CONFIG_SND_ENTRY(sender_id, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
+};
+
+static oscore_config_t oscore_rcp_config[] = {
+  CONFIG_RCP_ENTRY(recipient_id, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
+  CONFIG_RCP_ENTRY(silent_server, COAP_ENC_BOOL, NULL),
+};
+
+
+int
+coap_delete_oscore_snd_conf(coap_oscore_snd_conf_t *snd_conf) {
+  if (snd_conf == NULL)
+    return 0;
+
+  coap_delete_bin_const(snd_conf->sender_id);
+  coap_free_type(COAP_STRING, snd_conf);
+  return 1;
+}
+
+int
+coap_delete_oscore_rcp_conf(coap_oscore_rcp_conf_t *rcp_conf) {
+  if (rcp_conf == NULL)
+    return 0;
+
+  coap_delete_bin_const(rcp_conf->recipient_id);
+  coap_free_type(COAP_STRING, rcp_conf);
+  return 1;
+}
 
 int
 coap_delete_oscore_conf(coap_oscore_conf_t *oscore_conf) {
-  uint32_t i;
-
+  coap_oscore_rcp_conf_t *rcp_conf;
   if (oscore_conf == NULL)
     return 0;
 
   coap_delete_bin_const(oscore_conf->master_secret);
   coap_delete_bin_const(oscore_conf->master_salt);
   coap_delete_bin_const(oscore_conf->id_context);
-  coap_delete_bin_const(oscore_conf->sender_id);
-  for (i = 0; i < oscore_conf->recipient_id_count; i++) {
-    coap_delete_bin_const(oscore_conf->recipient_id[i]);
+  coap_delete_oscore_snd_conf(oscore_conf->sender);
+
+  rcp_conf = oscore_conf->recipient_chain;
+  while (rcp_conf) {
+    coap_oscore_rcp_conf_t *rcp_next = rcp_conf->next_recipient;
+
+    coap_delete_oscore_rcp_conf(rcp_conf);
+    rcp_conf = rcp_next;
   }
-  coap_free_type(COAP_STRING, oscore_conf->recipient_id);
+
   coap_free_type(COAP_STRING, oscore_conf);
   return 1;
+}
+
+static coap_oscore_snd_conf_t *
+coap_parse_oscore_snd_conf_mem(coap_bin_const_t conf_mem) {
+  const char *start = (const char *)conf_mem.s;
+  const char *end = start + conf_mem.length;
+  coap_str_const_t keyword;
+  oscore_value_t value;
+  coap_oscore_snd_conf_t *snd_conf;
+
+  snd_conf = coap_malloc_type(COAP_STRING, sizeof(coap_oscore_snd_conf_t));
+  if (snd_conf == NULL)
+    return NULL;
+  memset(snd_conf, 0, sizeof(coap_oscore_snd_conf_t));
+
+  memset(&value, 0, sizeof(value));
+
+  while (end > start &&
+         get_split_entry(&start, end - start, &keyword, &value, 0)) {
+    size_t i;
+    size_t j;
+
+    for (i = 0; i < sizeof(oscore_snd_config) / sizeof(oscore_snd_config[0]); i++) {
+      if (coap_string_equal(&oscore_snd_config[i].str_keyword, &keyword) != 0 &&
+          value.encoding & oscore_snd_config[i].encoding) {
+        coap_bin_const_t *unused_check;
+
+        switch (value.encoding) {
+        case COAP_ENC_HEX:
+        case COAP_ENC_ASCII:
+          memcpy(&unused_check,
+                 &(((char *)snd_conf)[oscore_snd_config[i].offset]),
+                 sizeof(unused_check));
+          if (unused_check != NULL) {
+            coap_log_warn("oscore_snd_conf: Keyword '%.*s' duplicated\n",
+                          (int)keyword.length,
+                          (const char *)keyword.s);
+            goto error;
+          }
+          memcpy(&(((char *)snd_conf)[oscore_snd_config[i].offset]),
+                 &value.u.value_bin,
+                 sizeof(value.u.value_bin));
+          break;
+        case COAP_ENC_INTEGER:
+        case COAP_ENC_BOOL:
+          memcpy(&(((char *)snd_conf)[oscore_snd_config[i].offset]),
+                 &value.u.value_int,
+                 sizeof(value.u.value_int));
+          break;
+        case COAP_ENC_TEXT:
+          for (j = 0; oscore_snd_config[i].text_mapping[j].text.s != NULL; j++) {
+            if (memcmp(value.u.value_str.s,
+                       oscore_snd_config[i].text_mapping[j].text.s,
+                       value.u.value_str.length) == 0) {
+              memcpy(&(((char *)snd_conf)[oscore_snd_config[i].offset]),
+                     &oscore_snd_config[i].text_mapping[j].value,
+                     sizeof(oscore_snd_config[i].text_mapping[j].value));
+              break;
+            }
+          }
+          if (oscore_snd_config[i].text_mapping[j].text.s == NULL) {
+            coap_log_warn("oscore_snd_conf: Keyword '%.*s': value '%.*s' unknown\n",
+                          (int)keyword.length,
+                          (const char *)keyword.s,
+                          (int)value.u.value_str.length,
+                          (const char *)value.u.value_str.s);
+            goto error;
+          }
+          break;
+        case COAP_ENC_CONFIG:
+        case COAP_ENC_LAST:
+        default:
+          assert(0);
+          break;
+        }
+        break;
+      }
+    }
+    if (i == sizeof(oscore_snd_config) / sizeof(oscore_snd_config[0])) {
+      coap_log_warn("oscore_snd_conf: Keyword '%.*s', type '%s' unknown\n",
+                    (int)keyword.length,
+                    (const char *)keyword.s,
+                    value.encoding_name);
+      if (value.encoding == COAP_ENC_HEX || value.encoding == COAP_ENC_ASCII)
+        coap_delete_bin_const(value.u.value_bin);
+      goto error;
+    }
+  }
+  if (!snd_conf->sender_id) {
+    coap_log_warn("oscore_snd_conf: sender_id not defined\n");
+    goto error;
+  }
+  if (snd_conf->sender_id->length > 7) {
+    coap_log_warn("oscore_snd_conf: Maximum size of sender_id is 7 bytes\n");
+    goto error;
+  }
+  return snd_conf;
+
+error:
+  coap_delete_oscore_snd_conf(snd_conf);
+  return NULL;
+}
+
+static coap_oscore_rcp_conf_t *
+coap_parse_oscore_rcp_conf_mem(coap_bin_const_t conf_mem) {
+  const char *start = (const char *)conf_mem.s;
+  const char *end = start + conf_mem.length;
+  coap_str_const_t keyword;
+  oscore_value_t value;
+  coap_oscore_rcp_conf_t *rcp_conf;
+
+  rcp_conf = coap_malloc_type(COAP_STRING, sizeof(coap_oscore_rcp_conf_t));
+  if (rcp_conf == NULL)
+    return NULL;
+  memset(rcp_conf, 0, sizeof(coap_oscore_rcp_conf_t));
+
+  memset(&value, 0, sizeof(value));
+
+  while (end > start &&
+         get_split_entry(&start, end - start, &keyword, &value, 0)) {
+    size_t i;
+    size_t j;
+
+    for (i = 0; i < sizeof(oscore_rcp_config) / sizeof(oscore_rcp_config[0]); i++) {
+      if (coap_string_equal(&oscore_rcp_config[i].str_keyword, &keyword) != 0 &&
+          value.encoding & oscore_rcp_config[i].encoding) {
+        coap_bin_const_t *unused_check;
+
+        switch (value.encoding) {
+        case COAP_ENC_HEX:
+        case COAP_ENC_ASCII:
+          memcpy(&unused_check,
+                 &(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
+                 sizeof(unused_check));
+          if (unused_check != NULL) {
+            coap_log_warn("oscore_rcp_conf: Keyword '%.*s' duplicated\n",
+                          (int)keyword.length,
+                          (const char *)keyword.s);
+            goto error;
+          }
+          memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
+                 &value.u.value_bin,
+                 sizeof(value.u.value_bin));
+          break;
+        case COAP_ENC_INTEGER:
+        case COAP_ENC_BOOL:
+          memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
+                 &value.u.value_int,
+                 sizeof(value.u.value_int));
+          break;
+        case COAP_ENC_TEXT:
+          for (j = 0; oscore_rcp_config[i].text_mapping[j].text.s != NULL; j++) {
+            if (memcmp(value.u.value_str.s,
+                       oscore_rcp_config[i].text_mapping[j].text.s,
+                       value.u.value_str.length) == 0) {
+              memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
+                     &oscore_rcp_config[i].text_mapping[j].value,
+                     sizeof(oscore_rcp_config[i].text_mapping[j].value));
+              break;
+            }
+          }
+          if (oscore_rcp_config[i].text_mapping[j].text.s == NULL) {
+            coap_log_warn("oscore_rcp_conf: Keyword '%.*s': value '%.*s' unknown\n",
+                          (int)keyword.length,
+                          (const char *)keyword.s,
+                          (int)value.u.value_str.length,
+                          (const char *)value.u.value_str.s);
+            goto error;
+          }
+          break;
+        case COAP_ENC_CONFIG:
+        case COAP_ENC_LAST:
+        default:
+          assert(0);
+          break;
+        }
+        break;
+      }
+    }
+    if (i == sizeof(oscore_rcp_config) / sizeof(oscore_rcp_config[0])) {
+      coap_log_warn("oscore_rcp_conf: Keyword '%.*s', type '%s' unknown\n",
+                    (int)keyword.length,
+                    (const char *)keyword.s,
+                    value.encoding_name);
+      if (value.encoding == COAP_ENC_HEX || value.encoding == COAP_ENC_ASCII)
+        coap_delete_bin_const(value.u.value_bin);
+      goto error;
+    }
+  }
+  if (!rcp_conf->recipient_id) {
+    coap_log_warn("oscore_rcp_conf: recipient_id not defined\n");
+    goto error;
+  }
+  if (rcp_conf->recipient_id->length > 7) {
+    coap_log_warn("oscore_rcp_conf: Maximum size of recipient_id is 7 bytes\n");
+    goto error;
+  }
+  return rcp_conf;
+
+error:
+  coap_delete_oscore_rcp_conf(rcp_conf);
+  return NULL;
 }
 
 static coap_oscore_conf_t *
@@ -2016,46 +2332,97 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
   memset(oscore_conf, 0, sizeof(coap_oscore_conf_t));
 
   memset(&value, 0, sizeof(value));
-  /* Preset with defaults */
+  /* Preset with defaults RFC8612 3.2 */
   oscore_conf->replay_window = COAP_OSCORE_DEFAULT_REPLAY_WINDOW;
   oscore_conf->ssn_freq = 1;
   oscore_conf->aead_alg = COSE_ALGORITHM_AES_CCM_16_64_128;
   oscore_conf->hkdf_alg = COSE_HKDF_ALG_HKDF_SHA_256;
+
   oscore_conf->rfc8613_b_1_2 = 1;
   oscore_conf->rfc8613_b_2 = 0;
+  /* For debugging only */
   oscore_conf->break_sender_key = 0;
   oscore_conf->break_recipient_key = 0;
 
   while (end > start &&
-         (split_ok = get_split_entry(&start, end - start, &keyword, &value)) > 0) {
+         (split_ok = get_split_entry(&start, end - start, &keyword, &value, 0)) > 0) {
     size_t i;
     size_t j;
 
     for (i = 0; i < sizeof(oscore_config) / sizeof(oscore_config[0]); i++) {
       if (coap_string_equal(&oscore_config[i].str_keyword, &keyword) != 0 &&
           value.encoding & oscore_config[i].encoding) {
-        if (coap_string_equal(coap_make_str_const("recipient_id"), &keyword)) {
+        if (coap_string_equal(coap_make_str_const("sender_id"), &keyword)) {
+          if (value.u.value_bin->length > 7) {
+            coap_log_warn("oscore_conf: Maximum size of sender_id is 7 bytes\n");
+            goto error_free_value_bin;
+          }
+          /* Special case group overlap */
+          coap_delete_oscore_snd_conf(oscore_conf->sender);
+          oscore_conf->sender = coap_malloc_type(COAP_STRING, sizeof(coap_oscore_snd_conf_t));
+          if (!oscore_conf->sender)
+            goto error_free_value_bin;
+
+          memset(oscore_conf->sender, 0, sizeof(coap_oscore_snd_conf_t));
+          oscore_conf->sender->sender_id = value.u.value_bin;
+        } else if (coap_string_equal(coap_make_str_const("recipient_id"), &keyword)) {
+          coap_oscore_rcp_conf_t *rcp_conf;
+
           if (value.u.value_bin->length > 7) {
             coap_log_warn("oscore_conf: Maximum size of recipient_id is 7 bytes\n");
             goto error_free_value_bin;
           }
           /* Special case as there are potentially multiple entries */
-          oscore_conf->recipient_id =
-              coap_realloc_type(COAP_STRING,
-                                oscore_conf->recipient_id,
-                                sizeof(oscore_conf->recipient_id[0]) *
-                                (oscore_conf->recipient_id_count + 1));
-          if (oscore_conf->recipient_id == NULL) {
+          rcp_conf = coap_malloc_type(COAP_STRING, sizeof(coap_oscore_rcp_conf_t));
+          if (!rcp_conf)
             goto error_free_value_bin;
-          }
-          oscore_conf->recipient_id[oscore_conf->recipient_id_count++] =
-              value.u.value_bin;
+
+          memset(rcp_conf, 0, sizeof(coap_oscore_rcp_conf_t));
+          rcp_conf->recipient_id = value.u.value_bin;
+          rcp_conf->next_recipient = oscore_conf->recipient_chain;
+          oscore_conf->recipient_chain = rcp_conf;
         } else {
           coap_bin_const_t *unused_check;
 
           switch (value.encoding) {
-          case COAP_ENC_HEX:
+          case COAP_ENC_CONFIG:
+            if (keyword.length == sizeof("complex_sender") - 1 &&
+                memcmp(keyword.s, "complex_sender", keyword.length) == 0) {
+              coap_oscore_snd_conf_t *snd_conf =
+                  coap_parse_oscore_snd_conf_mem(*value.u.value_bin);
+
+              if (!snd_conf) {
+                coap_log_warn("oscore_conf: Keyword '%.*s' invalid\n",
+                              (int)keyword.length,
+                              (const char *)keyword.s);
+                goto error_free_value_bin;
+              }
+              if (oscore_conf->sender) {
+                coap_log_warn("oscore_conf: group sender duplicated\n");
+                goto error_free_value_bin;
+              }
+              oscore_conf->sender = snd_conf;
+              coap_delete_bin_const(value.u.value_bin);
+              break;
+            }
+            if (keyword.length == sizeof("complex_recipient") - 1 &&
+                memcmp(keyword.s, "complex_recipient", keyword.length) == 0) {
+              coap_oscore_rcp_conf_t *rcp_conf =
+                  coap_parse_oscore_rcp_conf_mem(*value.u.value_bin);
+
+              if (!rcp_conf) {
+                coap_log_warn("oscore_conf: Keyword '%.*s' invalid\n",
+                              (int)keyword.length,
+                              (const char *)keyword.s);
+                goto error_free_value_bin;
+              }
+              rcp_conf->next_recipient = oscore_conf->recipient_chain;
+              oscore_conf->recipient_chain = rcp_conf;
+              coap_delete_bin_const(value.u.value_bin);
+            }
+            break;
           case COAP_ENC_ASCII:
+          case COAP_ENC_HEX:
             memcpy(&unused_check,
                    &(((char *)oscore_conf)[oscore_config[i].offset]),
                    sizeof(unused_check));
@@ -2108,8 +2475,10 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
                     (int)keyword.length,
                     (const char *)keyword.s,
                     value.encoding_name);
-      if (value.encoding == COAP_ENC_HEX || value.encoding == COAP_ENC_ASCII)
+      if (value.encoding == COAP_ENC_HEX || value.encoding == COAP_ENC_ASCII ||
+          value.encoding == COAP_ENC_CONFIG) {
         coap_delete_bin_const(value.u.value_bin);
+      }
       goto error;
     }
   }
@@ -2119,16 +2488,8 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
     coap_log_warn("oscore_conf: master_secret not defined\n");
     goto error;
   }
-  if (!oscore_conf->sender_id) {
+  if (!oscore_conf->sender) {
     coap_log_warn("oscore_conf: sender_id not defined\n");
-    goto error;
-  }
-  if (oscore_conf->sender_id->length > 7) {
-    coap_log_warn("oscore_conf: Maximum size of sender_id is 7 bytes\n");
-    goto error;
-  }
-  if (oscore_conf->recipient_id && oscore_conf->recipient_id[0]->length > 7) {
-    coap_log_warn("oscore_conf: Maximum size of recipient_id is 7 bytes\n");
     goto error;
   }
   return oscore_conf;
@@ -2158,12 +2519,9 @@ coap_oscore_init(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
   osc_ctx = oscore_derive_ctx(c_context, oscore_conf);
   if (!osc_ctx) {
     coap_log_crit("OSCORE: Could not create Security Context!\n");
-    goto error;
+    coap_free_type(COAP_STRING, oscore_conf);
+    return NULL;
   }
-
-  /* Free off the recipient_id array */
-  coap_free_type(COAP_STRING, oscore_conf->recipient_id);
-  oscore_conf->recipient_id = NULL;
 
   /* As all is stored in osc_ctx, oscore_conf is no longer needed */
   coap_free_type(COAP_STRING, oscore_conf);
@@ -2265,10 +2623,23 @@ coap_new_oscore_recipient(coap_context_t *context,
 int
 coap_new_oscore_recipient_lkd(coap_context_t *context,
                               coap_bin_const_t *recipient_id) {
+  coap_oscore_rcp_conf_t *rcp_conf;
+
   coap_lock_check_locked();
-  if (context->p_osc_ctx == NULL)
+
+  if (context->p_osc_ctx == NULL) {
+    coap_delete_bin_const(recipient_id);
     return 0;
-  if (oscore_add_recipient(context->p_osc_ctx, recipient_id, 0) == NULL)
+  }
+  rcp_conf = coap_malloc_type(COAP_STRING, sizeof(coap_oscore_rcp_conf_t));
+  if (rcp_conf == NULL) {
+    coap_delete_bin_const(recipient_id);
+    return 0;
+  }
+  memset(rcp_conf, 0, sizeof(coap_oscore_rcp_conf_t));
+  rcp_conf->recipient_id = recipient_id;
+  /* rcp_conf is released in oscore_add_recipient() */
+  if (oscore_add_recipient(context->p_osc_ctx, rcp_conf, 0) == NULL)
     return 0;
   return 1;
 }

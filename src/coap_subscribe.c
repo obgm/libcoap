@@ -307,7 +307,7 @@ coap_persist_observe_add_lkd(coap_context_t *context,
     } else
       goto oscore_fail;
 
-    osc_ctx = oscore_find_context(session->context, oscore_key_id,
+    osc_ctx = oscore_find_context(session, oscore_key_id,
                                   have_id_context ? &id_context : NULL, NULL,
                                   &session->recipient_ctx);
     if (osc_ctx) {

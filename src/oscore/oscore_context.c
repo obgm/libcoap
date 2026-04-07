@@ -49,13 +49,13 @@
 
 #include <stdio.h>
 
-static void oscore_enter_context(coap_context_t *c_context,
-                                 oscore_ctx_t *osc_ctx);
+/* Move ptr from b to a, and then clear b */
+#define OSC_MOVE_PTR(a,b) do { (a) = (b); (b) = NULL; } while(0)
 
 static size_t
 compose_info(uint8_t *buffer,
              size_t buf_size,
-             uint8_t alg,
+             cose_alg_t alg,
              coap_bin_const_t *id,
              coap_bin_const_t *id_context,
              coap_str_const_t *type,
@@ -104,34 +104,70 @@ oscore_bytes_equal(uint8_t *a_ptr,
 static void
 oscore_enter_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
   if (c_context->p_osc_ctx) {
-    oscore_ctx_t *prev = c_context->p_osc_ctx;
-    oscore_ctx_t *next = c_context->p_osc_ctx->next;
+    oscore_ctx_t *head = c_context->p_osc_ctx;
+    oscore_ctx_t *prev = head;
+    oscore_ctx_t *next = head->next;
 
-    while (next) {
+    /* verify if oscore context is already attached */
+    if (head == osc_ctx) {
+      return;
+    }
+    while (next != head) {
+      if (next == osc_ctx) {
+        return;
+      }
       prev = next;
       next = next->next;
     }
     prev->next = osc_ctx;
-  } else
+    osc_ctx->next = head;
+  } else {
     c_context->p_osc_ctx = osc_ctx;
+    osc_ctx->next = osc_ctx;
+  }
 }
 
 static void
 oscore_free_recipient(oscore_recipient_ctx_t *recipient) {
-  coap_delete_bin_const(recipient->recipient_id);
+  if (recipient == NULL)
+    return;
+  /* remove recipient from oscore context chain if attached */
+  if (recipient->osc_ctx) {
+    if (recipient->osc_ctx->recipient_chain == recipient) {
+      recipient->osc_ctx->recipient_chain = recipient->next_recipient;
+    } else {
+      oscore_recipient_ctx_t *prev = recipient->osc_ctx->recipient_chain;
+
+      while (prev && prev->next_recipient != recipient) {
+        prev = prev->next_recipient;
+      }
+      if (prev) {
+        prev->next_recipient = recipient->next_recipient;
+      }
+    }
+  }
+
   coap_delete_bin_const(recipient->recipient_key);
+  coap_delete_bin_const(recipient->recipient_id);
   coap_free_type(COAP_OSCORE_REC, recipient);
+}
+
+void
+oscore_free_sender(oscore_sender_ctx_t *snd_ctx) {
+
+  if (snd_ctx == NULL)
+    return;
+  coap_delete_bin_const(snd_ctx->sender_id);
+  coap_delete_bin_const(snd_ctx->sender_key);
+  coap_free_type(COAP_OSCORE_SEN, snd_ctx);
 }
 
 void
 oscore_free_context(oscore_ctx_t *osc_ctx) {
   if (osc_ctx == NULL)
     return;
-  if (osc_ctx->sender_context) {
-    coap_delete_bin_const(osc_ctx->sender_context->sender_id);
-    coap_delete_bin_const(osc_ctx->sender_context->sender_key);
-    coap_free_type(COAP_OSCORE_SEN, osc_ctx->sender_context);
-  }
+
+  oscore_free_sender(osc_ctx->sender_context);
 
   while (osc_ctx->recipient_chain) {
     oscore_recipient_ctx_t *next = osc_ctx->recipient_chain->next_recipient;
@@ -152,7 +188,17 @@ oscore_free_contexts(coap_context_t *c_context) {
   while (c_context->p_osc_ctx) {
     oscore_ctx_t *osc_ctx = c_context->p_osc_ctx;
 
-    c_context->p_osc_ctx = osc_ctx->next;
+    if (osc_ctx->next == osc_ctx) {
+      c_context->p_osc_ctx = NULL;
+    } else {
+      oscore_ctx_t *tail = osc_ctx;
+      c_context->p_osc_ctx = osc_ctx->next;
+      while (tail->next != osc_ctx) {
+        tail = tail->next;
+      }
+      tail->next = c_context->p_osc_ctx;
+    }
+    osc_ctx->next = NULL;
 
     oscore_free_context(osc_ctx);
   }
@@ -160,20 +206,33 @@ oscore_free_contexts(coap_context_t *c_context) {
 
 int
 oscore_remove_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
-  oscore_ctx_t *prev = NULL;
-  oscore_ctx_t *next = c_context->p_osc_ctx;
-  while (next) {
+  oscore_ctx_t *head = c_context->p_osc_ctx;
+  oscore_ctx_t *prev;
+  oscore_ctx_t *next;
+
+  if (head == NULL)
+    return 0;
+
+  prev = head;
+  next = head;
+  do {
     if (next == osc_ctx) {
-      if (prev != NULL)
+      if (next->next == next) {
+        c_context->p_osc_ctx = NULL;
+      } else {
+        while (prev->next != next) {
+          prev = prev->next;
+        }
         prev->next = next->next;
-      else
-        c_context->p_osc_ctx = next->next;
-      oscore_free_context(next);
+        if (next == c_context->p_osc_ctx)
+          c_context->p_osc_ctx = next->next;
+      }
+      next->next = NULL;
+      oscore_free_context(osc_ctx);
       return 1;
     }
-    prev = next;
     next = next->next;
-  }
+  } while (next != head);
   return 0;
 }
 
@@ -184,22 +243,24 @@ oscore_remove_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
  * Updates recipient_ctx.
  */
 oscore_ctx_t *
-oscore_find_context(const coap_context_t *c_context,
+oscore_find_context(const coap_session_t *session,
                     const coap_bin_const_t rcpkey_id,
                     const coap_bin_const_t *ctxkey_id,
                     uint8_t *oscore_r2,
                     oscore_recipient_ctx_t **recipient_ctx) {
-  oscore_ctx_t *pt = c_context->p_osc_ctx;
+  oscore_ctx_t *pt = session->context->p_osc_ctx;
 
   *recipient_ctx = NULL;
   assert(rcpkey_id.length == 0 || rcpkey_id.s != NULL);
-  while (pt != NULL) {
+  if (pt == NULL)
+    return NULL;
+  do {
     int ok = 0;
     oscore_recipient_ctx_t *rpt = pt->recipient_chain;
 
     while (rpt) {
       ok = 0;
-      if (rcpkey_id.length == rpt->recipient_id->length) {
+      if (rpt->recipient_id && rcpkey_id.length == rpt->recipient_id->length) {
         if (rcpkey_id.length != 0)
           ok = memcmp(rpt->recipient_id->s, rcpkey_id.s, rcpkey_id.length) != 0;
         if (oscore_r2) {
@@ -228,7 +289,7 @@ oscore_find_context(const coap_context_t *c_context,
       rpt = rpt->next_recipient;
     } /* while rpt */
     pt = pt->next;
-  } /* end while */
+  } while (pt != session->context->p_osc_ctx);
   return NULL;
 }
 
@@ -307,36 +368,44 @@ oscore_convert_to_hex(const uint8_t *src,
   dest[qq * 3] = 0;
 }
 
-static coap_bin_const_t *
+coap_bin_const_t *
 oscore_build_key(oscore_ctx_t *osc_ctx,
+                 coap_bin_const_t *salt,
+                 coap_bin_const_t *ikm,
+                 cose_alg_t aead_alg,
                  coap_bin_const_t *id,
                  coap_str_const_t *type,
                  size_t out_len) {
   uint8_t info_buffer[80];
   size_t info_len;
-  uint8_t hkdf_tmp[CONTEXT_KEY_LEN > CONTEXT_INIT_VECT_LEN ?
-                                   CONTEXT_KEY_LEN :
-                                   CONTEXT_INIT_VECT_LEN];
+  coap_bin_const_t *hkdf;
+  uint8_t *hkdf_tmp = coap_malloc_type(COAP_STRING, out_len);
+
+  if (hkdf_tmp == NULL)
+    return NULL;
 
   info_len = compose_info(info_buffer,
                           sizeof(info_buffer),
-                          osc_ctx->aead_alg,
+                          aead_alg,
                           id,
                           osc_ctx->id_context,
                           type,
                           out_len);
-  if (info_len == 0 || info_len > sizeof(info_buffer))
+  if (info_len == 0 || info_len > sizeof(info_buffer)) {
+    coap_free_type(COAP_STRING, hkdf_tmp);
     return NULL;
+  }
 
-  if (!oscore_hkdf(osc_ctx->hkdf_alg,
-                   osc_ctx->master_salt,
-                   osc_ctx->master_secret,
-                   info_buffer,
-                   info_len,
-                   hkdf_tmp,
-                   out_len))
-    return NULL;
-  return coap_new_bin_const(hkdf_tmp, out_len);
+  oscore_hkdf(osc_ctx->hkdf_alg,
+              salt,
+              ikm,
+              info_buffer,
+              info_len,
+              hkdf_tmp,
+              out_len);
+  hkdf = coap_new_bin_const(hkdf_tmp, out_len);
+  coap_free_type(COAP_STRING, hkdf_tmp);
+  return hkdf;
 }
 
 static void
@@ -397,9 +466,12 @@ oscore_update_ctx(oscore_ctx_t *osc_ctx, coap_bin_const_t *id_context) {
   temp = osc_ctx->sender_context->sender_key;
   osc_ctx->sender_context->sender_key =
       oscore_build_key(osc_ctx,
+                       osc_ctx->master_salt,
+                       osc_ctx->master_secret,
+                       osc_ctx->aead_alg,
                        osc_ctx->sender_context->sender_id,
                        coap_make_str_const("Key"),
-                       CONTEXT_KEY_LEN);
+                       cose_key_len(osc_ctx->aead_alg));
   if (!osc_ctx->sender_context->sender_key)
     osc_ctx->sender_context->sender_key = temp;
   else
@@ -407,18 +479,24 @@ oscore_update_ctx(oscore_ctx_t *osc_ctx, coap_bin_const_t *id_context) {
   temp = osc_ctx->recipient_chain->recipient_key;
   osc_ctx->recipient_chain->recipient_key =
       oscore_build_key(osc_ctx,
+                       osc_ctx->master_salt,
+                       osc_ctx->master_secret,
+                       osc_ctx->aead_alg,
                        osc_ctx->recipient_chain->recipient_id,
                        coap_make_str_const("Key"),
-                       CONTEXT_KEY_LEN);
+                       cose_key_len(osc_ctx->aead_alg));
   if (!osc_ctx->recipient_chain->recipient_key)
     osc_ctx->recipient_chain->recipient_key = temp;
   else
     coap_delete_bin_const(temp);
   temp = osc_ctx->common_iv;
   osc_ctx->common_iv = oscore_build_key(osc_ctx,
+                                        osc_ctx->master_salt,
+                                        osc_ctx->master_secret,
+                                        osc_ctx->aead_alg,
                                         NULL,
                                         coap_make_str_const("IV"),
-                                        CONTEXT_INIT_VECT_LEN);
+                                        cose_nonce_len(osc_ctx->aead_alg));
   if (!osc_ctx->common_iv)
     osc_ctx->common_iv = temp;
   else
@@ -435,7 +513,7 @@ oscore_duplicate_ctx(coap_context_t *c_context,
                      coap_bin_const_t *id_context) {
   oscore_ctx_t *osc_ctx = NULL;
   oscore_sender_ctx_t *sender_ctx = NULL;
-  coap_bin_const_t *copy_rid = NULL;
+  coap_oscore_rcp_conf_t *rcp_conf;
 
   osc_ctx = coap_malloc_type(COAP_OSCORE_COM, sizeof(oscore_ctx_t));
   if (osc_ctx == NULL)
@@ -469,19 +547,26 @@ oscore_duplicate_ctx(coap_context_t *c_context,
   if (o_osc_ctx->master_secret) {
     /* sender_ key */
     sender_ctx->sender_key = oscore_build_key(osc_ctx,
+                                              osc_ctx->master_salt,
+                                              osc_ctx->master_secret,
+                                              osc_ctx->aead_alg,
                                               sender_id,
                                               coap_make_str_const("Key"),
-                                              CONTEXT_KEY_LEN);
+                                              cose_key_len(osc_ctx->aead_alg));
     if (!sender_ctx->sender_key)
       goto error;
 
     /* common IV */
     osc_ctx->common_iv = oscore_build_key(osc_ctx,
+                                          osc_ctx->master_salt,
+                                          osc_ctx->master_secret,
+                                          osc_ctx->aead_alg,
                                           NULL,
                                           coap_make_str_const("IV"),
-                                          CONTEXT_INIT_VECT_LEN);
+                                          cose_nonce_len(osc_ctx->aead_alg));
     if (!osc_ctx->common_iv)
       goto error;
+
   }
 
   /*
@@ -495,10 +580,15 @@ oscore_duplicate_ctx(coap_context_t *c_context,
 
   sender_ctx->sender_id = coap_new_bin_const(sender_id->s, sender_id->length);
 
-  copy_rid = coap_new_bin_const(recipient_id->s, recipient_id->length);
-  if (copy_rid == NULL)
+  rcp_conf = coap_malloc_type(COAP_STRING, sizeof(coap_oscore_rcp_conf_t));
+  if (rcp_conf == NULL)
     goto error;
-  if (oscore_add_recipient(osc_ctx, copy_rid, 0) == NULL)
+  memset(rcp_conf, 0, sizeof(coap_oscore_rcp_conf_t));
+  rcp_conf->recipient_id = coap_new_bin_const(recipient_id->s, recipient_id->length);
+  if (rcp_conf->recipient_id == NULL)
+    goto error;
+  /* rcp_conf is released in oscore_add_recipient() */
+  if (oscore_add_recipient(osc_ctx, rcp_conf, 0) == NULL)
     goto error;
 
   oscore_log_context(osc_ctx, "New Common context");
@@ -515,7 +605,8 @@ oscore_ctx_t *
 oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
   oscore_ctx_t *osc_ctx = NULL;
   oscore_sender_ctx_t *sender_ctx = NULL;
-  size_t i;
+  coap_oscore_rcp_conf_t *rcp_conf;
+  int ok;
 
   osc_ctx = coap_malloc_type(COAP_OSCORE_COM, sizeof(oscore_ctx_t));
   if (osc_ctx == NULL)
@@ -528,11 +619,11 @@ oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
   memset(sender_ctx, 0, sizeof(oscore_sender_ctx_t));
 
   osc_ctx->sender_context = sender_ctx;
-  osc_ctx->master_secret = oscore_conf->master_secret;
-  osc_ctx->master_salt = oscore_conf->master_salt;
+  OSC_MOVE_PTR(osc_ctx->master_secret, oscore_conf->master_secret);
+  OSC_MOVE_PTR(osc_ctx->master_salt, oscore_conf->master_salt);
   osc_ctx->aead_alg = oscore_conf->aead_alg;
   osc_ctx->hkdf_alg = oscore_conf->hkdf_alg;
-  osc_ctx->id_context = oscore_conf->id_context;
+  OSC_MOVE_PTR(osc_ctx->id_context, oscore_conf->id_context);
   osc_ctx->ssn_freq = oscore_conf->ssn_freq ? oscore_conf->ssn_freq : 1;
   osc_ctx->replay_window_size = oscore_conf->replay_window ?
                                 oscore_conf->replay_window :
@@ -542,29 +633,39 @@ oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
   osc_ctx->save_seq_num_func = oscore_conf->save_seq_num_func;
   osc_ctx->save_seq_num_func_param = oscore_conf->save_seq_num_func_param;
 
-  if (oscore_conf->master_secret) {
+  if (osc_ctx->master_secret) {
     /* sender_ key */
     if (oscore_conf->break_sender_key)
       /* Interop testing */
       sender_ctx->sender_key = oscore_build_key(osc_ctx,
-                                                oscore_conf->sender_id,
+                                                osc_ctx->master_salt,
+                                                osc_ctx->master_secret,
+                                                osc_ctx->aead_alg,
+                                                oscore_conf->sender->sender_id,
                                                 coap_make_str_const("BAD"),
-                                                CONTEXT_KEY_LEN);
+                                                cose_key_len(osc_ctx->aead_alg));
     else
       sender_ctx->sender_key = oscore_build_key(osc_ctx,
-                                                oscore_conf->sender_id,
+                                                osc_ctx->master_salt,
+                                                osc_ctx->master_secret,
+                                                osc_ctx->aead_alg,
+                                                oscore_conf->sender->sender_id,
                                                 coap_make_str_const("Key"),
-                                                CONTEXT_KEY_LEN);
+                                                cose_key_len(osc_ctx->aead_alg));
     if (!sender_ctx->sender_key)
       goto error;
 
     /* common IV */
     osc_ctx->common_iv = oscore_build_key(osc_ctx,
+                                          osc_ctx->master_salt,
+                                          osc_ctx->master_secret,
+                                          osc_ctx->aead_alg,
                                           NULL,
                                           coap_make_str_const("IV"),
-                                          CONTEXT_INIT_VECT_LEN);
+                                          cose_nonce_len(osc_ctx->aead_alg));
     if (!osc_ctx->common_iv)
       goto error;
+
   }
 
   /*
@@ -576,16 +677,30 @@ oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
   sender_ctx->next_seq = oscore_conf->start_seq_num -
                          (oscore_conf->start_seq_num % (oscore_conf->ssn_freq > 0 ? oscore_conf->ssn_freq : 1));
 
-  sender_ctx->sender_id = oscore_conf->sender_id;
   sender_ctx->seq = oscore_conf->start_seq_num;
+  if (oscore_conf->sender) {
+    OSC_MOVE_PTR(sender_ctx->sender_id, oscore_conf->sender->sender_id);
+    coap_free_type(COAP_STRING, oscore_conf->sender);
+    oscore_conf->sender = NULL;
+  }
 
-  for (i = 0; i < oscore_conf->recipient_id_count; i++) {
-    if (oscore_add_recipient(osc_ctx, oscore_conf->recipient_id[i],
+  rcp_conf = oscore_conf->recipient_chain;
+  ok = 1;
+  while (rcp_conf) {
+    coap_oscore_rcp_conf_t *rcp_next = rcp_conf->next_recipient;
+
+    /* rcp_conf is released in oscore_add_recipient() */
+    if (oscore_add_recipient(osc_ctx, rcp_conf,
                              oscore_conf->break_recipient_key) == NULL) {
       coap_log_warn("OSCORE: Failed to add Client ID\n");
-      goto error;
+      ok = 0;
     }
+    rcp_conf = rcp_next;
   }
+  oscore_conf->recipient_chain = NULL;
+  if (!ok)
+    goto error;
+
   oscore_log_context(osc_ctx, "Common context");
 
   oscore_enter_context(c_context, osc_ctx);
@@ -593,63 +708,75 @@ oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
   return osc_ctx;
 
 error:
-  coap_free_type(COAP_OSCORE_COM, osc_ctx);
-  coap_free_type(COAP_OSCORE_SEN, sender_ctx);
+  oscore_free_context(osc_ctx);
   return NULL;
 }
 
 oscore_recipient_ctx_t *
-oscore_add_recipient(oscore_ctx_t *osc_ctx, coap_bin_const_t *rid,
+oscore_add_recipient(oscore_ctx_t *osc_ctx, coap_oscore_rcp_conf_t *rcp_conf,
                      uint32_t break_key) {
-  oscore_recipient_ctx_t *rcp_ctx = osc_ctx->recipient_chain;
-  oscore_recipient_ctx_t *recipient_ctx = NULL;
+  oscore_recipient_ctx_t *rcp_chain = osc_ctx->recipient_chain;
+  oscore_recipient_ctx_t *rcp_ctx = NULL;
 
-  if (rid->length > 7) {
+  if (rcp_conf->recipient_id->length > 7) {
     coap_log_warn("oscore_add_recipient: Maximum size of recipient_id is 7 bytes\n");
-    return NULL;
+    goto free_rcp_conf;
   }
   /* Check this is not a duplicate recipient id */
-  while (rcp_ctx) {
-    if (rcp_ctx->recipient_id->length == rid->length &&
-        memcmp(rcp_ctx->recipient_id->s, rid->s, rid->length) == 0) {
-      coap_delete_bin_const(rid);
-      return NULL;
+  while (rcp_chain) {
+    if (rcp_chain->recipient_id->length == rcp_conf->recipient_id->length &&
+        memcmp(rcp_chain->recipient_id->s, rcp_conf->recipient_id->s,
+               rcp_conf->recipient_id->length) == 0) {
+      goto free_rcp_conf;
     }
-    rcp_ctx = rcp_ctx->next_recipient;
+    rcp_chain = rcp_chain->next_recipient;
   }
-  recipient_ctx = (oscore_recipient_ctx_t *)coap_malloc_type(
-                      COAP_OSCORE_REC,
-                      sizeof(oscore_recipient_ctx_t));
-  if (recipient_ctx == NULL)
-    return NULL;
-  memset(recipient_ctx, 0, sizeof(oscore_recipient_ctx_t));
+  rcp_ctx = (oscore_recipient_ctx_t *)coap_malloc_type(COAP_OSCORE_REC,
+                                                       sizeof(oscore_recipient_ctx_t));
+  if (rcp_ctx == NULL) {
+    goto free_rcp_conf;
+  }
+  memset(rcp_ctx, 0, sizeof(oscore_recipient_ctx_t));
 
   if (osc_ctx->master_secret) {
     if (break_key)
       /* Interop testing */
-      recipient_ctx->recipient_key = oscore_build_key(osc_ctx,
-                                                      rid,
-                                                      coap_make_str_const("BAD"),
-                                                      CONTEXT_KEY_LEN);
+      rcp_ctx->recipient_key = oscore_build_key(osc_ctx,
+                                                osc_ctx->master_salt,
+                                                osc_ctx->master_secret,
+                                                osc_ctx->aead_alg,
+                                                rcp_conf->recipient_id,
+                                                coap_make_str_const("BAD"),
+                                                cose_key_len(osc_ctx->aead_alg));
     else
-      recipient_ctx->recipient_key = oscore_build_key(osc_ctx,
-                                                      rid,
-                                                      coap_make_str_const("Key"),
-                                                      CONTEXT_KEY_LEN);
-    if (!recipient_ctx->recipient_key) {
-      coap_free_type(COAP_OSCORE_REC, recipient_ctx);
-      return NULL;
+      rcp_ctx->recipient_key = oscore_build_key(osc_ctx,
+                                                osc_ctx->master_salt,
+                                                osc_ctx->master_secret,
+                                                osc_ctx->aead_alg,
+                                                rcp_conf->recipient_id,
+                                                coap_make_str_const("Key"),
+                                                cose_key_len(osc_ctx->aead_alg));
+    if (!rcp_ctx->recipient_key) {
+      goto free_rcp_conf;
     }
   }
+  rcp_ctx->silent_server = rcp_conf->silent_server;
+  OSC_MOVE_PTR(rcp_ctx->recipient_id, rcp_conf->recipient_id);
 
-  recipient_ctx->recipient_id = rid;
-  recipient_ctx->initial_state = 1;
-  recipient_ctx->osc_ctx = osc_ctx;
+  rcp_ctx->initial_state = 1;
+  rcp_ctx->osc_ctx = osc_ctx;
 
-  rcp_ctx = osc_ctx->recipient_chain;
-  recipient_ctx->next_recipient = rcp_ctx;
-  osc_ctx->recipient_chain = recipient_ctx;
-  return recipient_ctx;
+  rcp_chain = osc_ctx->recipient_chain;
+  rcp_ctx->next_recipient = rcp_chain;
+  osc_ctx->recipient_chain = rcp_ctx;
+  /* Just free rcp_conf as all configured values are now in rcp_ctx */
+  coap_free_type(COAP_STRING, rcp_conf);
+  return rcp_ctx;
+
+free_rcp_conf:
+  coap_free_type(COAP_OSCORE_REC, rcp_ctx);
+  coap_delete_oscore_rcp_conf(rcp_conf);
+  return NULL;
 }
 
 int

@@ -85,6 +85,8 @@ typedef struct coap_queue_t coap_queue_t;
  * OSCORE information.
  */
 typedef struct coap_oscore_conf_t coap_oscore_conf_t;
+typedef struct coap_oscore_rcp_conf_t coap_oscore_rcp_conf_t;
+typedef struct coap_oscore_snd_conf_t coap_oscore_snd_conf_t;
 
 /* ************* coap_pdu_internal.h ***************** */
 

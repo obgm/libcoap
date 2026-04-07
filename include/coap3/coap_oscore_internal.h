@@ -33,16 +33,32 @@ extern "C" {
  */
 
 /**
+ * The structure used to hold the OSCORE Sender configuration information
+ */
+struct coap_oscore_snd_conf_t {
+  coap_bin_const_t *sender_id;     /**< Sender ID (i.e. local our id) */
+};
+
+/**
+ * The structure used to hold the OSCORE Recipient configuration
+ */
+struct coap_oscore_rcp_conf_t {
+  struct coap_oscore_rcp_conf_t *next_recipient; /**< Used to maintain
+                                                      the chain */
+  coap_bin_const_t *recipient_id;  /**< Recipient ID (i.e. local our id) */
+  /* Silent Server */
+  int silent_server;       /**< 1 if server is likely to be silent else 0 */
+};
+
+/**
  * The structure used to hold the OSCORE configuration information
  */
 struct coap_oscore_conf_t {
   coap_bin_const_t *master_secret; /**< Common Master Secret */
   coap_bin_const_t *master_salt;   /**< Common Master Salt */
-  coap_bin_const_t *sender_id;     /**< Sender ID (i.e. local our id) */
   coap_bin_const_t *id_context;    /**< Common ID context */
-  coap_bin_const_t **recipient_id; /**< Recipient ID (i.e. remote peer id)
-                                        Array of recipient_id */
-  uint32_t recipient_id_count;     /**< Number of recipient_id entries */
+  coap_oscore_snd_conf_t *sender;  /**< The sender - i.e. us */
+  coap_oscore_rcp_conf_t *recipient_chain; /**< The recipients as a chain */
   uint32_t replay_window;          /**< Replay window size
                                         Use COAP_OSCORE_DEFAULT_REPLAY_WINDOW */
   uint32_t ssn_freq;               /**< Sender Seq Num update frequency */
@@ -194,6 +210,28 @@ int coap_context_oscore_server_lkd(coap_context_t *context,
  */
 int coap_delete_oscore_recipient_lkd(coap_context_t *context,
                                      coap_bin_const_t *recipient_id);
+
+/**
+ * Release all the information associated with the OSCORE complex Sender
+ * configuration.
+ *
+ * @param oscore_snd_conf The OSCORE complex Sender configuration structure
+ *                        to release.
+ *
+ * @return @c 1 Successfully removed, else @c 0 not found.
+ */
+int coap_delete_oscore_snd_conf(coap_oscore_snd_conf_t *oscore_snd_conf);
+
+/**
+ * Release all the information associated with the OSCORE complex Recipient
+ * configuration.
+ *
+ * @param oscore_rcp_conf The OSCORE complex Recipient configuration structure
+ *                        to release.
+ *
+ * @return @c 1 Successfully removed, else @c 0 not found.
+ */
+int coap_delete_oscore_rcp_conf(coap_oscore_rcp_conf_t *oscore_rcp_conf);
 
 /**
  * Creates a new client session to the designated server, protecting the data
