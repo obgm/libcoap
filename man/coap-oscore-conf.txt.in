@@ -60,7 +60,14 @@ The possible encodings are:
     https://www.iana.org/assignments/cose/cose.xhtml#elliptic-curves are
     supported.
 
+*config* ::
+    A set of configuration lines comprising of keyword,encoding,value starting and ending with a single quote '.
+    Multiple configuraiton lines are supported.
+
 The valid keywords are:
+
+OSCORE
+------
 
 *master_secret* ::
     (*hex* or *ascii*) (*Required*) (No default) +
@@ -88,7 +95,8 @@ The valid keywords are:
     "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
     Security Context Definition]".
     Sender ID.  This is the local application ID.
-    Maximum length is determined by the AEAD Algorithm (typically 7 bytes).
+    Maximum length is determined by the AEAD Algorithm (typically 7 bytes). +
+    *NOTE:* Can be defined in *complex_sender*.
 
 *recipient_id* ::
     (*hex* or *ascii*) (*Required* for client, else *Optional*) (No default) +
@@ -99,7 +107,8 @@ The valid keywords are:
     For servers, there can be zero or more (unique) recipient_ids.
     Additional recipient_ids can be added programmatically to the OSCORE
     configuration - see *coap_new_oscore_recipient*(3).
-    For clients, there should only be one recipient_id (only the first is used).
+    For clients, there should only be one recipient_id (only the first is used). +
+    *NOTE:* Can be defined in *complex_recipient*.
 
 *replay_window* ::
     (*integer*) (*Optional*) (Default is 32) +
@@ -133,6 +142,56 @@ The valid keywords are:
     Security Context Derived Multiple Times]".
     Enable Security Context protocol.
 
+OSCORE COMPLEX
+--------------
+
+In addition to the above, it is possible to define specific additional options
+for the sender and/or recipient by setting up a complex definition for the sender
+and/or recipient. The start and end of this definition are indicated by the
+single quote ' character.  This definition can be (and usually is) over multiple
+lines.
+
+*complex_sender* ::
+    (*config*) (*Optional*) (No default) +
+    One or more sender specific definitions in the form of keyword,encoding,value
+    with a start and end single quote '.
+
+*complex_recipient* ::
+    (*config*) (*Optional*) (No default) +
+    One or more recipient specific definitions in the form of keyword,encoding,value
+    with a start and end single quote '.
+    For servers, there can be zero or more (unique) complex_recipient.
+    For clients, there should only be one complex_recipient (only the first is used).
+
+OSCORE COMPLEX SENDER
+---------------------
+
+*sender_id* ::
+    (*hex* or *ascii*) (*Required*) (No default) +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    Sender ID.  This is the local application ID.
+    Maximum length is determined by the AEAD Algorithm (typically 7 bytes).
+
+OSCORE COMPLEX RECIPIENT
+------------------------
+
+*recipient_id* ::
+    (*hex* or *ascii*) (*Required* for client, else *Optional*) (No default) +
+    "https://rfc-editor.org/rfc/rfc8613#section-3.1[RFC8613 Section 3.1.
+    Security Context Definition]".
+    Recipient ID. This is the remote peer application ID.
+    Maximum length is determined by the AEAD Algorithm (typically 7 bytes).
+    Additional recipient_ids can be added programmatically to the OSCORE
+    configuration - see *coap_new_oscore_recipient*(3).
+
+*silent_server* ::
+    (*bool*) (*Optional*) (Default is false) +
+    The remote server normally does not send any response if set.
+
+GENERAL
+-------
+
 *ssn_freq* ::
     (*integer*) (*Optional*) (Default is 1) +
     "https://rfc-editor.org/rfc/rfc8613#appendix-B.1.1[RFC8613 Appendix B.1.1.
@@ -140,7 +199,8 @@ The valid keywords are:
     Sender Sequence Number frequency non-volatile storage update rate. Has
     to be a positive number.
 
-Diagnostic testing options
+DIAGNOSTIC TESTING
+------------------
 
 *break_sender_key* ::
     (*bool*) (*Optional*) (Default is false) +
@@ -205,6 +265,44 @@ aead_alg,integer,10
 
 # HKDF COSE Algorithm (usually -10)
 hkdf_alg,integer,-10
+
+----
+
+EXAMPLE COMPLEX CLIENT OSCORE CONFIGURATION FILE
+------------------------------------------------
+
+[source, c]
+----
+
+# Master Secret (same for both client and server)
+master_secret,hex,"0102030405060708090a0b0c0d0e0f10"
+
+# Master Salt (same for both client and server)
+master_salt,hex,"9e7ca92223786340"
+
+# Sender ID (This is the client who is the Sender)
+sender_id,ascii,"client"
+
+# Replay Window (usually 32)
+replay_window,integer,32
+
+# AEAD COSE Cipher Algorithm (usually 10)
+aead_alg,integer,10
+
+# HKDF COSE Algorithm (usually -10)
+hkdf_alg,integer,-10
+
+# Set up complex recipient definition
+complex_recipient,config,'
+
+# Recipient ID (It is the server that is remote)
+recipient_id,ascii,"server"
+
+# Remote server is silent
+silent_server,bool,true
+
+# Closing ' for complex_recipient
+'
 
 ----
 

@@ -1609,7 +1609,8 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
 
 #if COAP_OSCORE_SUPPORT
   if (session->oscore_encryption) {
-    if (session->recipient_ctx->initial_state == 1) {
+    if (session->recipient_ctx->initial_state == 1 &&
+        !session->recipient_ctx->silent_server) {
       /*
        * Not sure if remote supports OSCORE, or is going to send us a
        * "4.01 + ECHO" etc. so need to hold off future coap_send()s until all

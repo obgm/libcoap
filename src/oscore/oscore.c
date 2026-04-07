@@ -132,21 +132,16 @@ oscore_prepare_e_aad(oscore_ctx_t *ctx,
   (void)oscore_option_len;
   (void)sender_public_key;
 
-  if (ctx->mode != OSCORE_MODE_SINGLE)
-    external_aad_len += oscore_cbor_put_array(&external_aad_ptr, &rem_size, 9);
-  else
-    external_aad_len += oscore_cbor_put_array(&external_aad_ptr, &rem_size, 5);
+  external_aad_len += oscore_cbor_put_array(&external_aad_ptr, &rem_size, 5);
 
   /* oscore_version, always "1" */
   external_aad_len += oscore_cbor_put_unsigned(&external_aad_ptr, &rem_size, 1);
 
-  if (ctx->mode == OSCORE_MODE_SINGLE) {
-    /* Algoritms array with one item*/
-    external_aad_len += oscore_cbor_put_array(&external_aad_ptr, &rem_size, 1);
-    /* Encryption Algorithm   */
-    external_aad_len +=
-        oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg);
-  }
+  /* Algoritms array with one item*/
+  external_aad_len += oscore_cbor_put_array(&external_aad_ptr, &rem_size, 1);
+  /* Encryption Algorithm   */
+  external_aad_len +=
+      oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg);
   /* request_kid */
   external_aad_len += oscore_cbor_put_bytes(&external_aad_ptr,
                                             &rem_size,
