@@ -923,6 +923,9 @@ coap_free_context_lkd(coap_context_t *context) {
   if (context->app_cb) {
     coap_lock_callback(context->app_cb(context->app_data));
   }
+#if COAP_THREAD_SAFE && !WITH_LWIP
+  coap_io_process_remove_threads_lkd(context);
+#endif /* COAP_THREAD_SAFE && !WITH_LWIP */
   coap_free_type(COAP_CONTEXT, context);
   coap_dump_memory_type_counts(COAP_LOG_DEBUG);
 }

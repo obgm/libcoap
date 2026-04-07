@@ -229,6 +229,10 @@ struct coap_context_t {
   uint32_t dynamic_cur;            /**< Current number of dynamic resources */
   uint32_t dynamic_max;            /**< Max number of dynamic resources or 0 is unlimited */
   uint32_t max_body_size;          /**< Max supported body size or 0 is unlimited */
+#if COAP_THREAD_SAFE
+  pthread_t *thread_id;            /**< Set of current additional threads */
+  uint32_t thread_id_count;        /**< Number of additional threads */
+#endif /* COAP_THREAD_SAFE */
 };
 
 /**

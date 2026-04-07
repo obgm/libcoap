@@ -100,9 +100,7 @@ coap_lock_lock_func(coap_lock_t *lock) {
 #endif /* ! COAP_THREAD_RECURSIVE_CHECK */
 
 #if !WITH_LWIP
-extern volatile int coap_thread_quit;
-static pthread_t *thread_id = NULL;
-static uint32_t thread_id_count = 0;
+extern COAP_THREAD_LOCAL_VAR volatile int coap_thread_quit;
 
 /* Visible to only this thread */
 COAP_THREAD_LOCAL_VAR uint32_t thread_no = 0;
@@ -175,44 +173,92 @@ coap_thread_sigint_action(int signum, siginfo_t *siginfo, void *ptr) {
 }
 #endif /*! _WIN32 */
 
+/* Must be run upder the protection of mutex m_io_threads */
+static void
+coap_io_process_kill_threads(coap_context_t *context) {
+  uint32_t i;
+
+#ifndef __ZEPHYR__
+  for (i = 0; i < context->thread_id_count ; i++) {
+    int s = pthread_kill(context->thread_id[i], COAP_THREAD_KILL_SIG);
+    if (s != 0) {
+      coap_log_err("thread kill failure\n");
+    }
+  }
+#else /* __ZEPHYR__ */
+  coap_thread_quit = 1;
+  coap_send_recv_terminate();
+#endif /* __ZEPHYR__ */
+
+  for (i = 0; i < context->thread_id_count ; i++) {
+    void *retval;
+    int s = pthread_join(context->thread_id[i], &retval);
+
+    if (s != 0) {
+      coap_log_err("thread join failure\n");
+    }
+  }
+  coap_free_type(COAP_STRING, context->thread_id);
+  context->thread_id = NULL;
+  context->thread_id_count = 0;
+}
+
 int
 coap_io_process_configure_threads(coap_context_t *context, uint32_t thread_count) {
   uint32_t i;
+  uint32_t base_thread;
+
+  if (thread_count == 0)
+    return 0;
 
   coap_mutex_lock(&m_io_threads);
 #ifdef _WIN32
-  old_sigint_handler = signal(SIGINT, coap_thread_sigint_handler);
+  old_sigint_handler = signal(COAP_THREAD_KILL_SIG, coap_thread_sigint_handler);
 #else /* ! _WIN32 */
   struct sigaction oldact;
   struct sigaction newact;
 
   /* Get the old handler / action */
-  if (sigaction(SIGINT, NULL, &oldact) != -1) {
+  if (sigaction(COAP_THREAD_KILL_SIG, NULL, &oldact) != -1) {
     if (oldact.sa_flags & SA_SIGINFO) {
-      memset(&newact, 0, sizeof(newact));
-      sigemptyset(&newact.sa_mask);
-      newact.sa_sigaction = coap_thread_sigint_action;
-      newact.sa_flags = SA_SIGINFO;
-      if (sigaction(SIGINT, &newact, &oldact) != -1) {
-        old_sigint_action = oldact.sa_sigaction;
+      if (oldact.sa_sigaction != coap_thread_sigint_action) {
+        memset(&newact, 0, sizeof(newact));
+        sigemptyset(&newact.sa_mask);
+        newact.sa_sigaction = coap_thread_sigint_action;
+        newact.sa_flags = SA_SIGINFO;
+        if (sigaction(COAP_THREAD_KILL_SIG, &newact, &oldact) != -1) {
+          old_sigint_action = oldact.sa_sigaction;
+        }
       }
     } else {
-      memset(&newact, 0, sizeof(newact));
-      sigemptyset(&newact.sa_mask);
-      newact.sa_handler = coap_thread_sigint_handler;
-      newact.sa_flags = 0;
-      if (sigaction(SIGINT, &newact, &oldact) != -1) {
-        old_sigint_handler = oldact.sa_handler;
+      if (oldact.sa_handler != coap_thread_sigint_handler) {
+        memset(&newact, 0, sizeof(newact));
+        sigemptyset(&newact.sa_mask);
+        newact.sa_handler = coap_thread_sigint_handler;
+        newact.sa_flags = 0;
+        if (sigaction(COAP_THREAD_KILL_SIG, &newact, &oldact) != -1) {
+          old_sigint_handler = oldact.sa_handler;
+        }
       }
     }
   }
 #endif /* ! _WIN32 */
 
-  thread_no = 1;
-  max_thread_no = 1 + thread_count;
-  coap_free_type(COAP_STRING, thread_id);
-  thread_id = coap_malloc_type(COAP_STRING, thread_count * sizeof(pthread_t));
-  if (!thread_id) {
+  if (context->thread_id_count) {
+    coap_io_process_kill_threads(context);
+  }
+  if (thread_no == 0) {
+    /* Set this thread with its thread number */
+    thread_no = 1;
+    base_thread = thread_no + 1;
+    max_thread_no = 1 + thread_count;
+  } else {
+    /* Existing thread starting things up */
+    base_thread = max_thread_no + 1;
+    max_thread_no = base_thread + thread_count - 1;
+  }
+  context->thread_id = coap_malloc_type(COAP_STRING, thread_count * sizeof(pthread_t));
+  if (!context->thread_id) {
     coap_log_err("thread start up memory allocate failure\n");
     coap_mutex_unlock(&m_io_threads);
     return 0;
@@ -222,15 +268,15 @@ coap_io_process_configure_threads(coap_context_t *context, uint32_t thread_count
     int s;
 
     thread_param->context = context;
-    thread_param->thread_no = i + 2;
-    s = pthread_create(&thread_id[i], NULL,
+    thread_param->thread_no = i + base_thread;
+    s = pthread_create(&context->thread_id[i], NULL,
                        &coap_io_process_worker_thread, thread_param);
     if (s != 0) {
       coap_log_err("thread start up failure (%s)\n", coap_socket_strerror());
       coap_mutex_unlock(&m_io_threads);
       return 0;
     }
-    thread_id_count++;
+    context->thread_id_count++;
   }
   coap_mutex_unlock(&m_io_threads);
   return 1;
@@ -245,35 +291,12 @@ coap_io_process_remove_threads(coap_context_t *context) {
 
 void
 coap_io_process_remove_threads_lkd(coap_context_t *context) {
-  uint32_t i;
-
-  (void)context;
-
   coap_lock_unlock();
   coap_mutex_lock(&m_io_threads);
 
-#ifndef __ZEPHYR__
-  for (i = 0; i < thread_id_count ; i++) {
-    int s = pthread_kill(thread_id[i], SIGINT);
-    if (s != 0) {
-      coap_log_err("thread kill failure\n");
-    }
+  if (context->thread_id_count) {
+    coap_io_process_kill_threads(context);
   }
-#else /* __ZEPHYR__ */
-  coap_thread_quit = 1;
-  coap_send_recv_terminate();
-#endif /* __ZEPHYR__ */
-
-  for (i = 0; i < thread_id_count ; i++) {
-    void *retval;
-    int s = pthread_join(thread_id[i], &retval);
-    if (s != 0) {
-      coap_log_err("thread join failure\n");
-    }
-  }
-  coap_free_type(COAP_STRING, thread_id);
-  thread_id = NULL;
-  thread_id_count = 0;
 
   coap_mutex_unlock(&m_io_threads);
   coap_lock_lock(return);
