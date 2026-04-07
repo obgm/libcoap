@@ -521,7 +521,7 @@ all_over:
   return (int)(((now - before) * 1000) / COAP_TICKS_PER_SECOND);
 }
 
-volatile int coap_thread_quit = 0;
+COAP_THREAD_LOCAL_VAR volatile int coap_thread_quit = 0;
 
 void
 coap_io_process_terminate_loop(void) {
