@@ -57,7 +57,7 @@ coap_socket_send(coap_socket_t *sock,
   if (bytes_written < 0) {
     errno = -bytes_written;
     bytes_written = -1;
-    coap_log_crit("coap_socket_send: %s\n", coap_socket_strerror());
+    coap_log_warn("coap_socket_send: %s\n", coap_socket_strerror());
   }
 
   return bytes_written;
