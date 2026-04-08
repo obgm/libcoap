@@ -657,7 +657,7 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
   }
 
   if (bytes_written < 0)
-    coap_log_crit("coap_socket_send: %s\n", coap_socket_strerror());
+    coap_log_warn("coap_socket_send: %s\n", coap_socket_strerror());
 
   return bytes_written;
 }

@@ -1094,7 +1094,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       coap_log_oscore("Appendix B.2 server finished\n");
     }
     if (!osc_ctx) {
-      coap_log_crit("OSCORE: Security Context not found\n");
+      coap_log_err("OSCORE: Security Context not found\n");
       oscore_log_hex_value(COAP_LOG_OSCORE, "key_id", &cose->key_id);
       oscore_log_hex_value(COAP_LOG_OSCORE, "kid_context", &cose->kid_context);
       build_and_send_error_pdu(session,
