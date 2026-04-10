@@ -503,13 +503,31 @@ release_1:
           coap_mid_t mid;
 
           if ((mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
-            /* Some issue - not safe to continue processing */
-            s->last_rx_tx = now;
+            coap_log_debug("** %s: keepalive ping failed to send\n",
+                           coap_session_str(s));
+            /* Ping send failed — check for unanswered previous ping */
+            if (s->last_ping > 0 && s->last_pong < s->last_ping) {
 #if COAP_CLIENT_SUPPORT
-            if (s->client_initiated && ctx->reconnect_time) {
-              coap_session_failed(s);
-            }
+              if (s->client_initiated && ctx->reconnect_time) {
+                coap_session_failed(s);
+              } else {
 #endif /* COAP_CLIENT_SUPPORT */
+                coap_session_server_keepalive_failed(s);
+#if COAP_CLIENT_SUPPORT
+              }
+#endif /* COAP_CLIENT_SUPPORT */
+            } else {
+              /*
+               * No unanswered ping yet.  Rate-limit retries to once per
+               * ping_timeout to avoid spinning sendto() every I/O cycle.
+               */
+              s->last_rx_tx = now;
+#if COAP_CLIENT_SUPPORT
+              if (s->client_initiated && ctx->reconnect_time) {
+                coap_session_failed(s);
+              }
+#endif /* COAP_CLIENT_SUPPORT */
+            }
             continue;
           }
           s->last_ping_mid = mid;
@@ -551,8 +569,24 @@ release_1:
         coap_mid_t mid;
 
         if ((mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
-          /* Some issue - not safe to continue processing */
-          s->last_rx_tx = now;
+          coap_log_debug("** %s: keepalive ping failed to send\n",
+                         coap_session_str(s));
+          /*
+           * Ping send failed (e.g. ENETUNREACH).  Check whether a
+           * previous ping went unanswered — if so, the session was
+           * already unhealthy before this send failure.  Fire
+           * KEEPALIVE_FAILURE so the application can act on it.
+           */
+          if (s->last_ping > 0 && s->last_pong < s->last_ping) {
+            coap_handle_event_lkd(s->context,
+                                  COAP_EVENT_KEEPALIVE_FAILURE, s);
+          } else {
+            /*
+             * No unanswered ping yet — rate-limit retries to once per
+             * ping_timeout to avoid spinning sendto() every I/O cycle.
+             */
+            s->last_rx_tx = now;
+          }
           coap_session_failed(s);
           continue;
         }
