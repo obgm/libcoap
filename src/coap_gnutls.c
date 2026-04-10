@@ -2395,7 +2395,6 @@ coap_dtls_send(coap_session_t *c_session,
     coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
-      coap_session_disconnected_lkd(c_session, COAP_NACK_TLS_FAILED);
       ret = -1;
     }
   }
@@ -2534,9 +2533,7 @@ coap_dtls_receive(coap_session_t *c_session, const uint8_t *data,
   }
 
   if (c_session->dtls_event >= 0) {
-    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
-    if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
+    coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected_lkd(c_session, COAP_NACK_TLS_FAILED);
@@ -2861,12 +2858,9 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
   }
 
   if (c_session->dtls_event >= 0) {
-    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
-    if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
+    coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
-      coap_session_disconnected_lkd(c_session, COAP_NACK_TLS_FAILED);
       ret = -1;
     }
   }
@@ -2942,9 +2936,7 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
   }
 
   if (c_session->dtls_event >= 0) {
-    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
-    if (c_session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
+    coap_handle_event_lkd(c_session->context, c_session->dtls_event, c_session);
     if (c_session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         c_session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
       coap_session_disconnected_lkd(c_session, COAP_NACK_TLS_FAILED);

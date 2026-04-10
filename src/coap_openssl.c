@@ -594,9 +594,9 @@ coap_dgram_destroy(BIO *a) {
   if (a == NULL)
     return 0;
   data = (coap_ssl_data *)BIO_get_data(a);
+  BIO_set_data(a, NULL);
   if (data != NULL)
     free(data);
-  BIO_set_data(a, NULL);
   return 1;
 }
 
@@ -3643,6 +3643,8 @@ coap_dtls_send(coap_session_t *session,
   }
 
   session->dtls_event = -1;
+  coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
+                 coap_session_str(session), (int)data_len);
   ERR_clear_error();
   r = SSL_write(ssl, data, (int)data_len);
 
@@ -3669,24 +3671,13 @@ coap_dtls_send(coap_session_t *session,
   }
 
   if (session->dtls_event >= 0) {
-    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
-    if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event_lkd(session->context, session->dtls_event, session);
+    coap_handle_event_lkd(session->context, session->dtls_event, session);
     if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
-      coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
       r = -1;
     }
   }
 
-  if (r > 0) {
-    if (r == (ssize_t)data_len)
-      coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
-                     coap_session_str(session), r);
-    else
-      coap_log_debug("*  %s: dtls:  sent %4d of %4zd bytes\n",
-                     coap_session_str(session), r, data_len);
-  }
   return r;
 }
 
@@ -3814,6 +3805,8 @@ retry:
     coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
                    coap_session_str(session), r);
     r =  coap_handle_dgram(session->context, session, pdu, (size_t)r);
+    /* Possible there was a DTLS error */
+    ssl_data = (coap_ssl_data *)BIO_get_data(rbio);
     goto finished;
   } else {
     int err = SSL_get_error(ssl, r);
@@ -3850,11 +3843,10 @@ retry:
       r = -1;
     }
     if (session->dtls_event >= 0) {
-      /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
-      if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-        coap_handle_event_lkd(session->context, session->dtls_event, session);
+      coap_handle_event_lkd(session->context, session->dtls_event, session);
       if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
           session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
+        /* Cause disconnect on a read */
         coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
         ssl_data = NULL;
         r = -1;
@@ -4147,12 +4139,9 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
   }
 
   if (session->dtls_event >= 0) {
-    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
-    if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event_lkd(session->context, session->dtls_event, session);
+    coap_handle_event_lkd(session->context, session->dtls_event, session);
     if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
-      coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
       r = -1;
     }
   }
@@ -4233,11 +4222,10 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
   }
 
   if (session->dtls_event >= 0) {
-    /* COAP_EVENT_DTLS_CLOSED event reported in coap_session_disconnected_lkd() */
-    if (session->dtls_event != COAP_EVENT_DTLS_CLOSED)
-      coap_handle_event_lkd(session->context, session->dtls_event, session);
+    coap_handle_event_lkd(session->context, session->dtls_event, session);
     if (session->dtls_event == COAP_EVENT_DTLS_ERROR ||
         session->dtls_event == COAP_EVENT_DTLS_CLOSED) {
+      /* Cause disconnect on a read */
       coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
       r = -1;
     }
