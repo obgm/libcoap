@@ -1882,11 +1882,120 @@ fail:
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+static int
+prepend_508_ip(coap_session_t *session, coap_pdu_t *pdu) {
+  char addr_str[INET6_ADDRSTRLEN + 8 + 1];
+  coap_opt_t *opt;
+  coap_opt_iterator_t opt_iter;
+  size_t hop_limit;
+
+  addr_str[sizeof(addr_str)-1] = '\000';
+  if (coap_print_addr(&session->addr_info.local, (uint8_t *)addr_str,
+                      sizeof(addr_str) - 1)) {
+    char *cp;
+    size_t len;
+
+    if (addr_str[0] == '[') {
+      cp = strchr(addr_str, ']');
+      if (cp)
+        *cp = '\000';
+      if (memcmp(&addr_str[1], "::ffff:", 7) == 0) {
+        /* IPv4 embedded into IPv6 */
+        cp = &addr_str[8];
+      } else {
+        cp = &addr_str[1];
+      }
+    } else {
+      cp = strchr(addr_str, ':');
+      if (cp)
+        *cp = '\000';
+      cp = addr_str;
+    }
+    len = strlen(cp);
+
+    /* See if Hop Limit option is being used in return path */
+    opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
+    if (opt) {
+      uint8_t buf[4];
+
+      hop_limit =
+          coap_decode_var_bytes(coap_opt_value(opt), coap_opt_length(opt));
+      if (hop_limit == 1) {
+        coap_log_warn("Proxy loop detected '%s'\n",
+                      (char *)pdu->data);
+        coap_delete_pdu_lkd(pdu);
+        return (coap_mid_t)COAP_DROPPED_RESPONSE;
+      } else if (hop_limit < 1 || hop_limit > 255) {
+        /* Something is bad - need to drop this pdu (TODO or delete option) */
+        coap_log_warn("Proxy return has bad hop limit count '%" PRIuS "'\n",
+                      hop_limit);
+        coap_delete_pdu_lkd(pdu);
+        return 0;
+      }
+      hop_limit--;
+      coap_update_option(pdu, COAP_OPTION_HOP_LIMIT,
+                         coap_encode_var_safe8(buf, sizeof(buf), hop_limit),
+                         buf);
+    }
+
+    /* Need to check that we are not seeing this proxy in the return loop */
+    if (pdu->data && opt == NULL) {
+      char *a_match;
+      size_t data_len;
+
+      if (pdu->used_size + 1 > pdu->max_size) {
+        /* No space */
+        coap_delete_pdu_lkd(pdu);
+        return 0;
+      }
+      if (!coap_pdu_resize(pdu, pdu->used_size + 1)) {
+        /* Internal error */
+        coap_delete_pdu_lkd(pdu);
+        return 0;
+      }
+      data_len = pdu->used_size - (pdu->data - pdu->token);
+      pdu->data[data_len] = '\000';
+      a_match = strstr((char *)pdu->data, cp);
+      if (a_match && (a_match == (char *)pdu->data || a_match[-1] == ' ') &&
+          ((size_t)(a_match - (char *)pdu->data + len) == data_len ||
+           a_match[len] == ' ')) {
+        coap_log_warn("Proxy loop detected '%s'\n",
+                      (char *)pdu->data);
+        coap_delete_pdu_lkd(pdu);
+        return 0;
+      }
+    }
+    if (pdu->used_size + len + 1 <= pdu->max_size) {
+      size_t old_size = pdu->used_size;
+      if (coap_pdu_resize(pdu, pdu->used_size + len + 1)) {
+        if (pdu->data == NULL) {
+          /*
+           * Set Hop Limit to max for return path.  If this libcoap is in
+           * a proxy loop path, it will always decrement hop limit in code
+           * above and hence timeout / drop the response as appropriate
+           */
+          hop_limit = 255;
+          coap_insert_option(pdu, COAP_OPTION_HOP_LIMIT, 1,
+                             (uint8_t *)&hop_limit);
+          coap_add_data(pdu, len, (uint8_t *)cp);
+        } else {
+          /* prepend with space separator, leaving hop limit "as is" */
+          memmove(pdu->data + len + 1, pdu->data,
+                  old_size - (pdu->data - pdu->token));
+          memcpy(pdu->data, cp, len);
+          pdu->data[len] = ' ';
+          pdu->used_size += len + 1;
+        }
+      }
+    }
+  }
+  return 1;
+}
+
 coap_mid_t
 coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request_pdu) {
   uint8_t r;
   ssize_t bytes_written;
-  coap_opt_iterator_t opt_iter;
 
 #if ! COAP_SERVER_SUPPORT
   (void)request_pdu;
@@ -1910,109 +2019,8 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
      * Need to prepend our IP identifier to the data as per
      * https://rfc-editor.org/rfc/rfc8768.html#section-4
      */
-    char addr_str[INET6_ADDRSTRLEN + 8 + 1];
-    coap_opt_t *opt;
-    size_t hop_limit;
-
-    addr_str[sizeof(addr_str)-1] = '\000';
-    if (coap_print_addr(&session->addr_info.local, (uint8_t *)addr_str,
-                        sizeof(addr_str) - 1)) {
-      char *cp;
-      size_t len;
-
-      if (addr_str[0] == '[') {
-        cp = strchr(addr_str, ']');
-        if (cp)
-          *cp = '\000';
-        if (memcmp(&addr_str[1], "::ffff:", 7) == 0) {
-          /* IPv4 embedded into IPv6 */
-          cp = &addr_str[8];
-        } else {
-          cp = &addr_str[1];
-        }
-      } else {
-        cp = strchr(addr_str, ':');
-        if (cp)
-          *cp = '\000';
-        cp = addr_str;
-      }
-      len = strlen(cp);
-
-      /* See if Hop Limit option is being used in return path */
-      opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
-      if (opt) {
-        uint8_t buf[4];
-
-        hop_limit =
-            coap_decode_var_bytes(coap_opt_value(opt), coap_opt_length(opt));
-        if (hop_limit == 1) {
-          coap_log_warn("Proxy loop detected '%s'\n",
-                        (char *)pdu->data);
-          coap_delete_pdu_lkd(pdu);
-          return (coap_mid_t)COAP_DROPPED_RESPONSE;
-        } else if (hop_limit < 1 || hop_limit > 255) {
-          /* Something is bad - need to drop this pdu (TODO or delete option) */
-          coap_log_warn("Proxy return has bad hop limit count '%" PRIuS "'\n",
-                        hop_limit);
-          coap_delete_pdu_lkd(pdu);
-          return (coap_mid_t)COAP_DROPPED_RESPONSE;
-        }
-        hop_limit--;
-        coap_update_option(pdu, COAP_OPTION_HOP_LIMIT,
-                           coap_encode_var_safe8(buf, sizeof(buf), hop_limit),
-                           buf);
-      }
-
-      /* Need to check that we are not seeing this proxy in the return loop */
-      if (pdu->data && opt == NULL) {
-        char *a_match;
-        size_t data_len;
-
-        if (pdu->used_size + 1 > pdu->max_size) {
-          /* No space */
-          coap_delete_pdu_lkd(pdu);
-          return (coap_mid_t)COAP_DROPPED_RESPONSE;
-        }
-        if (!coap_pdu_resize(pdu, pdu->used_size + 1)) {
-          /* Internal error */
-          coap_delete_pdu_lkd(pdu);
-          return (coap_mid_t)COAP_DROPPED_RESPONSE;
-        }
-        data_len = pdu->used_size - (pdu->data - pdu->token);
-        pdu->data[data_len] = '\000';
-        a_match = strstr((char *)pdu->data, cp);
-        if (a_match && (a_match == (char *)pdu->data || a_match[-1] == ' ') &&
-            ((size_t)(a_match - (char *)pdu->data + len) == data_len ||
-             a_match[len] == ' ')) {
-          coap_log_warn("Proxy loop detected '%s'\n",
-                        (char *)pdu->data);
-          coap_delete_pdu_lkd(pdu);
-          return (coap_mid_t)COAP_DROPPED_RESPONSE;
-        }
-      }
-      if (pdu->used_size + len + 1 <= pdu->max_size) {
-        size_t old_size = pdu->used_size;
-        if (coap_pdu_resize(pdu, pdu->used_size + len + 1)) {
-          if (pdu->data == NULL) {
-            /*
-             * Set Hop Limit to max for return path.  If this libcoap is in
-             * a proxy loop path, it will always decrement hop limit in code
-             * above and hence timeout / drop the response as appropriate
-             */
-            hop_limit = 255;
-            coap_insert_option(pdu, COAP_OPTION_HOP_LIMIT, 1,
-                               (uint8_t *)&hop_limit);
-            coap_add_data(pdu, len, (uint8_t *)cp);
-          } else {
-            /* prepend with space separator, leaving hop limit "as is" */
-            memmove(pdu->data + len + 1, pdu->data,
-                    old_size - (pdu->data - pdu->token));
-            memcpy(pdu->data, cp, len);
-            pdu->data[len] = ' ';
-            pdu->used_size += len + 1;
-          }
-        }
-      }
+    if (!prepend_508_ip(session, pdu)) {
+      return (coap_mid_t)COAP_DROPPED_RESPONSE;
     }
   }
 
@@ -2038,6 +2046,8 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
 #if !COAP_DISABLE_TCP
   if (COAP_PROTO_RELIABLE(session->proto) &&
       session->state == COAP_SESSION_STATE_ESTABLISHED) {
+    coap_opt_iterator_t opt_iter;
+
     if (!session->csm_block_supported) {
       /*
        * Need to check that this instance is not sending any block options as
