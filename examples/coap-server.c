@@ -141,6 +141,7 @@ static int enable_ws = 0;
 static int ws_port = 80;
 static int wss_port = 443;
 static uint32_t reconnect_secs = 0;
+static unsigned int ping_seconds = 30;
 #if COAP_CLIENT_SUPPORT
 static coap_uri_t call_home_uri;
 static int call_home = 0;
@@ -1668,13 +1669,13 @@ usage(const char *program, const char *version) {
   fprintf(stderr, "%s\n", coap_string_tls_support(buffer, sizeof(buffer)));
   fprintf(stderr, "\n"
           "Usage: %s [-a priority] [-b max_block_size] [-d max] [-e]\n"
-          "\t\t[-f scheme://address[:port]] [-g group] -l loss] [-o] [-p port]\n"
+          "\t\t[-f scheme://address[:port]] [-g group] [-l loss] [-o] [-p port]\n"
           "\t\t[-q tls_engine_conf_file] [-r] [-v num] [-w [port][,secure_port]]\n"
           "\t\t[-x] [-y rec_secs] [-z scheme://addr[:port][/resource[?query]]]\n"
           "\t\t[-A address] [-B resource[:check]] [-E oscore_conf_file[,seq_file]]\n"
-          "\t\t[-G group_if] [-L value] [-N]\n"
+          "\t\t[-G group_if] [-K interval] [-L value] [-N]\n"
           "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
-          "\t\t[-T max_token_size] [-U type] [-V num] [-X size] [-3]\n"
+          "\t\t[-T max_token_size] [-U type] [-V num] [-X size] [-Z fail] [-3]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
           "\t\t[-s match_psk_sni_file] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-m] [-n] [-C cafile]\n"
@@ -1735,6 +1736,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tIf resource and query (or queries) are defined, then this\n"
           "\t       \t\tis sent to the call-home client using a PUT request\n"
           "\t-A address\tInterface address to bind to\n"
+          , program);
+  fprintf(stderr,
           "\t-B resource[:check]\n"
           "\t       \t\tFor usage when setting up forward-dynamic proxy sessions\n"
           "\t       \t\twith -P option. This defines the resource to set up for\n"
@@ -1744,8 +1747,6 @@ usage(const char *program, const char *version) {
           "\t       \t\tinformation in the PUT request can define the IP (ip=xxx)\n"
           "\t       \t\tand port (port=yyy) the downstream client should be\n"
           "\t       \t\tspecifying to connect to in the proxy request\n"
-          , program);
-  fprintf(stderr,
           "\t-E oscore_conf_file[,seq_file]\n"
           "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
           "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
@@ -1754,6 +1755,9 @@ usage(const char *program, const char *version) {
           "\t-G group_if\tUse this interface for listening for the multicast\n"
           "\t       \t\tgroup. This can be different from the implied interface\n"
           "\t       \t\tif the -A option is used\n"
+          "\t-K interval\tSend a ping after interval seconds of inactivity for an\n"
+          "\t       \t\tObserved resource. If 0 specified, keep-alive is disabled.\n"
+          "\t       \t\tDefault is 30 seconds\n"
           "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
           "\t       \t\t(Sum of one or more of 1,2,4 64, 128, 256 and 512)\n"
@@ -1782,11 +1786,21 @@ usage(const char *program, const char *version) {
           "\t       \t\tlibrary logging\n"
           "\t-X size\t\tMaximum message size to use for TCP based connections\n"
           "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
+          "\t-Z fail\t\tNetwork fail some sent datagrams specified by a comma\n"
+          "\t       \t\tseparated list of numbers or number ranges.\n"
+          "\t       \t\tNote -l definitions are matched first.\n"
+          "\t       \t\t(for debugging only)\n"
+          "\t-Z fail%%\tRandomly network fail some sent datagrams with the\n"
+          "\t       \t\tspecified probability - 100%% all datagrams, 0%% no\n"
+          "\t       \t\tdatagrams.  Note -l definitions are matched first.\n"
+          "\t       \t\t(for debugging only)\n"
           "\t-3     \t\tIntercept all received data sent to /example_data with\n"
           "\t       \t\tsingle body enabled and write it out (test environment)\n"
           "PSK Options (if supported by underlying (D)TLS library)\n"
           "\t-h hint\t\tIdentity Hint to send. Default is CoAP. Zero length is\n"
           "\t       \t\tno hint\n"
+         );
+  fprintf(stderr,
           "\t-i match_identity_file\n"
           "\t       \t\tThis is a file that contains one or more lines of\n"
           "\t       \t\tIdentity Hints and (user) Identities to match for\n"
@@ -1817,8 +1831,6 @@ usage(const char *program, const char *version) {
           "\t-u user\t\tUser identity for pre-shared key mode (only used if\n"
           "\t       \t\toption -P is set)\n"
           "\t-2     \t\tUse EC-JPAKE negotiation (if supported)\n"
-         );
-  fprintf(stderr,
           "PKI Options (if supported by underlying (D)TLS library)\n"
           "\tNote: If any one of '-c certfile', '-j keyfile' or '-C cafile' is in\n"
           "\tPKCS11 URI naming format (pkcs11: prefix), then any remaining non\n"
@@ -1854,6 +1866,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tcontains both PUBLIC KEY and PRIVATE KEY or just\n"
           "\t       \t\tEC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support only).\n"
           "\t       \t\t'-C cafile' or '-R trust_casfile' are not required\n"
+         );
+  fprintf(stderr,
           "\t-R trust_casfile\n"
           "\t       \t\tPEM file containing the set of trusted root CAs\n"
           "\t       \t\tthat are to be used to validate the client certificate.\n"
@@ -2635,7 +2649,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:xy:z:A:B:C:E:G:J:L:M:NP:R:S:T:U:V:X:Y23")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:xy:z:A:B:C:E:G:J:K:L:M:NP:R:S:T:U:V:X:YZ:23")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2719,6 +2733,9 @@ main(int argc, char **argv) {
         break;
       }
       key_defined = 1;
+      break;
+    case 'K':
+      ping_seconds = atoi(optarg);
       break;
     case 'l':
       if (!coap_debug_set_packet_loss(optarg)) {
@@ -2845,6 +2862,12 @@ main(int argc, char **argv) {
       exit(1);
 #endif /* ! COAP_CLIENT_SUPPORT */
       break;
+    case 'Z':
+      if (!coap_debug_set_packet_fail(optarg)) {
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        goto failed;
+      }
+      break;
     case '2':
       ec_jpake = 1;
       break;
@@ -2895,7 +2918,7 @@ main(int argc, char **argv) {
   coap_context_set_block_mode(ctx, block_mode);
   coap_context_set_max_block_size(ctx, max_block_size);
   coap_context_set_session_reconnect_time2(ctx, reconnect_secs, 10);
-  coap_context_set_keepalive(ctx, reconnect_secs ? reconnect_secs : 30);
+  coap_context_set_keepalive(ctx, reconnect_secs ? reconnect_secs : ping_seconds);
   if (report_each_block)
     coap_register_block_data_handler(ctx, individual_blocks);
   if (csm_max_message_size)

@@ -27,7 +27,7 @@ SYNOPSIS
               [*-E* oscore_conf_file[,seq_file]] [*-G* count] [*-H* hoplimit]
               [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-S*] [*-T* token] [*-U*] [*-V* num]
-              [*-X* size] [*-3*]
+              [*-X* size] [*-Z* fail] [*-3*]
               [[*-d* value]]
               [[*-h* match_hint_file] [*-k* key] [*-u* user] [*-2*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
@@ -216,6 +216,16 @@ OPTIONS - General
 *-X* size::
    Maximum message size to use for TCP based connections (default is 8388864).
    Maximum value of 2^32 -1.
+
+*-Z* fail::
+   Network fail some sent datagrams specified by a comma separated list of
+   numbers or number ranges.
+   Note *-l* definitions are matched first. (for debugging only).
+
+*-Z* fail%::
+   Randomly network fail some sent datagrams with the specified probability -
+   100% all datagrams, 0% no datagrams. Note *-l* definitions are matched
+   first. (for debugging only).
 
 *-3* ::
    Intercept all received data and write it out (test environment).
