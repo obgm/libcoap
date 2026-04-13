@@ -56,6 +56,7 @@ coap_context_get_max_idle_sessions
 coap_context_get_session_timeout
 coap_context_load_pki_trust_store
 coap_context_oscore_server
+coap_context_rate_limit_ppm
 coap_context_set_app_data
 coap_context_set_app_data2
 coap_context_set_block_mode

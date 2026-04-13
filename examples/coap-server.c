@@ -96,6 +96,7 @@ coap_resource_t *time_resource = NULL;
 static int resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_CON;
 static int track_observes = 0;
 static int report_each_block = 0;
+static uint64_t rate_limit_ppm = 0;
 
 /*
  * For PKI, if one or more of cert_file, key_file and ca_file is in PKCS11 URI
@@ -1673,7 +1674,7 @@ usage(const char *program, const char *version) {
           "\t\t[-q tls_engine_conf_file] [-r] [-v num] [-w [port][,secure_port]]\n"
           "\t\t[-x] [-y rec_secs] [-z scheme://addr[:port][/resource[?query]]]\n"
           "\t\t[-A address] [-B resource[:check]] [-E oscore_conf_file[,seq_file]]\n"
-          "\t\t[-G group_if] [-K interval] [-L value] [-N]\n"
+          "\t\t[-G group_if] [-I rate_limit_ppm] [-K interval] [-L value] [-N]\n"
           "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size] [-Z fail] [-3]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
@@ -1758,6 +1759,9 @@ usage(const char *program, const char *version) {
           "\t-K interval\tSend a ping after interval seconds of inactivity for an\n"
           "\t       \t\tObserved resource. If 0 specified, keep-alive is disabled.\n"
           "\t       \t\tDefault is 30 seconds\n"
+          "\t-I rate_limit_ppm\n"
+          "\t       \t\tRate limit NON transmissions to packets per minute unless\n"
+          "\t       \t\ta response is received\n"
           "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
           "\t       \t\t(Sum of one or more of 1,2,4 64, 128, 256 and 512)\n"
@@ -1817,6 +1821,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tkey begins with 0x, then the hex text (two [0-9a-f] per\n"
           "\t       \t\tbyte) is converted to binary data\n"
           "\t-s match_psk_sni_file\n"
+         );
+  fprintf(stderr,
           "\t       \t\tThis is a file that contains one or more lines of\n"
           "\t       \t\treceived Subject Name Identifier (SNI) to match to use\n"
           "\t       \t\ta different Identity Hint and associated Pre-Shared Key\n"
@@ -2649,7 +2655,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:xy:z:A:B:C:E:G:J:K:L:M:NP:R:S:T:U:V:X:YZ:23")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:xy:z:A:B:C:E:G:I:J:K:L:M:NP:R:S:T:U:V:X:YZ:23")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2720,6 +2726,9 @@ main(int argc, char **argv) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
         goto failed;
       }
+      break;
+    case 'I':
+      rate_limit_ppm = atoi(optarg);
       break;
     case 'j' :
       key_file = optarg;
@@ -2923,6 +2932,8 @@ main(int argc, char **argv) {
     coap_register_block_data_handler(ctx, individual_blocks);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
+  if (rate_limit_ppm)
+    coap_context_rate_limit_ppm(ctx, rate_limit_ppm);
   if (doing_tls_engine) {
     if (!cmdline_tls_engine(tls_engine_conf))
       goto failed;

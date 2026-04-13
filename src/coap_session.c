@@ -494,6 +494,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
       coap_log_err("DTLS overhead exceeds MTU\n");
     }
   }
+  session->rl_ticks_per_packet = context->rl_ticks_per_packet;
   session->ack_timeout = COAP_DEFAULT_ACK_TIMEOUT;
   session->ack_random_factor = COAP_DEFAULT_ACK_RANDOM_FACTOR;
   session->max_retransmit = COAP_DEFAULT_MAX_RETRANSMIT;

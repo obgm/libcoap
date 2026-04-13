@@ -253,6 +253,9 @@ struct coap_session_t {
   coap_proxy_entry_t *proxy_entry; /**< Pointer to upstream server */
   coap_proxy_server_list_t *server_list; /**< Used for proxy internal session */
 #endif /* COAP_PROXY_SUPPORT */
+  uint64_t rl_ticks_per_packet;   /**< If not 0, rate limit NON to ticks per packet */
+  coap_tick_t last_tx;            /**< Last time a ratelimited packet is sent */
+  uint8_t is_rate_limiting;       /**< Currently NON rate limiting */
 };
 
 #if COAP_SERVER_SUPPORT

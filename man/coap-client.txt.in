@@ -25,7 +25,7 @@ SYNOPSIS
               [*-r*] [*-s duration*] [*-t* type] [*-v* num] [*-w*] [*-x*]
               [*-y* rec_secs] [*-z*] [*-A* type] [*-B* seconds]
               [*-E* oscore_conf_file[,seq_file]] [*-G* count] [*-H* hoplimit]
-              [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
+              [*-I* rate_limit_ppm] [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-S*] [*-T* token] [*-U*] [*-V* num]
               [*-X* size] [*-Z* fail] [*-3*]
               [[*-d* value]]
@@ -168,6 +168,9 @@ OPTIONS - General
 *-H* hoplimit::
    Set the Hop Limit count to hoplimit for proxies. Must have a value between
    1 and 255 inclusive. Default is '16'.
+
+*-I* rate_limit_ppm::
+   Rate limit NON transmissions to packets per minute unless a response is received.
 
 *-K* interval::
    Send a ping after interval seconds of inactivity.

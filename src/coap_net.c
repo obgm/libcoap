@@ -477,6 +477,16 @@ coap_context_set_cid_tuple_change(coap_context_t *context, uint8_t every) {
 }
 
 void
+coap_context_rate_limit_ppm(coap_context_t *context,
+                            uint64_t rate_limit_ppm) {
+  if (rate_limit_ppm) {
+    context->rl_ticks_per_packet = (60ULL * COAP_TICKS_PER_SECOND) / rate_limit_ppm;
+  } else {
+    context->rl_ticks_per_packet = 0;
+  }
+}
+
+void
 coap_context_set_max_body_size(coap_context_t *context,
                                uint32_t max_body_size) {
   assert(max_body_size == 0 || max_body_size > 1024);
@@ -2009,6 +2019,31 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
       goto error;
   }
 #endif /* COAP_CLIENT_SUPPORT */
+  if (pdu->type == COAP_MESSAGE_NON && session->rl_ticks_per_packet) {
+    coap_tick_t now;
+
+    if (!session->is_rate_limiting) {
+      coap_ticks(&now);
+      while (1) {
+        uint32_t timeout_ms;
+
+        if (now - session->last_tx >= session->rl_ticks_per_packet) {
+          break;
+        }
+        timeout_ms = (uint32_t)((session->rl_ticks_per_packet - (now - session->last_tx)) /
+                                (COAP_TICKS_PER_SECOND / 1000));
+
+        if (timeout_ms == 0) {
+          timeout_ms = COAP_IO_NO_WAIT;
+        }
+        session->is_rate_limiting = 1;
+        coap_io_process_lkd(session->context, timeout_ms);
+        session->is_rate_limiting = 0;
+        coap_ticks(&now);
+      }
+      session->last_tx = now;
+    }
+  }
 #if COAP_PROXY_SUPPORT
   if (session->server_list) {
     /* Local session wanting to use proxy logic */
@@ -5176,7 +5211,7 @@ coap_check_async(coap_context_t *context, coap_tick_t now, coap_tick_t *tim_rem)
     return 0;
   context->async_state_traversing = 1;
   LL_FOREACH_SAFE(context->async_state, async, tmp) {
-    if (async->delay != 0) {
+    if (async->delay != 0 && !async->session->is_rate_limiting) {
       if (async->delay <= now) {
         /* Send off the request to the application */
         coap_log_debug("Async PDU presented to app.\n");

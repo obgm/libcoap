@@ -167,7 +167,6 @@ coap_resource_release_lkd(coap_resource_t *resource) {
   return coap_delete_resource_lkd(resource);
 }
 
-
 /**
  * Deletes all resources from given @p context and frees their storage.
  *

@@ -326,6 +326,15 @@ void coap_context_set_keepalive(coap_context_t *context, unsigned int seconds);
 int coap_context_set_cid_tuple_change(coap_context_t *context, uint8_t every);
 
 /**
+ * Set the ratelimit for packets per minute
+ *
+ * @param context        The coap_context_t object.
+ * @param rate_limit_ppm The maximum number of packets per minute.
+ */
+void coap_context_rate_limit_ppm(coap_context_t *context,
+                                 uint64_t rate_limit_ppm);
+
+/**
  * Set the maximum supported body size.
  *
  * @param context       The coap_context_t object.

@@ -26,7 +26,7 @@ SYNOPSIS
               [*-y* rec_secs] [*-z* scheme://addr[:port][/resource[?query]]]
               [*-A* address]
               [*-B* resource[:check] [*-E* oscore_conf_file[,seq_file]]
-              [*-G* group_if] [*-K* interval] [*-L* value] [*-N*]
+              [*-G* group_if] [*-I* rate_limit_ppm] [*-K* interval] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port] | allow-mcast,[name1[,name2..]]]
               [*-T* max_token_size] [*-U* type] [*-V* num] [*-X* size]
               [*-Z* fail] [*-3*]
@@ -152,6 +152,9 @@ OPTIONS - General
 *-K* interval::
    Send a ping after interval seconds of inactivity for an Observed resource.
    If 0 specified, keep-alive is disabled. Default is 30 seconds.
+
+*-I* rate_limit_ppm::
+   Rate limit NON transmissions to packets per minute unless a response is received.
 
 *-L* value::
    Sum of one or more COAP_BLOCK_* flag values for different block handling

@@ -178,6 +178,7 @@ struct coap_lg_xmit_t {
 #if COAP_Q_BLOCK_SUPPORT
   coap_tick_t non_timeout_random_ticks; /** Used for Q-Block */
 #endif /* COAP_Q_BLOCK_SUPPORT */
+  uint32_t ref;          /**< Reference count */
 };
 
 #if COAP_CLIENT_SUPPORT
@@ -450,8 +451,48 @@ coap_lg_crcv_t *coap_find_lg_crcv(coap_session_t *session, coap_pdu_t *pdu);
  */
 coap_lg_xmit_t *coap_find_lg_xmit(coap_session_t *session, coap_pdu_t *pdu);
 
+/**
+ * Remove a lg_xmit.
+ * If lg_xmit is being referenced, then the reference counter is decremented
+ * but the lg_xmit data still exists until a coap_lg_xmit_release_lkd() is
+ * invoked.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ * @param lg_xmit The lg_xmit being used.
+ */
 void coap_block_delete_lg_xmit(coap_session_t *session,
                                coap_lg_xmit_t *lg_xmit);
+
+/**
+ * Decrement reference counter on a lg_xmit.
+ * Note that the lg_xmit storage may be deleted as a result and should not be
+ * used after this call.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ * @param lg_xmit The lg_xmit being used.
+ */
+COAP_STATIC_INLINE void
+coap_lg_xmit_release_lkd(coap_session_t *session,coap_lg_xmit_t *lg_xmit) {
+  coap_block_delete_lg_xmit(session, lg_xmit);
+  return;
+}
+
+/**
+ * Increment reference counter on a lg_xmit.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param lg_xmit The lg_xmit being used.
+ */
+COAP_STATIC_INLINE void
+coap_lg_xmit_reference_lkd(coap_lg_xmit_t *lg_xmit) {
+  lg_xmit->ref++;
+  return;
+}
 
 int coap_block_check_lg_xmit_timeouts(coap_session_t *session,
                                       coap_tick_t now,
