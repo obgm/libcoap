@@ -597,7 +597,7 @@ usage(const char *program, const char *version) {
           "\t\t[-z] [-A type] [-B seconds]\n"
           "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
-          "\t\t[-S] [-T token] [-U] [-V num] [-X size] [-3]\n"
+          "\t\t[-S] [-T token] [-U] [-V num] [-X size] [-Z fail] [-3]\n"
           "\t\t[[-d count]]\n"
           "\t\t[[h match_hint_file] [-k key] [-u user] [-2]]\n"
           "\t\t[[-c certfile] [-j keyfile] [-n] [-C cafile]\n"
@@ -677,6 +677,14 @@ usage(const char *program, const char *version) {
           "\t       \t\tlibrary logging\n"
           "\t-X size\t\tMaximum message size to use for TCP based connections\n"
           "\t       \t\t(default is 8388864). Maximum value of 2^32 -1\n"
+          "\t-Z fail\t\tNetwork fail some sent datagrams specified by a comma\n"
+          "\t       \t\tseparated list of numbers or number ranges.\n"
+          "\t       \t\tNote -l definitions are matched first.\n"
+          "\t       \t\t(for debugging only)\n"
+          "\t-Z fail%%\tRandomly network fail some sent datagrams with the\n"
+          "\t       \t\tspecified probability - 100%% all datagrams, 0%% no\n"
+          "\t       \t\tdatagrams.  Note -l definitions are matched first.\n"
+          "\t       \t\t(for debugging only)\n"
           "\t-3     \t\tIntercept all received data and write it out (test\n"
           "\t       \t\tenvironment\n"
           "DTLS Options (if supported by underlying (D)TLS library)\n"
@@ -1954,7 +1962,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:g:h:j:k:l:m:no:p:q:rs:t:u:v:wxy:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:Y23")) != -1) {
+                       "a:b:c:d:e:f:g:h:j:k:l:m:no:p:q:rs:t:u:v:wxy:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:YZ:23")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -2134,6 +2142,12 @@ main(int argc, char **argv) {
       break;
     case 'S':
       use_proxy_scheme = 1;
+      break;
+    case 'Z':
+      if (!coap_debug_set_packet_fail(optarg)) {
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        goto failed;
+      }
       break;
     case '2':
       ec_jpake = 1;

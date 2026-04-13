@@ -26,10 +26,10 @@ SYNOPSIS
               [*-y* rec_secs] [*-z* scheme://addr[:port][/resource[?query]]]
               [*-A* address]
               [*-B* resource[:check] [*-E* oscore_conf_file[,seq_file]]
-              [*-G* group_if] [*-L* value] [*-N*]
+              [*-G* group_if] [*-K* interval] [*-L* value] [*-N*]
               [*-P* scheme://addr[:port] | allow-mcast,[name1[,name2..]]]
               [*-T* max_token_size] [*-U* type] [*-V* num] [*-X* size]
-              [*-3*]
+              [*-Z* fail] [*-3*]
               [[*-h* hint] [*-i* match_identity_file] [*-k* key]
               [*-s* match_psk_sni_file] [*-u* user] [*-2*]]
               [[*-c* certfile] [*-j* keyfile] [*-n*] [*-C* cafile]
@@ -149,6 +149,10 @@ OPTIONS - General
    Use this interface for listening for the multicast group. This can be
    different from the implied interface if the *-A* option is used.
 
+*-K* interval::
+   Send a ping after interval seconds of inactivity for an Observed resource.
+   If 0 specified, keep-alive is disabled. Default is 30 seconds.
+
 *-L* value::
    Sum of one or more COAP_BLOCK_* flag values for different block handling
    methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP). This vlue can be set as a
@@ -197,6 +201,16 @@ OPTIONS - General
 *-X* size::
    Maximum message size to use for TCP based connections (default is 8388864).
    Maximum value of 2^32 -1.
+
+*-Z* fail::
+   Network fail some sent datagrams specified by a comma separated list of
+   numbers or number ranges.
+   Note *-l* definitions are matched first. (for debugging only).
+
+*-Z* fail%::
+   Randomly network fail some sent datagrams with the specified probability -
+   100% all datagrams, 0% no datagrams. Note *-l* definitions are matched
+   first. (for debugging only).
 
 *-3* ::
    Intercept all received data sent to /example_data with single body enabled
