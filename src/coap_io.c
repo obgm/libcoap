@@ -424,6 +424,8 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
         coap_handle_event_lkd(ctx, COAP_EVENT_SERVER_SESSION_DEL, s);
         coap_session_free(s);
         continue;
+      } else if (s->is_rate_limiting) {
+        continue;
       } else {
         if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
             s->delayqueue == NULL && s->last_rx_tx + session_timeout <= now) {
@@ -479,7 +481,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
          * Check if any server large transmits have hit MAX_PAYLOAD and need
          * restarting
          */
-        if (s->lg_xmit) {
+        if (s->lg_xmit && !s->is_rate_limiting) {
           if (coap_block_check_q_block2_xmit(s, now, &s_timeout)) {
             if (s_timeout < timeout)
               timeout = s_timeout;
@@ -543,6 +545,9 @@ release_1:
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_CLIENT_SUPPORT
   SESSIONS_ITER_SAFE(ctx->sessions, s, stmp) {
+    if (s->is_rate_limiting) {
+      continue;
+    }
     if (s->type == COAP_SESSION_TYPE_CLIENT &&
         s->state == COAP_SESSION_STATE_ESTABLISHED && !s->con_active &&
         ctx->ping_timeout > 0) {

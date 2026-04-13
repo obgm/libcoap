@@ -233,6 +233,7 @@ struct coap_context_t {
   pthread_t *thread_id;            /**< Set of current additional threads */
   uint32_t thread_id_count;        /**< Number of additional threads */
 #endif /* COAP_THREAD_SAFE */
+  uint64_t rl_ticks_per_packet;    /**< If not 0, rate limit NON to ticks per packet */
 };
 
 /**

@@ -1157,7 +1157,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
       coap_pdu_t *obs_pdu;
       coap_mid_t mid = COAP_INVALID_MID;
 
-      if (r->dirty == 0 && obs->dirty == 0) {
+      if ((r->dirty == 0 && obs->dirty == 0) || obs->session->is_rate_limiting) {
         /*
          * running this resource due to partiallydirty, but this observation's
          * notification was already enqueued

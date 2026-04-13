@@ -2132,6 +2132,7 @@ coap_send_q_blocks(coap_session_t *session,
     return COAP_INVALID_MID;
   }
 
+  coap_lg_xmit_reference_lkd(lg_xmit);
   while (block_pdu) {
     coap_pdu_t *t_pdu = NULL;
     uint8_t buf[8];
@@ -2214,6 +2215,7 @@ coap_send_q_blocks(coap_session_t *session,
     mid = coap_send_internal(session, block_pdu, NULL);
     if (mid == COAP_INVALID_MID) {
       /* Not expected, underlying issue somewhere */
+      coap_lg_xmit_release_lkd(session, lg_xmit);
       coap_delete_pdu_lkd(t_pdu);
       return COAP_INVALID_MID;
     }
@@ -2224,6 +2226,7 @@ coap_send_q_blocks(coap_session_t *session,
     coap_ticks(&lg_xmit->last_all_sent);
   } else
     coap_ticks(&lg_xmit->last_payload);
+  coap_lg_xmit_release_lkd(session, lg_xmit);
   return mid;
 }
 
@@ -2671,6 +2674,11 @@ coap_block_delete_lg_xmit(coap_session_t *session,
                           coap_lg_xmit_t *lg_xmit) {
   if (lg_xmit == NULL)
     return;
+
+  if (lg_xmit->ref > 0) {
+    lg_xmit->ref--;
+    return;
+  }
 
   coap_block_release_lg_xmit_data(session, lg_xmit->data_info);
   if (COAP_PDU_IS_REQUEST(lg_xmit->sent_pdu))

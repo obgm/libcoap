@@ -80,6 +80,7 @@ static int proxy_scheme_option = 0;
 static int use_proxy_scheme = 0;
 static int uri_host_option = 0;
 static unsigned int ping_seconds = 0;
+static uint64_t rate_limit_ppm = 0;
 static int setup_cid = 0;
 static uint32_t reconnect_secs = 0;
 
@@ -594,8 +595,8 @@ usage(const char *program, const char *version) {
           "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-g file]\n"
           "\t\t[-l loss] [-m method] [-o file] [-p port] [-q tls_engine_conf_file]\n"
           "\t\t[-r] [-s duration] [-t type] [-v num] [-w] [-x] [-y rec_secs]\n"
-          "\t\t[-z] [-A type] [-B seconds]\n"
-          "\t\t[-E oscore_conf_file[,seq_file]] [-G count] [-H hoplimit]\n"
+          "\t\t[-z] [-A type] [-B seconds] [-E oscore_conf_file[,seq_file]]\n"
+          "\t\t[-G count] [-H hoplimit] [-I rate_limit_ppm]\n"
           "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
           "\t\t[-S] [-T token] [-U] [-V num] [-X size] [-Z fail] [-3]\n"
           "\t\t[[-d count]]\n"
@@ -653,6 +654,9 @@ usage(const char *program, const char *version) {
           "\t-H hoplimit\tSet the Hop Limit count to hoplimit for proxies. Must\n"
           "\t       \t\thave a value between 1 and 255 inclusive.\n"
           "\t       \t\tDefault is '16'\n"
+          "\t-I rate_limit_ppm\n"
+          "\t       \t\tRate limit NON transmissions to packets per minute unless\n"
+          "\t       \t\ta response is received\n"
           "\t-K interval\tSend a ping after interval seconds of inactivity\n"
           "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
@@ -667,11 +671,11 @@ usage(const char *program, const char *version) {
           "\t       \t\toption to request) to forward the request to.\n"
           "\t       \t\tScheme is one of coap, coaps, coap+tcp, coaps+tcp,\n"
           "\t       \t\tcoap+ws, and coaps+ws\n"
+          ,program, wait_seconds);
+  fprintf(stderr,
           "\t-S     \t\tUse Proxy-Scheme instead of Proxy-Uri option if -P\n"
           "\t       \t\toption used\n"
           "\t-T token\tDefine the initial starting token (up to 24 characters)\n"
-          ,program, wait_seconds);
-  fprintf(stderr,
           "\t-U     \t\tNever include Uri-Host or Uri-Port options\n"
           "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
           "\t       \t\tlibrary logging\n"
@@ -1962,7 +1966,7 @@ main(int argc, char **argv) {
   coap_startup();
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:e:f:g:h:j:k:l:m:no:p:q:rs:t:u:v:wxy:zA:B:C:E:G:H:J:K:L:M:NO:P:R:ST:UV:X:YZ:23")) != -1) {
+                       "a:b:c:d:e:f:g:h:j:k:l:m:no:p:q:rs:t:u:v:wxy:zA:B:C:E:G:H:I:J:K:L:M:NO:P:R:ST:UV:X:YZ:23")) != -1) {
     switch (opt) {
     case 'a':
       strncpy(node_str, optarg, NI_MAXHOST - 1);
@@ -2117,6 +2121,9 @@ main(int argc, char **argv) {
       if (!cmdline_hop_limit(optarg))
         fprintf(stderr, "Hop Limit has to be > 0 and < 256\n");
       break;
+    case 'I':
+      rate_limit_ppm = atoi(optarg);
+      break;
     case 'n':
       verify_peer_cert = 0;
       break;
@@ -2237,6 +2244,8 @@ main(int argc, char **argv) {
   coap_context_set_block_mode(ctx, block_mode);
   if (csm_max_message_size)
     coap_context_set_csm_max_message_size(ctx, csm_max_message_size);
+  if (rate_limit_ppm)
+    coap_context_rate_limit_ppm(ctx, rate_limit_ppm);
   coap_register_response_handler(ctx, response_handler);
   coap_register_event_handler(ctx, event_handler);
   coap_register_nack_handler(ctx, nack_handler);
