@@ -506,16 +506,18 @@ release_1:
 
           if ((mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
             /* Some issue - not safe to continue processing */
+            s->ping_failed++;
             s->last_rx_tx = now;
 #if COAP_CLIENT_SUPPORT
             if (s->client_initiated && ctx->reconnect_time) {
               coap_session_failed(s);
             }
 #endif /* COAP_CLIENT_SUPPORT */
-            continue;
+            if (s->ping_failed <= COAP_MAX_PING_FAILURES)
+              continue;
           }
           s->last_ping_mid = mid;
-          if (s->last_ping > 0 && s->last_pong < s->last_ping) {
+          if ((s->last_ping > 0 && s->last_pong < s->last_ping) || s->ping_failed > COAP_MAX_PING_FAILURES) {
 #if COAP_CLIENT_SUPPORT
             if (s->client_initiated && ctx->reconnect_time) {
               coap_session_failed(s);
@@ -557,16 +559,37 @@ release_1:
 
         if ((mid = coap_session_send_ping_lkd(s)) == COAP_INVALID_MID) {
           /* Some issue - not safe to continue processing */
+          s->ping_failed++;
           s->last_rx_tx = now;
           coap_session_failed(s);
-          continue;
+          if (s->ping_failed <= COAP_MAX_PING_FAILURES)
+            continue;
         }
         s->last_ping_mid = mid;
         if (s->last_ping > 0 && s->last_pong < s->last_ping) {
           coap_handle_event_lkd(s->context, COAP_EVENT_KEEPALIVE_FAILURE, s);
         }
-        s->last_rx_tx = now;
-        s->last_ping = now;
+        if (s->ping_failed > COAP_MAX_PING_FAILURES) {
+#if COAP_CLIENT_SUPPORT
+          if (s->client_initiated) {
+            if (ctx->reconnect_time) {
+              coap_session_failed(s);
+            } else {
+              coap_session_disconnected_lkd(s, COAP_NACK_NOT_DELIVERABLE);
+            }
+          } else {
+#endif /* COAP_CLIENT_SUPPORT */
+#if COAP_SERVER_SUPPORT
+            coap_session_server_keepalive_failed(s);
+#endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+          }
+#endif /* COAP_CLIENT_SUPPORT */
+          continue;
+        } else {
+          s->last_rx_tx = now;
+          s->last_ping = now;
+        }
       } else {
         /* Always positive due to if() above */
         s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
