@@ -2151,7 +2151,8 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
     return pdu->mid;
   }
   if (bytes_written < 0) {
-    coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
+    if (pdu->code != 0)
+      coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
     goto error;
   }
 
@@ -4469,6 +4470,7 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
     }
   } else if (pdu->code == COAP_SIGNALING_CODE_PONG) {
     session->last_pong = session->last_rx_tx;
+    session->ping_failed = 0;
     if (context->pong_cb) {
       coap_lock_callback(context->pong_cb(session, pdu, pdu->mid));
     }
@@ -4845,6 +4847,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
           coap_lock_callback(context->pong_cb(session, pdu, pdu->mid));
         }
         session->last_pong = session->last_rx_tx;
+        session->ping_failed = 0;
         session->last_ping_mid = COAP_INVALID_MID;
       }
     } else {
@@ -4901,7 +4904,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
      * same token. Matching on token potentially containing ext length bytes.
      */
     /* find message token in sendqueue to stop retransmission */
-    coap_remove_from_queue_token(&context->sendqueue, session, &pdu->actual_token, &sent);
+    if (pdu->code != 0)
+      coap_remove_from_queue_token(&context->sendqueue, session, &pdu->actual_token, &sent);
 
     /* check for oscore issue or unknown critical options in non-signaling messages */
     if (oscore_invalid ||

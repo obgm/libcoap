@@ -66,6 +66,10 @@ typedef enum coap_ext_token_check_t {
   COAP_EXT_T_CHECKING,        /**< Token size check request sent */
 } coap_ext_token_check_t;
 
+#ifndef COAP_MAX_PING_FAILURES
+#define COAP_MAX_PING_FAILURES 3
+#endif
+
 /**
  * Abstraction of virtual session that can be attached to coap_context_t
  * (client) or coap_endpoint_t (server).
@@ -256,6 +260,7 @@ struct coap_session_t {
   uint64_t rl_ticks_per_packet;   /**< If not 0, rate limit NON to ticks per packet */
   coap_tick_t last_tx;            /**< Last time a ratelimited packet is sent */
   uint8_t is_rate_limiting;       /**< Currently NON rate limiting */
+  uint32_t ping_failed;           /**< Ping failure count */
 };
 
 #if COAP_SERVER_SUPPORT
