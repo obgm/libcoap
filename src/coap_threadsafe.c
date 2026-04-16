@@ -212,6 +212,10 @@ coap_io_process_configure_threads(coap_context_t *context, uint32_t thread_count
     return 0;
 
   coap_mutex_lock(&m_io_threads);
+  /* Need to make sure it is non zero incase coap_log*() is called */
+  if (thread_no == 0) {
+    thread_no = ++max_thread_no;
+  }
 #ifdef _WIN32
   old_sigint_handler = signal(COAP_THREAD_KILL_SIG, coap_thread_sigint_handler);
 #else /* ! _WIN32 */
@@ -247,16 +251,9 @@ coap_io_process_configure_threads(coap_context_t *context, uint32_t thread_count
   if (context->thread_id_count) {
     coap_io_process_kill_threads(context);
   }
-  if (thread_no == 0) {
-    /* Set this thread with its thread number */
-    thread_no = 1;
-    base_thread = thread_no + 1;
-    max_thread_no = 1 + thread_count;
-  } else {
-    /* Existing thread starting things up */
-    base_thread = max_thread_no + 1;
-    max_thread_no = base_thread + thread_count - 1;
-  }
+
+  base_thread = max_thread_no + 1;
+  max_thread_no = base_thread + thread_count - 1;
   context->thread_id = coap_malloc_type(COAP_STRING, thread_count * sizeof(pthread_t));
   if (!context->thread_id) {
     coap_log_err("thread start up memory allocate failure\n");
@@ -293,6 +290,10 @@ void
 coap_io_process_remove_threads_lkd(coap_context_t *context) {
   coap_lock_unlock();
   coap_mutex_lock(&m_io_threads);
+  /* Need to make sure it is non zero incase coap_log*() is called */
+  if (thread_no == 0) {
+    thread_no = ++max_thread_no;
+  }
 
   if (context->thread_id_count) {
     coap_io_process_kill_threads(context);
