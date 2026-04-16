@@ -72,7 +72,7 @@ asn1_tag_c(const uint8_t **ptr, size_t *plen, int *constructed, int *cls) {
     tag = (tag << 7) + (byte & 0x7F);
     (*plen)--;
     (*ptr)++;
-    if (*plen == 0 || tag > (INT_MAX >> 7))
+    if (*plen == 0 || (uint32_t)tag > (INT_MAX >> 7))
       return COAP_ASN1_FAIL;
     byte = (**ptr);
   }

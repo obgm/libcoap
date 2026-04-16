@@ -1,10 +1,7 @@
 /*
- * Copyright (C) 2015 Freie Universität Berlin
- * Copyright (C) 2018 Inria
- *
- * This file is subject to the terms and conditions of the GNU Lesser
- * General Public License v2.1. See the file LICENSE in the top level
- * directory for more details.
+ * SPDX-FileCopyrightText: 2015 Freie Universität Berlin
+ * SPDX-FileCopyrightText: 2018 Inria
+ * SPDX-License-Identifier: LGPL-2.1-only
  */
 
 /**
@@ -30,8 +27,7 @@
 #define MAIN_QUEUE_SIZE     (8)
 static msg_t _main_msg_queue[MAIN_QUEUE_SIZE];
 
-int
-main(void)
+int main(void)
 {
     /* we need a message queue for the thread running the shell in order to
      * receive potentially fast incoming networking packets */

@@ -38,7 +38,7 @@ SRC := coap_address.c \
   coap_ws.c
 
 ifneq (,$(filter libcoap_tinydtls,$(USEMODULE)))
-CFLAGS += -DCOAP_WITH_LIBTINYDTLS
+  CFLAGS += -DCOAP_WITH_LIBTINYDTLS
 endif
 
 include $(RIOTBASE)/Makefile.base

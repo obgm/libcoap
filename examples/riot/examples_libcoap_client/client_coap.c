@@ -1,9 +1,10 @@
 /*
- * client_coap.c -- RIOT client example
- *
- * Copyright (C) 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
- *
+ * SPDX-FileCopyrightText: 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/*
+ * client_coap.c -- RIOT client example
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -17,21 +18,21 @@
 #include "macros/utils.h"
 
 #ifdef CONFIG_LIBCOAP_CLIENT_URI
-#define COAP_CLIENT_URI CONFIG_LIBCOAP_CLIENT_URI
+#  define COAP_CLIENT_URI CONFIG_LIBCOAP_CLIENT_URI
 #else /* ! CONFIG_LIBCOAP_CLIENT_URI */
-#define COAP_CLIENT_URI "coap://[fe80::405:5aff:fe15:9b7f]/.well-known/core"
+#  define COAP_CLIENT_URI "coap://[fe80::405:5aff:fe15:9b7f]/.well-known/core"
 #endif /* ! CONFIG_LIBCOAP_CLIENT_URI */
 
 #ifdef CONFIG_LIBCOAP_USE_PSK
-#define COAP_USE_PSK CONFIG_LIBCOAP_USE_PSK
+#  define COAP_USE_PSK CONFIG_LIBCOAP_USE_PSK
 #else /* ! CONFIG_LIBCOAP_USE_PSK */
-#define COAP_USE_PSK NULL
+#  define COAP_USE_PSK NULL
 #endif /* ! CONFIG_LIBCOAP_USE_PSK */
 
 #ifdef CONFIG_LIBCOAP_USE_PSK_ID
-#define COAP_USE_PSK_ID CONFIG_LIBCOAP_USE_PSK_ID
+#  define COAP_USE_PSK_ID CONFIG_LIBCOAP_USE_PSK_ID
 #else /* ! CONFIG_LIBCOAP_USE_PSK_ID */
-#define COAP_USE_PSK_ID NULL
+#  define COAP_USE_PSK_ID NULL
 #endif /* ! CONFIG_LIBCOAP_USE_PSK_ID */
 
 static coap_context_t *main_coap_context = NULL;
@@ -44,11 +45,10 @@ static int is_mcast = 0;
 
 unsigned int wait_seconds = DEFAULT_WAIT_TIME; /* default timeout in seconds */
 
-static coap_response_t
-message_handler(coap_session_t *session,
-                const coap_pdu_t *sent,
-                const coap_pdu_t *received,
-                const coap_mid_t id)
+static coap_response_t message_handler(coap_session_t *session,
+                                       const coap_pdu_t *sent,
+                                       const coap_pdu_t *received,
+                                       const coap_mid_t id)
 {
     const uint8_t *data;
     size_t len;
@@ -68,11 +68,10 @@ message_handler(coap_session_t *session,
     return COAP_RESPONSE_OK;
 }
 
-static void
-nack_handler(coap_session_t *session COAP_UNUSED,
-             const coap_pdu_t *sent COAP_UNUSED,
-             const coap_nack_reason_t reason,
-             const coap_mid_t id COAP_UNUSED)
+static void nack_handler(coap_session_t *session COAP_UNUSED,
+                         const coap_pdu_t *sent COAP_UNUSED,
+                         const coap_nack_reason_t reason,
+                         const coap_mid_t id COAP_UNUSED)
 {
 
     switch (reason) {
@@ -94,9 +93,8 @@ nack_handler(coap_session_t *session COAP_UNUSED,
     return;
 }
 
-static int
-resolve_address(const char *host, const char *service, coap_address_t *dst,
-                int scheme_hint_bits)
+static int resolve_address(const char *host, const char *service,
+                           coap_address_t *dst, int scheme_hint_bits)
 {
     uint16_t port = service ? atoi(service) : 0;
     int ret = 0;
@@ -118,8 +116,7 @@ resolve_address(const char *host, const char *service, coap_address_t *dst,
     return ret;
 }
 
-void
-client_coap_init(int argc, char **argv)
+void client_coap_init(int argc, char **argv)
 {
     coap_session_t *session = NULL;
     coap_pdu_t *pdu;

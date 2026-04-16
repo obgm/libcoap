@@ -1,9 +1,10 @@
 /*
- * libcoap-test.c -- RIOT example
- *
- * Copyright (C) 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
- *
+ * SPDX-FileCopyrightText: 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/*
+ * libcoap-test.c -- RIOT example
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -16,25 +17,24 @@
 #include "macros/utils.h"
 
 #ifdef CONFIG_LIBCOAP_USE_PSK
-#define COAP_USE_PSK CONFIG_LIBCOAP_USE_PSK
+#  define COAP_USE_PSK CONFIG_LIBCOAP_USE_PSK
 #else /* CONFIG_LIBCOAP_USE_PSK */
-#define COAP_USE_PSK NULL
+#  define COAP_USE_PSK NULL
 #endif /* CONFIG_LIBCOAP_USE_PSK */
 
 #ifdef CONFIG_LIBCOAP_USE_PSK_ID
-#define COAP_USE_PSK_ID CONFIG_LIBCOAP_USE_PSK_ID
+#  define COAP_USE_PSK_ID CONFIG_LIBCOAP_USE_PSK_ID
 #else /* CONFIG_LIBCOAP_USE_PSK_ID */
-#define COAP_USE_PSK_ID NULL
+#  define COAP_USE_PSK_ID NULL
 #endif /* CONFIG_LIBCOAP_USE_PSK_ID */
 
 static int quit;
 
 #define INDEX "This is a DTLS loopback test client/server made with libcoap\n"
 
-static void
-hnd_get_index(coap_resource_t *resource, coap_session_t  *session,
-             const coap_pdu_t *request, const coap_string_t *query,
-             coap_pdu_t *response)
+static void hnd_get_index(coap_resource_t *resource, coap_session_t  *session,
+                          const coap_pdu_t *request, const coap_string_t *query,
+                          coap_pdu_t *response)
 {
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
     coap_add_data_large_response(resource, session, request, response,
@@ -43,8 +43,7 @@ hnd_get_index(coap_resource_t *resource, coap_session_t  *session,
                                  (const uint8_t *)INDEX, NULL, NULL);
 }
 
-static void
-init_coap_resources(coap_context_t *ctx)
+static void init_coap_resources(coap_context_t *ctx)
 {
     coap_resource_t *r;
 
@@ -61,8 +60,7 @@ error:
     coap_log_crit("cannot create resource\n");
 }
 
-static int
-init_coap_endpoints(coap_context_t *ctx, const char *use_psk)
+static int init_coap_endpoints(coap_context_t *ctx, const char *use_psk)
 {
     char addr_str[INET6_ADDRSTRLEN + 8];
     int scheme_hint_bits = 1 << COAP_URI_SCHEME_COAP;
@@ -111,8 +109,7 @@ init_coap_endpoints(coap_context_t *ctx, const char *use_psk)
     return 1;
 }
 
-static int
-coap_server_init(coap_context_t *ctx)
+static int coap_server_init(coap_context_t *ctx)
 {
     if (!init_coap_endpoints(ctx, COAP_USE_PSK)) {
         return 0;
@@ -122,9 +119,8 @@ coap_server_init(coap_context_t *ctx)
     return 1;
 }
 
-static int
-resolve_address(const char *host, const char *service, coap_address_t *dst,
-                int scheme_hint_bits)
+static int resolve_address(const char *host, const char *service,
+                           coap_address_t *dst, int scheme_hint_bits)
 {
     uint16_t port = service ? atoi(service) : 0;
     int ret = 0;
@@ -145,11 +141,10 @@ resolve_address(const char *host, const char *service, coap_address_t *dst,
     return ret;
 }
 
-static coap_response_t
-message_handler(coap_session_t *session,
-                const coap_pdu_t *sent,
-                const coap_pdu_t *received,
-                const coap_mid_t id)
+static coap_response_t message_handler(coap_session_t *session,
+                                       const coap_pdu_t *sent,
+                                       const coap_pdu_t *received,
+                                       const coap_mid_t id)
 {
     const uint8_t *data;
     size_t len;
@@ -169,8 +164,7 @@ message_handler(coap_session_t *session,
     return COAP_RESPONSE_OK;
 }
 
-static int
-coap_client_init(coap_context_t *ctx)
+static int coap_client_init(coap_context_t *ctx)
 {
     coap_session_t *session = NULL;
     coap_pdu_t *pdu;
@@ -289,8 +283,7 @@ fail:
     return 0;
 }
 
-void
-libcoap_test_run(void)
+void libcoap_test_run(void)
 {
     coap_context_t *coap_context;
 
