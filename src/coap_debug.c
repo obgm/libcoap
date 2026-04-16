@@ -1344,7 +1344,13 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
 
 #if COAP_THREAD_SAFE && COAP_THREAD_NUM_LOGGING
     if (thread_no == 0) {
+      /*
+       * All other call to coap_mutex_lock(&m_io_threads) immediately
+       * by setting thread_no if 0. So deadlock should never occur.
+       */
+      coap_mutex_lock(&m_io_threads);
       thread_no = ++max_thread_no;
+      coap_mutex_unlock(&m_io_threads);
     }
     fprintf(log_fd, "%2d ", thread_no);
 #endif /* COAP_THREAD_SAFE && COAP_THREAD_NUM_LOGGING */
