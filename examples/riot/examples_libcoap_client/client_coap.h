@@ -1,16 +1,16 @@
 /*
- * client-coap.h -- RIOT client example
- *
- * Copyright (C) 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
- *
+ * SPDX-FileCopyrightText: 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/*
+ * client-coap.h -- RIOT client example
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
  */
 
-#ifndef CLIENT_COAP_H
-#define CLIENT_COAP_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,5 +22,3 @@ void client_coap_init(int argc, char **argv);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CLIENT_COAP_H */

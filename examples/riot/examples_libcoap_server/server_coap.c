@@ -1,9 +1,10 @@
 /*
- * server_coap.c -- RIOT example
- *
- * Copyright (C) 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
- *
+ * SPDX-FileCopyrightText: 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/*
+ * server_coap.c -- RIOT example
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
@@ -16,9 +17,9 @@
 #include "macros/utils.h"
 
 #ifdef CONFIG_LIBCOAP_USE_PSK
-#define COAP_USE_PSK CONFIG_LIBCOAP_USE_PSK
+#  define COAP_USE_PSK CONFIG_LIBCOAP_USE_PSK
 #else /* CONFIG_LIBCOAP_USE_PSK */
-#define COAP_USE_PSK NULL
+#  define COAP_USE_PSK NULL
 #endif /* CONFIG_LIBCOAP_USE_PSK */
 
 static volatile int running = 0;
@@ -31,10 +32,9 @@ static coap_time_t clock_offset;
 static coap_time_t my_clock_base = 0;
 static coap_resource_t *time_resource = NULL; /* just for testing */
 
-static void
-hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
-             const coap_pdu_t *request, const coap_string_t *query,
-             coap_pdu_t *response)
+static void hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
+                         const coap_pdu_t *request, const coap_string_t *query,
+                         coap_pdu_t *response)
 {
     unsigned char buf[40];
     size_t len;
@@ -75,19 +75,10 @@ hnd_get_time(coap_resource_t *resource, coap_session_t  *session,
     }
 }
 
-static void
-init_coap_resources(coap_context_t *ctx)
+static void init_coap_resources(coap_context_t *ctx)
 {
     coap_resource_t *r;
 
-#if 0
-    r = coap_resource_init(NULL, 0, 0);
-    coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
-
-    coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-    coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"General Info\""), 0);
-    coap_add_resource(ctx, r);
-#endif
     /* store clock base to use in /time */
     my_clock_base = clock_offset;
 
@@ -125,8 +116,7 @@ error:
     coap_log_crit("cannot create resource\n");
 }
 
-static int
-init_coap_context_endpoints(const char *use_psk)
+static int init_coap_context_endpoints(const char *use_psk)
 {
     coap_address_t listenaddress;
     gnrc_netif_t *netif = gnrc_netif_iter(NULL);
@@ -196,8 +186,7 @@ init_coap_context_endpoints(const char *use_psk)
     return 1;
 }
 
-void *
-server_coap_run(void *arg)
+void *server_coap_run(void *arg)
 {
     (void)arg;
 
@@ -234,9 +223,7 @@ fail:
 static char server_stack[THREAD_STACKSIZE_MAIN +
                          THREAD_EXTRA_STACKSIZE_PRINTF];
 
-static
-void
-start_server(void)
+static void start_server(void)
 {
     kernel_pid_t server_pid;
 
@@ -268,9 +255,7 @@ start_server(void)
     return;
 }
 
-static
-void
-stop_server(void)
+static void stop_server(void)
 {
     /* check if server is running at all */
     if (running == 0) {
@@ -283,8 +268,7 @@ stop_server(void)
     puts("Stopping server...");
 }
 
-void
-server_coap_init(int argc, char **argv)
+void server_coap_init(int argc, char **argv)
 {
     if (argc < 2) {
         printf("usage: %s start|stop\n", argv[0]);
