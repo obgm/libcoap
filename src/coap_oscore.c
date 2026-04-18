@@ -2131,7 +2131,7 @@ coap_parse_oscore_snd_conf_mem(coap_bin_const_t conf_mem) {
   memset(&value, 0, sizeof(value));
 
   while (end > start &&
-         get_split_entry(&start, end - start, &keyword, &value, 0)) {
+         get_split_entry(&start, end - start, &keyword, &value, 0) > 0) {
     size_t i;
     size_t j;
 
@@ -2196,7 +2196,8 @@ coap_parse_oscore_snd_conf_mem(coap_bin_const_t conf_mem) {
                     (int)keyword.length,
                     (const char *)keyword.s,
                     value.encoding_name);
-      if (value.encoding == COAP_ENC_HEX || value.encoding == COAP_ENC_ASCII)
+      if (value.encoding == COAP_ENC_HEX || value.encoding == COAP_ENC_ASCII ||
+          value.encoding == COAP_ENC_CONFIG)
         coap_delete_bin_const(value.u.value_bin);
       goto error;
     }
@@ -2232,7 +2233,7 @@ coap_parse_oscore_rcp_conf_mem(coap_bin_const_t conf_mem) {
   memset(&value, 0, sizeof(value));
 
   while (end > start &&
-         get_split_entry(&start, end - start, &keyword, &value, 0)) {
+         get_split_entry(&start, end - start, &keyword, &value, 0) > 0) {
     size_t i;
     size_t j;
 
@@ -2297,7 +2298,8 @@ coap_parse_oscore_rcp_conf_mem(coap_bin_const_t conf_mem) {
                     (int)keyword.length,
                     (const char *)keyword.s,
                     value.encoding_name);
-      if (value.encoding == COAP_ENC_HEX || value.encoding == COAP_ENC_ASCII)
+      if (value.encoding == COAP_ENC_HEX || value.encoding == COAP_ENC_ASCII ||
+          value.encoding == COAP_ENC_CONFIG)
         coap_delete_bin_const(value.u.value_bin);
       goto error;
     }
