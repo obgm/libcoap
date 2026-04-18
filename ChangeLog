@@ -2,6 +2,8 @@
 
 	Change summary for version 4.3.5b:
 
+        * Fixes the following CVE
+          CVE-2026-29013
         * Add in sanitizer build support.
         * Fix issues raised by sanitizer builds.
         * Protect request handlers multi-thread usage by locking the resource.
