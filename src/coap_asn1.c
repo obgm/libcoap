@@ -83,10 +83,9 @@ asn1_tag_c(const uint8_t **ptr, size_t *plen, int *constructed, int *cls) {
   return tag;
 }
 
-/* caller must free off returned coap_binary_t* */
-coap_binary_t *
-get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr, size_t tlen,
-             asn1_validate validate) {
+static coap_binary_t *
+get_asn1_tag_internal(coap_asn1_tag_t ltag, const uint8_t *ptr, size_t tlen,
+                      asn1_validate validate, uint32_t recursive_check) {
   int constructed;
   int class;
   coap_asn1_tag_t tag = asn1_tag_c(&ptr, &tlen, &constructed, &class);
@@ -117,7 +116,9 @@ get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr, size_t tlen,
     }
     if (tag == 0x10 && constructed == 1) {
       /* SEQUENCE or SEQUENCE OF */
-      tag_data = get_asn1_tag(ltag, ptr, len, validate);
+      if (recursive_check > 100)
+        return NULL;
+      tag_data = get_asn1_tag_internal(ltag, ptr, len, validate, recursive_check + 1);
       if (tag_data)
         return tag_data;
     }
@@ -130,6 +131,13 @@ get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr, size_t tlen,
     len = asn1_len(&ptr, &tlen);
   }
   return NULL;
+}
+
+/* caller must free off returned coap_binary_t* */
+coap_binary_t *
+get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr, size_t tlen,
+             asn1_validate validate) {
+  return get_asn1_tag_internal(ltag, ptr, tlen, validate, 0);
 }
 
 /* first part of Raw public key, this is the start of the Subject Public Key */
