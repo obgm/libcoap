@@ -1062,7 +1062,7 @@ no_more:
         if (exp) {
           snprintf((char *)&buf, sizeof(buf), "%s", exp);
         } else {
-          snprintf((char *)&buf, sizeof(buf), "(%u)", value);
+          snprintf((char *)&buf, sizeof(buf), "(%" PRIu32 ")", value);
         }
         buf_len = strlen((char *)buf);
         break;
