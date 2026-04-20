@@ -307,7 +307,8 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
           }
         } else {
           coap_delete_pdu_lkd(pdu);
-          coap_log_info("coap_pdu_duplicate: Uri-Path-Abbrev value %u not known for fallback\n", value);
+          coap_log_info("coap_pdu_duplicate: Uri-Path-Abbrev value %" PRIu32 " not known for fallback\n",
+                        value);
           return NULL;
         }
       } else {
