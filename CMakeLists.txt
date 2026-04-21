@@ -801,9 +801,17 @@ target_compile_options(
   PUBLIC -DLIBCOAP_PACKAGE_BUILD="${LIBCOAP_PACKAGE_BUILD}")
 
 if(ZEPHYR_BASE)
-target_compile_options(
-  ${COAP_LIBRARY_NAME}
-  PUBLIC -DMBEDTLS_CONFIG_FILE="${CONFIG_MBEDTLS_CFG_FILE}" -I${ZEPHYR_MBEDTLS_CMAKE_DIR}/configs)
+  # Zephyr >= v4.4:
+  if(DEFINED CONFIG_MBEDTLS_CONFIG_FILE)
+    target_compile_options(${COAP_LIBRARY_NAME}
+      PUBLIC -DMBEDTLS_CONFIG_FILE="${CONFIG_MBEDTLS_CONFIG_FILE}" -I${ZEPHYR_MBEDTLS_CMAKE_DIR}/configs)
+  # Zephyr < v4.4:
+  elseif(DEFINED CONFIG_MBEDTLS_CFG_FILE)
+    target_compile_options(${COAP_LIBRARY_NAME}
+      PUBLIC -DMBEDTLS_CONFIG_FILE="${CONFIG_MBEDTLS_CFG_FILE}" -I${ZEPHYR_MBEDTLS_CMAKE_DIR}/configs)
+  else()
+    message(WARNING "No usable MBEDTLS config Kconfig symbol found")
+  endif()
 endif() # ! ZEPHYR_BASE
 
 add_library(
