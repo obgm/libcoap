@@ -3,11 +3,19 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-/*
- * libcoap-test.c -- RIOT example
+/**
+ * @ingroup     tests
+ * @{
+ *
+ * @file
+ * @brief       libcoap Test
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
+ *
+ * @author      Jon Shallow <supjps-libcoap@jpshallow.com>
+ *
+ * @}
  */
 
 #include "coap_config.h"
@@ -28,9 +36,9 @@
 #  define COAP_USE_PSK_ID NULL
 #endif /* CONFIG_LIBCOAP_USE_PSK_ID */
 
-static int quit;
+static volatile int quit;
 
-#define INDEX "This is a DTLS loopback test client/server made with libcoap\n"
+#define INDEX "This is DTLS loopback test client/server made with libcoap's response\n"
 
 static void hnd_get_index(coap_resource_t *resource, coap_session_t  *session,
                           const coap_pdu_t *request, const coap_string_t *query,
@@ -175,8 +183,7 @@ static int coap_client_init(coap_context_t *ctx)
     char portbuf[8];
     coap_optlist_t *optlist = NULL;
 
-#define BUFSIZE 100
-    unsigned char buf[BUFSIZE];
+    unsigned char buf[100];
     int res;
     const char *coap_uri = "coaps://[::1]";
 

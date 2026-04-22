@@ -11,7 +11,7 @@
  * @file
  * @brief       Example application for libcoap server
  *
- * @author      Raul Fuentes <>
+ * @author      Raul Fuentes <> <raul.fuentes-samaniego@inria.fr>
  *
  * @}
  */
@@ -28,10 +28,7 @@ static msg_t _main_msg_queue[MAIN_QUEUE_SIZE];
 
 extern int server_coap_init(int argc, char **argv);
 
-static const shell_command_t shell_commands[] = {
-    { "coaps", "Start a libcoap server", server_coap_init },
-    { NULL, NULL, NULL }
-};
+SHELL_COMMAND(coaps, "Start a libcoap server", server_coap_init);
 
 int main(void)
 {
@@ -44,7 +41,7 @@ int main(void)
     puts("All up, running the shell now");
     char line_buf[SHELL_DEFAULT_BUFSIZE];
 
-    shell_run(shell_commands, line_buf, SHELL_DEFAULT_BUFSIZE);
+    shell_run(NULL, line_buf, SHELL_DEFAULT_BUFSIZE);
 
     /* should be never reached */
     return 0;

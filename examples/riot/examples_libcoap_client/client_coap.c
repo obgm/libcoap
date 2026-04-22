@@ -3,11 +3,19 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-/*
- * client_coap.c -- RIOT client example
+/**
+ * @ingroup     examples
+ * @{
+ *
+ * @file
+ * @brief       libcoap Client Example Implementation
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
+ *
+ * @author      Jon Shallow <supjps-libcoap@jpshallow.com>
+ *
+ * @}
  */
 
 #include <thread.h>
@@ -127,11 +135,23 @@ void client_coap_init(int argc, char **argv)
     char portbuf[8];
     unsigned int wait_ms = 0;
     int result = -1;
-#define BUFSIZE 100
-    unsigned char buf[BUFSIZE];
+    unsigned char buf[100];
     int res;
     const char *coap_uri = COAP_CLIENT_URI;
 
+    if (argc > 1 && (strcmp(argv[1], "--help") == 0 ||
+        strcmp(argv[1], "help")) == 0) {
+        printf("usage: %s [<coap uri>]\n", argv[0]);
+        printf("      <coap_uri> is optional which is of the form\n"
+             "      <scheme><host>[:<port>][<path>][?<query>\n"
+             "      <scheme> is one of coap:// or coaps://\n"
+             "      <host> is in [ipv6] or [ipv6%%interface] format\n"
+             "      <port> is optional, default is 5683 (coap) or 5684 (coaps)\n"
+             "      <path> is optional\n"
+             "      <query> is optional\n"
+             );
+        return;
+    }
     if (argc > 1) {
         coap_uri = argv[1];
     }
@@ -147,6 +167,8 @@ void client_coap_init(int argc, char **argv)
         coap_log_warn("Failed to parse uri %s\n", coap_uri);
         goto fail;
     }
+
+    coap_log_info("Sending request '%s'\n", coap_uri);
 
     snprintf(portbuf, sizeof(portbuf), "%d", uri.port);
     snprintf((char *)buf, sizeof(buf), "%*.*s", (int)uri.host.length,

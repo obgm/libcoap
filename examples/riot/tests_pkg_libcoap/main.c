@@ -5,13 +5,13 @@
  */
 
 /**
- * @ingroup     examples
+ * @ingroup     tests
  * @{
  *
  * @file
- * @brief       Example test application for libcoap
+ * @brief       Test for libcoap
  *
- * @author      Raul Fuentes <>
+ * @author      Raul Fuentes <raul.fuentes-samaniego@inria.fr>
  *
  * @}
  */

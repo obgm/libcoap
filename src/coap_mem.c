@@ -46,7 +46,7 @@ static int fail_counts[COAP_MEM_TAG_LAST];
  * memory blocks.
  */
 #ifndef COAP_MAX_STRING_SIZE
-#define COAP_MAX_STRING_SIZE     (64U)
+#define COAP_MAX_STRING_SIZE     (120U)
 #endif /* COAP_MAX_STRING_SIZE */
 
 /**
@@ -220,29 +220,26 @@ static int fail_counts[COAP_MEM_TAG_LAST];
 #endif /* ! COAP_SERVER_SUPPORT */
 #endif /* COAP_MAX_LG_XMITS */
 
-/* The memstr is the storage for holding coap_string_t structure
- * together with its contents. */
-union memstr_t {
-  coap_string_t s;
-  char buf[sizeof(coap_string_t) + COAP_MAX_STRING_SIZE];
+/* The memstr is the storage for holding coap_string_t contents. */
+struct memstr_t {
+  char buf[COAP_MAX_STRING_SIZE];
 };
 
 /* The attrstr is the storage for holding coap_string_t structures to
  * serve as attribute names or values. As these are typically short,
  * they are stored in a different arena than generic strings. */
-union attrstr_t {
-  coap_string_t s;
-  char buf[sizeof(coap_string_t) + COAP_MAX_ATTRIBUTE_SIZE];
+struct attrstr_t {
+  char buf[COAP_MAX_ATTRIBUTE_SIZE];
 };
 
-static union memstr_t string_storage_data[COAP_MAX_STRINGS];
+static struct memstr_t string_storage_data[COAP_MAX_STRINGS];
 static memarray_t string_storage;
 
 #if COAP_SERVER_SUPPORT
 static coap_endpoint_t endpoint_storage_data[COAP_MAX_ENDPOINTS];
 static memarray_t endpoint_storage;
 
-static union attrstr_t attr_storage_data[COAP_MAX_ATTRIBUTE_STRINGS];
+static struct attrstr_t attr_storage_data[COAP_MAX_ATTRIBUTE_STRINGS];
 static memarray_t attr_storage;
 
 static coap_attr_t resattr_storage_data[COAP_MAX_ATTRIBUTES];
