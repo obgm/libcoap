@@ -2151,6 +2151,7 @@ coap_parse_oscore_snd_conf_mem(coap_bin_const_t conf_mem) {
             coap_log_warn("oscore_snd_conf: Keyword '%.*s' duplicated\n",
                           (int)keyword.length,
                           (const char *)keyword.s);
+            coap_delete_bin_const(value.u.value_bin);
             goto error;
           }
           memcpy(&(((char *)snd_conf)[oscore_snd_config[i].offset]),
@@ -2253,6 +2254,7 @@ coap_parse_oscore_rcp_conf_mem(coap_bin_const_t conf_mem) {
             coap_log_warn("oscore_rcp_conf: Keyword '%.*s' duplicated\n",
                           (int)keyword.length,
                           (const char *)keyword.s);
+            coap_delete_bin_const(value.u.value_bin);
             goto error;
           }
           memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
@@ -2360,8 +2362,10 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
             coap_log_warn("oscore_conf: Maximum size of sender_id is 7 bytes\n");
             goto error_free_value_bin;
           }
-          /* Special case group overlap */
-          coap_delete_oscore_snd_conf(oscore_conf->sender);
+          if (oscore_conf->sender) {
+            coap_log_warn("oscore_conf: sender_id duplicated\n");
+            goto error_free_value_bin;
+          }
           oscore_conf->sender = coap_malloc_type(COAP_STRING, sizeof(coap_oscore_snd_conf_t));
           if (!oscore_conf->sender)
             goto error_free_value_bin;
@@ -2401,7 +2405,7 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
                 goto error_free_value_bin;
               }
               if (oscore_conf->sender) {
-                coap_log_warn("oscore_conf: group sender duplicated\n");
+                coap_log_warn("oscore_conf: complex_sender duplicated\n");
                 goto error_free_value_bin;
               }
               oscore_conf->sender = snd_conf;
