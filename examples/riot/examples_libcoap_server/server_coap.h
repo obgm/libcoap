@@ -3,14 +3,22 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-/*
- * server_coap.h -- RIOT client example
+#pragma once
+
+/**
+ * @ingroup     examples
+ * @{
+ *
+ * @file
+ * @brief       libcoap Server Example Implementation
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
+ *
+ * @author      Jon Shallow <supjps-libcoap@jpshallow.com>
+ *
+ * @}
  */
-
-#pragma once
 
 #ifdef __cplusplus
 extern "C" {

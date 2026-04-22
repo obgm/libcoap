@@ -1,7 +1,6 @@
-#
 # SPDX-FileCopyrightText: 2023-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
 # SPDX-License-Identifier: BSD-2-Clause
-#
+
 menu "tests_libcoap"
     depends on USEPKG_LIBCOAP
 

@@ -3,11 +3,19 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-/*
- * server_coap.c -- RIOT example
+/**
+ * @ingroup     examples
+ * @{
+ *
+ * @file
+ * @brief       libcoap Server Example Implementation
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
+ *
+ * @author      Jon Shallow <supjps-libcoap@jpshallow.com>
+ *
+ * @}
  */
 
 #include "coap_config.h"
@@ -270,7 +278,8 @@ static void stop_server(void)
 
 void server_coap_init(int argc, char **argv)
 {
-    if (argc < 2) {
+    if (argc < 2 || strcmp(argv[1], "--help") == 0 ||
+        strcmp(argv[1], "help") == 0) {
         printf("usage: %s start|stop\n", argv[0]);
         return;
     }

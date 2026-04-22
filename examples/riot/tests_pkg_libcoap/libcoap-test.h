@@ -3,15 +3,22 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-/*
- * libcoap-test.h -- RIOT client example
+#pragma once
+
+/**
+ * @ingroup     tests
+ * @{
+ *
+ * @file
+ * @brief       libcoap Test
  *
  * This file is part of the CoAP library libcoap. Please see README for terms
  * of use.
+ *
+ * @author      Jon Shallow <supjps-libcoap@jpshallow.com>
+ *
+ * @}
  */
-
-
-#pragma once
 
 #ifdef __cplusplus
 extern "C" {

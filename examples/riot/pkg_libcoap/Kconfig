@@ -1,7 +1,6 @@
-#
 # SPDX-FileCopyrightText:  2019 HAW Hamburg
 # SPDX-License-Identifier: BSD-2-Clause
-#
+
 menu "libcoap"
     depends on USEPKG_LIBCOAP
 
@@ -239,7 +238,7 @@ config LIBCOAP_MAX_LG_XMITS
 
 config LIBCOAP_MAX_STRING_SIZE
     int "Max size of string memory allocation"
-    default 64
+    default 120
     help
         The maximum size of a supported string.
 
