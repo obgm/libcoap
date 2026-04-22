@@ -2406,6 +2406,7 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
               }
               if (oscore_conf->sender) {
                 coap_log_warn("oscore_conf: complex_sender duplicated\n");
+                coap_delete_oscore_snd_conf(snd_conf);
                 goto error_free_value_bin;
               }
               oscore_conf->sender = snd_conf;
