@@ -6,4 +6,4 @@ build:
 
 security:
   external-references:
-    - cpe:2.3:a:libcoap:libcoap:4.3.5a:*:*:*:*:*:*:*
+    - cpe:2.3:a:libcoap:libcoap:4.3.5b:*:*:*:*:*:*:*
