@@ -127,6 +127,11 @@ The *coap_resource_init*() function returns a newly created _resource_ of
 type _coap_resource_t_ * .  _uri_path_ specifies the uri string path to match
 against.  Normally there is no need for the leading '/' - e.g. just
 "full/path/for/resource".
+
+*NOTE:* _uri_path_, if not 7 bit readable ASCII, binary bytes must be hex
+encoded according to the rules defined in
+"https://rfc-editor.org/rfc/rfc3986#section-2.1[RFC3986 2.1. Percent-Encoding]".
+
 _flags_ can be zero or more of the following definitions or'ed together.
 
 [horizontal]
@@ -159,10 +164,24 @@ to the request handler.
 *COAP_RESOURCE_FLAGS_OSCORE_ONLY*::
 Define this resource as an OSCORE enabled access only.
 
+*COAP_RESOURCE_HIDE_WELLKNOWN_CORE*::
+Hide this resource from .well-known/core.
+
 *COAP_RESOURCE_HANDLE_WELLKNOWN_CORE*::
 Define this when invoking *coap_resource_unknown_init2*() if .well-known/core
 is to be passed to the unknown URI handler rather than processed locally.
 Used for easily passing on a request as a reverse-proxy request.
+
+*COAP_RESOURCE_USE_BLOCK_DATA_HANDLER*::
+Call the block data handler for this resource if one is registered for the context.
+
+*COAP_RESOURCE_SAFE_REQUEST_HANDLER*::
+Define this resource's request handlers as not manipulating any resource held
+and is therefore multi-thread safe.
+If not set, then the resource is locked (on multi-threaded systems) before
+calling any of these handlers so that any data changes are thread safe.
+*NOTE:* If there is a POST or PUT handler, then it is likely this should
+not be set.
 
 *NOTE:* The following flags are only tested against if
 *coap_mcast_per_resource*() has been called.  If *coap_mcast_per_resource*()
@@ -208,16 +227,6 @@ requests.
 Disable libcoap library suppressing 5.xx multicast responses (overridden by
 https://rfc-editor.org/rfc/rfc7967[RFC7967] No-Response option) for multicast
 requests.
-
-*COAP_RESOURCE_USE_BLOCK_DATA_HANDLER*::
-Call the block data handler for this resource if one is registered for the context.
-
-*COAP_RESOURCE_HIDE_WELLKNOWN_CORE*::
-Hide this resource from .well-known/core.
-
-*NOTE:* _uri_path_, if not 7 bit readable ASCII, binary bytes must be hex
-encoded according to the rules defined in
-"https://rfc-editor.org/rfc/rfc3986#section-2.1[RFC3986 2.1. Percent-Encoding]".
 
 *Function: coap_resource_unknown_init()*
 
