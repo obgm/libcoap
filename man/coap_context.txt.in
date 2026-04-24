@@ -73,7 +73,7 @@ coap_app_data_free_callback_t _app_cb_);*
 
 *int coap_context_set_cid_tuple_change(coap_context_t *_context_context, uint8_t _every_);*
 
-*void coap_context_set_shutdown_no_observe(coap_context_t *_context_);
+*void coap_context_set_shutdown_no_observe(coap_context_t *_context_);*
 
 *void coap_context_set_session_reconnect_time(coap_context_t *_context_,
 unsigned int _reconnect_time_);*

@@ -43,7 +43,7 @@ coap_release_large_data_t _release_func_, void *_app_ptr_);*
 *int coap_add_data_large_request_app(coap_session_t *_session_,
 coap_pdu_t *_pdu_, size_t _length_,
 coap_release_large_data_t _release_func_, coap_get_large_data_t _get_func_,
-void *_app_ptr_);
+void *_app_ptr_);*
 
 *int coap_add_data_large_response(coap_resource_t *_resource_,
 coap_session_t *_session_, const coap_pdu_t *_request_, coap_pdu_t *_response_,
