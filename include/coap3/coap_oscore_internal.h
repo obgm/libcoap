@@ -48,6 +48,12 @@ struct coap_oscore_rcp_conf_t {
   coap_bin_const_t *recipient_id;  /**< Recipient ID (i.e. local our id) */
   /* Silent Server */
   int silent_server;       /**< 1 if server is likely to be silent else 0 */
+
+  /* SSN handling for rfc8613 B.1.2 */
+  uint8_t window_initialized; /**< Contains if the sliding window is initialized
+                                   @c 1 if initialized, @c 0 otherwise */
+  uint64_t last_seq; /**< Highest sequence number used for this recipient */
+  uint64_t sliding_window; /**< bitfield sequence counter window */
 };
 
 /**
@@ -144,6 +150,33 @@ struct coap_pdu_t *coap_oscore_decrypt_pdu(coap_session_t *session,
  * @param context The context that the OSCORE information is associated with.
  */
 void coap_delete_all_oscore(coap_context_t *context);
+
+/**
+ * Attach the OSCORE recipient context information to the session.
+ *
+ * @param session The session to attach the recipient information to.
+ * @param recipient_ctx The recipient information to attach.
+ */
+void coap_oscore_session_set_recipient_ctx(coap_session_t *session,
+                                           oscore_recipient_ctx_t *recipient_ctx);
+
+/**
+ * Set the recipient context of an association.
+ *
+ * @param association The association to set @p recipient for.
+ * @param recipient_ctx For which the reference counter will be increased.
+ */
+void coap_oscore_association_set_recipient_ctx(oscore_association_t *association,
+                                               oscore_recipient_ctx_t *recipient_ctx);
+
+/**
+ * Verify if the OSCORE context is attached to the @p c_context .
+ *
+ * @param c_context The context to check for the OSCORE context.
+ * @param oscore_ctx The OSCORE context to check for.
+ * @return @c 1 if the OSCORE context is attached to the @p c_context , else @c 0.
+ */
+int coap_oscore_is_attached(coap_context_t *c_context, oscore_ctx_t *oscore_ctx);
 
 /**
  * Cleanup all allocated OSCORE association information.
@@ -276,6 +309,17 @@ coap_session_t *coap_new_client_session_oscore3_lkd(coap_context_t *ctx,
                                                     coap_str_const_t *ws_host);
 
 /**
+ * Initializes an OSCORE context from the given configuration.
+ *
+ * @param oscore_conf The OSCORE configuration information to use to create
+ *                    the OSCORE context.
+ *                    Will alwatys be freed by this call.
+ *
+ * @return The created OSCORE context or NULL on failure.
+ */
+oscore_ctx_t *coap_init_oscore_context_from_conf(coap_oscore_conf_t *oscore_conf);
+
+/**
  * Creates a new client session to the designated server, with PKI credentials
  * protecting the data using OSCORE, along with app_data information (as per
  * coap_session_set_app_data2()) and optional WebSockets host (as per
@@ -377,6 +421,23 @@ coap_session_t *coap_new_client_session_oscore_psk3_lkd(coap_context_t *ctx,
  */
 int coap_new_oscore_recipient_lkd(coap_context_t *context,
                                   coap_bin_const_t *recipient_id);
+
+/**
+ * Set the latest sequence number and sliding window for the specified recipient
+ * id in the compiled configuration file.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param oscore_conf The compiled configuration file.
+ * @param recipient_id The Recipient ID to update in @p oscore_conf.
+ * @param last_seq The sequence number to update the recipient id with.
+ * @param seq_window The sliding window to update the recipient id with.
+ *
+ * @return @c 1 Successfully updated, else @c 0 recipient id not found.
+ */
+int coap_oscore_recipient_set_latest_seq_lkd(coap_oscore_conf_t *oscore_conf,
+                                             const coap_bin_const_t *recipient_id,
+                                             uint64_t last_seq, uint64_t seq_window);
 
 /** @} */
 

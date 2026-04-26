@@ -52,6 +52,8 @@
 /* Move ptr from b to a, and then clear b */
 #define OSC_MOVE_PTR(a,b) do { (a) = (b); (b) = NULL; } while(0)
 
+static int oscore_context_release_recipients(oscore_ctx_t *osc_ctx);
+
 static size_t
 compose_info(uint8_t *buffer,
              size_t buf_size,
@@ -128,28 +130,34 @@ oscore_enter_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
 }
 
 static void
-oscore_free_recipient(oscore_recipient_ctx_t *recipient) {
-  if (recipient == NULL)
+oscore_free_recipient_ctx(oscore_recipient_ctx_t *rcp_ctx) {
+  if (rcp_ctx == NULL)
     return;
-  /* remove recipient from oscore context chain if attached */
-  if (recipient->osc_ctx) {
-    if (recipient->osc_ctx->recipient_chain == recipient) {
-      recipient->osc_ctx->recipient_chain = recipient->next_recipient;
-    } else {
-      oscore_recipient_ctx_t *prev = recipient->osc_ctx->recipient_chain;
 
-      while (prev && prev->next_recipient != recipient) {
+  assert(rcp_ctx->ref > 0);
+  if (--rcp_ctx->ref > 0) {
+    return;
+  }
+
+  /* remove recipient from oscore context chain if attached */
+  if (rcp_ctx->osc_ctx) {
+    if (rcp_ctx->osc_ctx->recipient_chain == rcp_ctx) {
+      rcp_ctx->osc_ctx->recipient_chain = rcp_ctx->next_recipient;
+    } else {
+      oscore_recipient_ctx_t *prev = rcp_ctx->osc_ctx->recipient_chain;
+
+      while (prev && prev->next_recipient != rcp_ctx) {
         prev = prev->next_recipient;
       }
       if (prev) {
-        prev->next_recipient = recipient->next_recipient;
+        prev->next_recipient = rcp_ctx->next_recipient;
       }
     }
   }
 
-  coap_delete_bin_const(recipient->recipient_key);
-  coap_delete_bin_const(recipient->recipient_id);
-  coap_free_type(COAP_OSCORE_REC, recipient);
+  coap_delete_bin_const(rcp_ctx->recipient_key);
+  coap_delete_bin_const(rcp_ctx->recipient_id);
+  coap_free_type(COAP_OSCORE_REC, rcp_ctx);
 }
 
 void
@@ -172,7 +180,7 @@ oscore_free_context(oscore_ctx_t *osc_ctx) {
   while (osc_ctx->recipient_chain) {
     oscore_recipient_ctx_t *next = osc_ctx->recipient_chain->next_recipient;
 
-    oscore_free_recipient(osc_ctx->recipient_chain);
+    oscore_free_recipient_ctx(osc_ctx->recipient_chain);
     osc_ctx->recipient_chain = next;
   }
 
@@ -200,8 +208,64 @@ oscore_free_contexts(coap_context_t *c_context) {
     }
     osc_ctx->next = NULL;
 
-    oscore_free_context(osc_ctx);
+    /*
+     * Verify if all recipients can be released, if not
+     * defer freeing of context until later when all recipients are released.
+     * The oscore context is flagged as ready to be freed by removing
+     * the oscore context from the coap context.
+     */
+    if (oscore_context_release_recipients(osc_ctx) > 0) {
+      oscore_free_context(osc_ctx);
+    }
   }
+}
+
+/**
+ * Function checks attached recipients, if any
+ * attached recipient has a reference counter higher then 1,
+ * it is referenced by another active session or association and can not be freed yet,
+ * otherwise will release the recipient.
+ *
+ * @param osc_ctx The OSCORE context to check attached recipients for.
+ *
+ * @return @c 1 if all recipients are released,
+ *         @c 0 if some recipients are still referenced externally and can not
+ *              be released yet,
+ */
+static int
+oscore_context_release_recipients(oscore_ctx_t *osc_ctx) {
+  int ok = 1;
+
+  oscore_recipient_ctx_t *prev = NULL;
+  oscore_recipient_ctx_t *next = osc_ctx->recipient_chain;
+
+  while (next != NULL) {
+    /* if reference is 1 or lower, ready to be freed */
+    if (next->ref <= 1) {
+      oscore_recipient_ctx_t *to_free = next;
+      next = next->next_recipient;
+      oscore_free_recipient_ctx(to_free);
+      continue;
+    }
+
+    /*
+     * Recipient is still attached to an oscore association or session,
+     * can not be freed yet. Decrease ref counter and keep in chain.
+     */
+    next->ref--;
+    ok = 0;
+
+    /* keep recipient in chain, since still referenced by other
+       session or association */
+    if (prev != NULL) {
+      prev->next_recipient = next;
+    } else {
+      osc_ctx->recipient_chain = next;
+    }
+    prev = next;
+    next = next->next_recipient;
+  }
+  return ok;
 }
 
 int
@@ -228,6 +292,17 @@ oscore_remove_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
           c_context->p_osc_ctx = next->next;
       }
       next->next = NULL;
+      /*
+       * Only free context if no recipient is still referenced by
+       * an association or session. Otherwise defer context to be
+       * freed after all references are resolved.
+       */
+      if (oscore_context_release_recipients(osc_ctx) <= 0) {
+        return 2;
+      }
+
+      /* all related recipient ctx attachments are released */
+      osc_ctx->recipient_chain = NULL;
       oscore_free_context(osc_ctx);
       return 1;
     }
@@ -243,11 +318,84 @@ oscore_remove_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
  * Updates recipient_ctx.
  */
 oscore_ctx_t *
-oscore_find_context(const coap_session_t *session,
+oscore_find_context(coap_session_t *session,
                     const coap_bin_const_t rcpkey_id,
                     const coap_bin_const_t *ctxkey_id,
                     uint8_t *oscore_r2,
                     oscore_recipient_ctx_t **recipient_ctx) {
+  if (session->context->oscore_find_cb != NULL) {
+    oscore_ctx_t *tmp_ctx = NULL;
+    coap_oscore_conf_t *oscore_conf;
+
+    if (session->recipient_ctx) {
+      tmp_ctx = session->recipient_ctx->osc_ctx;
+      if (!tmp_ctx) {
+        return NULL;
+      }
+      if (coap_binary_equal(session->recipient_ctx->recipient_id, &rcpkey_id)) {
+        if (oscore_r2) {
+          if (tmp_ctx->id_context != NULL &&
+              tmp_ctx->id_context->length > 8) {
+            if (memcmp(tmp_ctx->id_context->s, oscore_r2, 8) == 0) {
+              goto match;
+            }
+          }
+        } else if (ctxkey_id) {
+          if (session->recipient_ctx->osc_ctx->id_context != NULL) {
+            if (!coap_binary_equal(tmp_ctx->id_context, ctxkey_id)) {
+              return NULL;
+            }
+          } else if (ctxkey_id->length > 0) {
+            return NULL;
+          }
+        }
+match:
+        *recipient_ctx = session->recipient_ctx;
+        return session->recipient_ctx->osc_ctx;
+      }
+    }
+    coap_lock_callback_ret(oscore_conf, session->context->oscore_find_cb(session,
+                           &rcpkey_id,
+                           ctxkey_id));
+
+    if (oscore_conf) {
+      tmp_ctx = coap_init_oscore_context_from_conf(oscore_conf);
+    }
+
+    if (tmp_ctx != NULL) {
+      /*
+       * find matching recipient and remove others if multiple recipients
+       * have been provided. ensures unneeded memory is freed early
+       * to prevent memory leaks and unnecessary memory usage.
+       */
+      if (tmp_ctx->recipient_chain != NULL &&
+          tmp_ctx->recipient_chain->next_recipient != NULL) {
+        oscore_recipient_ctx_t *rcp_ctx = tmp_ctx->recipient_chain;
+        oscore_recipient_ctx_t *ref_ctx = NULL;
+        while (rcp_ctx != NULL) {
+          ref_ctx = rcp_ctx;
+          rcp_ctx = rcp_ctx->next_recipient;
+          if (coap_binary_equal(ref_ctx->recipient_id, &rcpkey_id)) {
+            ref_ctx->next_recipient = NULL;
+            *recipient_ctx = ref_ctx;
+          } else {
+            coap_delete_bin_const(ref_ctx->recipient_key);
+            coap_delete_bin_const(ref_ctx->recipient_id);
+            coap_free_type(COAP_OSCORE_REC, (void *)ref_ctx);
+          }
+        }
+      } else {
+        *recipient_ctx = tmp_ctx->recipient_chain;
+      }
+      tmp_ctx->recipient_chain = *recipient_ctx;
+      coap_oscore_session_set_recipient_ctx(session, *recipient_ctx);
+      /* Remove the tmp_ctx reference */
+      if (*recipient_ctx)
+        (*recipient_ctx)->ref--;
+      return tmp_ctx;
+    }
+  }
+
   oscore_ctx_t *pt = session->context->p_osc_ctx;
 
   *recipient_ctx = NULL;
@@ -602,7 +750,7 @@ error:
 }
 
 oscore_ctx_t *
-oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
+oscore_derive_ctx_from_conf(coap_oscore_conf_t *oscore_conf) {
   oscore_ctx_t *osc_ctx = NULL;
   oscore_sender_ctx_t *sender_ctx = NULL;
   coap_oscore_rcp_conf_t *rcp_conf;
@@ -702,14 +850,28 @@ oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
     goto error;
 
   oscore_log_context(osc_ctx, "Common context");
-
-  oscore_enter_context(c_context, osc_ctx);
-
   return osc_ctx;
-
 error:
   oscore_free_context(osc_ctx);
   return NULL;
+}
+
+int
+oscore_add_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
+  oscore_enter_context(c_context, osc_ctx);
+  return 1;
+}
+
+int
+oscore_is_context_attached(const oscore_ctx_t *osc_ctx) {
+  return osc_ctx->next != NULL;
+}
+
+oscore_ctx_t *
+oscore_derive_ctx(coap_context_t *c_context, coap_oscore_conf_t *oscore_conf) {
+  oscore_ctx_t *osc_ctx = oscore_derive_ctx_from_conf(oscore_conf);
+  oscore_enter_context(c_context, osc_ctx);
+  return osc_ctx;
 }
 
 oscore_recipient_ctx_t *
@@ -762,6 +924,10 @@ oscore_add_recipient(oscore_ctx_t *osc_ctx, coap_oscore_rcp_conf_t *rcp_conf,
   }
   rcp_ctx->silent_server = rcp_conf->silent_server;
   OSC_MOVE_PTR(rcp_ctx->recipient_id, rcp_conf->recipient_id);
+  if (rcp_conf->window_initialized) {
+    rcp_ctx->last_seq = rcp_conf->last_seq;
+    rcp_ctx->sliding_window = rcp_conf->sliding_window;
+  }
 
   rcp_ctx->initial_state = 1;
   rcp_ctx->osc_ctx = osc_ctx;
@@ -769,7 +935,8 @@ oscore_add_recipient(oscore_ctx_t *osc_ctx, coap_oscore_rcp_conf_t *rcp_conf,
   rcp_chain = osc_ctx->recipient_chain;
   rcp_ctx->next_recipient = rcp_chain;
   osc_ctx->recipient_chain = rcp_ctx;
-  /* Just free rcp_conf as all configured values are now in rcp_ctx */
+  oscore_reference_recipient_ctx(rcp_ctx);
+  /* All configured values are now in rcp_ctx */
   coap_free_type(COAP_STRING, rcp_conf);
   return rcp_ctx;
 
@@ -790,7 +957,7 @@ oscore_delete_recipient(oscore_ctx_t *osc_ctx, coap_bin_const_t *rid) {
         prev->next_recipient = next->next_recipient;
       else
         osc_ctx->recipient_chain = next->next_recipient;
-      oscore_free_recipient(next);
+      oscore_free_recipient_ctx(next);
       return 1;
     }
     prev = next;
@@ -800,8 +967,35 @@ oscore_delete_recipient(oscore_ctx_t *osc_ctx, coap_bin_const_t *rid) {
 }
 
 void
+oscore_reference_recipient_ctx(oscore_recipient_ctx_t *recipient_ctx) {
+  recipient_ctx->ref++;
+}
+
+void
+oscore_release_recipient_ctx(oscore_recipient_ctx_t **recipient_ctx) {
+  oscore_ctx_t *osc_ctx;
+
+  if (recipient_ctx == NULL || *recipient_ctx == NULL)
+    return;
+
+  /* ensure oscore context is freed if not attached to coap context */
+  osc_ctx = (*recipient_ctx)->osc_ctx;
+  oscore_free_recipient_ctx(*recipient_ctx);
+  /*
+   * Free temporary oscore context if not attached to a coap context
+   * and no recipients attached anymore.
+   */
+  if (!oscore_is_context_attached(osc_ctx) && osc_ctx->recipient_chain == NULL) {
+    oscore_free_context(osc_ctx);
+  }
+  *recipient_ctx = NULL;
+}
+
+void
 oscore_free_association(oscore_association_t *association) {
   if (association) {
+    oscore_release_recipient_ctx(&association->recipient_ctx);
+
     coap_delete_pdu_lkd(association->sent_pdu);
     coap_delete_bin_const(association->token);
     coap_delete_bin_const(association->aad);
@@ -828,7 +1022,7 @@ oscore_new_association(coap_session_t *session,
     return 0;
 
   memset(association, 0, sizeof(oscore_association_t));
-  association->recipient_ctx = recipient_ctx;
+  coap_oscore_association_set_recipient_ctx(association, recipient_ctx);
   association->is_observe = is_observe;
   association->just_set_up = 1;
 

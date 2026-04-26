@@ -13,8 +13,10 @@ NAME
 coap_oscore,
 coap_new_oscore_conf,
 coap_delete_oscore_conf,
+coap_oscore_register_external_handlers,
 coap_new_oscore_recipient,
 coap_delete_oscore_recipient,
+coap_oscore_recipient_set_latest_seq,
 coap_new_client_session_oscore3,
 coap_new_client_session_oscore_pki3,
 coap_new_client_session_oscore_psk3,
@@ -31,11 +33,19 @@ void *_save_seq_num_func_param_, uint64_t _start_seq_num_);*
 
 *int coap_delete_oscore_conf(coap_oscore_conf_t *_oscore_conf_);*
 
+*void coap_oscore_register_external_handlers(coap_context_t *_context_,
+coap_oscore_find_handler_t _find_handler_,
+coap_oscore_update_seq_num_handler_t _update_seq_num_handler_);*
+
 *int coap_new_oscore_recipient(coap_context_t *_context_,
 coap_bin_const_t *_recipient_id_);*
 
 *int coap_delete_oscore_recipient(coap_context_t *_context_,
 coap_bin_const_t *_recipient_id_);*
+
+*int coap_oscore_recipient_set_latest_seq(coap_oscore_conf_t *_oscore_conf_,
+const coap_bin_const_t *_recipient_id_, uint64_t _last_seq_,
+uint64_t _seq_window_);*
 
 *coap_session_t *coap_new_client_session_oscore3(coap_context_t *_context_,
 const coap_address_t *_local_if_, const coap_address_t *_server_,
@@ -75,6 +85,48 @@ manipulate information.
 
 CALLBACK HANDLER
 ----------------
+
+*Callback Type: coap_oscore_find_handler_t*
+
+The coap_oscore_find_handler_t method handler function prototype is defined as:
+[source, c]
+----
+/**
+ * Callback function type for overriding oscore_find_context().
+ */
+typedef coap_oscore_conf_t *(*coap_oscore_find_handler_t)(
+  const coap_session_t    *session,
+  const coap_bin_const_t   rcpkey_id,
+  const coap_bin_const_t   ctxkey_id
+);
+----
+
+If this callback is registered with
+*coap_oscore_register_external_handlers*(), libcoap calls it when
+incoming OSCORE traffic needs a context lookup. The callback can return
+temporary credentials sourced from an external store (for example a file or
+database keyed by Recipient ID and Context ID).
+
+*Callback Type: coap_oscore_update_seq_num_handler_t*
+
+The coap_oscore_update_seq_num_handler_t method handler function prototype is
+defined as:
+[source, c]
+----
+/**
+ * Callback function type for persisting OSCORE sequence and replay state.
+ */
+typedef int (*coap_oscore_update_seq_num_handler_t)(
+  const coap_session_t *session,
+  const coap_bin_const_t rcpkey_id,
+  const coap_bin_const_t ctxkey_id,
+  uint64_t             receiver_seq_num,
+  uint64_t             seq_num_window
+);
+----
+
+This callback can be used to keep external storage synchronized whenever
+sequence/replay state changes.
 
 *Callback Type: coap_oscore_save_seq_num_t*
 
@@ -140,12 +192,32 @@ The *coap_delete_oscore_recipient*() is used to remove the _recipient_id_ from
 the OSCORE information associated with _context_.  OSCORE Traffic continuing
 to use _recipient_id_ will then fail.
 
+*Function: coap_oscore_recipient_set_latest_seq()*
+
+The *coap_oscore_recipient_set_latest_seq*() is used to set the _last_seq_
+and _sliding_window_ to be used following an application restart for the
+continuation of the same OSCORE session. _last_seq_ and _sliding_window_
+are set in the compiled _oscore_conf_ for _recipient_id_.
+If not set, _last_seq_ and _sliding_window_ are 0, used for starting a new
+OSCORE session.
+
 *Function: coap_delete_oscore_conf()*
 
 The *coap_delete_oscore_conf*() function is used to free off the
 coap_oscore_conf_t structure _oscore_conf_ as returned by
 *coap_new_oscore_conf*().  Normally this function never needs to be called
 as _oscore_conf_ is freed off by the call the client or server setup functions.
+
+*Function: coap_oscore_register_external_handlers()*
+
+The *coap_oscore_register_external_handlers*() function registers callbacks
+for custom OSCORE credential/state storage. It can be used to:
+
+* override context lookup (_find_handler_)
+* persist sequence/replay state (_update_seq_num_handler_)
+
+When no handler is required, pass NULL for that callback. If _find_handler_ is
+set, then _update_seq_num_handler_ should also be defined.
 
 *Function: coap_new_client_session_oscore3()*
 
@@ -238,6 +310,9 @@ or NULL on failure.
 *coap_context_oscore_server*(), *coap_delete_oscore_conf*(),
 *coap_new_oscore_recipient*() and *coap_delete_oscore_recipient*()
 return 0 on failure, 1 on success.
+
+*coap_oscore_recipient_set_latest_seq*() returns 1 on successful update,
+else 0 if _recipient_id_ was not found.
 
 EXAMPLES
 --------

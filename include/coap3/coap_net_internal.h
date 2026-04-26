@@ -20,6 +20,7 @@
 
 #include "coap_subscribe.h"
 #include "coap_resource.h"
+#include "coap_oscore.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -102,6 +103,9 @@ struct coap_context_t {
 #endif /* RIOT_VERSION */
 #if COAP_OSCORE_SUPPORT
   struct oscore_ctx_t *p_osc_ctx; /**< primary oscore context  */
+  coap_oscore_find_handler_t oscore_find_cb; /**< Optional override for oscore_find_context() */
+  coap_oscore_update_seq_num_handler_t
+  oscore_update_seq_num_cb; /**< Optional function to call to update sequence number and window values */
 #endif /* COAP_OSCORE_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT

@@ -208,6 +208,8 @@ global:
   coap_option_iterator_init;
   coap_option_next;
   coap_oscore_is_supported;
+  coap_oscore_recipient_set_latest_seq;
+  coap_oscore_register_external_handlers;
   coap_package_build;
   coap_package_name;
   coap_package_version;

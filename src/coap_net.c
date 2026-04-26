@@ -871,10 +871,6 @@ coap_free_context_lkd(coap_context_t *context) {
   coap_delete_all_async(context);
 #endif /* COAP_ASYNC_SUPPORT */
 
-#if COAP_OSCORE_SUPPORT
-  coap_delete_all_oscore(context);
-#endif /* COAP_OSCORE_SUPPORT */
-
 #if COAP_SERVER_SUPPORT
   coap_cache_entry_t *cp, *ctmp;
   coap_endpoint_t *ep, *tmp;
@@ -898,6 +894,10 @@ coap_free_context_lkd(coap_context_t *context) {
     coap_session_release_lkd(sp);
   }
 #endif /* COAP_CLIENT_SUPPORT */
+
+#if COAP_OSCORE_SUPPORT
+  coap_delete_all_oscore(context);
+#endif /* COAP_OSCORE_SUPPORT */
 
   if (context->dtls_context)
     coap_dtls_free_context(context->dtls_context);
@@ -1010,7 +1010,8 @@ coap_option_check_critical(coap_session_t *session,
       case COAP_OPTION_OSCORE:
         /* Valid critical if doing OSCORE */
 #if COAP_OSCORE_SUPPORT
-        if (ctx->p_osc_ctx)
+        /* Generally configured or has coap oscore enabled helper function */
+        if (ctx->p_osc_ctx || ctx->oscore_find_cb)
           break;
 #endif /* COAP_OSCORE_SUPPORT */
       /* Fall Through */

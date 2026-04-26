@@ -59,7 +59,7 @@ coap_oscore_initiate(coap_session_t *session, coap_oscore_conf_t *oscore_conf) {
     if (osc_ctx == NULL) {
       return 0;
     }
-    session->recipient_ctx = osc_ctx->recipient_chain;
+    coap_oscore_session_set_recipient_ctx(session, osc_ctx->recipient_chain);
     session->oscore_encryption = 1;
   }
   return 1;
@@ -781,7 +781,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
           coap_new_bin_const(cose->partial_iv.s, cose->partial_iv.length);
       if (association->partial_iv == NULL)
         goto error;
-      association->recipient_ctx = rcp_ctx;
+      coap_oscore_association_set_recipient_ctx(association, rcp_ctx);
       coap_delete_pdu_lkd(association->sent_pdu);
       if (session->b_2_step != COAP_OSCORE_B_2_NONE || association->just_set_up) {
         size_t size;
@@ -877,6 +877,23 @@ fail_resp:
   return;
 }
 
+oscore_ctx_t *
+coap_init_oscore_context_from_conf(coap_oscore_conf_t *oscore_conf) {
+  oscore_ctx_t *oscore_ctx = oscore_derive_ctx_from_conf(oscore_conf);
+
+  if (oscore_ctx == NULL) {
+    goto error;
+  }
+
+  /* As all is stored in osc_ctx, oscore_conf is no longer needed */
+  coap_free_type(COAP_STRING, oscore_conf);
+
+  return oscore_ctx;
+error:
+  coap_delete_oscore_conf(oscore_conf);
+  return NULL;
+}
+
 /* pdu contains incoming message with encrypted COSE ciphertext payload
  * function returns decrypted message
  * and verifies signature, if present
@@ -919,7 +936,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   if (opt == NULL)
     return NULL;
 
-  if (session->context->p_osc_ctx == NULL) {
+  if (session->context->p_osc_ctx == NULL && session->context->oscore_find_cb == NULL) {
     coap_log_warn("OSCORE: Not enabled\n");
     if (!coap_request)
       coap_handle_event_lkd(session->context,
@@ -1101,7 +1118,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       goto error_no_ack;
     }
     /* to be used for encryption of returned response later */
-    session->recipient_ctx = rcp_ctx;
+    coap_oscore_session_set_recipient_ctx(session, rcp_ctx);
     snd_ctx = osc_ctx->sender_context;
 
     /*
@@ -1127,6 +1144,13 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       incoming_seq =
           coap_decode_var_bytes8(cose->partial_iv.s, cose->partial_iv.length);
       rcp_ctx->last_seq = incoming_seq;
+    } else if (session->context->oscore_update_seq_num_cb != NULL) {
+      /* notify custom credential storage */
+      coap_lock_callback(session->context->oscore_update_seq_num_cb(session,
+                         rcp_ctx->recipient_id,
+                         osc_ctx->id_context,
+                         rcp_ctx->last_seq,
+                         rcp_ctx->sliding_window));
     }
   } else { /* !coap_request */
     /*
@@ -1284,7 +1308,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       association->aad = coap_new_bin_const(cose->aad.s, cose->aad.length);
       if (association->aad == NULL)
         goto error;
-      association->recipient_ctx = rcp_ctx;
+      coap_oscore_association_set_recipient_ctx(association, rcp_ctx);
       /* So association is not released when handling decrypt */
       association = NULL;
     } else if (!oscore_new_association(session,
@@ -1579,6 +1603,15 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                      NULL,
                                      0);
             goto error_no_ack;
+          } else {
+            if (session->context->oscore_update_seq_num_cb != NULL) {
+              /* notify echo challenge changed */
+              coap_lock_callback(session->context->oscore_update_seq_num_cb(session,
+                                 rcp_ctx->recipient_id,
+                                 osc_ctx->id_context,
+                                 rcp_ctx->last_seq,
+                                 rcp_ctx->sliding_window));
+            }
           }
         } else
           goto error;
@@ -1590,6 +1623,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
         }
         coap_prng_lkd(rcp_ctx->echo_value, sizeof(rcp_ctx->echo_value));
         coap_log_oscore("Appendix B.1.2 server plain response\n");
+
         build_and_send_error_pdu(session,
                                  pdu,
                                  COAP_RESPONSE_CODE(401),
@@ -1753,6 +1787,7 @@ typedef enum {
   COAP_ENC_INTEGER = 0x400,
   COAP_ENC_TEXT = 0x800,
   COAP_ENC_BOOL = 0x1000,
+  COAP_ENC_UNSIGNED64 = 0x2000,
   COAP_ENC_LAST
 } coap_oscore_coding_t;
 
@@ -1768,6 +1803,7 @@ static struct coap_oscore_encoding_t {
   TEXT_MAPPING(hex, COAP_ENC_HEX),
   TEXT_MAPPING(config, COAP_ENC_CONFIG),
   TEXT_MAPPING(integer, COAP_ENC_INTEGER),
+  TEXT_MAPPING(unsigned64, COAP_ENC_UNSIGNED64),
   TEXT_MAPPING(text, COAP_ENC_TEXT),
   TEXT_MAPPING(bool, COAP_ENC_BOOL),
   {{0, NULL}, COAP_ENC_LAST}
@@ -1778,6 +1814,7 @@ typedef struct {
   const char *encoding_name;
   union {
     int value_int;
+    uint64_t value_int64;
     coap_bin_const_t *value_bin;
     coap_str_const_t value_str;
   } u;
@@ -1972,6 +2009,10 @@ retry:
   case COAP_ENC_INTEGER:
     value->u.value_int = atoi(begin);
     break;
+  case COAP_ENC_UNSIGNED64: {
+    value->u.value_int64 = strtoull(begin, NULL, 10);
+    break;
+  }
   case COAP_ENC_TEXT:
     value->u.value_str.s = (const uint8_t *)begin;
     value->u.value_str.length = end - begin;
@@ -2070,6 +2111,8 @@ static oscore_config_t oscore_snd_config[] = {
 static oscore_config_t oscore_rcp_config[] = {
   CONFIG_RCP_ENTRY(recipient_id, COAP_ENC_HEX | COAP_ENC_ASCII, NULL),
   CONFIG_RCP_ENTRY(silent_server, COAP_ENC_BOOL, NULL),
+  CONFIG_DUMMY_ENTRY(last_seq,       COAP_ENC_UNSIGNED64, NULL),
+  CONFIG_DUMMY_ENTRY(sliding_window, COAP_ENC_UNSIGNED64, NULL),
 };
 
 
@@ -2185,6 +2228,7 @@ coap_parse_oscore_snd_conf_mem(coap_bin_const_t conf_mem) {
           }
           break;
         case COAP_ENC_CONFIG:
+        case COAP_ENC_UNSIGNED64:
         case COAP_ENC_LAST:
         default:
           assert(0);
@@ -2242,56 +2286,65 @@ coap_parse_oscore_rcp_conf_mem(coap_bin_const_t conf_mem) {
     for (i = 0; i < sizeof(oscore_rcp_config) / sizeof(oscore_rcp_config[0]); i++) {
       if (coap_string_equal(&oscore_rcp_config[i].str_keyword, &keyword) != 0 &&
           value.encoding & oscore_rcp_config[i].encoding) {
-        coap_bin_const_t *unused_check;
+        if (coap_string_equal(coap_make_str_const("last_seq"), &keyword)) {
+          rcp_conf->last_seq = value.u.value_int64;
+          rcp_conf->window_initialized = 1;
+        } else if (coap_string_equal(coap_make_str_const("sliding_window"), &keyword)) {
+          rcp_conf->sliding_window = value.u.value_int64;
+          rcp_conf->window_initialized = 1;
+        } else {
+          coap_bin_const_t *unused_check;
 
-        switch (value.encoding) {
-        case COAP_ENC_HEX:
-        case COAP_ENC_ASCII:
-          memcpy(&unused_check,
-                 &(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
-                 sizeof(unused_check));
-          if (unused_check != NULL) {
-            coap_log_warn("oscore_rcp_conf: Keyword '%.*s' duplicated\n",
-                          (int)keyword.length,
-                          (const char *)keyword.s);
-            coap_delete_bin_const(value.u.value_bin);
-            goto error;
-          }
-          memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
-                 &value.u.value_bin,
-                 sizeof(value.u.value_bin));
-          break;
-        case COAP_ENC_INTEGER:
-        case COAP_ENC_BOOL:
-          memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
-                 &value.u.value_int,
-                 sizeof(value.u.value_int));
-          break;
-        case COAP_ENC_TEXT:
-          for (j = 0; oscore_rcp_config[i].text_mapping[j].text.s != NULL; j++) {
-            if (memcmp(value.u.value_str.s,
-                       oscore_rcp_config[i].text_mapping[j].text.s,
-                       value.u.value_str.length) == 0) {
-              memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
-                     &oscore_rcp_config[i].text_mapping[j].value,
-                     sizeof(oscore_rcp_config[i].text_mapping[j].value));
-              break;
+          switch (value.encoding) {
+          case COAP_ENC_HEX:
+          case COAP_ENC_ASCII:
+            memcpy(&unused_check,
+                   &(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
+                   sizeof(unused_check));
+            if (unused_check != NULL) {
+              coap_log_warn("oscore_rcp_conf: Keyword '%.*s' duplicated\n",
+                            (int)keyword.length,
+                            (const char *)keyword.s);
+              coap_delete_bin_const(value.u.value_bin);
+              goto error;
             }
+            memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
+                   &value.u.value_bin,
+                   sizeof(value.u.value_bin));
+            break;
+          case COAP_ENC_INTEGER:
+          case COAP_ENC_BOOL:
+            memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
+                   &value.u.value_int,
+                   sizeof(value.u.value_int));
+            break;
+          case COAP_ENC_TEXT:
+            for (j = 0; oscore_rcp_config[i].text_mapping[j].text.s != NULL; j++) {
+              if (memcmp(value.u.value_str.s,
+                         oscore_rcp_config[i].text_mapping[j].text.s,
+                         value.u.value_str.length) == 0) {
+                memcpy(&(((char *)rcp_conf)[oscore_rcp_config[i].offset]),
+                       &oscore_rcp_config[i].text_mapping[j].value,
+                       sizeof(oscore_rcp_config[i].text_mapping[j].value));
+                break;
+              }
+            }
+            if (oscore_rcp_config[i].text_mapping[j].text.s == NULL) {
+              coap_log_warn("oscore_rcp_conf: Keyword '%.*s': value '%.*s' unknown\n",
+                            (int)keyword.length,
+                            (const char *)keyword.s,
+                            (int)value.u.value_str.length,
+                            (const char *)value.u.value_str.s);
+              goto error;
+            }
+            break;
+          case COAP_ENC_CONFIG:
+          case COAP_ENC_UNSIGNED64:
+          case COAP_ENC_LAST:
+          default:
+            assert(0);
+            break;
           }
-          if (oscore_rcp_config[i].text_mapping[j].text.s == NULL) {
-            coap_log_warn("oscore_rcp_conf: Keyword '%.*s': value '%.*s' unknown\n",
-                          (int)keyword.length,
-                          (const char *)keyword.s,
-                          (int)value.u.value_str.length,
-                          (const char *)value.u.value_str.s);
-            goto error;
-          }
-          break;
-        case COAP_ENC_CONFIG:
-        case COAP_ENC_LAST:
-        default:
-          assert(0);
-          break;
         }
         break;
       }
@@ -2469,6 +2522,7 @@ coap_parse_oscore_conf_mem(coap_str_const_t conf_mem) {
               goto error;
             }
             break;
+          case COAP_ENC_UNSIGNED64:
           case COAP_ENC_LAST:
           default:
             assert(0);
@@ -2555,6 +2609,47 @@ coap_delete_oscore_associations(coap_session_t *session) {
   oscore_delete_server_associations(session);
 }
 
+void
+coap_oscore_session_set_recipient_ctx(coap_session_t *session,
+                                      oscore_recipient_ctx_t *recipient_ctx) {
+  oscore_recipient_ctx_t *old_ctx;
+
+  if (session == NULL || recipient_ctx == NULL)
+    return;
+
+  if (session->recipient_ctx == recipient_ctx) {
+    /* already attached */
+    return;
+  }
+
+  old_ctx = session->recipient_ctx;
+
+  /* attach recipient context */
+  session->recipient_ctx = recipient_ctx;
+  session->recipient_ctx->ref++;
+
+  if (old_ctx != NULL) {
+    oscore_release_recipient_ctx(&old_ctx);
+  }
+}
+
+void
+coap_oscore_association_set_recipient_ctx(oscore_association_t *association,
+                                          oscore_recipient_ctx_t *recipient_ctx) {
+  if (association == NULL)
+    return;
+
+  if (association->recipient_ctx == recipient_ctx)
+    return;
+
+  if (association->recipient_ctx != NULL) {
+    association->recipient_ctx->ref--;
+  }
+
+  association->recipient_ctx = recipient_ctx;
+  association->recipient_ctx->ref++;
+}
+
 coap_oscore_conf_t *
 coap_new_oscore_conf(coap_str_const_t conf_mem,
                      coap_oscore_save_seq_num_t save_seq_num_func,
@@ -2632,6 +2727,7 @@ int
 coap_new_oscore_recipient_lkd(coap_context_t *context,
                               coap_bin_const_t *recipient_id) {
   coap_oscore_rcp_conf_t *rcp_conf;
+  oscore_recipient_ctx_t *rcp_ctx;
 
   coap_lock_check_locked();
 
@@ -2647,7 +2743,8 @@ coap_new_oscore_recipient_lkd(coap_context_t *context,
   memset(rcp_conf, 0, sizeof(coap_oscore_rcp_conf_t));
   rcp_conf->recipient_id = recipient_id;
   /* rcp_conf is released in oscore_add_recipient() */
-  if (oscore_add_recipient(context->p_osc_ctx, rcp_conf, 0) == NULL)
+  rcp_ctx = oscore_add_recipient(context->p_osc_ctx, rcp_conf, 0);
+  if (rcp_ctx == NULL)
     return 0;
   return 1;
 }
@@ -2672,6 +2769,62 @@ coap_delete_oscore_recipient_lkd(coap_context_t *context,
   if (context->p_osc_ctx == NULL)
     return 0;
   return oscore_delete_recipient(context->p_osc_ctx, recipient_id);
+}
+
+void
+coap_oscore_register_external_handlers(coap_context_t                       *context,
+                                       coap_oscore_find_handler_t           find_handler,
+                                       coap_oscore_update_seq_num_handler_t update_seq_num_handler) {
+  if (context == NULL)
+    return;
+
+  coap_lock_lock(return);
+  context->oscore_find_cb = find_handler;
+  context->oscore_update_seq_num_cb = update_seq_num_handler;
+  coap_lock_unlock();
+}
+
+static coap_oscore_rcp_conf_t *
+coap_oscore_get_recipient_conf(coap_oscore_conf_t *oscore_conf,
+                               const coap_bin_const_t *rid) {
+  coap_oscore_rcp_conf_t *next = oscore_conf->recipient_chain;
+
+  while (next) {
+    if (coap_binary_equal(next->recipient_id, rid)) {
+      return next;
+    }
+    next = next->next_recipient;
+  }
+  return NULL;
+}
+
+
+COAP_API int
+coap_oscore_recipient_set_latest_seq(coap_oscore_conf_t *oscore_conf,
+                                     const coap_bin_const_t *recipient_id,
+                                     uint64_t last_seq, uint64_t seq_window) {
+  int ret;
+
+  coap_lock_lock(return 0);
+  ret = coap_oscore_recipient_set_latest_seq_lkd(oscore_conf, recipient_id, last_seq,
+                                                 seq_window);
+  coap_lock_unlock();
+  return ret;
+}
+
+int
+coap_oscore_recipient_set_latest_seq_lkd(coap_oscore_conf_t *oscore_conf,
+                                         const coap_bin_const_t *recipient_id,
+                                         uint64_t last_seq, uint64_t seq_window) {
+  coap_oscore_rcp_conf_t *rcp_conf;
+
+  rcp_conf = coap_oscore_get_recipient_conf(oscore_conf, recipient_id);
+  if (rcp_conf) {
+    rcp_conf->last_seq = last_seq;
+    rcp_conf->sliding_window = seq_window;
+    return 1;
+  }
+  return 0;
 }
 
 /** @} */
@@ -2831,6 +2984,35 @@ coap_delete_oscore_recipient(coap_context_t *context,
                              coap_bin_const_t *recipient_id) {
   (void)context;
   (void)recipient_id;
+  return 0;
+}
+
+void
+coap_oscore_register_external_handlers(coap_context_t                       *context,
+                                       coap_oscore_find_handler_t           find_handler,
+                                       coap_oscore_update_seq_num_handler_t update_seq_num_handler) {
+  (void)context;
+  (void)find_handler;
+  (void)update_seq_num_handler;
+}
+
+COAP_API int
+coap_oscore_recipient_set_last_seq(coap_oscore_conf_t *oscore_conf,
+                                   const coap_bin_const_t *recipient_id,
+                                   uint64_t last_seq) {
+  (void)oscore_conf;
+  (void)recipient_id;
+  (void)last_seq;
+  return 0;
+}
+
+COAP_API int
+coap_oscore_recipient_set_seq_window(coap_oscore_conf_t *oscore_conf,
+                                     const coap_bin_const_t *recipient_id,
+                                     uint64_t seq_window) {
+  (void)oscore_conf;
+  (void)recipient_id;
+  (void)seq_window;
   return 0;
 }
 

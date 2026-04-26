@@ -26,7 +26,8 @@ SYNOPSIS
               [*-y* rec_secs] [*-z* scheme://addr[:port][/resource[?query]]]
               [*-A* address]
               [*-B* resource[:check] [*-E* oscore_conf_file[,seq_file]]
-              [*-G* group_if] [*-I* rate_limit_ppm] [*-K* interval] [*-L* value] [*-N*]
+              [*-G* group_if] [*-I* rate_limit_ppm] [*-K* interval] [*-L* value]
+              [*-N*] [*-O* oscore_cred_dir]
               [*-P* scheme://addr[:port] | allow-mcast,[name1[,name2..]]]
               [*-T* max_token_size] [*-U* type] [*-V* num] [*-X* size]
               [*-Z* fail] [*-3*]
@@ -174,6 +175,20 @@ OPTIONS - General
    not specified, a confirmable response will be sent.  Even if set, every
    fifth response will still be sent as a confirmable response
    (RFC 7641 requirement).
+
+*-O* oscore_cred_dir::
+   Directory containing OSCORE credential files to be dynamically loaded named
+   as <kid>_<kid_context>.txt where <kid> and <kid_context> are hex-encoded
+   byte strings, but can be 0 length. <kid> and <kid_context> are determined
+   from the requesting CoAP OSCORE option and map to recipient_id and
+   id_context respectively.  These files use coap-oscore-conf(5) definitions.
+   Demonstrates the use of an external OSCORE credential store.
+   A <kid>_<kid_context>_seq.txt file contains the recipient sequence counter
+   and window. To enforce a new echo challenge the <kid>_<kid_context>_seq.txt
+   file can be deleted, to remove the credentials, the <kid>_<kid_context>.txt
+   file can be deleted. Can be combined with -E for a default configuration.
+   Note: If rfc8613_b_2,bool,true is set, then <kid_context> must not be defined,
+   even if id_context is defined.
 
 *-P* scheme://address[:port],[name1[,name2[,name3..]]] ::
    Scheme, address, optional port of how to connect to the next proxy server
