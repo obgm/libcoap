@@ -33,6 +33,56 @@ extern "C" {
  */
 
 /**
+ * Callback function type for overriding oscore_find_context().
+ *
+ * If set via coap_oscore_register_external_handlers(), this function is
+ * called before the internal oscore_find_context() to locate the OSCORE
+ * recipient and security context for an incoming request.
+ *
+ * The implementation of this function should be combined with
+ * @ref coap_oscore_update_seq_num_handler_t if sequence counter management is required.
+ * Otherwise, libcoap will lose those values
+ * and replay protection will not work properly.
+ *
+ * @param session    The active CoAP session receiving the request from.
+ * @param rcpkey_id  The Recipient Key ID (KID).
+ * @param ctxkey_id  The ID Context to match or NULL.
+ *
+ * @return The OSCORE config retrieved from the custom OSCORE storage or NULL if not found.
+ *         Will fallback to libcoap internal credential storage lookup.
+ */
+typedef coap_oscore_conf_t *(*coap_oscore_find_handler_t)(
+    const coap_session_t    *session,
+    const coap_bin_const_t  *rcpkey_id,
+    const coap_bin_const_t  *ctxkey_id
+);
+
+/**
+ * Callback function type for persisting the OSCORE receiver sequence number
+ * and anti-replay sliding window to an external storage.
+ *
+ * Called by the library whenever the Receiver Sequence Number or the
+ * anti-replay window is updated, giving the application the opportunity to
+ * store both values for external OSCORE credential management. Required
+ * to provide those values via the coap_oscore_find_handler_t callback, since
+ * the values will otherwise be lost.
+ *
+ * @param session           The active CoAP session receiving the request from.
+ * @param rcpkey_id         The Recipient ID for which the sequence number and window applies.
+ * @param ctxkey_id         The ID Context for which the sequence number and window applies.
+ * @param receiver_seq_num  The receiver sequence number.
+ * @param seq_num_window    The 64-bit anti-replay sliding window bitmask.
+ * @return @c 1 if persisted successfully, else @c 0.
+ */
+typedef int (*coap_oscore_update_seq_num_handler_t)(
+    const coap_session_t *session,
+    const coap_bin_const_t *rcpkey_id,
+    const coap_bin_const_t *ctxkey_id,
+    uint64_t             receiver_seq_num,
+    uint64_t             seq_num_window
+);
+
+/**
  * Creates a new client session to the designated server, protecting the data
  * using OSCORE.
  *
@@ -238,6 +288,7 @@ COAP_API coap_session_t *coap_new_client_session_oscore_pki3(coap_context_t *ctx
     void *app_data,
     coap_app_data_free_callback_t callback,
     coap_str_const_t *ws_host);
+
 /**
  * Set the context's default OSCORE configuration for a server.
  *
@@ -288,17 +339,45 @@ coap_oscore_conf_t *coap_new_oscore_conf(coap_str_const_t conf_mem,
  *
  * @param oscore_conf The OSCORE configuration structure to release.
  *
- * @return @c 1 Successfully removed, else @c 0 not found.
+ * @return @c 1 Successfully released, else @c 0 if not valid.
  */
 int coap_delete_oscore_conf(coap_oscore_conf_t *oscore_conf);
+
+/**
+ * Register external storage handlers for OSCORE session state.
+ *
+ * Allows providing a custom OSCORE credential storage for
+ * persistence and optimized for the needs of the application.
+ * Expands the built-in OSCORE context lookup and enables management
+ * of persistent OSCORE data (sequence numbers and Echo challenges)
+ * from within the application.
+ *
+ * @param context                 The CoAP context to configure.
+ * @param find_handler            Inject a customized OSCORE config-lookup function
+ *                                to return temporary oscore credentials managed by
+ *                                an external credential store (see coap_oscore_find_handler_t),
+ *                                or @c NULL to only use the built-in oscore_find_context().
+ * @param update_seq_num_handler  Called whenever the Sender Sequence Number
+ *                                or anti-replay window changes.  Use this
+ *                                to synchronize values with the external
+ *                                credential storage.  @c NULL to disable.
+ *                                If find_handler is set, then it is recommended that
+ *                                update_seq_num_handler is set.
+ */
+COAP_API void coap_oscore_register_external_handlers(
+    coap_context_t                   *context,
+    coap_oscore_find_handler_t           find_handler,
+    coap_oscore_update_seq_num_handler_t update_seq_num_handler);
 
 /**
  * Add in the specific Recipient ID into the OSCORE context (server only).
  * Note: This is only added to the OSCORE context as first defined by
  * coap_new_client_session_oscore*() or coap_context_oscore_server().
  *
- * @param context The CoAP  context to add the OSCORE recipient_id to.
- * @param recipient_id The Recipient ID to add.
+ * @param context The CoAP context to add the OSCORE recipient_id to.
+ * @param recipient_id The Recipient ID to add. Ownership of memory moves into the function
+ *                     and will be freed off when the context is freed or if the
+ *                     function fails.
  *
  * @return @c 1 Successfully added, else @c 0 there is an issue.
  */
@@ -307,17 +386,33 @@ COAP_API int coap_new_oscore_recipient(coap_context_t *context,
 
 /**
  * Release all the information associated for the specific Recipient ID
- * (and hence and stop any further OSCORE protection for this Recipient).
+ * (and hence stop any further OSCORE protection for this Recipient).
  * Note: This is only removed from the OSCORE context as first defined by
  * coap_new_client_session_oscore*() or coap_context_oscore_server().
  *
- * @param context The CoAP  context holding the OSCORE recipient_id to.
+ * @param context The CoAP context holding the OSCORE recipient_id to be removed.
  * @param recipient_id The Recipient ID to remove.
  *
  * @return @c 1 Successfully removed, else @c 0 not found.
  */
 COAP_API int coap_delete_oscore_recipient(coap_context_t *context,
                                           coap_bin_const_t *recipient_id);
+
+/**
+ * Set the latest sequence number and sliding window for the specified recipient
+ * id in the compiled configuration file.
+ *
+ * @param oscore_conf The compiled configuration file.
+ * @param recipient_id The Recipient ID to update in @p oscore_conf.
+ * @param last_seq The sequence number to update the recipient id with.
+ * @param seq_window The sliding window to update the recipient id with.
+ *
+ * @return @c 1 Successfully updated, else @c 0 recipient id not found.
+ */
+COAP_API int coap_oscore_recipient_set_latest_seq(coap_oscore_conf_t *oscore_conf,
+                                                  const coap_bin_const_t *recipient_id,
+                                                  uint64_t last_seq,
+                                                  uint64_t seq_window);
 
 /** @} */
 

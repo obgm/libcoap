@@ -622,6 +622,7 @@ coap_session_mfree(coap_session_t *session) {
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_OSCORE_SUPPORT
   coap_delete_oscore_associations(session);
+  oscore_release_recipient_ctx(&session->recipient_ctx);
 #endif /* COAP_OSCORE_SUPPORT */
 #if COAP_WS_SUPPORT
   coap_free_type(COAP_STRING, session->ws);
@@ -1249,6 +1250,9 @@ coap_make_addr_hash(coap_addr_hash_t *addr_hash, coap_proto_t proto,
   addr_hash->proto = proto;
 }
 
+/* Aids debugging when session is created */
+static coap_session_t *debug_session;
+
 coap_session_t *
 coap_endpoint_get_session(coap_endpoint_t *endpoint,
                           const coap_packet_t *packet, coap_tick_t now) {
@@ -1426,6 +1430,8 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
                               &addr_hash, &packet->addr_info.local,
                               &packet->addr_info.remote,
                               packet->ifindex, endpoint->context, endpoint);
+  /* Aids debugging endpoint created session */
+  debug_session = session;
   if (session) {
     session->last_rx_tx = now;
     memcpy(session->sock.lfunc, endpoint->sock.lfunc,

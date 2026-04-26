@@ -162,6 +162,12 @@ static coap_upa_abbrev_t abbrev_mappings[] = {
 
 static coap_dtls_pki_t *setup_pki(coap_context_t *ctx, coap_dtls_role_t role, char *sni);
 
+static uint8_t *read_file_mem(const char *file, size_t *length);
+
+static char *oscore_make_credential_file_name(const coap_bin_const_t *rcpkey_id,
+                                              const coap_bin_const_t *ctxkey_id,
+                                              int seq_file);
+
 typedef struct psk_sni_def_t {
   char *sni_match;
   coap_bin_const_t *new_key;
@@ -308,6 +314,109 @@ hnd_get_index(coap_resource_t *resource,
                                query, COAP_MEDIATYPE_TEXT_PLAIN,
                                0x2ffff, 0, strlen(INDEX),
                                (const uint8_t *)INDEX, NULL, NULL);
+}
+
+static int
+update_seq_num_handler(const coap_session_t *session,
+                       const coap_bin_const_t *rcpkey_id,
+                       const coap_bin_const_t *ctxkey_id,
+                       uint64_t              sender_seq_num,
+                       uint64_t              seq_num_window) {
+  FILE *fp;
+  char *seq_file = oscore_make_credential_file_name(rcpkey_id, ctxkey_id, 1);
+  int ret;
+
+  (void)session;
+
+  if (seq_file == NULL)
+    return 0;
+
+  fp = fopen(seq_file, "w");
+  if (fp == NULL) {
+    coap_free_type(COAP_STRING, seq_file);
+    return 0;
+  }
+
+  ret = fprintf(fp, "%" PRIu64 " %" PRIu64 "\n", sender_seq_num, seq_num_window);
+  fclose(fp);
+  coap_free_type(COAP_STRING, seq_file);
+  return ret > 0;
+}
+
+static int
+load_oscore_storage_seq_file(const coap_bin_const_t *rcpkey_id,
+                             const coap_bin_const_t *ctxkey_id,
+                             uint64_t *sender_seq_num,
+                             uint64_t *seq_num_window) {
+  char *seq_file = oscore_make_credential_file_name(rcpkey_id, ctxkey_id, 1);
+  FILE *fp;
+  int ret;
+
+  if (seq_file == NULL)
+    return 0;
+
+  fp = fopen(seq_file, "r");
+  if (fp == NULL) {
+    coap_free_type(COAP_STRING, seq_file);
+    return 0;
+  }
+
+  ret = fscanf(fp, "%" SCNu64 " %" SCNu64 "\n", sender_seq_num,
+               seq_num_window);
+  fclose(fp);
+  coap_free_type(COAP_STRING, seq_file);
+  return ret == 2;
+}
+
+/**
+ * Load the config from file system if file exists.
+ * Demonstrates external credential storage, this implementation is
+ * only for demonstration and not meant for production use.
+ * The approach is not efficient.
+ */
+static coap_oscore_conf_t *
+coap_oscore_ctx_find(const coap_session_t *session,
+                     const coap_bin_const_t *rcpkey_id,
+                     const coap_bin_const_t *ctxkey_id) {
+  size_t length;
+  uint8_t *buf = NULL;
+  char *cred_file;
+  coap_oscore_conf_t *t_oscore_conf = NULL;
+  uint64_t last_seq = 0;
+  uint64_t seq_window = 0;
+  int has_seq;
+  coap_str_const_t built_conf;
+
+  (void)session;
+
+  cred_file = oscore_make_credential_file_name(rcpkey_id, ctxkey_id, 0);
+
+  buf = read_file_mem(cred_file, &length);
+  if (buf == NULL) {
+    coap_log_info("OSCORE Credentials file '%s' not found\n", cred_file);
+    goto exit;
+  }
+
+  /* Load persisted sequence state before building the config buffer. */
+  has_seq = load_oscore_storage_seq_file(rcpkey_id, ctxkey_id,
+                                         &last_seq, &seq_window);
+  built_conf.length = length;
+  built_conf.s = buf;
+  t_oscore_conf = coap_new_oscore_conf(built_conf, NULL, NULL, 0);
+  if (t_oscore_conf == NULL) {
+    coap_log_info("Failed to load credentials file %s\n", cred_file);
+    goto exit;
+  }
+
+  if (has_seq) {
+    coap_oscore_recipient_set_latest_seq(t_oscore_conf, rcpkey_id, last_seq, seq_window);
+  }
+  coap_log_debug("Used credentials file %s\n", cred_file);
+
+exit:
+  coap_free_type(COAP_STRING, cred_file);
+  coap_free(buf);
+  return t_oscore_conf;
 }
 
 static void
@@ -1653,7 +1762,7 @@ usage(const char *program, const char *version) {
           "\t\t[-x] [-y rec_secs] [-z scheme://addr[:port][/resource[?query]]]\n"
           "\t\t[-A address] [-B resource[:check]] [-E oscore_conf_file[,seq_file]]\n"
           "\t\t[-G group_if] [-I rate_limit_ppm] [-K interval] [-L value] [-N]\n"
-          "\t\t[-P scheme://address[:port],[name1[,name2..]]]\n"
+          "\t\t[-O oscore_cred_dir] [-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size] [-Z fail] [-3]\n"
           "\t\t[[-h hint] [-i match_identity_file] [-k key]\n"
           "\t\t[-s match_psk_sni_file] [-u user] [-2]]\n"
@@ -1661,6 +1770,8 @@ usage(const char *program, const char *version) {
           "\t\t[-J pkcs11_pin] [-M rpk_file] [-R trust_casfile]\n"
           "\t\t[-S match_pki_sni_file] [-Y]]\n"
           "General Options\n"
+          , program);
+  fprintf(stderr,
           "\t-a priority\tSend logging output to syslog at priority (0-7) level\n"
           "\t-b max_block_size\n"
           "\t       \t\tMaximum block size server supports (16, 32, 64,\n"
@@ -1714,8 +1825,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tScheme is one of coap, coaps, coap+tcp and coaps+tcp.\n"
           "\t       \t\tIf resource and query (or queries) are defined, then this\n"
           "\t       \t\tis sent to the call-home client using a PUT request\n"
-          "\t-A address\tInterface address to bind to\n"
-          , program);
+          "\t-A address\tInterface address to bind to\n");
   fprintf(stderr,
           "\t       \t\tExamples:\n"
 #if COAP_IPV4_SUPPORT
@@ -1747,6 +1857,8 @@ usage(const char *program, const char *version) {
           "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
           "\t       \t\tOptional seq_file is used to save the current transmit\n"
           "\t       \t\tsequence number, so on restart sequence numbers continue\n"
+         );
+  fprintf(stderr,
           "\t-G group_if\tUse this interface for listening for the multicast\n"
           "\t       \t\tgroup. This can be different from the implied interface\n"
           "\t       \t\tif the -A option is used\n"
@@ -1762,6 +1874,22 @@ usage(const char *program, const char *version) {
           "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"
           "\t       \t\tevery fifth response will still be sent as a confirmable\n"
           "\t       \t\tresponse (RFC 7641 requirement)\n"
+          "\t-O oscore_cred_dir\n"
+          "\t       \t\tDirectory containing OSCORE credential files to be\n"
+          "\t       \t\tdynamically loaded named as <kid>_<kid_context>.txt where\n"
+          "\t       \t\t<kid> and <kid_context> are hex-encoded byte strings, but can\n"
+          "\t       \t\tbe 0 length. <kid> and <kid_context> are determined from the\n"
+          "\t       \t\trequesting CoAP OSCORE option and map to recipient_id and\n"
+          "\t       \t\tid_context respectively.\n"
+          "\t       \t\tThese files use coap-oscore-conf(5) definitions.\n"
+          "\t       \t\tDemonstrates the use of an external OSCORE credential store.\n"
+          "\t       \t\tA <kid>_<kid_context>_seq.txt file contains the recipient\n"
+          "\t       \t\tsequence counter and window. To enforce a new echo challenge\n"
+          "\t       \t\tthe <kid>_<kid_context>_seq.txt file can be deleted, to remove\n"
+          "\t       \t\tthe credentials, the <kid>_<kid_context>.txt file can be\n"
+          "\t       \t\tdeleted. Can be combined with -E for a default configuration\n"
+          "\t       \t\tNote: If rfc8613_b_2,bool,true is set, then <kid_context>\n"
+          "\t       \t\tmust not be defined, even if id_context is defined\n"
           "\t-P scheme://address[:port] | allow-mcast,[name1[,name2[,name3..]]]\n"
           "\t       \t\tScheme, address, optional port of how to connect to the\n"
           "\t       \t\tnext proxy server and zero or more names (comma\n"
@@ -2192,6 +2320,7 @@ cmdline_read_user(char *arg, unsigned char **buf, size_t maxlen) {
 static FILE *oscore_seq_num_fp = NULL;
 static const char *oscore_conf_file = NULL;
 static const char *oscore_seq_save_file = NULL;
+static const char *oscore_cred_dir = NULL;
 
 static int
 oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
@@ -2201,6 +2330,43 @@ oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
     fflush(oscore_seq_num_fp);
   }
   return 1;
+}
+
+
+/*
+ * Build "${oscore_cred_dir}/<ctxkey_id_hex>_<rcpkey_id_hex>[_seq].txt".
+ * Caller must free with coap_free().
+ */
+static char *
+oscore_make_credential_file_name(const coap_bin_const_t *rcpkey_id,
+                                 const coap_bin_const_t *ctxkey_id, int seq_file) {
+  size_t rcp_len = rcpkey_id ? rcpkey_id->length : 0;
+  size_t ctx_len = ctxkey_id ? ctxkey_id->length : 0;
+  size_t dir_len = oscore_cred_dir ? strlen(oscore_cred_dir) + 1 : 0; /* "dir/" */
+  size_t buf_len = dir_len + (2 * ctx_len) + 1 + (2 * rcp_len) +
+                   9; /* hex + "_" + hex + "[_seq].txt\0" */
+  char *result = coap_malloc_type(COAP_STRING, buf_len);
+  char *p = result;
+  char *end = result + buf_len;
+
+  if (!result)
+    return NULL;
+
+  if (oscore_cred_dir && strlen(oscore_cred_dir)) {
+    p += snprintf(p, end - p, "%s", oscore_cred_dir);
+    if (oscore_cred_dir[strlen(oscore_cred_dir)-1] != '/') {
+      p += snprintf(p, end - p, "%s", "/");
+    }
+  }
+  for (size_t i = 0; i < rcp_len; i++)
+    p += snprintf(p, end - p, "%02x", rcpkey_id->s[i]);
+  *p++ = '_';
+  for (size_t i = 0; i < ctx_len; i++)
+    p += snprintf(p, end - p, "%02x", ctxkey_id->s[i]);
+  if (seq_file)
+    p += snprintf(p, end - p, "_seq");
+  snprintf(p, end - p, ".txt");
+  return result;
 }
 
 static coap_oscore_conf_t *
@@ -2652,7 +2818,7 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:xy:z:A:B:C:E:G:I:J:K:L:M:NP:R:S:T:U:V:X:YZ:23")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:xy:z:A:B:C:E:G:I:J:K:L:M:NP:O:R:S:T:U:V:X:YZ:23")) != -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2768,6 +2934,13 @@ main(int argc, char **argv) {
       break;
     case 'N':
       resource_flags = COAP_RESOURCE_FLAGS_NOTIFY_NON;
+      break;
+    case 'O':
+      if (!coap_oscore_is_supported()) {
+        fprintf(stderr, "OSCORE support not enabled\n");
+        goto failed;
+      }
+      oscore_cred_dir = optarg;
       break;
     case 'o':
       shutdown_no_observe = 1;
@@ -2939,6 +3112,12 @@ main(int argc, char **argv) {
   if (doing_oscore) {
     if (get_oscore_conf(ctx) == NULL)
       goto failed;
+  }
+  if (oscore_cred_dir) {
+    /* register example local OSCORE credential storage */
+    coap_oscore_register_external_handlers(ctx,
+                                           coap_oscore_ctx_find,
+                                           update_seq_num_handler);
   }
 #if COAP_PROXY_SUPPORT
   if (reverse_proxy.entry_count) {

@@ -120,6 +120,8 @@ const char *pointer_list[] = {
   "coap_context_t ",
   "coap_fixed_point_t ",
   "coap_oscore_conf_t ",
+  "coap_oscore_rcp_conf_t ",
+  "coap_oscore_snd_conf_t ",
   "coap_optlist_t ",
   "coap_session_t ",
   "coap_string_t ",

@@ -135,6 +135,10 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_context.3" > coap_context_set_session_reconnect_time2.3
 	@echo ".so man3/coap_context.3" > coap_context_rate_limit_ppm.3
 	@echo ".so man3/coap_context.3" > coap_register_option.3
+	@echo ".so man3/coap_oscore.3" > coap_new_client_session_oscore3.3
+	@echo ".so man3/coap_oscore.3" > coap_new_client_session_oscore_pki3.3
+	@echo ".so man3/coap_oscore.3" > coap_new_client_session_oscore_psk3.3
+	@echo ".so man3/coap_oscore.3" > coap_context_oscore_server.3
 	@echo ".so man3/coap_deprecated.3" > coap_new_client_session_oscore_psk.3
 	@echo ".so man3/coap_deprecated.3" > coap_new_client_session_psk.3
 	@echo ".so man3/coap_deprecated.3" > coap_new_client_session_psk2.3

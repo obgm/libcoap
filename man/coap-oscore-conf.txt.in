@@ -15,7 +15,7 @@ coap-oscore-conf
 
 DESCRIPTION
 -----------
-The OSCORE configuration file is read in when using the _*-E* oscore_conf_file_
+The OSCORE configuration file is read in when using the *-E oscore_conf_file*
 option for the *coap-client*(5) or *coap-server*(5) executables. This then
 allows a client or server to use OSCORE to protect the CoAP information
 between endpoints (https://rfc-editor.org/rfc/rfc8613[RFC8613]).
@@ -52,6 +52,9 @@ The possible encodings are:
 
 *integer* ::
     The value is encoded as an integer number.
+
+*unsigned64* ::
+    The value is encoded as an unsigned 64-bit integer number.
 
 *text* ::
     The string value is mapped and then encoded as an integer number. This
@@ -188,6 +191,20 @@ OSCORE COMPLEX RECIPIENT
 *silent_server* ::
     (*bool*) (*Optional*) (Default is false) +
     The remote server normally does not send any response if set.
+
+The following 3 entries are used for external credential stores to restore
+replay-protection state across restarts as per RFC8613 Appenxix B.
+Setting either *last_seq* or *sliding_window* marks the replay window as
+initialized.
+
+*last_seq* ::
+    (*unsigned64*) (*Optional*) (Default is 0) +
+    The highest sequence number observed for this recipient.
+
+*sliding_window* ::
+    (*unsigned64*) (*Optional*) (Default is 0) +
+    The sliding replay-window bitmask for this recipient.
+    Used together with *last_seq* to restore the full replay-protection state.
 
 GENERAL
 -------

@@ -117,8 +117,9 @@ struct oscore_sender_ctx_t {
 };
 
 struct oscore_recipient_ctx_t {
-  /* This field allows recipient chaining */
-  oscore_recipient_ctx_t *next_recipient;
+  unsigned ref;   /**< Reference counter to keep track of linked associations
+                      / active sessions */
+  oscore_recipient_ctx_t *next_recipient; /**< This field allows recipient chaining */
   oscore_ctx_t *osc_ctx;
   /* RFC8613 3.1 */
   coap_bin_const_t *recipient_id;
@@ -175,6 +176,15 @@ oscore_ctx_t *oscore_derive_ctx(coap_context_t *c_context,
                                 coap_oscore_conf_t *oscore_conf);
 
 /**
+ * oscore_derive_ctx_from_conf - derive a osc_ctx from oscore_conf information
+ *
+ * @param oscore_conf The OSCORE configuration to use.
+ *
+ * @return NULL if failure or derived OSCORE context.
+ */
+oscore_ctx_t *oscore_derive_ctx_from_conf(coap_oscore_conf_t *oscore_conf);
+
+/**
  * oscore_duplicate_ctx - duplicate a osc_ctx
  *
  * @param c_context The CoAP context to associate OSCORE context with.
@@ -206,6 +216,16 @@ void oscore_free_contexts(coap_context_t *c_context);
 
 int oscore_remove_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx);
 
+int oscore_add_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx);
+
+/**
+ * Check if oscore context is attached to a the provided context.
+ *
+ * @param osc_ctx The OSCORE context to check for being attached.
+ * @return @c 1 if @p osc_ctx is not attached to any context, @c 0 otherwise.
+ */
+int oscore_is_context_attached(const oscore_ctx_t *osc_ctx);
+
 /**
  * oscore_add_recipient - add in recipient information
  *
@@ -223,6 +243,22 @@ oscore_recipient_ctx_t *oscore_add_recipient(oscore_ctx_t *ctx,
 int oscore_delete_recipient(oscore_ctx_t *osc_ctx, coap_bin_const_t *rid);
 
 void oscore_free_sender(oscore_sender_ctx_t *snd_ctx);
+
+/**
+ * Cleanup recipient context, including releasing the oscore context if the
+ * oscore context referenced is not attached to the coap_context_t.
+ *
+ * @param recipient_ctx The recipient context to cleanup. Will set the pointer
+ *                      to NULL after cleanup.
+ */
+void oscore_release_recipient_ctx(oscore_recipient_ctx_t **recipient_ctx);
+
+/**
+ * Increment the recipient context reference count.
+ *
+ * @param recipient_ctx The recipient context to increment the reference count.
+ */
+void oscore_reference_recipient_ctx(oscore_recipient_ctx_t *recipient_ctx);
 
 uint8_t oscore_bytes_equal(uint8_t *a_ptr,
                            uint8_t a_len,
@@ -247,14 +283,14 @@ void oscore_log_char_value(coap_log_t level, const char *name,
  *  oscore_find_context - Locate recipient context (and hence OSCORE context)
  *
  * @param session The CoAP session to search.
- * @param rcpkey_id The Recipient kid.
+ * @param rcpkey_id The Recipient kid (can be 0 length).
  * @param ctxkey_id The ID Context to match (or NULL if no check).
  * @param oscore_r2 Partial id_context to match against or NULL.
- * @param recipient_ctx The recipient context to update.
+ * @param recipient_ctx Updated with the found recipient context.
  *
  * return The OSCORE context and @p recipient_ctx updated, or NULL is error.
  */
-oscore_ctx_t *oscore_find_context(const coap_session_t *session,
+oscore_ctx_t *oscore_find_context(coap_session_t *session,
                                   const coap_bin_const_t rcpkey_id,
                                   const coap_bin_const_t *ctxkey_id,
                                   uint8_t *oscore_r2,
