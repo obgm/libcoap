@@ -261,13 +261,15 @@ struct coap_session_t {
   uint64_t rl_ticks_per_packet;   /**< If not 0, rate limit NON to ticks per packet */
   coap_tick_t last_tx;            /**< Last time a ratelimited packet is sent */
   uint8_t is_rate_limiting;       /**< Currently NON rate limiting */
-  uint8_t is_doing_q_block;       /**< Currently processing a Q-Block response
-                                       handler (e.g. 4.08 retransmit, 2.31
-                                       Continue triggering next MAX_PAYLOADS
-                                       set). Forces coap_send_internal() to
-                                       still apply pacing even though
-                                       is_rate_limiting is set by an outer
-                                       wait loop in a recursive io_process. */
+  uint8_t is_doing_q_block;       /**< Q-Block send/response processing is in
+                                       progress on this session (e.g. 4.08
+                                       retransmit, 2.31 Continue triggering
+                                       next MAX_PAYLOADS set, or timer-driven
+                                       Q-Block restart sends). Forces
+                                       coap_send_internal() to still apply
+                                       pacing even though is_rate_limiting is
+                                       set by an outer wait loop in a
+                                       recursive io_process. */
   uint32_t ping_failed;           /**< Ping failure count */
 };
 
