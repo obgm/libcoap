@@ -2245,6 +2245,16 @@ coap_block_check_q_block1_xmit(coap_session_t *session, coap_tick_t now, coap_ti
   int ret = 0;
 
   *tim_rem = COAP_MAX_DELAY_TICKS;
+  if (session->is_doing_q_block) {
+    /*
+     * A Q-Block send is already in flight on this session (e.g. an outer
+     * coap_send_q_blocks() iterating with rate-limit pacing, or a 4.08 /
+     * 2.31 response handler). Skip the timer-driven next-MAX_PAYLOAD-set
+     * push so we do not start an overlapping coap_send_q_blocks() for the
+     * same lg_xmit, which would re-send already-queued blocks.
+     */
+    return ret;
+  }
   LL_FOREACH_SAFE(session->lg_xmit, lg_xmit, q) {
     coap_tick_t non_timeout = lg_xmit->non_timeout_random_ticks;
 
@@ -2265,7 +2275,9 @@ coap_block_check_q_block1_xmit(coap_session_t *session, coap_tick_t now, coap_ti
         block.num = (uint32_t)(lg_xmit->offset / chunk);
         block.m = lg_xmit->offset + chunk < lg_xmit->data_info->length;
         block.szx = lg_xmit->blk_size;
+        session->is_doing_q_block = 1;
         coap_send_q_blocks(session, lg_xmit, block, lg_xmit->sent_pdu, COAP_SEND_SKIP_PDU);
+        session->is_doing_q_block = 0;
         if (*tim_rem > non_timeout) {
           *tim_rem = non_timeout;
           ret = 1;
@@ -2309,6 +2321,11 @@ coap_block_check_q_block2_xmit(coap_session_t *session, coap_tick_t now, coap_ti
   int ret = 0;
 
   *tim_rem = (coap_tick_t)-1;
+  if (session->is_doing_q_block) {
+    /* See coap_block_check_q_block1_xmit() — skip while a Q-Block send is
+       already in flight on this session to avoid overlapping sends. */
+    return ret;
+  }
   LL_FOREACH_SAFE(session->lg_xmit, lg_xmit, q) {
     coap_tick_t non_timeout = lg_xmit->non_timeout_random_ticks;
 
@@ -2329,8 +2346,11 @@ coap_block_check_q_block2_xmit(coap_session_t *session, coap_tick_t now, coap_ti
         block.num = (uint32_t)(lg_xmit->offset / chunk);
         block.m = lg_xmit->offset + chunk < lg_xmit->data_info->length;
         block.szx = lg_xmit->blk_size;
-        if (block.num == (uint32_t)lg_xmit->last_block)
+        if (block.num == (uint32_t)lg_xmit->last_block) {
+          session->is_doing_q_block = 1;
           coap_send_q_blocks(session, lg_xmit, block, lg_xmit->sent_pdu, COAP_SEND_SKIP_PDU);
+          session->is_doing_q_block = 0;
+        }
         if (*tim_rem > non_timeout) {
           *tim_rem = non_timeout;
           ret = 1;
@@ -3908,8 +3928,14 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
 #if COAP_Q_BLOCK_SUPPORT
         if (lg_xmit->option == COAP_OPTION_Q_BLOCK1 &&
             pdu->type == COAP_MESSAGE_NON) {
-          if (coap_send_q_block1(session, block, pdu,
-                                 COAP_SEND_INC_PDU) == COAP_INVALID_MID)
+          coap_mid_t q_mid;
+          /* Save/restore — see 4.08 handler below for rationale. */
+          uint8_t saved_q_block = session->is_doing_q_block;
+
+          session->is_doing_q_block = 1;
+          q_mid = coap_send_q_block1(session, block, pdu, COAP_SEND_INC_PDU);
+          session->is_doing_q_block = saved_q_block;
+          if (q_mid == COAP_INVALID_MID)
             goto fail_body;
           return 1;
         } else if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
@@ -3990,15 +4016,25 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
         uint64_t token;
         uint8_t ltoken[8];
         size_t ltoken_length;
+        /*
+         * Save/restore is_doing_q_block: this handler can run nested
+         * inside an outer coap_send_q_blocks() (timer-driven next
+         * MAX_PAYLOAD set, etc.) that already set the flag. Plain
+         * set-then-clear would zero the outer's flag on our exit and
+         * let coap_block_check_q_block1_xmit() spawn an overlapping
+         * coap_send_q_blocks() while the outer is still iterating.
+         */
+        uint8_t saved_q_block = session->is_doing_q_block;
 
+        session->is_doing_q_block = 1;
         for (i = 0; (bp < data + length) &&
              i < COAP_MAX_PAYLOADS(session); i++) {
           if ((*bp & 0xc0) != 0x00) /* uint(value) */
-            goto fail_cbor;
+            goto fail_cbor_q_block;
           block.num = derive_cbor_value(&bp, data + length - bp);
           coap_log_debug("Q-Block1: Missing block %d\n", block.num);
           if (block.num > (1 << 20) -1)
-            goto fail_cbor;
+            goto fail_cbor_q_block;
           block.m = (block.num + 1) * chunk < lg_xmit->data_info->length;
           block.szx = lg_xmit->blk_size;
 
@@ -4007,8 +4043,10 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
           ltoken_length = coap_encode_var_safe8(ltoken, sizeof(token), token);
           pdu = coap_pdu_duplicate_lkd(lg_xmit->sent_pdu, session, ltoken_length,
                                        ltoken, NULL, COAP_BOOL_FALSE);
-          if (!pdu)
+          if (!pdu) {
+            session->is_doing_q_block = saved_q_block;
             goto fail_body;
+          }
 
           coap_update_option(pdu, lg_xmit->option,
                              coap_encode_var_safe(buf, sizeof(buf),
@@ -4021,12 +4059,20 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                               lg_xmit->data_info->length,
                               lg_xmit->data_info->data,
                               block.num,
-                              block.szx))
+                              block.szx)) {
+            session->is_doing_q_block = saved_q_block;
             goto fail_body;
-          if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
+          }
+          if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID) {
+            session->is_doing_q_block = saved_q_block;
             goto fail_body;
+          }
         }
+        session->is_doing_q_block = saved_q_block;
         return 1;
+fail_cbor_q_block:
+        session->is_doing_q_block = saved_q_block;
+        goto fail_cbor;
       }
 fail_cbor:
       coap_log_info("Invalid application/missing-blocks+cbor-seq\n");

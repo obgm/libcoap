@@ -2044,7 +2044,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
   if (pdu->type == COAP_MESSAGE_NON && session->rl_ticks_per_packet) {
     coap_tick_t now;
 
-    if (!session->is_rate_limiting) {
+    if (!session->is_rate_limiting || session->is_doing_q_block) {
       coap_ticks(&now);
       while (1) {
         uint32_t timeout_ms;
