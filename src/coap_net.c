@@ -2058,9 +2058,10 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
         if (timeout_ms == 0) {
           timeout_ms = COAP_IO_NO_WAIT;
         }
+        uint8_t prev_rate_limiting = session->is_rate_limiting;
         session->is_rate_limiting = 1;
         coap_io_process_lkd(session->context, timeout_ms);
-        session->is_rate_limiting = 0;
+        session->is_rate_limiting = prev_rate_limiting;
         coap_ticks(&now);
       }
       session->last_tx = now;
