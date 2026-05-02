@@ -29,6 +29,12 @@
 #error COAP_ETAG_MAX_BYTES byte size invalid
 #endif
 
+#define COAP_LG_XMIT_TXT_SCALAR (8)
+
+#if COAP_Q_BLOCK_SUPPORT
+static int blocks_delete_entry(coap_rblock_t *rec_blocks, uint32_t block_num);
+#endif /* COAP_Q_BLOCK_SUPPORT */
+
 #if COAP_Q_BLOCK_SUPPORT
 int
 coap_q_block_is_supported(void) {
@@ -1226,6 +1232,11 @@ coap_add_data_large_internal(coap_session_t *session,
                                               (block.num << 4) | (block.m << 3) | lg_xmit->blk_size),
                          buf);
     }
+#if COAP_Q_BLOCK_SUPPORT
+    /* Set up send_blocks */
+    lg_xmit->send_blocks.used = 1;
+    lg_xmit->send_blocks.range[0].end = (uint32_t)(lg_xmit->data_info->length / chunk);
+#endif /* COAP_Q_BLOCK_SUPPORT */
 
     rem = block.chunk_size;
     if (rem > lg_xmit->data_info->length - block.num * chunk)
@@ -1525,7 +1536,7 @@ coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now,
   coap_lg_xmit_t *lg_xmit;
   coap_lg_xmit_t *q;
 #if COAP_Q_BLOCK_SUPPORT
-  coap_tick_t idle_timeout = 4 * COAP_NON_TIMEOUT_TICKS(session);
+  coap_tick_t idle_timeout = COAP_LG_XMIT_TXT_SCALAR * COAP_NON_TIMEOUT_TICKS(session);
 #else /* ! COAP_Q_BLOCK_SUPPORT */
   coap_tick_t idle_timeout = 8 * COAP_TICKS_PER_SECOND;
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
@@ -1895,6 +1906,87 @@ check_any_blocks_next_payload_set(coap_session_t *session,
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
+#if COAP_Q_BLOCK_SUPPORT
+static int
+request_missing_blocks(coap_session_t *session, coap_lg_srcv_t *lg_srcv, size_t final_block) {
+  uint32_t i;
+  int block = -1; /* Last one seen */
+  size_t block_size = (size_t)1 << (lg_srcv->szx + 4);
+  size_t cur_payload;
+  size_t last_payload_block;
+  coap_pdu_t *pdu = NULL;
+  size_t no_blocks = 0;
+
+  /* Need to count the number of missing blocks */
+  for (i = 0; i < lg_srcv->rec_blocks.used; i++) {
+    if (block < (int)lg_srcv->rec_blocks.range[i].begin &&
+        lg_srcv->rec_blocks.range[i].begin != 0) {
+      block++;
+      no_blocks += lg_srcv->rec_blocks.range[i].begin - block;
+    }
+    if (block < (int)lg_srcv->rec_blocks.range[i].end) {
+      block = lg_srcv->rec_blocks.range[i].end;
+    }
+  }
+  if (no_blocks == 0 && block == (int)final_block)
+    return 0;
+
+  /* Include missing up to end of current payload or total amount */
+  cur_payload = block / COAP_MAX_PAYLOADS(session);
+  last_payload_block = (cur_payload + 1) * COAP_MAX_PAYLOADS(session) - 1;
+  if (final_block > last_payload_block) {
+    final_block = last_payload_block;
+  }
+  no_blocks += final_block - block;
+  if (no_blocks == 0) {
+    /* Add in the blocks out of the next payload */
+    final_block = (lg_srcv->total_len + block_size - 1)/block_size - 1;
+    last_payload_block += COAP_MAX_PAYLOADS(session);
+    if (final_block > last_payload_block) {
+      final_block = last_payload_block;
+    }
+  }
+  /* Ask for the missing blocks */
+  block = -1;
+  for (i = 0; i < lg_srcv->rec_blocks.used; i++) {
+    if (block < (int)lg_srcv->rec_blocks.range[i].begin &&
+        lg_srcv->rec_blocks.range[i].begin != 0) {
+      /* Report on missing blocks */
+      if (pdu == NULL) {
+        pdu = pdu_408_build(session, lg_srcv);
+        if (!pdu)
+          continue;
+      }
+      block++;
+      for (; block < (int)lg_srcv->rec_blocks.range[i].begin; block++) {
+        if (!add_408_block(pdu, block)) {
+          break;
+        }
+      }
+    }
+    if (block < (int)lg_srcv->rec_blocks.range[i].end) {
+      block = lg_srcv->rec_blocks.range[i].end;
+    }
+  }
+  block++;
+  for (; block <= (int)final_block; block++) {
+    if (pdu == NULL) {
+      pdu = pdu_408_build(session, lg_srcv);
+      if (!pdu)
+        continue;
+    }
+    if (!add_408_block(pdu, block)) {
+      break;
+    }
+  }
+  if (pdu)
+    coap_send_internal(session, pdu, NULL);
+  lg_srcv->rec_blocks.retry++;
+  coap_ticks(&lg_srcv->rec_blocks.last_seen);
+  return 1;
+}
+#endif /* COAP_Q_BLOCK_SUPPORT */
+
 /*
  * return 1 if there is a future expire time, else 0.
  * update tim_rem with remaining value if return is 1.
@@ -1937,81 +2029,19 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now,
         goto expire;
       }
       if (lg_srcv->rec_blocks.last_seen + scaled_timeout <= now) {
-        uint32_t i;
-        int block = -1; /* Last one seen */
         size_t block_size = (size_t)1 << (lg_srcv->szx + 4);
         size_t final_block = (lg_srcv->total_len + block_size - 1)/block_size - 1;
-        size_t cur_payload;
-        size_t last_payload_block;
-        coap_pdu_t *pdu = NULL;
-        size_t no_blocks = 0;
 
-        /* Need to count the number of missing blocks */
-        for (i = 0; i < lg_srcv->rec_blocks.used; i++) {
-          if (block < (int)lg_srcv->rec_blocks.range[i].begin &&
-              lg_srcv->rec_blocks.range[i].begin != 0) {
-            block++;
-            no_blocks += lg_srcv->rec_blocks.range[i].begin - block;
-          }
-          if (block < (int)lg_srcv->rec_blocks.range[i].end) {
-            block = lg_srcv->rec_blocks.range[i].end;
-          }
+        if (lg_srcv->rec_blocks.used > 1 ||
+            final_block != lg_srcv->rec_blocks.range[lg_srcv->rec_blocks.used - 1].end) {
+          /* Missing sone blocks before the latest block received */
+          if (final_block > lg_srcv->rec_blocks.range[lg_srcv->rec_blocks.used - 1].end + 1)
+            final_block = lg_srcv->rec_blocks.range[lg_srcv->rec_blocks.used - 1].end + 1;
         }
-        if (no_blocks == 0 && block == (int)final_block)
+        coap_log_debug("** %s: lg_srcv %p timeout\n",
+                       coap_session_str(session), (void *)lg_srcv);
+        if (!request_missing_blocks(session, lg_srcv, final_block))
           goto expire;
-
-        /* Include missing up to end of current payload or total amount */
-        cur_payload = block / COAP_MAX_PAYLOADS(session);
-        last_payload_block = (cur_payload + 1) * COAP_MAX_PAYLOADS(session) - 1;
-        if (final_block > last_payload_block) {
-          final_block = last_payload_block;
-        }
-        no_blocks += final_block - block;
-        if (no_blocks == 0) {
-          /* Add in the blocks out of the next payload */
-          final_block = (lg_srcv->total_len + block_size - 1)/block_size - 1;
-          last_payload_block += COAP_MAX_PAYLOADS(session);
-          if (final_block > last_payload_block) {
-            final_block = last_payload_block;
-          }
-        }
-        /* Ask for the missing blocks */
-        block = -1;
-        for (i = 0; i < lg_srcv->rec_blocks.used; i++) {
-          if (block < (int)lg_srcv->rec_blocks.range[i].begin &&
-              lg_srcv->rec_blocks.range[i].begin != 0) {
-            /* Report on missing blocks */
-            if (pdu == NULL) {
-              pdu = pdu_408_build(session, lg_srcv);
-              if (!pdu)
-                continue;
-            }
-            block++;
-            for (; block < (int)lg_srcv->rec_blocks.range[i].begin; block++) {
-              if (!add_408_block(pdu, block)) {
-                break;
-              }
-            }
-          }
-          if (block < (int)lg_srcv->rec_blocks.range[i].end) {
-            block = lg_srcv->rec_blocks.range[i].end;
-          }
-        }
-        block++;
-        for (; block <= (int)final_block; block++) {
-          if (pdu == NULL) {
-            pdu = pdu_408_build(session, lg_srcv);
-            if (!pdu)
-              continue;
-          }
-          if (!add_408_block(pdu, block)) {
-            break;
-          }
-        }
-        if (pdu)
-          coap_send_internal(session, pdu, NULL);
-        lg_srcv->rec_blocks.retry++;
-        coap_ticks(&lg_srcv->rec_blocks.last_seen);
       }
       if (*tim_rem > lg_srcv->rec_blocks.last_seen + scaled_timeout - now) {
         *tim_rem = lg_srcv->rec_blocks.last_seen + scaled_timeout - now;
@@ -2072,7 +2102,7 @@ coap_send_q_blocks(coap_session_t *session,
                    coap_block_b_t block,
                    coap_pdu_t *pdu,
                    coap_send_pdu_t send_pdu) {
-  coap_pdu_t *block_pdu = NULL;
+  coap_pdu_t *block_pdu = NULL; /* The next block to send after any initial PDU */
   coap_opt_filter_t drop_options;
   coap_mid_t mid = COAP_INVALID_MID;
   uint64_t token;
@@ -2080,10 +2110,21 @@ coap_send_q_blocks(coap_session_t *session,
   uint8_t ltoken[8];
   size_t ltoken_length;
   uint32_t delayqueue_cnt = 0;
+  coap_block_b_t l_block;
 
-  if (!lg_xmit) {
-    if (send_pdu == COAP_SEND_INC_PDU)
-      return coap_send_internal(session, pdu, NULL);
+  if (!lg_xmit || session->is_rate_limiting) {
+    if (send_pdu == COAP_SEND_INC_PDU) {
+      if (lg_xmit &&
+          (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK1, &l_block) ||
+           coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK2, &l_block))) {
+        mid = coap_send_internal(session, pdu, NULL);
+        if (mid != COAP_INVALID_MID) {
+          blocks_delete_entry(&lg_xmit->send_blocks, l_block.num);
+        }
+      } else {
+        return coap_send_internal(session, pdu, NULL);
+      }
+    }
     return COAP_INVALID_MID;
   }
 
@@ -2097,16 +2138,23 @@ coap_send_q_blocks(coap_session_t *session,
     }
   }
   pdu->lg_xmit = lg_xmit;
-  if (block.m &&
+  if ((block.m || lg_xmit->send_blocks.used) &&
+      COAP_MAX_PAYLOADS(session) &&
       ((pdu->type == COAP_MESSAGE_NON &&
-        ((block.num + 1) % COAP_MAX_PAYLOADS(session)) + 1 !=
-        COAP_MAX_PAYLOADS(session)) ||
+        (lg_xmit->send_blocks.used > 1 ||
+         ((block.num + 1) % COAP_MAX_PAYLOADS(session)) + 1 !=
+         COAP_MAX_PAYLOADS(session))) ||
        (pdu->type == COAP_MESSAGE_ACK &&
         lg_xmit->option == COAP_OPTION_Q_BLOCK2) ||
        (pdu->type == COAP_MESSAGE_CON &&
         delayqueue_cnt < COAP_NSTART(session)) ||
        COAP_PROTO_RELIABLE(session->proto))) {
-    /* Allocate next pdu if there is headroom */
+    /*
+     * Allocate next block pdu if there is headroom and if one of
+     *   NON and more in MAX_PAYLOADS
+     *   CON and NSTART allows it (based on number in delayqueue)
+     *   Reliable transport
+     */
     if (COAP_PDU_IS_RESPONSE(pdu)) {
       ptoken = pdu->actual_token.s;
       ltoken_length = pdu->actual_token.length;
@@ -2126,28 +2174,42 @@ coap_send_q_blocks(coap_session_t *session,
   }
 
   /* Send initial pdu (which deletes 'pdu') */
-  if (send_pdu == COAP_SEND_INC_PDU &&
-      (mid = coap_send_internal(session, pdu, NULL)) == COAP_INVALID_MID) {
-    /* Not expected, underlying issue somewhere */
-    coap_delete_pdu_lkd(block_pdu);
-    return COAP_INVALID_MID;
+  if (send_pdu == COAP_SEND_INC_PDU) {
+    if (coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK1, &l_block) ||
+        coap_get_block_b(session, pdu, COAP_OPTION_Q_BLOCK2, &l_block)) {
+      mid = coap_send_internal(session, pdu, NULL);
+      if (mid != COAP_INVALID_MID) {
+        blocks_delete_entry(&lg_xmit->send_blocks, l_block.num);
+      }
+    } else {
+      mid = coap_send_internal(session, pdu, NULL);
+    }
+    if (mid == COAP_INVALID_MID) {
+      /* Not expected, underlying issue somewhere */
+      coap_delete_pdu_lkd(block_pdu);
+      return COAP_INVALID_MID;
+    }
   }
+  /* Unsafe to use pdu in later code */
 
   coap_lg_xmit_reference_lkd(lg_xmit);
-  while (block_pdu) {
+  while (block_pdu && lg_xmit->send_blocks.used) {
     coap_pdu_t *t_pdu = NULL;
     uint8_t buf[8];
     size_t chunk = ((size_t)1 << (lg_xmit->blk_size + 4));
+    size_t offset;
 
-    block.num++;
-    lg_xmit->offset = block.num * chunk;
-    block.m = lg_xmit->offset + chunk < lg_xmit->data_info->length;
-    if (block.m && ((block_pdu->type == COAP_MESSAGE_NON &&
-                     (block.num % COAP_MAX_PAYLOADS(session)) + 1 !=
-                     COAP_MAX_PAYLOADS(session)) ||
-                    (block_pdu->type == COAP_MESSAGE_CON &&
-                     delayqueue_cnt + 1 < COAP_NSTART(session)) ||
-                    COAP_PROTO_RELIABLE(session->proto))) {
+    /* Get the next block to transmit (which could be a retry */
+    block.num = lg_xmit->send_blocks.range[0].begin;
+
+    offset = block.num * chunk;
+    block.m = offset + chunk < lg_xmit->data_info->length;
+    if (block.m &&
+        ((block_pdu->type == COAP_MESSAGE_NON &&
+          (lg_xmit->send_blocks.used > 1 ||
+           (block.num % COAP_MAX_PAYLOADS(session)) + 1 != COAP_MAX_PAYLOADS(session))) ||
+         (block_pdu->type == COAP_MESSAGE_CON && delayqueue_cnt + 1 < COAP_NSTART(session)) ||
+         COAP_PROTO_RELIABLE(session->proto))) {
       /*
        * Send following block if
        *   NON and more in MAX_PAYLOADS
@@ -2221,8 +2283,11 @@ coap_send_q_blocks(coap_session_t *session,
       coap_delete_pdu_lkd(t_pdu);
       return COAP_INVALID_MID;
     }
+    /* This block has now been transmitted */
+    blocks_delete_entry(&lg_xmit->send_blocks, block.num);
     block_pdu = t_pdu;
   }
+  coap_delete_pdu_lkd(block_pdu);
   if (!block.m) {
     lg_xmit->last_payload = 0;
     coap_ticks(&lg_xmit->last_all_sent);
@@ -2255,15 +2320,17 @@ coap_block_check_q_block1_xmit(coap_session_t *session, coap_tick_t now, coap_ti
     }
     timed_out = now - non_timeout;
 
-    if (lg_xmit->last_payload) {
+    if (lg_xmit->last_payload && lg_xmit->send_blocks.used) {
       if (lg_xmit->last_payload <= timed_out) {
         /* Send off the next MAX_PAYLOAD set */
         coap_block_b_t block;
         size_t chunk = (size_t)1 << (lg_xmit->blk_size + 4);
+        size_t offset;
 
         memset(&block, 0, sizeof(block));
-        block.num = (uint32_t)(lg_xmit->offset / chunk);
-        block.m = lg_xmit->offset + chunk < lg_xmit->data_info->length;
+        block.num = lg_xmit->send_blocks.range[0].begin;
+        offset = block.num * chunk;
+        block.m = offset + chunk < lg_xmit->data_info->length;
         block.szx = lg_xmit->blk_size;
         coap_send_q_blocks(session, lg_xmit, block, lg_xmit->sent_pdu, COAP_SEND_SKIP_PDU);
         if (*tim_rem > non_timeout) {
@@ -2279,14 +2346,14 @@ coap_block_check_q_block1_xmit(coap_session_t *session, coap_tick_t now, coap_ti
       }
     } else if (lg_xmit->last_all_sent) {
       non_timeout = COAP_NON_TIMEOUT_TICKS(session);
-      if (lg_xmit->last_all_sent + 4 * non_timeout <= now) {
+      if (lg_xmit->last_all_sent + COAP_LG_XMIT_TXT_SCALAR * non_timeout <= now) {
         /* Expire this entry */
         LL_DELETE(session->lg_xmit, lg_xmit);
         coap_block_delete_lg_xmit(session, lg_xmit);
       } else {
         /* Delay until the lg_xmit needs to expire */
-        if (*tim_rem > lg_xmit->last_all_sent + 4 * non_timeout - now) {
-          *tim_rem = lg_xmit->last_all_sent + 4 * non_timeout - now;
+        if (*tim_rem > lg_xmit->last_all_sent + COAP_LG_XMIT_TXT_SCALAR * non_timeout - now) {
+          *tim_rem = lg_xmit->last_all_sent + COAP_LG_XMIT_TXT_SCALAR * non_timeout - now;
           ret = 1;
         }
       }
@@ -2319,15 +2386,17 @@ coap_block_check_q_block2_xmit(coap_session_t *session, coap_tick_t now, coap_ti
     }
     timed_out = now - non_timeout;
 
-    if (lg_xmit->last_payload) {
+    if (lg_xmit->last_payload && lg_xmit->send_blocks.used) {
       if (lg_xmit->last_payload <= timed_out) {
         /* Send off the next MAX_PAYLOAD set */
         coap_block_b_t block;
         size_t chunk = (size_t)1 << (lg_xmit->blk_size + 4);
+        size_t offset;
 
         memset(&block, 0, sizeof(block));
-        block.num = (uint32_t)(lg_xmit->offset / chunk);
-        block.m = lg_xmit->offset + chunk < lg_xmit->data_info->length;
+        block.num = lg_xmit->send_blocks.range[0].begin;
+        offset = block.num * chunk;
+        block.m = offset + chunk < lg_xmit->data_info->length;
         block.szx = lg_xmit->blk_size;
         if (block.num == (uint32_t)lg_xmit->last_block)
           coap_send_q_blocks(session, lg_xmit, block, lg_xmit->sent_pdu, COAP_SEND_SKIP_PDU);
@@ -2847,24 +2916,23 @@ coap_handle_request_send_block(coap_session_t *session,
     }
     if (block.bert == 0 && block.szx != lg_xmit->blk_size) {
       if (block.num == 0) {
-        if ((lg_xmit->offset + chunk) % ((size_t)1 << (block.szx + 4)) == 0) {
+        if (block.szx < lg_xmit->blk_size) {
           /*
            * Recompute the block number of the previous packet given
            * the new block size
            */
-          block.num = (uint32_t)(((lg_xmit->offset + chunk) >> (block.szx + 4)) - 1);
-          lg_xmit->blk_size = block.szx;
+          block.num = (uint32_t)((chunk >> (block.szx + 4)) - 1);
           chunk = (size_t)1 << (lg_xmit->blk_size + 4);
-          lg_xmit->offset = block.num * chunk;
+#if COAP_Q_BLOCK_SUPPORT
+          lg_xmit->send_blocks.range[0].begin = block.num;
+          lg_xmit->send_blocks.range[0].end = (uint32_t)(lg_xmit->data_info->length / chunk);
+#endif /* COAP_Q_BLOCK_SUPPORT */
+          lg_xmit->blk_size = block.szx;
           coap_log_debug("new Block size is %u, block number %u completed\n",
-                         1 << (block.szx + 4), block.num);
+                         (1 << (block.szx + 4)), block.num);
         } else {
-          coap_log_debug("ignoring request to increase Block size, "
-                         "next block is not aligned on requested block size "
-                         "boundary. (%" PRIuS " x %u mod %u = %" PRIuS " (which is not 0)\n",
-                         lg_xmit->offset/chunk + 1, (1 << (lg_xmit->blk_size + 4)),
-                         (1 << (block.szx + 4)),
-                         (lg_xmit->offset + chunk) % ((size_t)1 << (block.szx + 4)));
+          coap_log_debug("ignoring request to increase Block size from %u to %u\n",
+                         (1 << (lg_xmit->blk_size + 4)), (1 << (lg_xmit->blk_size + 4)));
         }
       } else {
         coap_log_debug("ignoring request to change Block size from %u to %u\n",
@@ -2932,7 +3000,6 @@ coap_handle_request_send_block(coap_session_t *session,
   if (request_cnt == 0) {
     /* Block2 or Q-Block2 not found - give them the first block */
     block.szx = lg_xmit->blk_size;
-    lg_xmit->offset = 0;
     out_blocks[0].num = 0;
     out_blocks[0].is_continue = 0;
     request_cnt = 1;
@@ -2940,9 +3007,9 @@ coap_handle_request_send_block(coap_session_t *session,
 
   for (i = 0; i < request_cnt; i++) {
     uint8_t buf[8];
+    size_t offset;
 
     block.num = out_blocks[i].num;
-    lg_xmit->offset = block.num * chunk;
 
     if (i + 1 < request_cnt) {
       /* Need to set up a copy of the pdu to send */
@@ -2988,12 +3055,13 @@ coap_handle_request_send_block(coap_session_t *session,
     }
     if (pdu->type == COAP_MESSAGE_NON)
       out_pdu->type = COAP_MESSAGE_NON;
+    offset = block.num * chunk;
     if (block.bert) {
       size_t token_options = pdu->data ? (size_t)(pdu->data - pdu->token) : pdu->used_size;
-      block.m = (lg_xmit->data_info->length - lg_xmit->offset) >
+      block.m = (lg_xmit->data_info->length - offset) >
                 ((out_pdu->max_size - token_options) /1024) * 1024;
     } else {
-      block.m = (lg_xmit->offset + chunk) < lg_xmit->data_info->length;
+      block.m = (offset + chunk) < lg_xmit->data_info->length;
     }
     if (!coap_update_option(out_pdu, lg_xmit->option,
                             coap_encode_var_safe(buf,
@@ -3004,7 +3072,7 @@ coap_handle_request_send_block(coap_session_t *session,
                             buf)) {
       goto internal_issue;
     }
-    if (!(lg_xmit->offset + chunk < lg_xmit->data_info->length)) {
+    if (!(offset + chunk < lg_xmit->data_info->length)) {
       /* Last block - keep in cache for 4 * ACK_TIMOUT */
       coap_ticks(&lg_xmit->last_all_sent);
     }
@@ -3012,7 +3080,7 @@ coap_handle_request_send_block(coap_session_t *session,
       coap_tick_t now;
       coap_time_t rem;
 
-      if (!(lg_xmit->offset + chunk < lg_xmit->data_info->length)) {
+      if (!(offset + chunk < lg_xmit->data_info->length)) {
         /* Last block - keep in cache for 4 * ACK_TIMOUT */
         coap_ticks(&lg_xmit->last_all_sent);
       }
@@ -3068,8 +3136,62 @@ skip_app_handler:
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_Q_BLOCK_SUPPORT
 static int
-update_received_blocks(coap_rblock_t *rec_blocks, uint32_t block_num, uint32_t block_m) {
+blocks_delete_entry(coap_rblock_t *rec_blocks, uint32_t block_num) {
+  uint32_t i;
+
+  if (rec_blocks->total_blocks && block_num + 1 > rec_blocks->total_blocks) {
+    /* received block number greater than Block No defined when More bit unset */
+    return 0;
+  }
+
+  for (i = 0; i < rec_blocks->used; i++) {
+    if (block_num >= rec_blocks->range[i].begin &&
+        block_num <= rec_blocks->range[i].end) {
+      /* In this block */
+      if (block_num == rec_blocks->range[i].begin) {
+        if (block_num == rec_blocks->range[i].end) {
+          /* Need to delete this range */
+          if (i + 1 < rec_blocks->used) {
+            memmove(&rec_blocks->range[i], &rec_blocks->range[i+1],
+                    (rec_blocks->used - i) * sizeof(rec_blocks->range[0]));
+          }
+          rec_blocks->used--;
+          break;
+        }
+        rec_blocks->range[i].begin++;
+      } else if (block_num == rec_blocks->range[i].end) {
+        rec_blocks->range[i].end--;
+        if (rec_blocks->range[i].begin == rec_blocks->range[i].end) {
+          /* Need to delete this range */
+          rec_blocks->used--;
+          if (i == rec_blocks->used)
+            break;
+          memmove(&rec_blocks->range[i], &rec_blocks->range[i+1],
+                  sizeof(rec_blocks->range[i]) * (rec_blocks->used - i));
+        }
+      } else {
+        /* Need to split the range */
+        if (rec_blocks->used == COAP_RBLOCK_CNT)
+          /* Too many losses */
+          return 0;
+        memmove(&rec_blocks->range[i+1], &rec_blocks->range[i],
+                (rec_blocks->used - i) * sizeof(rec_blocks->range[0]));
+        rec_blocks->range[i].end = block_num - 1;
+        rec_blocks->range[i+1].begin = block_num + 1;
+        rec_blocks->used++;
+      }
+      break;
+    }
+  }
+  coap_ticks(&rec_blocks->last_seen);
+  return 1;
+}
+#endif /* COAP_Q_BLOCK_SUPPORT */
+
+static int
+blocks_add_entry(coap_rblock_t *rec_blocks, uint32_t block_num, uint32_t block_m) {
   uint32_t i;
 
   if (rec_blocks->total_blocks && block_num + 1 > rec_blocks->total_blocks) {
@@ -3090,7 +3212,7 @@ update_received_blocks(coap_rblock_t *rec_blocks, uint32_t block_num, uint32_t b
         rec_blocks->range[i].begin = block_num;
       } else {
         /* Need to insert a new range */
-        if (rec_blocks->used == COAP_RBLOCK_CNT -1)
+        if (rec_blocks->used == COAP_RBLOCK_CNT)
           /* Too many losses */
           return 0;
         memmove(&rec_blocks->range[i+1], &rec_blocks->range[i],
@@ -3117,7 +3239,7 @@ update_received_blocks(coap_rblock_t *rec_blocks, uint32_t block_num, uint32_t b
     }
   }
   if (i == rec_blocks->used) {
-    if (rec_blocks->used == COAP_RBLOCK_CNT -1)
+    if (rec_blocks->used == COAP_RBLOCK_CNT)
       /* Too many losses */
       return 0;
     rec_blocks->range[i].begin = rec_blocks->range[i].end = block_num;
@@ -3410,14 +3532,13 @@ coap_handle_request_put_block(coap_context_t *context,
   while (offset < saved_offset + length) {
     if (!check_if_received_block(&lg_srcv->rec_blocks, block.num)) {
       /* Update list of blocks received */
-      if (!update_received_blocks(&lg_srcv->rec_blocks, block.num, block.m)) {
-        coap_handle_event_lkd(context, COAP_EVENT_PARTIAL_BLOCK, session);
-        coap_add_data(response, sizeof("Too many missing blocks")-1,
-                      (const uint8_t *)"Too many missing blocks");
-        response->code = COAP_RESPONSE_CODE(408);
-        goto free_lg_srcv;
+      if (blocks_add_entry(&lg_srcv->rec_blocks, block.num, block.m)) {
+        update_data = 1;
+      } else {
+        coap_log_debug("Block nr %u ignored (too many missing blocks)\n", block.num);
       }
-      update_data = 1;
+    } else {
+      coap_log_debug("Duplicate block nr %u\n", block.num);
     }
     block.num++;
     offset = block.num << (block.szx + 4);
@@ -3462,6 +3583,8 @@ coap_handle_request_put_block(coap_context_t *context,
         goto skip_app_handler;
       }
     }
+  } else {
+    goto skip_app_handler;
   }
 
   if (block.m ||
@@ -3483,6 +3606,17 @@ coap_handle_request_put_block(coap_context_t *context,
             block.num = lg_srcv->rec_blocks.range[0].end;
             goto skip_app_handler;
           }
+        } else if (lg_srcv->rec_blocks.used > 1 &&
+                   (block.num / COAP_MAX_PAYLOADS(session)) >
+                   (lg_srcv->rec_blocks.range[0].end / COAP_MAX_PAYLOADS(session)) &&
+                   (lg_srcv->rec_blocks.range[0].end % COAP_MAX_PAYLOADS(session)) + 1 !=
+                   COAP_MAX_PAYLOADS(session)) {
+          /*
+           * Current MAX_PAYLOAD chunk is different to last MAX_PAYLOAD chunk
+           * with some missing packets in last MAX_PAYLOAD chunk
+           */
+          request_missing_blocks(session, lg_srcv, block.num);
+          goto skip_app_handler;
         } else {
           /* The remote end will be sending the next one unless this
              is a MAX_PAYLOADS and all previous have been received */
@@ -3568,6 +3702,8 @@ coap_handle_request_put_block(coap_context_t *context,
          * Fall through to skip_app_handler.
          */
 #if COAP_Q_BLOCK_SUPPORT
+      } else {
+        request_missing_blocks(session, lg_srcv, block.num);
       }
 #endif /* COAP_Q_BLOCK_SUPPORT */
     }
@@ -3805,29 +3941,32 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
           coap_log_info("ignoring request to increase Block size, "
                         "(%u > %u)\n",
                         1 << (block.szx + 4), 1 << (lg_xmit->blk_size + 4));
-        } else if ((lg_xmit->offset + chunk) % ((size_t)1 << (block.szx + 4)) == 0) {
+        } else {
           /*
            * Recompute the block number of the previous packet given the
            * new block size
            */
-          block.num = (uint32_t)(((lg_xmit->offset + chunk) >> (block.szx + 4)) - 1);
-          lg_xmit->blk_size = block.szx;
+          block.num = (uint32_t)((chunk >> (block.szx + 4)) - 1);
           chunk = (size_t)1 << (lg_xmit->blk_size + 4);
-          lg_xmit->offset = block.num * chunk;
+#if COAP_Q_BLOCK_SUPPORT
+          lg_xmit->send_blocks.range[0].begin = block.num;
+          lg_xmit->send_blocks.range[0].end = (uint32_t)(lg_xmit->data_info->length / chunk);
+#endif /* COAP_Q_BLOCK_SUPPORT */
+          lg_xmit->blk_size = block.szx;
           coap_log_debug("new Block size is %u, block number %u completed\n",
                          1 << (block.szx + 4), block.num);
           block.bert = 0;
           block.aszx = block.szx;
-        } else {
-          coap_log_debug("ignoring request to increase Block size, "
-                         "next block is not aligned on requested block size boundary. "
-                         "(%" PRIuS " x %u mod %u = %" PRIuS " != 0)\n",
-                         lg_xmit->offset/chunk + 1, (1 << (lg_xmit->blk_size + 4)),
-                         (1 << (block.szx + 4)),
-                         (lg_xmit->offset + chunk) % ((size_t)1 << (block.szx + 4)));
         }
       }
       track_echo(session, rcvd);
+#if COAP_Q_BLOCK_SUPPORT
+      if (rcvd->code == COAP_RESPONSE_CLASS(231) &&
+          lg_xmit->option == COAP_OPTION_Q_BLOCK1) {
+        coap_send_q_blocks(session, lg_xmit, block, lg_xmit->sent_pdu, COAP_SEND_SKIP_PDU);
+        goto skip_app_handler;
+      }
+#endif /* COAP_Q_BLOCK_SUPPORT */
       if (lg_xmit->last_block == (int)block.num &&
           lg_xmit->option != COAP_OPTION_Q_BLOCK1) {
         /*
@@ -3845,13 +3984,13 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
       if (block.bert)
         block.num += (unsigned int)(lg_xmit->b.b1.bert_size / 1024 - 1);
       lg_xmit->last_block = block.num;
-      lg_xmit->offset = (block.num + 1) * chunk;
-      if (lg_xmit->offset < lg_xmit->data_info->length) {
+      if ((block.num + 1) * chunk < lg_xmit->data_info->length) {
         /* Build the next PDU request based off the skeletal PDU */
         uint8_t buf[8];
         coap_pdu_t *pdu;
         uint64_t token = STATE_TOKEN_FULL(lg_xmit->b.b1.state_token, ++lg_xmit->b.b1.count);
         size_t len = coap_encode_var_safe8(buf, sizeof(token), token);
+        size_t offset;
 
         if (lg_xmit->sent_pdu->code == COAP_REQUEST_CODE_FETCH) {
           /* Need to handle Observe for large FETCH */
@@ -3885,13 +4024,14 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
         }
 
         block.num++;
+        offset = block.num * chunk;
         if (block.bert) {
           size_t token_options = pdu->data ? (size_t)(pdu->data - pdu->token) :
                                  pdu->used_size;
-          block.m = (lg_xmit->data_info->length - lg_xmit->offset) >
+          block.m = (lg_xmit->data_info->length - offset) >
                     ((pdu->max_size - token_options) /1024) * 1024;
         } else {
-          block.m = (lg_xmit->offset + chunk) < lg_xmit->data_info->length;
+          block.m = (offset + chunk) < lg_xmit->data_info->length;
         }
         coap_update_option(pdu, lg_xmit->option,
                            coap_encode_var_safe(buf, sizeof(buf),
@@ -4006,11 +4146,6 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
         /* Need to decode CBOR to work out what blocks to re-send */
         const uint8_t *bp = data;
         uint32_t i;
-        uint8_t buf[8];
-        coap_pdu_t *pdu;
-        uint64_t token;
-        uint8_t ltoken[8];
-        size_t ltoken_length;
 
         for (i = 0; (bp < data + length) &&
              i < COAP_MAX_PAYLOADS(session); i++) {
@@ -4023,29 +4158,13 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
           block.m = (block.num + 1) * chunk < lg_xmit->data_info->length;
           block.szx = lg_xmit->blk_size;
 
-          /* Build the next PDU request based off the skeletal PDU */
-          token = STATE_TOKEN_FULL(lg_xmit->b.b1.state_token,++lg_xmit->b.b1.count);
-          ltoken_length = coap_encode_var_safe8(ltoken, sizeof(token), token);
-          pdu = coap_pdu_duplicate_lkd(lg_xmit->sent_pdu, session, ltoken_length,
-                                       ltoken, NULL, COAP_BOOL_FALSE);
-          if (!pdu)
-            goto fail_body;
-
-          coap_update_option(pdu, lg_xmit->option,
-                             coap_encode_var_safe(buf, sizeof(buf),
-                                                  (block.num << 4) |
-                                                  (block.m << 3) |
-                                                  block.szx),
-                             buf);
-
-          if (!coap_add_block(pdu,
-                              lg_xmit->data_info->length,
-                              lg_xmit->data_info->data,
-                              block.num,
-                              block.szx))
-            goto fail_body;
-          if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
-            goto fail_body;
+          blocks_add_entry(&lg_xmit->send_blocks, block.num, block.m);
+        }
+        if (lg_xmit->send_blocks.used) {
+          /* Flush out the first one */
+          block.num = lg_xmit->send_blocks.range[0].begin;
+          block.m = (block.num + 1) * chunk < lg_xmit->data_info->length;
+          coap_send_q_blocks(session, lg_xmit, block, lg_xmit->sent_pdu, COAP_SEND_SKIP_PDU);
         }
         goto skip_app_handler;
       }
@@ -4206,6 +4325,7 @@ coap_handle_response_get_block(coap_context_t *context,
   if (lg_crcv) {
     size_t chunk = 0;
     uint8_t buf[8];
+    coap_tick_t adjust;
 
     if (COAP_RESPONSE_CLASS(rcvd->code) == 2) {
       size_t length;
@@ -4420,11 +4540,13 @@ reinit:
             lg_crcv->rec_blocks.latest_payload_set = this_payload_set;
 #endif /* COAP_Q_BLOCK_SUPPORT */
             /* Update list of blocks received */
-            if (!update_received_blocks(&lg_crcv->rec_blocks, block.num, block.m)) {
-              coap_handle_event_lkd(context, COAP_EVENT_PARTIAL_BLOCK, session);
-              goto fail_resp;
+            if (blocks_add_entry(&lg_crcv->rec_blocks, block.num, block.m)) {
+              updated_block = 1;
+            } else {
+              coap_log_debug("Block nr %u ignored (too many missing blocks)\n", block.num);
             }
-            updated_block = 1;
+          } else {
+            coap_log_debug("Duplicate block nr %u\n", block.num);
           }
           block.num++;
           offset = block.num << (block.szx + 4);
@@ -4710,10 +4832,15 @@ give_to_app:
     }
     if (!block.m && !lg_crcv->observe_set) {
 fail_resp:
+
       /* lg_crcv no longer required - cache it for 1 sec */
+      if (COAP_MAX_TRANSMIT_WAIT_TICKS(session) >= COAP_TICKS_PER_SECOND) {
+        adjust = COAP_MAX_TRANSMIT_WAIT_TICKS(session) - COAP_TICKS_PER_SECOND;
+      } else {
+        adjust = 0;
+      }
       coap_ticks(&lg_crcv->last_used);
-      lg_crcv->last_used = lg_crcv->last_used - COAP_MAX_TRANSMIT_WAIT_TICKS(session) +
-                           COAP_TICKS_PER_SECOND;
+      lg_crcv->last_used -= adjust;
     }
     /* need to put back original token into rcvd */
     if (!coap_binary_equal(&rcvd->actual_token, lg_crcv->app_token)) {

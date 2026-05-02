@@ -1467,7 +1467,7 @@ coap_debug_send_packet(void) {
     for (i = 0; i < num_packet_loss_intervals; i++) {
       if (send_packet_count >= packet_loss_intervals[i].start &&
           send_packet_count <= packet_loss_intervals[i].end) {
-        coap_log_debug("Packet %u dropped\n", send_packet_count);
+        coap_log_debug("Following packet no %u dropped\n", send_packet_count);
         return 0;
       }
     }
@@ -1476,7 +1476,7 @@ coap_debug_send_packet(void) {
     uint16_t r = 0;
     coap_prng_lkd((uint8_t *)&r, 2);
     if (r < packet_loss_level) {
-      coap_log_debug("Packet %u dropped\n", send_packet_count);
+      coap_log_debug("Following packet no %u dropped\n", send_packet_count);
       return 0;
     }
   }
@@ -1485,7 +1485,7 @@ coap_debug_send_packet(void) {
     for (i = 0; i < num_packet_fail_intervals; i++) {
       if (send_packet_count >= packet_fail_intervals[i].start &&
           send_packet_count <= packet_fail_intervals[i].end) {
-        coap_log_debug("Packet %u failed\n", send_packet_count);
+        coap_log_debug("Following packet no %u failed\n", send_packet_count);
         errno = ECONNREFUSED;
         return -1;
       }
@@ -1495,7 +1495,7 @@ coap_debug_send_packet(void) {
     uint16_t r = 0;
     coap_prng_lkd((uint8_t *)&r, 2);
     if (r < packet_fail_level) {
-      coap_log_debug("Packet %u failed\n", send_packet_count);
+      coap_log_debug("Following packet no %u failed\n", send_packet_count);
       errno = ECONNREFUSED;
       return -1;
     }

@@ -103,6 +103,8 @@
 /** creates a Qx.FRAC_BITS from session's 'ack_timeout' */
 #define ACK_TIMEOUT Q(FRAC_BITS, session->ack_timeout)
 
+static int send_recv_terminate = 0;
+
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
   return (coap_queue_t *)coap_malloc_type(COAP_NODE, sizeof(coap_queue_t));
@@ -2058,8 +2060,21 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
 
     if (!session->is_rate_limiting) {
       coap_ticks(&now);
+#if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG)
+      if (now - session->last_tx < session->rl_ticks_per_packet) {
+        uint32_t rem = (uint32_t)(session->rl_ticks_per_packet -
+                                  (now - session->last_tx)) * 1000 / COAP_TICKS_PER_SECOND;
+        coap_log_debug("** %s: mid 0x%04x: delaying transmission (%d.%03ds)\n",
+                       coap_session_str(session), pdu->mid, rem / 1000, rem %1000);
+        coap_show_pdu(COAP_LOG_DEBUG, pdu);
+      }
+#endif /* COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG */
       while (1) {
         uint32_t timeout_ms;
+
+        if (send_recv_terminate) {
+          goto error;
+        }
 
         if (now - session->last_tx >= session->rl_ticks_per_packet) {
           break;
@@ -2070,11 +2085,14 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
         if (timeout_ms == 0) {
           timeout_ms = COAP_IO_NO_WAIT;
         }
+
         session->is_rate_limiting = 1;
         coap_io_process_lkd(session->context, timeout_ms);
         session->is_rate_limiting = 0;
         coap_ticks(&now);
       }
+      coap_log_debug("** %s: mid 0x%04x: now transmitting\n",
+                     coap_session_str(session), pdu->mid);
       session->last_tx = now;
     }
   }
@@ -2226,8 +2244,6 @@ error:
   coap_delete_pdu_lkd(pdu);
   return COAP_INVALID_MID;
 }
-
-static int send_recv_terminate = 0;
 
 void
 coap_send_recv_terminate(void) {
@@ -4130,6 +4146,24 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
        */
       LL_FOREACH(session->lg_srcv, lg_srcv) {
         if (lg_srcv == free_lg_srcv) {
+#if COAP_Q_BLOCK_SUPPORT
+          if (lg_srcv->block_option == COAP_OPTION_Q_BLOCK1) {
+            coap_tick_t adjust;
+
+            /* cache the lg_srcv for 1 second */
+            if (COAP_NON_RECEIVE_TIMEOUT_TICKS(session) >= COAP_TICKS_PER_SECOND) {
+              adjust = COAP_NON_RECEIVE_TIMEOUT_TICKS(session) - COAP_TICKS_PER_SECOND;
+            } else {
+              adjust = 0;
+            }
+            coap_ticks(&free_lg_srcv->rec_blocks.last_seen);
+            if (free_lg_srcv->rec_blocks.last_seen > adjust) {
+              free_lg_srcv->rec_blocks.last_seen -= adjust;
+            }
+            free_lg_srcv->dont_timeout = 0;
+            break;
+          }
+#endif /* COAP_Q_BLOCK_SUPPORT */
           LL_DELETE(session->lg_srcv, free_lg_srcv);
           coap_block_delete_lg_srcv(session, free_lg_srcv);
           break;
@@ -4234,6 +4268,10 @@ skip_handler:
       /* Use this to delay transmission */
       coap_wait_ack(session->context, session, node);
     }
+  } else if (COAP_PDU_IS_EMPTY(response) &&
+             (response->type == COAP_MESSAGE_NON ||
+              COAP_PROTO_RELIABLE(session->proto))) {
+    coap_delete_pdu_lkd(response);
   } else {
     coap_log_debug("   %s: mid=0x%04x: response dropped\n",
                    coap_session_str(session),

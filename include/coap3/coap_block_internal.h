@@ -30,8 +30,14 @@ extern "C" {
  * @{
  */
 
-/* Use the top 20 bits of a 64 bit token for tracking current block in large transfer */
+/*
+ * Use the top 20 bits of a 64 bit token for tracking current block in large transfer.
+ * However, if smaller tokens are required. this vould be set up to 48, leaving 16 bits
+ * for unique tokens.
+ */
+#ifndef STATE_MAX_BLK_CNT_BITS
 #define STATE_MAX_BLK_CNT_BITS 20
+#endif /* STATE_MAX_BLK_CNT_BITS */
 #define STATE_TOKEN_BASE(t) ((t) & (0xffffffffffffffffULL >> STATE_MAX_BLK_CNT_BITS))
 #define STATE_TOKEN_RETRY(t) ((uint64_t)(t) >> (64 - STATE_MAX_BLK_CNT_BITS))
 #define STATE_TOKEN_FULL(t,r) (STATE_TOKEN_BASE(t) + ((uint64_t)(r) << (64 - STATE_MAX_BLK_CNT_BITS)))
@@ -103,7 +109,16 @@ struct coap_lg_range {
   uint32_t end;
 };
 
+#ifndef COAP_RBLOCK_CNT
 #define COAP_RBLOCK_CNT 4
+#endif
+#if COAP_RBLOCK_CNT > COAP_DEFAULT_MAX_PAYLOADS -1
+#error COAP_RBLOCK_CNT too large
+#endif
+#if COAP_RBLOCK_CNT < 2
+#error COAP_RBLOCK_CNT too small
+#endif
+
 /**
  * Structure to keep track of received blocks
  */
@@ -165,7 +180,6 @@ struct coap_lg_xmit_t {
   int last_block;        /**< last acknowledged block number Block1
                               last transmitted Q-Block2 */
   coap_lg_xmit_data_t *data_info; /**< Pointer to large data information */
-  size_t offset;         /**< large data next offset to transmit */
   union {
     coap_l_block1_t b1;
     coap_l_block2_t b2;
@@ -177,6 +191,7 @@ struct coap_lg_xmit_t {
   coap_tick_t last_obs; /**< Last time used (Observe tracking) or 0 */
 #if COAP_Q_BLOCK_SUPPORT
   coap_tick_t non_timeout_random_ticks; /** Used for Q-Block */
+  coap_rblock_t send_blocks; /**< list of blocks still to send */
 #endif /* COAP_Q_BLOCK_SUPPORT */
   uint32_t ref;          /**< Reference count */
 };
@@ -330,6 +345,21 @@ coap_mid_t coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual);
 #endif /* COAP_CLIENT_SUPPORT */
 
 #if COAP_Q_BLOCK_SUPPORT
+/**
+ * Send the next set of Q-blocks - one if CON, else to the next appropriate MAX_PAYLOAD
+ * boundary. Handles if blocks are reported as not being received.
+ *
+ * If rate limiting when called returns COAP_INVALID_MID.
+ *
+ * @param session  The current session.
+ * @param lg_xmit  Contains information about the list of blocks to send.
+ * @param block    The first block to send using @p pdu template.
+ * @param pdu      The PDU to model the blocks on. @p pdu is always released
+ *                  if send_pdu == COAP_SEND_INC_PDU
+ * @param send_pdu Whether @p pdu should be sent first or just used as a PDU model.
+ *
+ * @return COAP_INVALID_MID if transmission error, else the last transmitted block mid.
+ */
 coap_mid_t coap_send_q_blocks(coap_session_t *session,
                               coap_lg_xmit_t *lg_xmit,
                               coap_block_b_t block,
