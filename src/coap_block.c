@@ -2634,6 +2634,11 @@ coap_block_delete_lg_crcv(coap_session_t *session,
   if (lg_crcv == NULL)
     return;
 
+  if (lg_crcv->ref > 0) {
+    lg_crcv->ref--;
+    return;
+  }
+
   coap_free_type(COAP_STRING, lg_crcv->body_data);
   if (lg_crcv->obs_data) {
     coap_block_release_lg_xmit_data(session, lg_crcv->obs_data);
@@ -2661,6 +2666,11 @@ coap_block_delete_lg_srcv(coap_session_t *session,
 #endif
   if (lg_srcv == NULL)
     return;
+
+  if (lg_srcv->ref > 0) {
+    lg_srcv->ref--;
+    return;
+  }
 
   coap_delete_str_const(lg_srcv->uri_path);
   coap_delete_bin_const(lg_srcv->last_token);
@@ -3157,6 +3167,7 @@ coap_handle_request_put_block(coap_context_t *context,
   int update_data;
   unsigned int saved_num;
   size_t saved_offset;
+  int lg_srcv_is_refed = 0;
 
   *added_block = 0;
   *pfree_lg_srcv = NULL;
@@ -3356,6 +3367,8 @@ coap_handle_request_put_block(coap_context_t *context,
     LL_PREPEND(session->lg_srcv, lg_srcv);
   }
   coap_ticks(&lg_srcv->last_used);
+  coap_lg_srcv_reference_lkd(lg_srcv);
+  lg_srcv_is_refed = 1;
 
   if (block_option == COAP_OPTION_BLOCK1 &&
       session->block_mode & COAP_BLOCK_NOT_RANDOM_BLOCK1 &&
@@ -3595,6 +3608,8 @@ give_app_data:
   *pfree_lg_srcv = lg_srcv;
 
 call_app_handler:
+  if (lg_srcv_is_refed)
+    coap_lg_srcv_release_lkd(session, lg_srcv);
   return 0;
 
 free_lg_srcv:
@@ -3602,6 +3617,8 @@ free_lg_srcv:
   coap_block_delete_lg_srcv(session, lg_srcv);
 
 skip_app_handler:
+  if (lg_srcv_is_refed)
+    coap_lg_srcv_release_lkd(session, lg_srcv);
   return 1;
 }
 #endif /* COAP_SERVER_SUPPORT */
@@ -3758,6 +3775,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                                 coap_pdu_t *rcvd) {
   coap_lg_xmit_t *lg_xmit;
   coap_lg_crcv_t *lg_crcv = NULL;
+  int lg_crcv_is_refed = 0;
 
   lg_xmit = coap_find_lg_xmit(session, rcvd);
   if (lg_xmit) {
@@ -3766,8 +3784,11 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
     coap_block_b_t block;
 
     lg_crcv = coap_find_lg_crcv(session, rcvd);
-    if (lg_crcv)
+    if (lg_crcv) {
       coap_ticks(&lg_crcv->last_used);
+      coap_lg_crcv_reference_lkd(lg_crcv);
+      lg_crcv_is_refed = 1;
+    }
 
     if (COAP_RESPONSE_CLASS(rcvd->code) == 2 &&
         coap_get_block_b(session, rcvd, lg_xmit->option, &block)) {
@@ -3819,7 +3840,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
          *
          * Once a block has been ACKd, there is no need to retransmit it.
          */
-        return 1;
+        goto skip_app_handler;
       }
       if (block.bert)
         block.num += (unsigned int)(lg_xmit->b.b1.bert_size / 1024 - 1);
@@ -3911,14 +3932,14 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
           if (coap_send_q_block1(session, block, pdu,
                                  COAP_SEND_INC_PDU) == COAP_INVALID_MID)
             goto fail_body;
-          return 1;
+          goto skip_app_handler;
         } else if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
           goto fail_body;
 #else /* ! COAP_Q_BLOCK_SUPPORT */
         if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
           goto fail_body;
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
-        return 1;
+        goto skip_app_handler;
       }
     } else if (COAP_RESPONSE_CLASS(rcvd->code) == 2) {
       /*
@@ -3947,18 +3968,18 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
                                   COAP_OPTION_OBSERVE,
                                   &opt_iter);
       if (obs_opt) {
-        return 0;
+        goto call_app_handler;
       }
       goto lg_xmit_finished;
     } else if (rcvd->code == COAP_RESPONSE_CODE(401)) {
       if (check_freshness(session, rcvd, sent, lg_xmit, NULL))
-        return 1;
+        goto skip_app_handler;
 #if COAP_Q_BLOCK_SUPPORT
     } else if (rcvd->code == COAP_RESPONSE_CODE(402)) {
       /* Q-Block1 or Q-Block2 not present in p - duplicate error ? */
       if (coap_get_block_b(session, rcvd, COAP_OPTION_Q_BLOCK2, &block) ||
           coap_get_block_b(session, rcvd, COAP_OPTION_Q_BLOCK1, &block))
-        return 1;
+        goto skip_app_handler;
     } else if (rcvd->code == COAP_RESPONSE_CODE(408) &&
                lg_xmit->option == COAP_OPTION_Q_BLOCK1) {
       size_t length;
@@ -3978,7 +3999,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
       if (COAP_PROTO_RELIABLE(session->proto) ||
           rcvd->type != COAP_MESSAGE_NON) {
         coap_log_debug("Unexpected 4.08 - protocol violation - ignore\n");
-        return 1;
+        goto skip_app_handler;
       }
 
       if (coap_get_data(rcvd, &length, &data)) {
@@ -4026,7 +4047,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
           if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)
             goto fail_body;
         }
-        return 1;
+        goto skip_app_handler;
       }
 fail_cbor:
       coap_log_info("Invalid application/missing-blocks+cbor-seq\n");
@@ -4034,7 +4055,7 @@ fail_cbor:
     }
     goto lg_xmit_finished;
   }
-  return 0;
+  goto call_app_handler;
 
 fail_body:
   coap_handle_event_lkd(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
@@ -4071,7 +4092,16 @@ lg_xmit_finished:
   }
   LL_DELETE(session->lg_xmit, lg_xmit);
   coap_block_delete_lg_xmit(session, lg_xmit);
+
+call_app_handler:
+  if (lg_crcv_is_refed)
+    coap_lg_crcv_release_lkd(session, lg_crcv);
   return 0;
+
+skip_app_handler:
+  if (lg_crcv_is_refed)
+    coap_lg_crcv_release_lkd(session, lg_crcv);
+  return 1;
 }
 #endif /* COAP_CLIENT_SUPPORT */
 

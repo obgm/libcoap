@@ -204,10 +204,11 @@ struct coap_lg_crcv_t {
   coap_binary_t *app_token; /**< app requesting PDU token */
   coap_bin_const_t **obs_token; /**< Tokens used in setting up Observe
                                   (to handle large FETCH) */
-  size_t obs_token_cnt; /**< number of tokens used to set up Observe */
+  size_t obs_token_cnt;  /**< number of tokens used to set up Observe */
   uint16_t o_block_option; /**< Block CoAP option used when initiating Observe */
-  uint8_t o_blk_size;      /**< Block size used when initiating Observe */
-  uint64_t state_token; /**< state token */
+  uint8_t o_blk_size;    /**< Block size used when initiating Observe */
+  uint32_t ref;          /**< Reference count */
+  uint64_t state_token;  /**< state token */
   coap_pdu_t *sent_pdu;  /**< The sent pdu with all the data */
   coap_rblock_t rec_blocks; /**< list of received blocks */
   coap_tick_t last_used; /**< Last time all data sent or 0 */
@@ -242,6 +243,7 @@ struct coap_lg_srcv_t {
   coap_str_const_t *uri_path; /** set to uri_path if unknown resource */
   coap_rblock_t rec_blocks; /** < list of received blocks */
   coap_bin_const_t *last_token; /**< last used token */
+  uint32_t ref;          /**< Reference count */
 };
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -257,8 +259,48 @@ coap_lg_crcv_t *coap_block_new_lg_crcv(coap_session_t *session,
                                        coap_pdu_t *pdu,
                                        coap_lg_xmit_t *lg_xmit);
 
+/**
+ * Remove a lg_crcv.
+ * If lg_crcv is being referenced, then the reference counter is decremented
+ * but the lg_crcv data still exists until a coap_lg_crcv_release_lkd() is
+ * invoked.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ * @param lg_crcv The lg_crcv being used.
+ */
 void coap_block_delete_lg_crcv(coap_session_t *session,
                                coap_lg_crcv_t *lg_crcv);
+
+/**
+ * Decrement reference counter on a lg_crcv.
+ * Note that the lg_crcv storage may be deleted as a result and should not be
+ * used after this call.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ * @param lg_crcv The lg_crcv being used.
+ */
+COAP_STATIC_INLINE void
+coap_lg_crcv_release_lkd(coap_session_t *session,coap_lg_crcv_t *lg_crcv) {
+  coap_block_delete_lg_crcv(session, lg_crcv);
+  return;
+}
+
+/**
+ * Increment reference counter on a lg_crcv.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param lg_crcv The lg_crcv being used.
+ */
+COAP_STATIC_INLINE void
+coap_lg_crcv_reference_lkd(coap_lg_crcv_t *lg_crcv) {
+  lg_crcv->ref++;
+  return;
+}
 
 int coap_block_check_lg_crcv_timeouts(coap_session_t *session,
                                       coap_tick_t now,
@@ -296,8 +338,48 @@ coap_mid_t coap_send_q_blocks(coap_session_t *session,
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
+/**
+ * Remove a lg_srcv.
+ * If lg_srcv is being referenced, then the reference counter is decremented
+ * but the lg_srcv data still exists until a coap_lg_srcv_release_lkd() is
+ * invoked.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ * @param lg_srcv The lg_srcv being used.
+ */
 void coap_block_delete_lg_srcv(coap_session_t *session,
                                coap_lg_srcv_t *lg_srcv);
+
+/**
+ * Decrement reference counter on a lg_srcv.
+ * Note that the lg_srcv storage may be deleted as a result and should not be
+ * used after this call.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ * @param lg_srcv The lg_srcv being used.
+ */
+COAP_STATIC_INLINE void
+coap_lg_srcv_release_lkd(coap_session_t *session,coap_lg_srcv_t *lg_srcv) {
+  coap_block_delete_lg_srcv(session, lg_srcv);
+  return;
+}
+
+/**
+ * Increment reference counter on a lg_srcv.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param lg_srcv The lg_srcv being used.
+ */
+COAP_STATIC_INLINE void
+coap_lg_srcv_reference_lkd(coap_lg_srcv_t *lg_srcv) {
+  lg_srcv->ref++;
+  return;
+}
 
 int coap_block_check_lg_srcv_timeouts(coap_session_t *session,
                                       coap_tick_t now,
