@@ -4554,6 +4554,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   int is_ext_token_rst = 0;
   int oscore_invalid = 0;
 
+  coap_pdu_reference_lkd(pdu);
   pdu->session = session;
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
 
@@ -4594,7 +4595,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #if COAP_OSCORE_SUPPORT
         session->oscore_encryption = oscore_encryption;
 #endif /* COAP_OSCORE_SUPPORT */
-        return;
+        goto finish;
       }
 #if COAP_OSCORE_SUPPORT
       session->oscore_encryption = oscore_encryption;
@@ -4677,9 +4678,11 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         }
         coap_delete_node_lkd(sent);
         coap_delete_pdu_lkd(orig_pdu);
-        return;
+        goto finish;
       } else {
         session->oscore_encryption = 1;
+        coap_pdu_reference_lkd(dec_pdu);
+        coap_pdu_release_lkd(pdu);
         pdu = dec_pdu;
       }
       coap_log_debug("Decrypted PDU\n");
@@ -5014,6 +5017,11 @@ cleanup:
 #if COAP_OSCORE_SUPPORT
   coap_delete_pdu_lkd(dec_pdu);
 #endif /* COAP_OSCORE_SUPPORT */
+
+#if COAP_SERVER_SUPPORT || COAP_OSCORE_SUPPORT
+finish:
+#endif /* COAP_SERVER_SUPPORT || COAP_OSCORE_SUPPORT */
+  coap_pdu_release_lkd(pdu);
 }
 
 #if COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG
