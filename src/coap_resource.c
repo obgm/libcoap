@@ -175,7 +175,8 @@ coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
       query_pattern.length =
           query_filter->length - (resource_param.length + 1);
 
-      if ((query_pattern.s[0] == '/') && ((flags & MATCH_URI) == MATCH_URI)) {
+      if (query_pattern.length &&
+          (query_pattern.s[0] == '/') && ((flags & MATCH_URI) == MATCH_URI)) {
         query_pattern.s++;
         query_pattern.length--;
       }
