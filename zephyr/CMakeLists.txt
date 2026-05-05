@@ -185,6 +185,16 @@ if(CONFIG_LIBCOAP)
       $<$<BOOL:${CONFIG_LIBCOAP_DEFAULT_SESSION_TIMEOUT}>:COAP_DEFAULT_SESSION_TIMEOUT=${CONFIG_LIBCOAP_DEFAULT_SESSION_TIMEOUT}>
     )
 
+  target_compile_definitions(coap-3 PRIVATE
+    uthash_malloc=k_malloc
+    mbedtls_malloc=k_malloc
+    mbedtls_realloc=k_realloc
+    mbedtls_free=k_free
+  )
+  target_compile_options(coap-3 PRIVATE
+    "SHELL:-Duthash_free(ptr,sz)=k_free(ptr)"
+  )
+
   target_link_libraries(coap-3 PUBLIC zephyr_interface)
 
   set_property(GLOBAL APPEND PROPERTY ZEPHYR_INTERFACE_LIBS coap-3)

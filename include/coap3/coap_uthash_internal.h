@@ -81,6 +81,10 @@ do {                                                                            
 } while (0)
 #endif
 
+#ifdef WITH_ZEPHYR
+#include <zephyr/kernel.h>
+#endif
+
 #ifndef uthash_malloc
 #define uthash_malloc(sz) malloc(sz)      /* malloc fcn                      */
 #endif
