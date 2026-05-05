@@ -119,26 +119,62 @@ typedef mbedtls_md_type_t coap_crypto_md_type_t;
 #define COAP_CRYPTO_MD_NONE     MBEDTLS_MD_NONE
 #endif /* !COAP_USE_PSA_CRYPTO */
 
-#ifdef _WIN32
+/*
+ * Default mbedTLS helpers in this file to the C library heap. Zephyr can set
+ * mbedtls_malloc / mbedtls_realloc / mbedtls_free via zephyr/CMakeLists.txt.
+ */
 #include <stdlib.h>
 #include <string.h>
+
+#ifndef mbedtls_malloc
+#define mbedtls_malloc(a) malloc(a)
+#endif
+#ifndef mbedtls_realloc
+#define mbedtls_realloc(a, b) realloc((a), (b))
+#endif
+#ifndef mbedtls_free
+#define mbedtls_free(a) free(a)
+#endif
+
 static char *
-strndup(const char *s1, size_t n) {
-  char *copy = (char *)malloc(n + 1);
+coap_mbedtls_strdup_alloc(const char *s) {
+  size_t len;
+  char *copy;
+
+  if (!s) {
+    return NULL;
+  }
+  len = strlen(s) + 1;
+  copy = (char *)mbedtls_malloc(len);
   if (copy) {
-    memcpy(copy, s1, n);
-    copy[n] = 0;
+    memcpy(copy, s, len);
   }
   return copy;
 }
-#endif /* _WIN32 */
 
-#define mbedtls_malloc(a) malloc(a)
-#define mbedtls_realloc(a,b) realloc(a,b)
-#define mbedtls_strdup(a) strdup(a)
-#define mbedtls_strndup(a,b) strndup(a,b)
-#undef mbedtls_free
-#define mbedtls_free(a) free(a)
+static char *
+coap_mbedtls_strndup_alloc(const char *s, size_t n) {
+  size_t len;
+  char *copy;
+
+  if (!s) {
+    return NULL;
+  }
+  len = strnlen(s, n);
+  copy = (char *)mbedtls_malloc(len + 1);
+  if (copy) {
+    memcpy(copy, s, len);
+    copy[len] = '\0';
+  }
+  return copy;
+}
+
+#ifndef mbedtls_strdup
+#define mbedtls_strdup(a) coap_mbedtls_strdup_alloc(a)
+#endif
+#ifndef mbedtls_strndup
+#define mbedtls_strndup(a, b) coap_mbedtls_strndup_alloc((a), (b))
+#endif
 
 #ifndef MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED
 /* definition changed in later mbedtls code versions */
