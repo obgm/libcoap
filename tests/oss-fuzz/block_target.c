@@ -1,7 +1,15 @@
 #include "coap3/coap_internal.h"
+#include "coap_fuzz_helper.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+
+static int
+fuzz_event_handler(coap_session_t *session, const coap_event_t event) {
+  (void)session;
+  (void)event;
+  return 0;
+}
 
 /* Resource handler - exercises coap_add_data_large_response() */
 static void
@@ -54,7 +62,6 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   coap_session_t *session = NULL;
   coap_resource_t *resource = NULL;
   coap_address_t addr;
-  uint8_t *dgram = NULL;
 
   if (size < 8)
     return 0;
@@ -67,6 +74,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   ctx = coap_new_context(NULL);
   if (!ctx)
     goto cleanup;
+  coap_register_event_handler(ctx, fuzz_event_handler);
 
   /* Configure block mode and max block size */
   uint32_t block_mode = ((uint32_t)data[0] << 8) | data[1];
@@ -94,14 +102,12 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     goto cleanup;
   session->state = COAP_SESSION_STATE_ESTABLISHED;
 
-  /* Process datagram */
-  size_t dgram_len = size - 4;
-  dgram = (uint8_t *)malloc(dgram_len);
-  if (dgram) {
-    memcpy(dgram, data + 4, dgram_len);
-    coap_handle_dgram(ctx, session, dgram, dgram_len);
-    free(dgram);
-  }
+  /* Dispatch with programmatic PDU and raw wire format */
+  coap_fuzz_dispatch(ctx, session, data, size, (const uint8_t *)"data", 4);
+
+  /* Dispatch to .well-known/core to exercise hnd_get_wellknown_lkd */
+  coap_fuzz_dispatch(ctx, session, data, size,
+                     (const uint8_t *)".well-known/core", 16);
 
 cleanup:
   if (session)
