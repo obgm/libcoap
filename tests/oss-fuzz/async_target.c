@@ -1,7 +1,15 @@
 #include "coap3/coap_internal.h"
+#include "coap_fuzz_helper.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+
+static int
+fuzz_event_handler(coap_session_t *session, const coap_event_t event) {
+  (void)session;
+  (void)event;
+  return 0;
+}
 
 static void
 async_handler(coap_resource_t *resource, coap_session_t *session,
@@ -57,6 +65,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   ctx = coap_new_context(NULL);
   if (!ctx)
     goto cleanup;
+  coap_register_event_handler(ctx, fuzz_event_handler);
 
   resource = coap_resource_init(coap_make_str_const("async"), 0);
   if (resource) {
@@ -117,15 +126,8 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     }
   }
 
-  /* Message processing via handler */
-  if (size > 16 && size <= 512) {
-    uint8_t *dgram = malloc(size);
-    if (dgram) {
-      memcpy(dgram, data, size);
-      coap_handle_dgram(ctx, session, dgram, size);
-      free(dgram);
-    }
-  }
+  /* Dispatch with programmatic PDU and raw wire format */
+  coap_fuzz_dispatch(ctx, session, data, size, (const uint8_t *)"async", 5);
 
 cleanup:
   if (session)
