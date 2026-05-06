@@ -2,6 +2,13 @@
 #include <stdint.h>
 #include <string.h>
 
+static int
+fuzz_event_handler(coap_session_t *session, const coap_event_t event) {
+  (void)session;
+  (void)event;
+  return 0;
+}
+
 static uint8_t test_data[4096];
 
 int
@@ -24,6 +31,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   if (!ctx) {
     return 0;
   }
+  coap_register_event_handler(ctx, fuzz_event_handler);
 
   if (data[0] & 0x01) {
     ctx->block_mode |= COAP_BLOCK_USE_LIBCOAP;
@@ -61,6 +69,22 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     data_len = sizeof(test_data);
   }
   uint32_t block_num = (size > 4) ? (data[4] % 16) : 0;
+
+  /* Populate lg_xmit so timeout functions iterate a non-empty list */
+  {
+    uint32_t saved_mode = session->block_mode;
+    session->block_mode |= COAP_BLOCK_USE_LIBCOAP;
+    coap_pdu_t *setup_pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_PUT,
+                                          coap_new_message_id(session),
+                                          coap_session_max_pdu_size(session));
+    if (setup_pdu) {
+      coap_add_option(setup_pdu, COAP_OPTION_URI_PATH, 4, (const uint8_t *)"test");
+      coap_add_data_large_request_lkd(session, setup_pdu, sizeof(test_data),
+                                      test_data, NULL, NULL);
+      coap_delete_pdu(setup_pdu);
+    }
+    session->block_mode = saved_mode;
+  }
 
   coap_tick_t now, tim_rem;
   coap_ticks(&now);
