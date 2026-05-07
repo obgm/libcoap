@@ -503,7 +503,7 @@ coap_free_resource(coap_resource_t *resource, coap_deleting_resource_t deleting)
 
   context = resource->context;
   if (context) {
-    if (context->observe_no_clear) {
+    if (!context->observe_no_clear) {
       coap_resource_notify_observers_lkd(resource, deleting);
       coap_notify_observers(context, resource, deleting);
     }
