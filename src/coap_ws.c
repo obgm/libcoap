@@ -498,7 +498,7 @@ coap_ws_rd_http_header(coap_session_t *session) {
      * some frame info that needs to be subsequently processed
      */
     rem = ws->http_ofs > (sizeof(ws->http_hdr) - 1 - COAP_MAX_FS) ?
-          sizeof(ws->http_hdr) - ws->http_ofs : COAP_MAX_FS;
+          sizeof(ws->http_hdr) - ws->http_ofs -1 : COAP_MAX_FS;
     bytes = session->sock.lfunc[COAP_LAYER_WS].l_read(session,
                                                       &ws->http_hdr[ws->http_ofs],
                                                       rem);
