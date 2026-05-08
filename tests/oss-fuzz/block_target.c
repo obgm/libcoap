@@ -85,12 +85,16 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     coap_context_set_max_block_size(ctx, max_block);
   }
 
-  /* Create resource */
+  /* Create resource with type and interface attributes */
   resource = coap_resource_init(coap_make_str_const("data"), 0);
   if (resource) {
     coap_register_request_handler(resource, COAP_REQUEST_GET, block_handler);
     coap_register_request_handler(resource, COAP_REQUEST_PUT, block_handler);
     coap_register_request_handler(resource, COAP_REQUEST_POST, block_handler);
+    coap_add_attr(resource, coap_make_str_const("rt"),
+                  coap_make_str_const("\"test\""), 0);
+    coap_add_attr(resource, coap_make_str_const("if"),
+                  coap_make_str_const("\"block\""), 0);
     coap_add_resource(ctx, resource);
   }
 
@@ -105,9 +109,23 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   /* Dispatch with programmatic PDU and raw wire format */
   coap_fuzz_dispatch(ctx, session, data, size, (const uint8_t *)"data", 4);
 
-  /* Dispatch to .well-known/core to exercise hnd_get_wellknown_lkd */
-  coap_fuzz_dispatch(ctx, session, data, size,
-                     (const uint8_t *)".well-known/core", 16);
+  /* Probe .well-known/core with a fuzz-derived query filter */
+  {
+    coap_pdu_t *wk = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET,
+                                   coap_new_message_id(session),
+                                   coap_session_max_pdu_size(session));
+    if (wk) {
+      coap_add_option(wk, COAP_OPTION_URI_PATH, 11,
+                      (const uint8_t *)".well-known");
+      coap_add_option(wk, COAP_OPTION_URI_PATH, 4,
+                      (const uint8_t *)"core");
+      uint8_t qlen = (data[4] % 16) + 1;
+      if ((size_t)5 + qlen <= size)
+        coap_add_option(wk, COAP_OPTION_URI_QUERY, qlen, data + 5);
+      coap_dispatch(ctx, session, wk);
+      coap_delete_pdu(wk);
+    }
+  }
 
 cleanup:
   if (session)
