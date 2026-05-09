@@ -926,32 +926,8 @@ hnd_put_post(coap_resource_t *resource,
   resource_entry->value = transient_value;
 
   if (resource_entry->created) {
-    coap_pdu_code_t code = coap_pdu_get_code(request);
-
     resource_entry->created = 0;
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CREATED);
-    if (code == COAP_REQUEST_CODE_POST) {
-      /* Add in Location-Path / Location-Query Options */
-      coap_option_iterator_init(request, &opt_iter, COAP_OPT_ALL);
-      while ((option = coap_option_next(&opt_iter))) {
-        switch (opt_iter.number) {
-        case COAP_OPTION_URI_PATH:
-          if (!coap_add_option(response, COAP_OPTION_LOCATION_PATH,
-                               coap_opt_length(option),
-                               coap_opt_value(option)))
-            goto fail;
-          break;
-        case COAP_OPTION_URI_QUERY:
-          if (!coap_add_option(response, COAP_OPTION_LOCATION_QUERY,
-                               coap_opt_length(option),
-                               coap_opt_value(option)))
-            goto fail;
-          break;
-        default:
-          break;
-        }
-      }
-    }
   } else {
     coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
     coap_resource_notify_observers(resource, NULL);
@@ -967,10 +943,6 @@ hnd_put_post(coap_resource_t *resource,
                                  body.s,
                                  release_resource_data, resource_entry->value);
   }
-  return;
-
-fail:
-  coap_pdu_set_code(response, COAP_RESPONSE_CODE_INTERNAL_ERROR);
   return;
 }
 
@@ -2028,7 +2000,9 @@ do_call_home(coap_context_t *ctx, const char *local_bind, const char *local_port
           goto error;
       }
       if (optlist_chain) {
-        coap_add_optlist_pdu(pdu, &optlist_chain);
+        if (!coap_add_optlist_pdu(pdu, &optlist_chain)) {
+          coap_log_warn("do_call_home: cannot add all options to request\n");
+        }
         coap_delete_optlist(optlist_chain);
       }
       ret = coap_send_recv(session, pdu, &resp_pdu, 2000);

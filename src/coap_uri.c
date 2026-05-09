@@ -664,8 +664,8 @@ typedef void (*segment_handler_t)(const uint8_t *, size_t, void *);
  *
  * returns 1 if . , 2 if .. else 0.
  */
-static int
-dots(const uint8_t *s, size_t len) {
+int
+coap_check_dots(const uint8_t *s, size_t len) {
   uint8_t p;
 
   if (!len)
@@ -751,7 +751,7 @@ coap_split_path_impl(const uint8_t *path, size_t len,
   while (length > 0 && !strnchr((const uint8_t *)"?#", 2, *q)) {
     if (*q == '/') {
       /* start new segment */
-      num_dots = dots(p, q - p);
+      num_dots = coap_check_dots(p, q - p);
       switch (num_dots) {
       case 1:
         /* drop segment */
@@ -775,7 +775,7 @@ coap_split_path_impl(const uint8_t *path, size_t len,
   }
 
   /* write last segment */
-  num_dots = dots(p, q - p);
+  num_dots = coap_check_dots(p, q - p);
   switch (num_dots) {
   case 1:
     /* drop segment */
@@ -903,7 +903,7 @@ coap_path_into_optlist_abbrev(const uint8_t *s, size_t length, coap_option_num_t
   while (length > 0 && !strnchr((const uint8_t *)"?#", 2, *s)) {
     if (*s == '/') {                /* start of new path element */
       /* start new segment */
-      num_dots = dots(p, s - p);
+      num_dots = coap_check_dots(p, s - p);
       switch (num_dots) {
       case 1:
         /* drop segment */
@@ -932,7 +932,7 @@ coap_path_into_optlist_abbrev(const uint8_t *s, size_t length, coap_option_num_t
 
   }
   /* add last path element */
-  num_dots = dots(p, s - p);
+  num_dots = coap_check_dots(p, s - p);
   switch (num_dots) {
   case 1:
     /* drop segment */

@@ -508,12 +508,15 @@ coap_option_filter_get(coap_opt_filter_t *filter, coap_option_num_t option) {
 }
 
 coap_optlist_t *
-coap_new_optlist(uint16_t number,
+coap_new_optlist(coap_option_num_t number,
                  size_t length,
-                 const uint8_t *data
-                ) {
+                 const uint8_t *data) {
   coap_optlist_t *node;
 
+  if (!coap_pdu_parse_opt_base(number, length, data)) {
+    coap_log_warn("coap_new_optlist: %d: Invalid option length / data\n", number);
+    return NULL;
+  }
 #if defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS
   if (length > MEMP_LEN_COAPOPTLIST) {
     coap_log_crit("coap_new_optlist: size too large (%" PRIuS " > MEMP_LEN_COAPOPTLIST)\n",

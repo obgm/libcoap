@@ -340,8 +340,11 @@ coap_new_request(coap_context_t *ctx,
     coap_log_debug("cannot add token to request\n");
   }
 
-  if (options)
-    coap_add_optlist_pdu(pdu, options);
+  if (options) {
+    if (!coap_add_optlist_pdu(pdu, options)) {
+      coap_log_warn("cannot add all options to request\n");
+    }
+  }
 
   if (length) {
     /* Let the underlying libcoap decide how this data should be sent */

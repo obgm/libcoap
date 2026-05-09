@@ -829,7 +829,11 @@ size_t
 coap_add_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
                 const uint8_t *data) {
   if (pdu->data) {
-    coap_log_warn("coap_add_optlist_pdu: PDU already contains data\n");
+    coap_log_warn("coap_add_option: PDU already contains data\n");
+    return 0;
+  }
+  if (!coap_pdu_parse_opt_base(number, len, data)) {
+    coap_log_warn("qcoap_add_option: %d: Invalid option length / data\n", number);
     return 0;
   }
   return coap_add_option_internal(pdu, number, len, data);
@@ -1252,11 +1256,11 @@ bad:
   return 0;
 }
 
-static int
-coap_pdu_parse_opt_base(coap_pdu_t *pdu, uint16_t len) {
+int
+coap_pdu_parse_opt_base(coap_option_num_t number, size_t len, const uint8_t *opt_val) {
   int res = 1;
 
-  switch (pdu->max_opt) {
+  switch (number) {
   case COAP_OPTION_IF_MATCH:
     if (len > 8)
       res = 0;
@@ -1282,14 +1286,14 @@ coap_pdu_parse_opt_base(coap_pdu_t *pdu, uint16_t len) {
       res = 0;
     break;
   case COAP_OPTION_LOCATION_PATH:
+  case COAP_OPTION_URI_PATH:
     if (len > 255)
       res = 0;
+    if (coap_check_dots(opt_val, len)) {
+      res = 0;
+    }
     break;
   case COAP_OPTION_OSCORE:
-    if (len > 255)
-      res = 0;
-    break;
-  case COAP_OPTION_URI_PATH:
     if (len > 255)
       res = 0;
     break;
@@ -1438,8 +1442,9 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
       coap_opt_t *opt_last = opt;
 #endif
       size_t optsize = next_option_safe(&opt, &length, &pdu->max_opt);
-      const uint32_t len =
-          optsize ? coap_opt_length((const uint8_t *)opt - optsize) : 0;
+      uint32_t len;
+      const uint8_t *opt_val;
+
       if (optsize == 0) {
         coap_log_debug("coap_pdu_parse: %d.%02d: offset %u malformed option\n",
                        pdu->code >> 5, pdu->code & 0x1F,
@@ -1448,10 +1453,12 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
         good = 0;
         break;
       }
+      len = coap_opt_length((const uint8_t *)opt - optsize);
+      opt_val = coap_opt_value((const uint8_t *)opt - optsize);
       if (COAP_PDU_IS_SIGNALING(pdu) ?
           !coap_pdu_parse_opt_csm(pdu, len) :
-          !coap_pdu_parse_opt_base(pdu, len)) {
-        coap_log_warn("coap_pdu_parse: %d.%02d: offset %u option %u has bad length %" PRIu32 "\n",
+          !coap_pdu_parse_opt_base(pdu->max_opt, len, opt_val)) {
+        coap_log_warn("coap_pdu_parse: %d.%02d: offset %u option %u has bad length %" PRIu32 " or value\n",
                       pdu->code >> 5, pdu->code & 0x1F,
                       (int)(opt_last - pdu->token - pdu->e_token_length), pdu->max_opt,
                       len);
@@ -1489,9 +1496,12 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
           size_t optsize = next_option_safe(&opt, &length, &pdu->max_opt);
           const uint32_t len =
               optsize ? coap_opt_length((const uint8_t *)opt - optsize) : 0;
+          const uint8_t *opt_val =
+              optsize ?  coap_opt_value((const uint8_t *)opt - optsize) : 0;
+
           if (!optsize || (COAP_PDU_IS_SIGNALING(pdu) ?
                            !coap_pdu_parse_opt_csm(pdu, len) :
-                           !coap_pdu_parse_opt_base(pdu, len))) {
+                           !coap_pdu_parse_opt_base(pdu->max_opt, len, opt_val))) {
             ok = ok && write_prefix(&obp, &outbuflen, "*", 1);
             if (!optsize) {
               /* Skip to end of options to output all data */
