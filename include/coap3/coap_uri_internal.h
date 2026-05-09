@@ -47,6 +47,17 @@ extern coap_upa_chain_t *coap_upa_client_fallback_chain;
 extern coap_upa_chain_t *coap_upa_server_mapping_chain;
 
 /**
+ * Checks if path segment @p s consists of one or two dots.
+ * Hex encoding %2e is also checked.
+ *
+ * @param s Start of data.
+ * @param len length of data.
+ *
+ * @return @c 1 if single ., @c 2 if two .. else @c 0.
+ */
+int coap_check_dots(const uint8_t *s, size_t len);
+
+/**
  * replace any % hex definitions with the actual character.
  *
  * @param optlist The optlist entry to modify if % hex definitions.

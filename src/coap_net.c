@@ -3291,19 +3291,30 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
     if (response->code == COAP_RESPONSE_CODE(402)) {
       char buf[128];
       int first = 1;
+      int i;
+      size_t len;
 
 #if COAP_ERROR_PHRASE_LENGTH > 0
       snprintf(buf, sizeof(buf), "%s", phrase ? phrase : "");
 #else
       buf[0] = '\000';
 #endif
-      /* copy all options into diagnostic message */
-      coap_option_iterator_init(request, &opt_iter, opts);
-      while (coap_option_next(&opt_iter)) {
-        size_t len = strlen(buf);
-
-        snprintf(&buf[len], sizeof(buf) - len, "%s%d", first ? " " : ",", opt_iter.number);
-        first = 0;
+      /* copy all reported options into diagnostic message */
+      for (i = COAP_OPT_FILTER_SHORT - 1; i >= 0; i--) {
+        if (opts->mask & (1 << (COAP_OPT_FILTER_LONG + i))) {
+          len = strlen(buf);
+          snprintf(&buf[len], sizeof(buf) - len, "%s%d", first ? " " : ",",
+                   opts->short_opts[i]);
+          first = 0;
+        }
+      }
+      for (i = COAP_OPT_FILTER_LONG - 1; i >= 0; i--) {
+        if (opts->mask & (1 << i)) {
+          len = strlen(buf);
+          snprintf(&buf[len], sizeof(buf) - len, "%s%d", first ? " " : ",",
+                   opts->long_opts[i]);
+          first = 0;
+        }
       }
       coap_add_data(response, (size_t)strlen(buf), (const uint8_t *)buf);
     } else if (opts && opts->mask) {

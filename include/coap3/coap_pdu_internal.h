@@ -380,6 +380,18 @@ int coap_update_token(coap_pdu_t *pdu,
 int coap_option_check_repeatable(coap_option_num_t number);
 
 /**
+ * Check the length / data (if appropriate) of an option.
+ *
+ * @param number The option number to check for repeatability.
+ * @param len The data length of an option.
+ * @param opt_val The data value of an option.
+ *
+ * @return     @c 0 if not valid or @c 1 if valid.
+ */
+int coap_pdu_parse_opt_base(coap_option_num_t number, size_t len,
+                            const uint8_t *opt_val);
+
+/**
  * Creates a new CoAP PDU.
  *
  * Note: This function must be called in the locked state.

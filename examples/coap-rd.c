@@ -261,6 +261,7 @@ hnd_delete_resource(coap_resource_t *resource,
 
   if (rd) {
     rd_delete(rd);
+    coap_resource_set_userdata(resource, NULL);
   }
   /* FIXME: link attributes for resource have been created dynamically
    * using coap_malloc() and must be released. */
@@ -535,7 +536,8 @@ hnd_post_rd(coap_resource_t *resource COAP_UNUSED,
     coap_optlist_t *optlist_chain = NULL;
 
     /* add Location-Path */
-    if (!coap_path_into_optlist(loc, loc_size, COAP_OPTION_LOCATION_PATH,
+    if (!coap_path_into_optlist(loc+RD_ROOT_SIZE+1, loc_size-RD_ROOT_SIZE-1,
+                                COAP_OPTION_LOCATION_PATH,
                                 &optlist_chain))
       goto error;
     if (!coap_add_optlist_pdu(response, &optlist_chain))

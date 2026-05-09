@@ -1076,9 +1076,9 @@ static void
 t_encode_pdu19(void) {
   size_t n;
   uint8_t  token[] = { 't' };
-  uint16_t opt_num[] = { 300,   7,  21,  25 };
+  uint16_t opt_num[] = { 300,   7,  20,  25 };
   uint8_t  opt_val[] = {  54,  50,  52,  53 };
-  uint8_t  data1[] = { 0x74, 0x71, 0x32, 0xd1, 0x01, 0x34, 0x41, 0x35,
+  uint8_t  data1[] = { 0x74, 0x71, 0x32, 0xd1, 0x00, 0x34, 0x51, 0x35,
                        0xe1, 0x00, 0x06, 0x36
                      };
   uint8_t  data2[] = { 0x74, 0x71, 0x32, 0xd1, 0x05, 0x35, 0xe1, 0x00,
@@ -1103,7 +1103,7 @@ t_encode_pdu19(void) {
   CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
 
   /* Now remove an option in the middle */
-  coap_remove_option(pdu, 21);
+  coap_remove_option(pdu, 20);
   CU_ASSERT(memcmp(pdu->token, data2, pdu->used_size) == 0);
 
   /* Now remove an option from the start */
@@ -1215,10 +1215,10 @@ static void
 t_encode_pdu21(void) {
   size_t n;
   uint8_t  token[] = { 't' };
-  uint16_t opt_num[] = { 300,   7,  21,  25 };
+  uint16_t opt_num[] = { 300,   7,  20,  25 };
   uint8_t  opt_val[] = {  54,  50,  52,  53 };
   uint8_t  data[] = { 'd', 'a', 't', 'a' };
-  uint8_t  data1[] = { 0x74, 0x71, 0x32, 0xd1, 0x01, 0x34, 0x41, 0x35,
+  uint8_t  data1[] = { 0x74, 0x71, 0x32, 0xd1, 0x00, 0x34, 0x51, 0x35,
                        0xe1, 0x00, 0x06, 0x36, 0xff, 0x64, 0x61, 0x74,
                        0x61
                      };
@@ -1251,7 +1251,7 @@ t_encode_pdu21(void) {
   CU_ASSERT(memcmp(pdu->token, data1, pdu->used_size) == 0);
 
   /* Now remove an option in the middle */
-  coap_remove_option(pdu, 21);
+  coap_remove_option(pdu, 20);
   CU_ASSERT(memcmp(pdu->token, data2, pdu->used_size) == 0);
 
   /* Now remove an option from the start */
@@ -1369,18 +1369,18 @@ t_encode_pdu23(void) {
   size_t n;
   uint8_t  token[] = { 't' };
   uint8_t  new_token[] = { 't', 'o', 'k', 'e', 'n' };
-  uint16_t opt_num[] = { 300,  10,   7,  21,  25 };
+  uint16_t opt_num[] = { 300,  10,   7,  20,  25 };
   uint8_t  opt_val[] = {  54,  51,  50,  52,  53 };
   uint8_t  data[] = { 'd', 'a', 't', 'a' };
-  uint8_t  data1[] = { 0x74, 0x71, 0x32, 0x31, 0x33, 0xb1, 0x34, 0x41,
+  uint8_t  data1[] = { 0x74, 0x71, 0x32, 0x31, 0x33, 0xa1, 0x34, 0x51,
                        0x35, 0xe1, 0x00, 0x06, 0x36, 0xff, 0x64, 0x61,
                        0x74, 0x61
                      };
   uint8_t  data2[] = { 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x71, 0x32, 0x31,
-                       0x33, 0xb1, 0x34, 0x41, 0x35, 0xe1, 0x00, 0x06,
+                       0x33, 0xa1, 0x34, 0x51, 0x35, 0xe1, 0x00, 0x06,
                        0x36, 0xff, 0x64, 0x61, 0x74, 0x61
                      };
-  uint8_t  data3[] = { 0x71, 0x32, 0x31, 0x33, 0xb1, 0x34, 0x41, 0x35,
+  uint8_t  data3[] = { 0x71, 0x32, 0x31, 0x33, 0xa1, 0x34, 0x51, 0x35,
                        0xe1, 0x00, 0x06, 0x36, 0xff, 0x64, 0x61, 0x74,
                        0x61
                      };
