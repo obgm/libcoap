@@ -614,11 +614,12 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
   /* Copy across the Outer/Inner Options to respective PDUs */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
   while ((option = coap_option_next(&opt_iter))) {
-    switch (opt_iter.number) {
+    switch ((coap_code_opt_num_t)opt_iter.number) {
     case COAP_OPTION_URI_HOST:
     case COAP_OPTION_URI_PORT:
     case COAP_OPTION_PROXY_SCHEME:
     case COAP_OPTION_HOP_LIMIT:
+    case COAP_OPTION_EDHOC:
       /* Outer only */
       if (!coap_insert_option(osc_pdu,
                               opt_iter.number,
@@ -660,6 +661,29 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
        */
       assert(0);
       break;
+    case COAP_OPTION_OSCORE:
+      /* Dealt with separately */
+      break;
+    case COAP_OPTION_IF_MATCH:
+    case COAP_OPTION_ETAG:
+    case COAP_OPTION_IF_NONE_MATCH:
+    case COAP_OPTION_LOCATION_PATH:
+    case COAP_OPTION_URI_PATH:
+    case COAP_OPTION_URI_PATH_ABB:
+    case COAP_OPTION_CONTENT_FORMAT:
+    case COAP_OPTION_MAXAGE:
+    case COAP_OPTION_URI_QUERY:
+    case COAP_OPTION_ACCEPT:
+    case COAP_OPTION_Q_BLOCK1:
+    case COAP_OPTION_LOCATION_QUERY:
+    case COAP_OPTION_BLOCK2:
+    case COAP_OPTION_BLOCK1:
+    case COAP_OPTION_SIZE2:
+    case COAP_OPTION_Q_BLOCK2:
+    case COAP_OPTION_SIZE1:
+    case COAP_OPTION_NORESPONSE:
+    case COAP_OPTION_ECHO:
+    case COAP_OPTION_RTAG:
     default:
       /* Make as Inner option */
       if (!coap_insert_option(plain_pdu,
@@ -980,7 +1004,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
    */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
   while ((opt = coap_option_next(&opt_iter))) {
-    switch (opt_iter.number) {
+    switch ((coap_code_opt_num_t)opt_iter.number) {
     /* 'E' options skipped */
     case COAP_OPTION_IF_MATCH:
     case COAP_OPTION_ETAG:
@@ -988,14 +1012,17 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     case COAP_OPTION_OBSERVE:
     case COAP_OPTION_LOCATION_PATH:
     case COAP_OPTION_URI_PATH:
+    case COAP_OPTION_URI_PATH_ABB:
     case COAP_OPTION_CONTENT_FORMAT:
     case COAP_OPTION_MAXAGE:
     case COAP_OPTION_URI_QUERY:
     case COAP_OPTION_ACCEPT:
+    case COAP_OPTION_Q_BLOCK1:
     case COAP_OPTION_LOCATION_QUERY:
     case COAP_OPTION_BLOCK2:
     case COAP_OPTION_BLOCK1:
     case COAP_OPTION_SIZE2:
+    case COAP_OPTION_Q_BLOCK2:
     case COAP_OPTION_SIZE1:
     case COAP_OPTION_NORESPONSE:
     case COAP_OPTION_ECHO:
@@ -1003,6 +1030,13 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     /* OSCORE does not get copied across */
     case COAP_OPTION_OSCORE:
       break;
+    /* 'U' options included */
+    case COAP_OPTION_URI_HOST:
+    case COAP_OPTION_URI_PORT:
+    case COAP_OPTION_HOP_LIMIT:
+    case COAP_OPTION_EDHOC:
+    case COAP_OPTION_PROXY_URI:
+    case COAP_OPTION_PROXY_SCHEME:
     default:
       if (!coap_add_option_internal(decrypt_pdu,
                                     opt_iter.number,

@@ -373,11 +373,12 @@ int coap_update_token(coap_pdu_t *pdu,
  * Check whether the option is allowed to be repeated or not.
  * This function returns @c 0 if not repeatable or @c 1 if repeatable
  *
+ * @param pdu    The PDU being checked.
  * @param number The option number to check for repeatability.
  *
  * @return     @c 0 if not repeatable or @c 1 if repeatable.
  */
-int coap_option_check_repeatable(coap_option_num_t number);
+int coap_option_check_repeatable(coap_pdu_t *pdu, coap_option_num_t number);
 
 /**
  * Check the length / data (if appropriate) of an option.

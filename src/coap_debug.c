@@ -610,10 +610,10 @@ msg_code_string(uint16_t c) {
 }
 
 /** Returns a textual description of the option name. */
-static const char *
-msg_option_string(uint8_t code, uint16_t option_type) {
+const char *
+coap_option_string(coap_pdu_code_t code, coap_option_num_t number) {
   struct option_desc_t {
-    uint16_t type;
+    uint16_t value;
     const char *name;
   };
 
@@ -648,61 +648,61 @@ msg_option_string(uint8_t code, uint16_t option_type) {
   };
 
   static struct option_desc_t options_csm[] = {
-    { COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE, "Max-Message-Size" },
-    { COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER, "Block-Wise-Transfer" },
-    { COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH, "Extended-Token-Length" }
+    { COAP_SIG_OPT_MAX_MESSAGE_SIZE, "Max-Message-Size" },
+    { COAP_SIG_OPT_BLOCK_WISE_TRANSFER, "Block-Wise-Transfer" },
+    { COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH, "Extended-Token-Length" }
   };
 
   static struct option_desc_t options_pingpong[] = {
-    { COAP_SIGNALING_OPTION_CUSTODY, "Custody" }
+    { COAP_SIG_OPT_CUSTODY, "Custody" }
   };
 
   static struct option_desc_t options_release[] = {
-    { COAP_SIGNALING_OPTION_ALTERNATIVE_ADDRESS, "Alternative-Address" },
-    { COAP_SIGNALING_OPTION_HOLD_OFF, "Hold-Off" }
+    { COAP_SIG_OPT_ALTERNATIVE_ADDRESS, "Alternative-Address" },
+    { COAP_SIG_OPT_HOLD_OFF, "Hold-Off" }
   };
 
   static struct option_desc_t options_abort[] = {
-    { COAP_SIGNALING_OPTION_BAD_CSM_OPTION, "Bad-CSM-Option" }
+    { COAP_SIG_OPT_BAD_CSM_OPTION, "Bad-CSM-Option" }
   };
 
   static char buf[6];
   size_t i;
 
-  if (code == COAP_SIGNALING_CSM) {
+  if (code == COAP_SIGNALING_CODE_CSM) {
     for (i = 0; i < sizeof(options_csm)/sizeof(struct option_desc_t); i++) {
-      if (option_type == options_csm[i].type) {
+      if (number == options_csm[i].value) {
         return options_csm[i].name;
       }
     }
-  } else if (code == COAP_SIGNALING_PING || code == COAP_SIGNALING_PONG) {
+  } else if (code == COAP_SIGNALING_CODE_PING || code == COAP_SIGNALING_CODE_PONG) {
     for (i = 0; i < sizeof(options_pingpong)/sizeof(struct option_desc_t); i++) {
-      if (option_type == options_pingpong[i].type) {
+      if (number == options_pingpong[i].value) {
         return options_pingpong[i].name;
       }
     }
-  } else if (code == COAP_SIGNALING_RELEASE) {
+  } else if (code == COAP_SIGNALING_CODE_RELEASE) {
     for (i = 0; i < sizeof(options_release)/sizeof(struct option_desc_t); i++) {
-      if (option_type == options_release[i].type) {
+      if (number == options_release[i].value) {
         return options_release[i].name;
       }
     }
-  } else if (code == COAP_SIGNALING_ABORT) {
+  } else if (code == COAP_SIGNALING_CODE_ABORT) {
     for (i = 0; i < sizeof(options_abort)/sizeof(struct option_desc_t); i++) {
-      if (option_type == options_abort[i].type) {
+      if (number == options_abort[i].value) {
         return options_abort[i].name;
       }
     }
   } else {
     /* search option_type in list of known options */
     for (i = 0; i < sizeof(options)/sizeof(struct option_desc_t); i++) {
-      if (option_type == options[i].type) {
+      if (number == options[i].value) {
         return options[i].name;
       }
     }
   }
   /* unknown option type, just print to buf */
-  snprintf(buf, sizeof(buf), "%u", option_type);
+  snprintf(buf, sizeof(buf), "%u", number);
   return buf;
 }
 
@@ -821,7 +821,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   char outbuf[COAP_DEBUG_BUF_SIZE];
 #endif /* ! COAP_CONSTRAINED_STACK */
   size_t buf_len = 0; /* takes the number of bytes written to buf */
-  int encode = 0, have_options = 0;
+  int have_options = 0;
   uint32_t i;
   coap_opt_iterator_t opt_iter;
   coap_opt_t *option;
@@ -882,28 +882,33 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
     }
 
     if (pdu->code == COAP_SIGNALING_CODE_CSM) {
-      switch (opt_iter.number) {
-      case COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH:
-      case COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE:
+      switch ((coap_sig_csm_opt_t)opt_iter.number) {
+      case COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH:
+      case COAP_SIG_OPT_MAX_MESSAGE_SIZE:
         buf_len = snprintf((char *)buf, sizeof(buf), "%u",
                            coap_decode_var_bytes(coap_opt_value(option),
                                                  coap_opt_length(option)));
         break;
+      case COAP_SIG_OPT_BLOCK_WISE_TRANSFER:
       default:
         buf_len = 0;
         break;
       }
     } else if (pdu->code == COAP_SIGNALING_CODE_PING ||
                pdu->code == COAP_SIGNALING_CODE_PONG) {
-      buf_len = 0;
+      switch ((coap_sig_ping_opt_t)opt_iter.number) {
+      case COAP_SIG_OPT_CUSTODY:
+      default:
+        buf_len = 0;
+      }
     } else if (pdu->code == COAP_SIGNALING_CODE_RELEASE) {
-      switch (opt_iter.number) {
-      case COAP_SIGNALING_OPTION_ALTERNATIVE_ADDRESS:
+      switch ((coap_sig_release_opt_t)opt_iter.number) {
+      case COAP_SIG_OPT_ALTERNATIVE_ADDRESS:
         buf_len = print_readable(coap_opt_value(option),
                                  coap_opt_length(option),
                                  buf, sizeof(buf), 0);
         break;
-      case COAP_SIGNALING_OPTION_HOLD_OFF:
+      case COAP_SIG_OPT_HOLD_OFF:
         buf_len = snprintf((char *)buf, sizeof(buf), "%u",
                            coap_decode_var_bytes(coap_opt_value(option),
                                                  coap_opt_length(option)));
@@ -913,8 +918,8 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
         break;
       }
     } else if (pdu->code == COAP_SIGNALING_CODE_ABORT) {
-      switch (opt_iter.number) {
-      case COAP_SIGNALING_OPTION_BAD_CSM_OPTION:
+      switch ((coap_sig_abort_opt_t)opt_iter.number) {
+      case COAP_SIG_OPT_BAD_CSM_OPTION:
         buf_len = snprintf((char *)buf, sizeof(buf), "%u",
                            coap_decode_var_bytes(coap_opt_value(option),
                                                  coap_opt_length(option)));
@@ -924,7 +929,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
         break;
       }
     } else {
-      switch (opt_iter.number) {
+      switch ((coap_code_opt_num_t)opt_iter.number) {
       case COAP_OPTION_CONTENT_FORMAT:
       case COAP_OPTION_ACCEPT:
         content_format = (int)coap_decode_var_bytes(coap_opt_value(option),
@@ -1066,27 +1071,28 @@ no_more:
         }
         buf_len = strlen((char *)buf);
         break;
-      default:
-        /* generic output function for all other option types */
-        if (opt_iter.number == COAP_OPTION_URI_PATH ||
-            opt_iter.number == COAP_OPTION_PROXY_URI ||
-            opt_iter.number == COAP_OPTION_URI_HOST ||
-            opt_iter.number == COAP_OPTION_LOCATION_PATH ||
-            opt_iter.number == COAP_OPTION_LOCATION_QUERY ||
-            opt_iter.number == COAP_OPTION_PROXY_SCHEME ||
-            opt_iter.number == COAP_OPTION_URI_QUERY) {
-          encode = 0;
-        } else {
-          encode = 1;
-        }
+      case COAP_OPTION_URI_PATH:
+      case COAP_OPTION_PROXY_URI:
+      case COAP_OPTION_URI_HOST:
+      case COAP_OPTION_LOCATION_PATH:
+      case COAP_OPTION_LOCATION_QUERY:
+      case COAP_OPTION_PROXY_SCHEME:
+      case COAP_OPTION_URI_QUERY:
         buf_len = print_readable(coap_opt_value(option),
                                  coap_opt_length(option),
-                                 buf, sizeof(buf), encode);
+                                 buf, sizeof(buf), 0);
+        break;
+      case COAP_OPTION_IF_NONE_MATCH:
+      case COAP_OPTION_EDHOC:
+      default:
+        buf_len = print_readable(coap_opt_value(option),
+                                 coap_opt_length(option),
+                                 buf, sizeof(buf), 1);
       }
     }
     outbuflen = strlen(outbuf);
     snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-             " %s:%.*s", msg_option_string(pdu->code, opt_iter.number),
+             " %s:%.*s", coap_option_string(pdu->code, opt_iter.number),
              (int)buf_len, buf);
   }
 

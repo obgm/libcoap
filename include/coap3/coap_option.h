@@ -36,6 +36,111 @@ extern "C" {
 
 typedef uint16_t coap_option_num_t;
 
+/*
+ * CoAP option numbers (be sure to update coap_option_check_critical()
+ * and coap_option_check_repeatable() when adding options).
+ */
+
+/*
+ * The C, U, and N flags indicate the properties
+ * Critical, Unsafe, and NoCacheKey, respectively.
+ * If U is set, then N has no meaning as per
+ * https://rfc-editor.org/rfc/rfc7252#section-5.10
+ * and is set to a -.
+ *
+ * Separately, R is for the options that can be repeated
+ *
+ * The least significant byte of the option is set as followed
+ * as per https://rfc-editor.org/rfc/rfc7252#section-5.4.6
+ *
+ *   0   1   2   3   4   5   6   7
+ * --+---+---+---+---+---+---+---+
+ *           | NoCacheKey| U | C |
+ * --+---+---+---+---+---+---+---+
+ *
+ * https://rfc-editor.org/rfc/rfc8613#section-4 goes on to define E, I and U
+ * properties Encrypted and Integrity Protected, Integrity Protected Only, and
+ * Unprotected respectively.  Integrity Protected Only is not currently used.
+ *
+ * An Option is tagged with CUNREIU with any of the letters replaced with _ if
+ * not set, or - for N if U is set (see above) for aiding understanding of the
+ * Option.
+ */
+
+typedef enum coap_code_opt_num_t {
+  COAP_OPTION_IF_MATCH      =   1, /* C__RE__, opaque,      0-8 B, none, RFC7252 */
+  COAP_OPTION_URI_HOST      =   3, /* CU-___U, String,    1-255 B, none, RFC7252 */
+  COAP_OPTION_ETAG          =   4, /* ___RE__, opaque,      1-8 B, none, RFC7252 */
+  COAP_OPTION_IF_NONE_MATCH =   5, /* C___E__, empty,         0 B, none, RFC7252 */
+  COAP_OPTION_OBSERVE       =   6, /* _U-_E_U, empty/uint,0/0-3 B, none, RFC7641 */
+  COAP_OPTION_URI_PORT      =   7, /* CU-___U, uint,        0-2 B, none, RFC7252 */
+  COAP_OPTION_LOCATION_PATH =   8, /* ___RE__, String,    0-255 B, none, RFC7252 */
+  COAP_OPTION_OSCORE        =   9, /* C_____U, *,         0-255 B, none, RFC8613 */
+  COAP_OPTION_URI_PATH      =  11, /* CU-RE__, String,    0-255 B, none, RFC7252 */
+  COAP_OPTION_CONTENT_FORMAT=  12, /* ____E__, uint,        0-2 B, none, RFC7252 */
+  COAP_OPTION_URI_PATH_ABB  =  13, /* C___E__, uint,        0-4 B, none, RFC TBD */
+  /* COAP_OPTION_MAXAGE default 60 seconds if not set */
+  COAP_OPTION_MAXAGE        =  14, /* _U-_E_U, uint,        0-4 B, 60,   RFC7252 */
+  COAP_OPTION_URI_QUERY     =  15, /* CU-RE__, String,    1-255 B, none, RFC7252 */
+  COAP_OPTION_HOP_LIMIT     =  16, /* ______U, uint,          1 B, none, RFC8768 */
+  COAP_OPTION_ACCEPT        =  17, /* C___E__, uint,        0-2 B, none, RFC7252 */
+  COAP_OPTION_Q_BLOCK1      =  19, /* CU__E_U, uint,        0-3 B, none, RFC9177 */
+  COAP_OPTION_LOCATION_QUERY=  20, /* ___RE__, String,    0-255 B, none, RFC7252 */
+  COAP_OPTION_EDHOC         =  21, /* C_____U, empty,         0 B, none, RFC9668 */
+  COAP_OPTION_BLOCK2        =  23, /* CU-_E_U, uint,        0-3 B, none, RFC7959 */
+  COAP_OPTION_BLOCK1        =  27, /* CU-_E_U, uint,        0-3 B, none, RFC7959 */
+  COAP_OPTION_SIZE2         =  28, /* __N_E_U, uint,        0-4 B, none, RFC7959 */
+  COAP_OPTION_Q_BLOCK2      =  31, /* CU_RE_U, uint,        0-3 B, none, RFC9177 */
+  COAP_OPTION_PROXY_URI     =  35, /* CU-___U, String,   1-1034 B, none, RFC7252 */
+  COAP_OPTION_PROXY_SCHEME  =  39, /* CU-___U, String,    1-255 B, none, RFC7252 */
+  COAP_OPTION_SIZE1         =  60, /* __N_E_U, uint,        0-4 B, none, RFC7252 */
+  COAP_OPTION_ECHO          = 252, /* __N_E_U, opaque,     0-40 B, none, RFC9175 */
+  COAP_OPTION_NORESPONSE    = 258, /* _U-_E_U, uint,        0-1 B, none, RFC7967 */
+  COAP_OPTION_RTAG          = 292, /* ___RE_U, opaque,      0-8 B, none, RFC9175 */
+} coap_code_opt_num_t;
+
+#define  COAP_OPTION_CONTENT_TYPE COAP_OPTION_CONTENT_FORMAT
+
+#if (UINT_MAX > 65535)
+#define COAP_MAX_OPT 65535 /**< the highest option number we know */
+#else /* UINT_MAX <= 65535 */
+#define COAP_MAX_OPT 65534 /**< the highest option number we know */
+#endif /* UINT_MAX <= 65535 */
+
+/* Signaling options */
+
+/* Applies to COAP_SIGNALING_CSM (7.01) */
+typedef enum coap_sig_csm_opt_t {
+  COAP_SIG_OPT_MAX_MESSAGE_SIZE      = 2, /* ____E_U, uint,     0-4 B, 1152, RFC8323 */
+  COAP_SIG_OPT_BLOCK_WISE_TRANSFER   = 4, /* ____E_U, empty,      0 B, none, RFC8323 */
+  COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH = 6, /* ____E_U, uint,     0-3 B, 8,    RFC8974 */
+} coap_sig_csm_opt_t;
+
+/* Applies to COAP_SIGNALING_PING / COAP_SIGNALING_PONG (7.02 / 7.03) */
+typedef enum coap_sig_ping_opt_t {
+  COAP_SIG_OPT_CUSTODY               = 2, /* ____E_U, empty,      0 B, none, RFC8323 */
+} coap_sig_ping_opt_t;
+
+/* Applies to COAP_SIGNALING_RELEASE (7.04) */
+typedef enum coap_sig_release_opt_t {
+  COAP_SIG_OPT_ALTERNATIVE_ADDRESS   = 2, /* ___RE_U, String, 1-255 B, none, RFC8323 */
+  COAP_SIG_OPT_HOLD_OFF              = 4, /* ____E_U, uint,     0-3 B, none, RFC8323 */
+} coap_sig_release_opt_t;
+
+/* Applies to COAP_SIGNALING_ABORT (7.05 )*/
+typedef enum coap_sig_abort_opt_t {
+  COAP_SIG_OPT_BAD_CSM_OPTION        = 2, /* ____E_U, uint,     0-2 B, none, RFC8323 */
+} coap_sig_abort_opt_t;
+
+/* Backward Application compatability */
+#define COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE      COAP_SIG_OPT_MAX_MESSAGE_SIZE
+#define COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER   COAP_SIG_OPT_BLOCK_WISE_TRANSFER
+#define COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH
+#define COAP_SIGNALING_OPTION_CUSTODY               COAP_SIG_OPT_CUSTODY
+#define COAP_SIGNALING_OPTION_ALTERNATIVE_ADDRESS   COAP_SIG_OPT_ALTERNATIVE_ADDRESS
+#define COAP_SIGNALING_OPTION_HOLD_OFF              COAP_SIG_OPT_HOLD_OFF
+#define COAP_SIGNALING_OPTION_BAD_CSM_OPTION        COAP_SIG_OPT_BAD_CSM_OPTION
+
 /**
  * Use byte-oriented access methods here because sliding a complex struct
  * coap_opt_t over the data buffer may cause bus error on certain platforms.
@@ -341,7 +446,7 @@ const uint8_t *coap_opt_value(const coap_opt_t *opt);
  */
 typedef struct coap_optlist_t {
   struct coap_optlist_t *next;  /**< next entry in the optlist chain */
-  uint16_t number;              /**< the option number (no delta coding) */
+  coap_option_num_t number;     /**< the option number (no delta coding) */
   size_t length;                /**< the option value length */
   uint8_t *data;                /**< the option data */
 } coap_optlist_t;
@@ -361,7 +466,7 @@ typedef struct coap_optlist_t {
  *
  * @return          A pointer to the new optlist entry, or @c NULL if error
  */
-coap_optlist_t *coap_new_optlist(uint16_t number,
+coap_optlist_t *coap_new_optlist(coap_option_num_t number,
                                  size_t length,
                                  const uint8_t *data);
 
@@ -423,7 +528,7 @@ void coap_delete_optlist(coap_optlist_t *optlist_chain);
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
 COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_option_setb(coap_opt_filter_t *filter, uint16_t type) {
+coap_option_setb(coap_opt_filter_t *filter, coap_option_num_t type) {
   return coap_option_filter_set(filter, type) ? 1 : -1;
 }
 
@@ -439,7 +544,7 @@ coap_option_setb(coap_opt_filter_t *filter, uint16_t type) {
  * @return       @c 1 if bit was set, @c -1 otherwise.
  */
 COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_option_clrb(coap_opt_filter_t *filter, uint16_t type) {
+coap_option_clrb(coap_opt_filter_t *filter, coap_option_num_t type) {
   return coap_option_filter_unset(filter, type) ? 1 : -1;
 }
 
@@ -455,7 +560,7 @@ coap_option_clrb(coap_opt_filter_t *filter, uint16_t type) {
  * @return       @c 1 if bit was set, @c 0 if not.
  */
 COAP_STATIC_INLINE COAP_DEPRECATED int
-coap_option_getb(coap_opt_filter_t *filter, uint16_t type) {
+coap_option_getb(coap_opt_filter_t *filter, coap_option_num_t type) {
   return coap_option_filter_get(filter, type);
 }
 

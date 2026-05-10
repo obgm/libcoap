@@ -951,10 +951,80 @@ coap_free_context_lkd(coap_context_t *context) {
   coap_dump_memory_type_counts(COAP_LOG_DEBUG);
 }
 
+static coap_crit_type_t
+coap_is_session_proxy(coap_session_t *session, coap_pdu_t *pdu) {
+#if COAP_SERVER_SUPPORT
+  coap_opt_iterator_t t_iter;
+  coap_opt_t *proxy_uri = NULL;
+  coap_opt_t *proxy_scheme = NULL;
+
+  if (session->proxy_session) {
+    return COAP_CRIT_PROXY;
+  } else if (COAP_PDU_IS_REQUEST(pdu) && session->context->unknown_resource &&
+             session->context->unknown_resource->is_reverse_proxy) {
+    return COAP_CRIT_PROXY;
+  } else if (COAP_PDU_IS_REQUEST(pdu) && session->context->proxy_uri_resource &&
+             ((proxy_uri = coap_check_option(pdu, COAP_OPTION_PROXY_URI, &t_iter)) ||
+              (proxy_scheme = coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &t_iter)))) {
+    if (proxy_uri || proxy_scheme) {
+      coap_uri_t uri;
+
+      /* Duplicates some of the code in handle_request() */
+      if (proxy_uri) {
+        if (coap_split_proxy_uri(coap_opt_value(proxy_uri),
+                                 coap_opt_length(proxy_uri), &uri) < 0) {
+          return COAP_CRIT_PROXY;
+        }
+      } else {
+        coap_opt_t *opt;
+        coap_resource_t *resource;
+
+        memset(&uri, 0, sizeof(uri));
+        opt = coap_check_option(pdu, COAP_OPTION_URI_HOST, &t_iter);
+        if (opt) {
+          uri.host.length = coap_opt_length(opt);
+          uri.host.s = coap_opt_value(opt);
+        } else {
+          uri.host.length = 0;
+        }
+        /* See if we are the endpoint */
+        resource = session->context->proxy_uri_resource;
+        if (uri.host.length && resource->proxy_name_count &&
+            resource->proxy_name_list) {
+          size_t i;
+
+          if (resource->proxy_name_count == 1 &&
+              resource->proxy_name_list[0]->length == 0) {
+            /* If proxy_name_list[0] is zero length, then this is the endpoint */
+            i = 0;
+          } else {
+            for (i = 0; i < resource->proxy_name_count; i++) {
+              if (coap_string_equal(&uri.host, resource->proxy_name_list[i])) {
+                break;
+              }
+            }
+          }
+          if (i != resource->proxy_name_count) {
+            return COAP_CRIT_NOT_PROXY;
+          }
+        }
+      }
+      return COAP_CRIT_PROXY;
+    }
+  }
+  return COAP_CRIT_NOT_PROXY;
+#else /* ! COAP_SERVER_SUPPORT */
+#endif /* ! COAP_SERVER_SUPPORT */
+  (void)session;
+  (void)pdu;
+  return COAP_CRIT_NOT_PROXY;
+}
+
 int
 coap_option_check_critical(coap_session_t *session,
                            coap_pdu_t *pdu,
-                           coap_opt_filter_t *unknown) {
+                           coap_opt_filter_t *unknown,
+                           coap_crit_type_t is_proxy) {
   coap_context_t *ctx = session->context;
   coap_opt_iterator_t opt_iter;
   int ok = 1;
@@ -972,7 +1042,7 @@ coap_option_check_critical(coap_session_t *session,
     case 136:
     case 140:
       if (coap_option_filter_get(&ctx->known_options, opt_iter.number) <= 0) {
-        coap_log_debug("unknown reserved option %d\n", opt_iter.number);
+        coap_log_debug("Unknown reserved option %d\n", opt_iter.number);
         ok = 0;
 
         /* When opt_iter.number cannot be set in unknown, all of the appropriate
@@ -993,8 +1063,8 @@ coap_option_check_critical(coap_session_t *session,
       case COAP_OPTION_Q_BLOCK1:
       case COAP_OPTION_Q_BLOCK2:
         if (!(ctx->block_mode & COAP_BLOCK_TRY_Q_BLOCK)) {
-          coap_log_debug("disabled support for critical option %u\n",
-                         opt_iter.number);
+          coap_log_debug("Critical option '%s' (%d) disabled - not supported\n",
+                         coap_option_string(pdu->code, opt_iter.number), opt_iter.number);
           ok = 0;
           /* When opt_iter.number cannot be set in unknown, all of the appropriate
            * slots have been used up and no more options can be tracked.
@@ -1013,10 +1083,10 @@ coap_option_check_critical(coap_session_t *session,
       case COAP_OPTION_URI_PATH_ABB:
       case COAP_OPTION_URI_QUERY:
       case COAP_OPTION_ACCEPT:
-      case COAP_OPTION_PROXY_URI:
-      case COAP_OPTION_PROXY_SCHEME:
       case COAP_OPTION_BLOCK2:
       case COAP_OPTION_BLOCK1:
+      case COAP_OPTION_PROXY_URI:
+      case COAP_OPTION_PROXY_SCHEME:
         break;
       case COAP_OPTION_OSCORE:
         /* Valid critical if doing OSCORE */
@@ -1030,25 +1100,51 @@ coap_option_check_critical(coap_session_t *session,
         if (coap_option_filter_get(&ctx->known_options, opt_iter.number) <= 0) {
 #if COAP_SERVER_SUPPORT
           if ((opt_iter.number & 0x02) == 0) {
-            coap_opt_iterator_t t_iter;
-
-            /* Safe to forward  - check if proxy pdu */
-            if (session->proxy_session)
-              break;
-            if (COAP_PDU_IS_REQUEST(pdu) && ctx->proxy_uri_resource &&
-                (coap_check_option(pdu, COAP_OPTION_PROXY_URI, &t_iter) ||
-                 coap_check_option(pdu, COAP_OPTION_PROXY_SCHEME, &t_iter))) {
-              pdu->crit_opt = 1;
-              break;
+            /* Safe to forward critical? - check if proxy pdu */
+            if (is_proxy == COAP_CRIT_UNKNOWN) {
+              is_proxy = coap_is_session_proxy(session, pdu);
             }
-            if (COAP_PDU_IS_REQUEST(pdu) && ctx->unknown_resource &&
-                ctx->unknown_resource->is_reverse_proxy) {
+            if (is_proxy == COAP_CRIT_PROXY) {
               pdu->crit_opt = 1;
               break;
             }
           }
 #endif /* COAP_SERVER_SUPPORT */
-          coap_log_debug("unknown critical option %d\n", opt_iter.number);
+          coap_log_debug("Critical option %u dropped\n", opt_iter.number);
+          ok = 0;
+
+          /* When opt_iter.number cannot be set in unknown, all of the appropriate
+           * slots have been used up and no more options can be tracked.
+           * Safe to break out of this loop as ok is already set. */
+          if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
+            goto overflow;
+          }
+        }
+      }
+    }
+    if (opt_iter.number & 0x02) {
+      /* Check for safe to forward for a proxy */
+      if (is_proxy == COAP_CRIT_UNKNOWN) {
+        is_proxy = coap_is_session_proxy(session, pdu);
+      }
+      if (is_proxy == COAP_CRIT_PROXY) {
+        switch (opt_iter.number) {
+        case COAP_OPTION_URI_HOST:
+        case COAP_OPTION_OBSERVE:
+        case COAP_OPTION_URI_PORT:
+        case COAP_OPTION_URI_PATH:
+        case COAP_OPTION_MAXAGE:
+        case COAP_OPTION_URI_QUERY:
+        case COAP_OPTION_Q_BLOCK1:
+        case COAP_OPTION_BLOCK2:
+        case COAP_OPTION_BLOCK1:
+        case COAP_OPTION_Q_BLOCK2:
+        case COAP_OPTION_PROXY_URI:
+        case COAP_OPTION_PROXY_SCHEME:
+          break;
+        default:
+          coap_log_debug("Not Safe option %u cannot be forwarded - dropped\n",
+                         opt_iter.number);
           ok = 0;
 
           /* When opt_iter.number cannot be set in unknown, all of the appropriate
@@ -1062,7 +1158,7 @@ coap_option_check_critical(coap_session_t *session,
     }
     if (last_number == opt_iter.number) {
       /* Check for duplicated option RFC 5272 5.4.5 */
-      if (!coap_option_check_repeatable(opt_iter.number)) {
+      if (!coap_option_check_repeatable(pdu, opt_iter.number)) {
         if (coap_option_filter_get(&ctx->known_options, opt_iter.number) <= 0) {
           ok = 0;
           if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
@@ -4459,9 +4555,11 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       session->max_token_size = COAP_TOKEN_DEFAULT_MAX;
     }
     while ((option = coap_option_next(&opt_iter))) {
-      if (opt_iter.number == COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE) {
-        unsigned max_recv = coap_decode_var_bytes(coap_opt_value(option), coap_opt_length(option));
+      unsigned max_recv;
 
+      switch ((coap_sig_csm_opt_t)opt_iter.number) {
+      case COAP_SIG_OPT_MAX_MESSAGE_SIZE:
+        max_recv = coap_decode_var_bytes(coap_opt_value(option), coap_opt_length(option));
         if (max_recv > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
           max_recv = COAP_DEFAULT_MAX_PDU_RX_SIZE;
           coap_log_debug("*  %s: Restricting CSM Max-Message-Size size to %u\n",
@@ -4469,9 +4567,11 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
         }
         coap_session_set_mtu(session, max_recv);
         set_mtu = 1;
-      } else if (opt_iter.number == COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER) {
+        break;
+      case COAP_SIG_OPT_BLOCK_WISE_TRANSFER:
         session->csm_block_supported = 1;
-      } else if (opt_iter.number == COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH) {
+        break;
+      case COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH:
         session->max_token_size =
             coap_decode_var_bytes(coap_opt_value(option),
                                   coap_opt_length(option));
@@ -4480,6 +4580,9 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
         else if (session->max_token_size > COAP_TOKEN_EXT_MAX)
           session->max_token_size = COAP_TOKEN_EXT_MAX;
         session->max_token_checked = COAP_EXT_T_CHECKED;
+        break;
+      default:
+        break;
       }
     }
     if (set_mtu) {
@@ -4496,7 +4599,8 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
       coap_lock_callback(context->ping_cb(session, pdu, pdu->mid));
     }
     if (pong) {
-      coap_add_option_internal(pong, COAP_SIGNALING_OPTION_CUSTODY, 0, NULL);
+      coap_add_option_internal(pong, (coap_option_num_t)COAP_SIG_OPT_CUSTODY,
+                               0, NULL);
       coap_send_internal(session, pong, NULL);
     }
   } else if (pdu->code == COAP_SIGNALING_CODE_PONG) {
@@ -4617,7 +4721,7 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   }
 #if COAP_OSCORE_SUPPORT
   if (!COAP_PDU_IS_SIGNALING(pdu) &&
-      coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+      coap_option_check_critical(session, pdu, &opt_filter, COAP_CRIT_UNKNOWN) == 0) {
     if (pdu->type == COAP_MESSAGE_CON || pdu->type == COAP_MESSAGE_NON) {
       if (COAP_PDU_IS_REQUEST(pdu)) {
         response =
@@ -4720,7 +4824,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
         /* Flush out any entries on session->delayqueue */
         coap_session_connected(session);
     }
-    if (oscore_invalid || coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+    if (oscore_invalid ||
+        coap_option_check_critical(session, pdu, &opt_filter, COAP_CRIT_UNKNOWN) == 0) {
       packet_is_bad = 1;
       goto cleanup;
     }
@@ -4914,7 +5019,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
   case COAP_MESSAGE_NON:
     /* check for oscore issue or unknown critical options */
-    if (oscore_invalid || coap_option_check_critical(session, pdu, &opt_filter) == 0) {
+    if (oscore_invalid ||
+        coap_option_check_critical(session, pdu, &opt_filter, COAP_CRIT_UNKNOWN) == 0) {
       packet_is_bad = 1;
       if (COAP_PDU_IS_REQUEST(pdu)) {
         response =
@@ -4944,7 +5050,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
     /* check for oscore issue or unknown critical options in non-signaling messages */
     if (oscore_invalid ||
-        (!COAP_PDU_IS_SIGNALING(pdu) && coap_option_check_critical(session, pdu, &opt_filter) == 0)) {
+        (!COAP_PDU_IS_SIGNALING(pdu) &&
+         coap_option_check_critical(session, pdu, &opt_filter, COAP_CRIT_UNKNOWN) == 0)) {
       packet_is_bad = 1;
       if (COAP_PDU_IS_REQUEST(pdu)) {
         response =
@@ -5423,14 +5530,14 @@ coap_register_dynamic_resource_handler(coap_context_t *context,
 }
 
 COAP_API void
-coap_register_option(coap_context_t *ctx, uint16_t type) {
+coap_register_option(coap_context_t *ctx, coap_option_num_t type) {
   coap_lock_lock(return);
   coap_register_option_lkd(ctx, type);
   coap_lock_unlock();
 }
 
 void
-coap_register_option_lkd(coap_context_t *ctx, uint16_t type) {
+coap_register_option_lkd(coap_context_t *ctx, coap_option_num_t type) {
   coap_option_filter_set(&ctx->known_options, type);
 }
 

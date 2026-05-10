@@ -243,6 +243,12 @@ struct coap_context_t {
   uint64_t rl_ticks_per_packet;    /**< If not 0, rate limit NON to ticks per packet */
 };
 
+typedef enum {
+  COAP_CRIT_UNKNOWN,
+  COAP_CRIT_NOT_PROXY,
+  COAP_CRIT_PROXY,
+} coap_crit_type_t;
+
 /**
  * Adds @p node to given @p queue, ordered by variable t in @p node.
  *
@@ -414,12 +420,14 @@ void coap_dispatch(coap_context_t *context, coap_session_t *session,
  * @param pdu      The PDU to check.
  * @param unknown  The output filter that will be updated to indicate the
  *                 unknown critical/duplicated/reserved options found in @p pdu.
+ * @param is_proxy The type of the critical search.
  *
  * @return         @c 1 if everything was ok, @c 0 otherwise.
  */
 int coap_option_check_critical(coap_session_t *session,
                                coap_pdu_t *pdu,
-                               coap_opt_filter_t *unknown);
+                               coap_opt_filter_t *unknown,
+                               coap_crit_type_t is_proxy);
 
 /**
  * Creates a new response for given @p request with the contents of @c
