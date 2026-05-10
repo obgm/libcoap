@@ -87,7 +87,7 @@ test_reliable_transport(coap_context_t *ctx, coap_session_t *session,
                             (uint32_t)data[3];
     if (max_msg_size >= 64) {
       uint8_t buf[4];
-      coap_insert_option(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
+      coap_insert_option(pdu, (coap_option_num_t)COAP_SIG_OPT_MAX_MESSAGE_SIZE,
                          coap_encode_var_safe(buf, sizeof(buf), max_msg_size),
                          buf);
     }

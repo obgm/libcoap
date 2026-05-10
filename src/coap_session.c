@@ -870,15 +870,15 @@ coap_session_send_csm(coap_session_t *session) {
     coap_session_set_mtu(session, COAP_DEFAULT_MTU);  /* base value */
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_CSM, 0, 20);
   if (pdu == NULL
-      || coap_add_option_internal(pdu, COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE,
+      || coap_add_option_internal(pdu, (coap_option_num_t)COAP_SIG_OPT_MAX_MESSAGE_SIZE,
                                   coap_encode_var_safe(buf, sizeof(buf),
                                                        session->context->csm_max_message_size), buf) == 0
-      || coap_add_option_internal(pdu, COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER,
+      || coap_add_option_internal(pdu, (coap_option_num_t)COAP_SIG_OPT_BLOCK_WISE_TRANSFER,
                                   coap_encode_var_safe(buf, sizeof(buf),
                                                        0), buf) == 0
       || (session->max_token_size > COAP_TOKEN_DEFAULT_MAX &&
           coap_add_option_internal(pdu,
-                                   COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH,
+                                   (coap_option_num_t)COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH,
                                    coap_encode_var_safe(buf, sizeof(buf),
                                                         session->max_token_size),
                                    buf) == 0)

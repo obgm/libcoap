@@ -797,6 +797,14 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
   size_t total;
   const uint8_t *data;
   coap_string_t *l_query = NULL;
+  coap_opt_filter_t opt_filter;
+
+  coap_option_filter_clear(&opt_filter);
+  if (!coap_option_check_critical(session, rcvd, &opt_filter, COAP_CRIT_PROXY)) {
+    /* Need to send back a 5.02 response */
+    coap_send_error_lkd(session, rcvd, COAP_RESPONSE_CODE(502), &opt_filter);
+    return COAP_RESPONSE_FAIL;
+  }
 
   if (remove_observe) {
     coap_opt_filter_t drop_options;

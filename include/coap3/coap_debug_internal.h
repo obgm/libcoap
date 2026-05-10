@@ -37,6 +37,16 @@ int coap_debug_send_packet(void);
  */
 void coap_debug_reset(void);
 
+/**
+ * Output ascii representation of option number, if known.
+ *
+ * @param code The PDU code.
+ * @param number The option number.
+ *
+ * @return Ascii representation or numeric value in ascii.
+ */
+const char *coap_option_string(coap_pdu_code_t code, coap_option_num_t number);
+
 #ifdef __cplusplus
 }
 #endif

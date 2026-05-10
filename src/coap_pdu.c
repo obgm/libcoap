@@ -41,6 +41,8 @@
 #define max(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
+static int coap_pdu_parse_opt_csm(coap_pdu_code_t code, coap_option_num_t option, uint16_t len);
+
 void
 coap_pdu_clear(coap_pdu_t *pdu, size_t size) {
   assert(pdu);
@@ -635,12 +637,17 @@ coap_remove_option(coap_pdu_t *pdu, coap_option_num_t number) {
 }
 
 int
-coap_option_check_repeatable(coap_option_num_t number) {
+coap_option_check_repeatable(coap_pdu_t *pdu, coap_option_num_t number) {
   /* Validate that the option is repeatable */
-  switch (number) {
+  switch ((coap_code_opt_num_t)number) {
+  case COAP_OPTION_ETAG:
+    if (!COAP_PDU_IS_REQUEST(pdu)) {
+      coap_log_info("Option 'Echo' (4) cannot be repeated on a Response - dropped\n");
+      return 0;
+    }
+    break;
   /* Ignore list of genuine repeatable */
   case COAP_OPTION_IF_MATCH:
-  case COAP_OPTION_ETAG:
   case COAP_OPTION_LOCATION_PATH:
   case COAP_OPTION_URI_PATH:
   case COAP_OPTION_URI_QUERY:
@@ -654,8 +661,8 @@ coap_option_check_repeatable(coap_option_num_t number) {
   case COAP_OPTION_OBSERVE:
   case COAP_OPTION_URI_PORT:
   case COAP_OPTION_OSCORE:
-  case COAP_OPTION_URI_PATH_ABB:
   case COAP_OPTION_CONTENT_FORMAT:
+  case COAP_OPTION_URI_PATH_ABB:
   case COAP_OPTION_MAXAGE:
   case COAP_OPTION_HOP_LIMIT:
   case COAP_OPTION_ACCEPT:
@@ -669,8 +676,8 @@ coap_option_check_repeatable(coap_option_num_t number) {
   case COAP_OPTION_SIZE1:
   case COAP_OPTION_ECHO:
   case COAP_OPTION_NORESPONSE:
-    coap_log_info("Option number %d is not defined as repeatable - dropped\n",
-                  number);
+    coap_log_info("Option '%s' (%d) is not defined as repeatable - dropped\n",
+                  coap_option_string(pdu->code, number), number);
     return 0;
   default:
     coap_log_info("Option number %d is not defined as repeatable\n",
@@ -718,7 +725,7 @@ coap_insert_option(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
     return 0;
   opt_delta = opt_iter.number - number;
   if (opt_delta == 0) {
-    if (!coap_option_check_repeatable(number))
+    if (!coap_option_check_repeatable(pdu, number))
       return 0;
   }
 
@@ -849,7 +856,7 @@ coap_add_option_internal(coap_pdu_t *pdu, coap_option_num_t number, size_t len,
   assert(pdu);
 
   if (number == pdu->max_opt) {
-    if (!coap_option_check_repeatable(number))
+    if (!coap_option_check_repeatable(pdu, number))
       return 0;
   }
 
@@ -1197,67 +1204,67 @@ bad_ext_token:
 }
 
 static int
-coap_pdu_parse_opt_csm(coap_pdu_t *pdu, uint16_t len) {
-  switch ((coap_pdu_signaling_proto_t)pdu->code) {
+coap_pdu_parse_opt_csm(coap_pdu_code_t code, coap_option_num_t option, uint16_t len) {
+  switch ((coap_pdu_signaling_proto_t)code) {
   case COAP_SIGNALING_CSM:
-    switch (pdu->max_opt) {
-    case COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE:
+    switch ((coap_sig_csm_opt_t)option) {
+    case COAP_SIG_OPT_MAX_MESSAGE_SIZE:
       if (len > 4)
         goto bad;
       break;
-    case COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER:
+    case COAP_SIG_OPT_BLOCK_WISE_TRANSFER:
       if (len > 0)
         goto bad;
       break;
-    case COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH:
+    case COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH:
       if (len > 3)
         goto bad;
       break;
     default:
-      if (pdu->max_opt & 0x01)
+      if (option & 0x01)
         goto bad; /* Critical */
     }
     break;
   case COAP_SIGNALING_PING:
   case COAP_SIGNALING_PONG:
-    switch (pdu->max_opt) {
-    case COAP_SIGNALING_OPTION_CUSTODY:
+    switch ((coap_sig_ping_opt_t)option) {
+    case COAP_SIG_OPT_CUSTODY:
       if (len > 0)
         goto bad;
       break;
     default:
-      if (pdu->max_opt & 0x01)
+      if (option & 0x01)
         goto bad; /* Critical */
     }
     break;
   case COAP_SIGNALING_RELEASE:
-    switch (pdu->max_opt) {
-    case COAP_SIGNALING_OPTION_ALTERNATIVE_ADDRESS:
+    switch ((coap_sig_release_opt_t)option) {
+    case COAP_SIG_OPT_ALTERNATIVE_ADDRESS:
       if (len < 1 || len > 255)
         goto bad;
       break;
-    case COAP_SIGNALING_OPTION_HOLD_OFF:
+    case COAP_SIG_OPT_HOLD_OFF:
       if (len > 3)
         goto bad;
       break;
     default:
-      if (pdu->max_opt & 0x01)
+      if (option & 0x01)
         goto bad; /* Critical */
     }
     break;
   case COAP_SIGNALING_ABORT:
-    switch (pdu->max_opt) {
-    case COAP_SIGNALING_OPTION_BAD_CSM_OPTION:
+    switch ((coap_sig_abort_opt_t)option) {
+    case COAP_SIG_OPT_BAD_CSM_OPTION:
       if (len > 2)
         goto bad;
       break;
     default:
-      if (pdu->max_opt & 0x01)
+      if (option & 0x01)
         goto bad; /* Critical */
     }
     break;
   default:
-    ;
+    goto bad;
   }
   return 1;
 bad:
@@ -1268,7 +1275,7 @@ int
 coap_pdu_parse_opt_base(coap_option_num_t number, size_t len, const uint8_t *opt_val) {
   int res = 1;
 
-  switch (number) {
+  switch ((coap_code_opt_num_t)number) {
   case COAP_OPTION_IF_MATCH:
     if (len > 8)
       res = 0;
@@ -1307,6 +1314,10 @@ coap_pdu_parse_opt_base(coap_option_num_t number, size_t len, const uint8_t *opt
     break;
   case COAP_OPTION_CONTENT_FORMAT:
     if (len > 2)
+      res = 0;
+    break;
+  case COAP_OPTION_URI_PATH_ABB:
+    if (len > 4)
       res = 0;
     break;
   case COAP_OPTION_MAXAGE:
@@ -1464,7 +1475,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
       len = coap_opt_length((const uint8_t *)opt - optsize);
       opt_val = coap_opt_value((const uint8_t *)opt - optsize);
       if (COAP_PDU_IS_SIGNALING(pdu) ?
-          !coap_pdu_parse_opt_csm(pdu, len) :
+          !coap_pdu_parse_opt_csm(pdu->code, pdu->max_opt, len) :
           !coap_pdu_parse_opt_base(pdu->max_opt, len, opt_val)) {
         coap_log_warn("coap_pdu_parse: %d.%02d: offset %u option %u has bad length %" PRIu32 " or value\n",
                       pdu->code >> 5, pdu->code & 0x1F,
@@ -1508,7 +1519,7 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
               optsize ?  coap_opt_value((const uint8_t *)opt - optsize) : 0;
 
           if (!optsize || (COAP_PDU_IS_SIGNALING(pdu) ?
-                           !coap_pdu_parse_opt_csm(pdu, len) :
+                           !coap_pdu_parse_opt_csm(pdu->code, pdu->max_opt, len) :
                            !coap_pdu_parse_opt_base(pdu->max_opt, len, opt_val))) {
             ok = ok && write_prefix(&obp, &outbuflen, "*", 1);
             if (!optsize) {

@@ -275,6 +275,7 @@ t_parse_pdu15(void) {
 
   CU_ASSERT(pdu->data == NULL);
 
+  coap_set_log_level(COAP_LOG_CRIT);
   result = coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu);
   CU_ASSERT(result == 0);
 }
