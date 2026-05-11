@@ -979,17 +979,12 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
                           raw_packet->length, request)) {
         goto fail;
       }
-      r = ctx->unknown_resource;
-      if ((ctx->dyn_create_handler != NULL) &&
-          (request->code == COAP_REQUEST_CODE_PUT || request->code == COAP_REQUEST_CODE_POST)) {
-        /* Above test must be the same as in handle_request() */
-        if (ctx->dynamic_cur < ctx->dynamic_max || ctx->dynamic_max == 0) {
-          ctx->unknown_pdu = request;
-          ctx->unknown_session = session;
-          coap_lock_callback_ret(r, ctx->dyn_create_handler(session, request));
-          ctx->unknown_pdu = NULL;
-          ctx->unknown_session = NULL;
-        }
+      if (!COAP_PDU_IS_REQUEST(request)) {
+        goto next;
+      }
+      r = coap_add_dynamic_resource(session, request);
+      if (!r) {
+        r = ctx->unknown_resource;
       }
       if (!r || !r->handler[request->code-1])
         goto next;

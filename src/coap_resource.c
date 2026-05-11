@@ -1572,4 +1572,35 @@ void
 coap_resource_reference_lkd(coap_resource_t *resource) {
   resource->ref++;
 }
-#endif /* ! COAP_SERVER_SUPPORT */
+
+coap_resource_t *
+coap_add_dynamic_resource(coap_session_t *session, coap_pdu_t *pdu) {
+  coap_context_t *context = session->context;
+  coap_resource_t *resource;
+
+  if ((context->dyn_create_handler != NULL) &&
+      (pdu->code == COAP_REQUEST_CODE_PUT || pdu->code == COAP_REQUEST_CODE_POST)) {
+    /* Above test must be the same as in coap_op_dyn_resource_load_disk() */
+    if (context->dynamic_cur < context->dynamic_max || context->dynamic_max == 0) {
+#if COAP_WITH_OBSERVE_PERSIST
+      /* If we are maintaining Observe persist */
+      context->unknown_pdu = pdu;
+      context->unknown_session = session;
+#endif /* COAP_WITH_OBSERVE_PERSIST */
+      coap_lock_callback_ret(resource, context->dyn_create_handler(session, pdu));
+#if COAP_WITH_OBSERVE_PERSIST
+      /* If we are maintaining Observe persist */
+      context->unknown_pdu = NULL;
+      context->unknown_session = NULL;
+#endif /* COAP_WITH_OBSERVE_PERSIST */
+      if (resource) {
+        context->dynamic_cur++;
+        resource->is_dynamic = 1;
+      }
+      return resource;
+    }
+  }
+  return NULL;
+}
+
+#endif /* COAP_SERVER_SUPPORT */
