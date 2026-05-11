@@ -253,6 +253,17 @@ coap_print_status_t coap_print_wellknown_lkd(coap_context_t *context,
                                              size_t offset,
                                              const coap_string_t *query_filter);
 
+/**
+ * Check to see if a dynamic resource needs to be added.
+ *
+ * @param session Session potentiall adding a new dynamic resource.
+ * @param pdu     PDU that is asking for an unknown resource.
+ *
+ * @return Created resource or NULL is resource eneration not applicable.
+ */
+coap_resource_t *coap_add_dynamic_resource(coap_session_t *session,
+                                           coap_pdu_t *pdu);
+
 /** @} */
 
 #endif /* COAP_SERVER_SUPPORT */
