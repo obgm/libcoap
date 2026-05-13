@@ -136,21 +136,23 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
 
   pdu->alloc_size = min(size, COAP_DEFAULT_MTU);
 #ifdef WITH_LWIP
-  pdu->pbuf = pbuf_alloc(PBUF_TRANSPORT, pdu->alloc_size + pdu->max_hdr_size, PBUF_RAM);
+  pdu->pbuf = pbuf_alloc(PBUF_TRANSPORT, max(size, COAP_DEFAULT_MTU) + pdu->max_hdr_size,
+                         PBUF_RAM);
   if (pdu->pbuf == NULL) {
     coap_free_type(COAP_PDU, pdu);
     return NULL;
   }
   pdu->token = (uint8_t *)pdu->pbuf->payload + pdu->max_hdr_size;
-#else /* WITH_LWIP */
+#else /* ! WITH_LWIP */
   uint8_t *buf;
-  buf = coap_malloc_type(COAP_PDU_BUF, pdu->alloc_size + pdu->max_hdr_size);
+  /* + 2 is needed if size == 0 and we are checking for extended tokens */
+  buf = coap_malloc_type(COAP_PDU_BUF,  max(2, pdu->alloc_size) + pdu->max_hdr_size);
   if (buf == NULL) {
     coap_free_type(COAP_PDU, pdu);
     return NULL;
   }
   pdu->token = buf + pdu->max_hdr_size;
-#endif /* WITH_LWIP */
+#endif /* ! WITH_LWIP */
   coap_pdu_clear(pdu, size);
   pdu->mid = mid;
   pdu->type = type;
