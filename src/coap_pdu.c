@@ -431,7 +431,7 @@ coap_update_token(coap_pdu_t *pdu, size_t len, const uint8_t *data) {
   } else if (len <= COAP_TOKEN_EXT_MAX) {
     bias = 2;
   } else {
-    coap_log_warn("coap_add_token: Token size too large. Token ignored\n");
+    coap_log_warn("coap_update_token: Token size too large. Token ignored\n");
     return 0;
   }
   if ((len + bias) == pdu->e_token_length) {
@@ -1109,23 +1109,30 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
     pdu->actual_token.length = pdu->e_token_length;
     pdu->actual_token.s = &pdu->token[0];
   } else if (e_token_length == COAP_TOKEN_EXT_1B_TKL) {
+    if (pdu->used_size < 1)
+      goto bad_ext_token;
     pdu->e_token_length = pdu->token[0] + COAP_TOKEN_EXT_1B_BIAS + 1;
     pdu->actual_token.length = pdu->e_token_length - 1;
     pdu->actual_token.s = &pdu->token[1];
   } else if (e_token_length == COAP_TOKEN_EXT_2B_TKL) {
+    if (pdu->used_size < 2)
+      goto bad_ext_token;
     pdu->e_token_length = ((uint16_t)pdu->token[0] << 8) + pdu->token[1] +
                           COAP_TOKEN_EXT_2B_BIAS + 2;
     pdu->actual_token.length = pdu->e_token_length - 2;
     pdu->actual_token.s = &pdu->token[2];
   }
   if (pdu->e_token_length > pdu->alloc_size || e_token_length == 15) {
-    /* Invalid PDU provided - not wise to assert here though */
-    coap_log_debug("coap_pdu_parse: PDU header token size broken\n");
-    pdu->e_token_length = 0;
-    pdu->actual_token.length = 0;
-    return 0;
+    goto bad_ext_token;
   }
   return 1;
+
+bad_ext_token:
+  /* Invalid PDU provided - not wise to assert here though */
+  coap_log_debug("coap_pdu_parse: PDU header extended token size broken\n");
+  pdu->e_token_length = 0;
+  pdu->actual_token.length = 0;
+  return 0;
 }
 
 static int
@@ -1497,7 +1504,7 @@ coap_pdu_encode_header(coap_pdu_t *pdu, coap_proto_t proto) {
   } else if (pdu->actual_token.length <= COAP_TOKEN_EXT_MAX) {
     e_token_length = COAP_TOKEN_EXT_2B_TKL;
   } else {
-    coap_log_warn("coap_add_token: Token size too large. PDU ignored\n");
+    coap_log_warn("coap_pdu_encode_header: Token size too large. PDU ignored\n");
     return 0;
   }
   if (COAP_PROTO_NOT_RELIABLE(proto)) {
