@@ -52,6 +52,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   memcpy(strbuf, data, slen);
   strbuf[slen] = '\0';
 
+  /* Stop unnecessary logging output */
+  coap_set_log_level(COAP_LOG_EMERG);
+
   /* The PKCS11 branch does strncasecmp(name, "pkcs11:", 7); about a quarter
    * of the time we want that string to actually match. */
   char pkcs11_str[sizeof(strbuf) + 8];

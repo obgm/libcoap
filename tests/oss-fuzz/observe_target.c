@@ -72,7 +72,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     coap_add_option(pdu, COAP_OPTION_URI_PATH, 3, (const uint8_t *)"obs");
 
     /* Test coap_add_observer */
+    coap_lock_lock(goto cleanup);
     coap_subscription_t *sub = coap_add_observer(res, sess, &pdu->actual_token, pdu);
+    coap_lock_unlock();
 
     if (sub) {
       /* Test coap_find_observer */
@@ -85,7 +87,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       coap_resource_notify_observers(res, NULL);
 
       /* Test coap_delete_observer */
+      coap_lock_lock(goto cleanup);
       coap_delete_observer(res, sess, &pdu->actual_token);
+      coap_lock_unlock();
     }
 
     coap_delete_pdu(pdu);
@@ -101,7 +105,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       if (op) {
         coap_add_option(op, COAP_OPTION_OBSERVE, 1, &obs_val);
         coap_add_option(op, COAP_OPTION_URI_PATH, 3, (const uint8_t *)"obs");
+        coap_lock_lock(goto cleanup);
         coap_dispatch(ctx, sess, op);
+        coap_lock_unlock();
         coap_delete_pdu(op);
       }
     }

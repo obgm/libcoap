@@ -21,7 +21,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   /* Initialize libcoap with OSCORE support */
   coap_startup();
-  coap_set_log_level(COAP_LOG_ERR);
+  coap_set_log_level(COAP_LOG_EMERG);
   coap_str_const_t conf = { sizeof(oscore_conf_str) - 1, (const uint8_t *)oscore_conf_str };
   coap_oscore_conf_t *oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
 
