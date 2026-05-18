@@ -76,7 +76,9 @@ coap_fuzz_dispatch(coap_context_t *ctx, coap_session_t *session,
         coap_add_data(pdu, rem < avail ? rem : avail, data + c.pos);
       }
 
+      coap_lock_lock(return);
       coap_dispatch(ctx, session, pdu);
+      coap_lock_unlock();
       coap_delete_pdu(pdu);
     }
   }

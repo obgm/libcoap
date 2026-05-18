@@ -133,8 +133,10 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     coap_add_token(pdu, tok_len, data);
 
     /* Register a subscription and trigger the observe added callback */
+    coap_lock_lock(goto cleanup_persist);
     coap_subscription_t *sub = coap_add_observer(res, sess, &pdu->actual_token,
                                                  pdu);
+    coap_lock_unlock();
     if (sub) {
       coap_find_observer(res, sess, &pdu->actual_token);
       coap_touch_observer(ctx, sess, &pdu->actual_token);

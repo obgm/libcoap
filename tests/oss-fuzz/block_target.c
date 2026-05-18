@@ -122,7 +122,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       uint8_t qlen = (data[4] % 16) + 1;
       if ((size_t)5 + qlen <= size)
         coap_add_option(wk, COAP_OPTION_URI_QUERY, qlen, data + 5);
+      coap_lock_lock(goto cleanup);
       coap_dispatch(ctx, session, wk);
+      coap_lock_unlock();
       coap_delete_pdu(wk);
     }
   }

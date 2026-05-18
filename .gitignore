@@ -48,6 +48,7 @@ src/.libs/
 build/
 
 # the doc/ folder
+doc/*.bak
 doc/Doxyfile
 doc/Makefile
 doc/Makefile.in
@@ -99,7 +100,9 @@ include/coap3/coap_defines.h
 tests/.deps
 tests/Makefile
 tests/oss-fuzz/Makefile.ci
+tests/oss-fuzz/coap_fuzz_helper.a
 tests/oss-fuzz/*.o
+tests/oss-fuzz/*.zip
 tests/testdriver
 tests/*.o
 
