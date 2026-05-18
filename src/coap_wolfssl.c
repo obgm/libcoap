@@ -2293,7 +2293,10 @@ coap_dtls_send(coap_session_t *session,
   WOLFSSL *ssl = w_env ? w_env->ssl : NULL;
   int r;
 
-  assert(ssl != NULL);
+  if (ssl == NULL) {
+    errno = ENOTCONN;
+    return -1;
+  }
 
   session->dtls_event = -1;
   coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
