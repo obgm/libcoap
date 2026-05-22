@@ -155,17 +155,26 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
 
   /* Parse the URI */
   len = coap_split_uri((const unsigned char *)use_uri, strlen(use_uri), &uri);
-  LWIP_ASSERT("Failed to parse uri", len == 0);
+  if (len != 0) {
+    coap_log_err("Failed to parse uri '%s'\n", use_uri);
+    return;
+  }
 
   snprintf(portbuf, sizeof(portbuf), "%d", uri.port);
   snprintf((char *)buf, sizeof(buf), "%*.*s", (int)uri.host.length,
            (int)uri.host.length, (const char *)uri.host.s);
   /* resolve destination address where server should be sent */
   len = resolve_address((const char *)buf, portbuf, &dst, &proto, 1 << uri.scheme);
-  LWIP_ASSERT("Failed to resolve address", len > 0);
+  if (len < 1) {
+    coap_log_err("Failed to resolve address '%s'\n", buf);
+    return;
+  }
 
   main_coap_context = coap_new_context(NULL);
-  LWIP_ASSERT("Failed to initialize context", main_coap_context != NULL);
+  if (main_coap_context == NULL) {
+    coap_log_err("Failed to initialize context\n");
+    return;
+  }
 
   coap_context_set_block_mode(main_coap_context, COAP_BLOCK_USE_LIBCOAP);
 #if NO_SYS
@@ -197,7 +206,10 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
                                        proto, NULL, NULL, NULL);
   }
 
-  LWIP_ASSERT("Failed to create session", session != NULL);
+  if (session == NULL) {
+    coap_log_err("Failed to create session\n");
+    return;
+  }
 
   if (proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS) {
     coap_ws_set_host_request(session, &uri.host);
@@ -211,20 +223,32 @@ client_coap_init(coap_lwip_input_wait_handler_t input_wait, void *input_arg,
                       COAP_REQUEST_CODE_GET,
                       coap_new_message_id(session),
                       coap_session_max_pdu_size(session));
-  LWIP_ASSERT("Failed to create PDU", pdu != NULL);
+  if (pdu == NULL) {
+    coap_log_err("Failed to create PDU\n");
+    return;
+  }
 
   res = coap_uri_into_optlist(&uri, &dst, &optlist, 1);
-  LWIP_ASSERT("Failed to create options", res == 1);
+  if (res != 1) {
+    coap_log_err("Failed to create options\n");
+    return;
+  }
 
   /* Add option list (which will be sorted) to the PDU */
   if (optlist) {
     res = coap_add_optlist_pdu(pdu, &optlist);
-    LWIP_ASSERT("Failed to add options to PDU", res == 1);
+    if (res != 1) {
+      coap_log_err("Failed to add options to PDU\n");
+      return;
+    }
   }
 
   /* and send the PDU */
   mid = coap_send(session, pdu);
-  LWIP_ASSERT("Failed to send PDU", mid != COAP_INVALID_MID);
+  if (mid == COAP_INVALID_MID) {
+    coap_log_err("Failed to send PDU\n");
+    return;
+  }
 }
 
 void

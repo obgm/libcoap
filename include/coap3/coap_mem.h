@@ -62,7 +62,16 @@ typedef enum {
   COAP_MEM_TAG_LAST
 } coap_memory_tag_t;
 
-#if ! defined(WITH_LWIP) || (defined(WITH_LWIP) && ! MEMP_USE_CUSTOM_POOLS)
+/**
+ * Dumps the current usage of malloc'd memory types.
+ *
+ * Requires COAP_MEMORY_TYPE_TRACK to be defined to 1.
+ *
+ * @param log_level The logging level to use.
+ */
+void coap_dump_memory_type_counts(coap_log_t log_level);
+
+#if ! defined(WITH_LWIP) || (defined(WITH_LWIP) && ! MEMP_USE_CUSTOM_POOLS && ! MEM_USE_POOLS)
 
 /**
  * Initializes libcoap's memory management.
@@ -110,15 +119,6 @@ void *coap_realloc_type(coap_memory_tag_t type, void *p, size_t size);
 void coap_free_type(coap_memory_tag_t type, void *p);
 
 /**
- * Dumps the current usage of malloc'd memory types.
- *
- * Requires COAP_MEMORY_TYPE_TRACK to be defined to 1.
- *
- * @param log_level The logging level to use.
- */
-void coap_dump_memory_type_counts(coap_log_t log_level);
-
-/**
  * Wrapper function to coap_malloc_type() for backwards compatibility.
  */
 COAP_STATIC_INLINE void *
@@ -134,7 +134,7 @@ coap_free(void *object) {
   coap_free_type(COAP_STRING, object);
 }
 
-#else /* WITH_LWIP && MEMP_USE_CUSTOM_POOLS */
+#else /* WITH_LWIP && (MEMP_USE_CUSTOM_POOLS || MEM_USE_POOLS) */
 
 #include <lwip/memp.h>
 
@@ -150,24 +150,64 @@ coap_malloc_error(uint16_t *err) {
   return NULL;
 }
 #endif /* MEMP_STATS */
-/* It would be nice to check that size equals the size given at the memp
- * declaration, but i currently don't see a standard way to check that without
+/*
+ * It would be nice to check that size equals the size given at the memp
+ * declaration, but I currently don't see a standard way to check that without
  * sourcing the custom memp pools and becoming dependent of its syntax
  */
+#if MEM_USE_POOLS
+
+void *coap_malloc_type_string(size_t size);
+
+void *coap_realloc_type_string(void *p, size_t size);
+
+void coap_free_type_string(void *p);
+
 #if MEMP_STATS
+
+#define coap_malloc_type(type, asize) \
+  (type == COAP_STRING) ? coap_malloc_type_string(asize) : \
+  (((asize) <= memp_pools[MEMP_ ## type]->size) ? \
+   memp_malloc(MEMP_ ## type) : coap_malloc_error(&memp_pools[MEMP_ ## type]->stats->err))
+
+#else /* ! MEMP_STATS */
+
+#define coap_malloc_type(type, asize) \
+  (type == COAP_STRING) ? coap_malloc_type_string(asize) : \
+  (((asize) <= memp_pools[MEMP_ ## type]->size) ? \
+   memp_malloc(MEMP_ ## type) : NULL)
+#endif /* ! MEMP_STATS */
+
+#define coap_free_type(type, p) \
+  (type == COAP_STRING) ? coap_free_type_string(p) : \
+  memp_free(MEMP_ ## type, p)
+
+/* As these are fixed size, return value if already defined */
+#define coap_realloc_type(type, p, asize) \
+  (type == COAP_STRING) ? coap_realloc_type_string(p, asize) : \
+  ((p) ? ((asize) <= memp_pools[MEMP_ ## type]->size) ? (p) : NULL : coap_malloc_type(type, asize))
+
+#else /* ! MEM_USE_POOLS */
+
+#if MEMP_STATS
+
 #define coap_malloc_type(type, asize) \
   (((asize) <= memp_pools[MEMP_ ## type]->size) ? \
    memp_malloc(MEMP_ ## type) : coap_malloc_error(&memp_pools[MEMP_ ## type]->stats->err))
+
 #else /* ! MEMP_STATS */
+
 #define coap_malloc_type(type, asize) \
   (((asize) <= memp_pools[MEMP_ ## type]->size) ? \
    memp_malloc(MEMP_ ## type) : NULL)
 #endif /* ! MEMP_STATS */
+
 #define coap_free_type(type, p) memp_free(MEMP_ ## type, p)
 
 /* As these are fixed size, return value if already defined */
 #define coap_realloc_type(type, p, asize) \
   ((p) ? ((asize) <= memp_pools[MEMP_ ## type]->size) ? (p) : NULL : coap_malloc_type(type, asize))
+#endif /* MEM_USE_POOLS */
 
 /* Those are just here to make uri.c happy where string allocation has not been
  * made conditional.
@@ -185,9 +225,7 @@ coap_free(void *pointer) {
   LWIP_ASSERT("coap_free must not be used in lwIP", 0);
 }
 
-#define coap_dump_memory_type_counts(l) coap_lwip_dump_memory_pools(l)
-
-#endif /* WITH_LWIP && MEMP_USE_CUSTOM_POOLS */
+#endif /* WITH_LWIP && (MEMP_USE_CUSTOM_POOLS || MEM_USE_POOLS) */
 
 #ifdef __cplusplus
 }

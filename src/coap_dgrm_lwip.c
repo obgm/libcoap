@@ -491,14 +491,15 @@ coap_socket_dgrm_close(coap_socket_t *sock) {
     struct udp_pcb *udp_pcb = sock->udp_pcb;
 
     sock->udp_pcb = NULL;
+    sock->flags = COAP_SOCKET_EMPTY;
     if (udp_pcb) {
 #if NO_SYS == 0
       err_t err;
       if (coap_lwip_in_call_back_ref == 0) {
-        err = tcpip_try_callback(coap_lwip_udp_remove, udp_pcb);
+        err = tcpip_callback_wait(coap_lwip_udp_remove, udp_pcb);
 
         if (err < 0) {
-          coap_log_warn("** %s: tcpip_try_callback: error %d\n",
+          coap_log_warn("** %s: tcpip_callback_wait: error %d\n",
                         sock->session ? coap_session_str(sock->session) : "", err);
           errno = EAGAIN;
           return;
@@ -510,7 +511,6 @@ coap_socket_dgrm_close(coap_socket_t *sock) {
       }
 #endif /* NO_SYS == 0 */
     }
-    sock->flags = COAP_SOCKET_EMPTY;
   }
   return;
 }

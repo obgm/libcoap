@@ -20,7 +20,7 @@
 coap_string_t *
 coap_new_string(size_t size) {
   coap_string_t *s;
-#if defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS
+#if defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS && ! MEM_USE_POOLS
   if (size >= MEMP_LEN_COAPSTRING) {
     coap_log_crit("coap_new_string: size too large (%" PRIuS " +1 > MEMP_LEN_COAPSTRING)\n",
                   size);
