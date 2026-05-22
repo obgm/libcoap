@@ -71,9 +71,19 @@
 #define MEMP_USE_CUSTOM_POOLS  1
 #define MEM_SIZE (4 * 1024)
 
+#if MEMP_USE_CUSTOM_POOLS
+/*
+ * Set to 0 if defined memory pools is not required, only custom pools.
+ * Memory pools are only used for COAP_SRING type mmemory allocations.
+ *
+ * [Update the LWIP_MALLOC_MEMPOOL definitions in lwippools.h.]
+ */
+#define MEM_USE_POOLS 1
+#endif
+
 #if ! MEMP_USE_CUSTOM_POOLS
 /* Set if you want to use the standard libc for malloc */
-#define MEM_LIBC_MALLOC        0
+#define MEM_LIBC_MALLOC        1
 #endif
 
 #if MEM_LIBC_MALLOC

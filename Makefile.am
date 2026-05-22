@@ -137,6 +137,7 @@ EXTRA_DIST = \
   src/coap_dgrm_contiki.c \
   src/coap_dgrm_lwip.c \
   src/coap_dgrm_riot.c \
+  src/coap_mem_lwip.c \
   src/coap_strm_contiki.c \
   src/coap_strm_lwip.c \
   src/coap_strm_riot.c \
@@ -295,6 +296,9 @@ coap_pdu_from_pbuf \
 coap_lwip_dump_memory_pools \
 coap_lwip_set_input_wait_handler \
 coap_print_contiki_prefix \
+coap_free_type_string \
+coap_malloc_type_string \
+coap_realloc_type_string \
 "
 
 # This helper is called by libcoap-$(LIBCOAP_API_VERSION).{map,sym} to see if

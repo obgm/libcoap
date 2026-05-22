@@ -31,32 +31,6 @@ uint32_t coap_lwip_in_call_back_ref = 0; /* Used if in LwIP call back, under
 #endif /* NO_SYS == 0 */
 
 void
-coap_lwip_dump_memory_pools(coap_log_t log_level) {
-#if MEMP_STATS && LWIP_STATS_DISPLAY && MEMP_USE_CUSTOM_POOLS
-  int i;
-
-  /* Save time if not needed */
-  if (log_level > coap_get_log_level())
-    return;
-
-  coap_log(log_level, "*   LwIP custom memory pools information\n");
-  /*
-   * Make sure LwIP and libcoap have been built with the same
-   * -DCOAP_CLIENT_ONLY or -DCOAP_SERVER_ONLY options for
-   * MEMP_MAX to be correct.
-   */
-  for (i = 0; i < MEMP_MAX; i++) {
-    coap_log(log_level, "*    %-17s avail %3d  in-use %3d  peak %3d failed %3d\n",
-             memp_pools[i]->stats->name, memp_pools[i]->stats->avail,
-             memp_pools[i]->stats->used, memp_pools[i]->stats->max,
-             memp_pools[i]->stats->err);
-  }
-#else /* !( MEMP_STATS && LWIP_STATS_DISPLAY && MEMP_USE_CUSTOM_POOLS) */
-  (void)log_level;
-#endif /* !( MEMP_STATS && LWIP_STATS_DISPLAY && MEMP_USE_CUSTOM_POOLS) */
-}
-
-void
 coap_lwip_set_input_wait_handler(coap_context_t *context,
                                  coap_lwip_input_wait_handler_t handler,
                                  void *input_arg) {

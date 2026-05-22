@@ -7,6 +7,7 @@ MODULES_SOURCES_EXCLUDES += coap_dgrm_riot.c
 MODULES_SOURCES_EXCLUDES += coap_io_lwip.c
 MODULES_SOURCES_EXCLUDES += coap_strm_lwip.c
 MODULES_SOURCES_EXCLUDES += coap_dgrm_lwip.c
+MODULES_SOURCES_EXCLUDES += coap_mem_lwip.c
 MODULES_SOURCES_EXCLUDES += coap_io_posix.c
 MODULES_SOURCES_EXCLUDES += coap_strm_posix.c
 MODULES_SOURCES_EXCLUDES += coap_dgrm_posix.c
