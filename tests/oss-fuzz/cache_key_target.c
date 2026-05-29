@@ -88,7 +88,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     coap_cache_entry_t *entry =
         coap_new_cache_entry(session, pdu,
                              (selector & 0x10) ? COAP_CACHE_RECORD_PDU
-                                               : COAP_CACHE_NOT_RECORD_PDU,
+                             : COAP_CACHE_NOT_RECORD_PDU,
                              sb, 0);
     (void)coap_cache_get_by_pdu(session, pdu, sb);
     if (entry)
