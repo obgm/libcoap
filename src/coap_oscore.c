@@ -1128,7 +1128,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
      * Requires in COSE object as appropriate
      *   partial_iv (as received)
      */
-    if (rcp_ctx->initial_state == 0 &&
+    if ((rcp_ctx->initial_state == 0 || osc_ctx->rfc8613_b_1_2 == 0) &&
         !oscore_validate_sender_seq(rcp_ctx, cose)) {
       coap_log_warn("OSCORE: Replayed or old message\n");
       build_and_send_error_pdu(session,
@@ -1336,7 +1336,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     } else {
       uint64_t last_seq;
 
-      if (rcp_ctx->initial_state == 0 &&
+      if ((rcp_ctx->initial_state == 0 || osc_ctx->rfc8613_b_1_2 == 0) &&
           !oscore_validate_sender_seq(rcp_ctx, cose)) {
         coap_log_warn("OSCORE: Replayed or old message\n");
         goto error;
@@ -1445,7 +1445,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
 
   tag_len = cose_tag_len(cose->alg);
   /* Decrypt into plain_pdu, so code (token), options and data are in place */
-  plain_pdu = coap_pdu_init(0, 0, 0, encrypt_len /* - tag_len */);
+  plain_pdu = coap_pdu_init(pdu->type, 0, 0, encrypt_len /* - tag_len */);
   if (plain_pdu == NULL) {
     if (!coap_request)
       coap_handle_event_lkd(session->context,
@@ -1576,6 +1576,10 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
     coap_send_ack_lkd(session, pdu);
     if (sent_pdu) {
       coap_log_oscore("Appendix B.2 retransmit pdu\n");
+      if (!session->b_2_retransmit_token) {
+        session->b_2_retransmit_token = coap_new_str_const(sent_pdu->actual_token.s,
+                                                           sent_pdu->actual_token.length);
+      }
       if (coap_retransmit_oscore_pdu(session, sent_pdu, NULL) ==
           COAP_INVALID_MID)
         goto error_no_ack;
@@ -1593,6 +1597,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
         /* Verify Client is genuine */
         if (coap_opt_length(opt) == 8 &&
             memcmp(coap_opt_value(opt), rcp_ctx->echo_value, 8) == 0) {
+          /* This clears rcp_ctx->initial_state */
           if (!oscore_validate_sender_seq(rcp_ctx, cose)) {
             coap_log_warn("OSCORE: Replayed or old message\n");
             build_and_send_error_pdu(session,
@@ -1728,6 +1733,12 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   if (session->b_2_step != COAP_OSCORE_B_2_NONE) {
     session->b_2_step = COAP_OSCORE_B_2_NONE;
     coap_log_oscore("Appendix B.2 client finished\n");
+    if (session->b_2_retransmit_token) {
+      coap_update_token(decrypt_pdu, session->b_2_retransmit_token->length,
+                        session->b_2_retransmit_token->s);
+      coap_delete_str_const(session->b_2_retransmit_token);
+      session->b_2_retransmit_token = NULL;
+    }
   }
 #if COAP_CLIENT_SUPPORT
   if (decrypt_pdu->code == COAP_RESPONSE_CODE(401) &&

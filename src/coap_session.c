@@ -623,6 +623,7 @@ coap_session_mfree(coap_session_t *session) {
 #if COAP_OSCORE_SUPPORT
   coap_delete_oscore_associations(session);
   oscore_release_recipient_ctx(&session->recipient_ctx);
+  coap_delete_str_const(session->b_2_retransmit_token);
 #endif /* COAP_OSCORE_SUPPORT */
 #if COAP_WS_SUPPORT
   coap_free_type(COAP_STRING, session->ws);
