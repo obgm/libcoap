@@ -74,7 +74,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
             }
 
             /* Test OSCORE decryption */
+            coap_lock_lock(return 0);
             decrypted = coap_oscore_decrypt_pdu(session, pdu);
+            coap_lock_unlock();
             if (decrypted) {
               coap_show_pdu(COAP_LOG_ERR, decrypted);
               coap_delete_pdu(decrypted);

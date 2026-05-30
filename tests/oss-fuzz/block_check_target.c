@@ -176,8 +176,10 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
                       coap_session_max_pdu_size(session));
   if (pdu) {
     coap_add_option(pdu, COAP_OPTION_URI_PATH, 4, (const uint8_t *)"test");
+    coap_lock_lock(return 0);
     coap_add_data_large_request_lkd(session, pdu, data_len, test_data, NULL,
                                     NULL);
+    coap_lock_unlock();
     coap_delete_pdu(pdu);
   }
 
@@ -201,7 +203,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     token.s = token_buf;
 
     coap_cancel_observe(session, &token, COAP_MESSAGE_CON);
+    coap_lock_lock(return 0);
     coap_cancel_observe_lkd(session, &token, COAP_MESSAGE_CON);
+    coap_lock_unlock();
     coap_delete_pdu(pdu);
   }
 
