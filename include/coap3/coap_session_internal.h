@@ -193,6 +193,7 @@ struct coap_session_t {
   oscore_association_t *associations; /**< OSCORE set of response
                                            associations */
   uint64_t oscore_r2;             /**< R2 for RFC8613 Appendix B.2 */
+  coap_str_const_t *b_2_retransmit_token; /**< Copy of token when doing B.2 */
 #endif /* COAP_OSCORE_SUPPORT */
 #if COAP_WS_SUPPORT
   coap_ws_state_t *ws;            /**< WS state */

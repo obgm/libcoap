@@ -3981,7 +3981,8 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
       coap_pdu_reference_lkd(orig_pdu);
       if ((dec_pdu = coap_oscore_decrypt_pdu(session, pdu)) == NULL) {
         if (session->recipient_ctx == NULL ||
-            session->recipient_ctx->initial_state == 0) {
+            (session->recipient_ctx->initial_state == 0 &&
+             session->b_2_step == COAP_OSCORE_B_2_NONE)) {
           coap_log_warn("OSCORE: PDU could not be decrypted\n");
         }
         coap_delete_node_lkd(sent);
