@@ -1118,8 +1118,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
                                  &uri) < 0) {
           /* Need to return a 5.05 RFC7252 Section 5.7.2 */
           coap_log_warn("Proxy URI not decodable\n");
-          coap_delete_pdu_lkd(pdu);
-          return 0;
+          goto failed;
         }
         if (!coap_uri_into_optlist(&uri, NULL, &optlist, 0)) {
           coap_log_err("Failed to create options for URI\n");
@@ -1149,6 +1148,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
     /* Update pdu with options */
     coap_add_optlist_pdu(pdu, &optlist);
     coap_delete_optlist(optlist);
+    optlist = NULL;
   } else {
     /*
      * Duplicate request PDU for onward transmission (with new token).
@@ -1199,6 +1199,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
 
 failed:
   response->code = COAP_RESPONSE_CODE(500);
+  coap_delete_optlist(optlist);
   coap_delete_pdu_lkd(pdu);
   return 0;
 
