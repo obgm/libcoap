@@ -146,7 +146,9 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
       if (data[1] & 0x01) {
         /* Delete the subscription and trigger the observe deleted callback */
+        coap_lock_lock(return 0);
         coap_delete_observer(res, sess, &pdu->actual_token);
+        coap_lock_unlock();
       }
     }
 

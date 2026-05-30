@@ -91,7 +91,9 @@ ws_fuzz_drive_read(coap_session_t *session, uint8_t *scratch,
     if (g_cursor.pos >= g_cursor.size)
       return;
     size_t before = g_cursor.pos;
+    coap_lock_lock(return);
     ssize_t r = coap_ws_read(session, scratch, scratch_len);
+    coap_lock_unlock();
     if (r < 0)
       return;
     /* No forward progress and no bytes returned: avoid infinite spin. */

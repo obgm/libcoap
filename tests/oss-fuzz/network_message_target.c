@@ -11,7 +11,9 @@ test_dgram_dispatch(coap_context_t *ctx, coap_session_t *session,
   }
 
   session->state = COAP_SESSION_STATE_ESTABLISHED;
+  coap_lock_lock(return);
   coap_handle_dgram(ctx, session, data, size);
+  coap_lock_unlock();
 }
 
 /* Test retransmission queue operations (coap_wait_ack, peek_next, pop_next) */

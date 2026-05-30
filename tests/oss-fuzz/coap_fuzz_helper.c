@@ -88,7 +88,9 @@ coap_fuzz_dispatch(coap_context_t *ctx, coap_session_t *session,
     uint8_t *copy = malloc(size);
     if (copy) {
       memcpy(copy, data, size);
+      coap_lock_lock(return);
       coap_handle_dgram(ctx, session, copy, size);
+      coap_lock_unlock();
       free(copy);
     }
   }
