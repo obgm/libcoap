@@ -256,6 +256,9 @@ typedef enum coap_resolve_type_t {
  * Resolve the specified @p address into a set of coap_address_t that can
  * be used to bind() (local) or connect() (remote) to.
  *
+ * Note: coap_startup() must have been called first, otherwise @c NULL
+ *       is returned.
+ *
  * @param address The Address to resolve.
  * @param port    The unsecured protocol port to use.
  * @param secure_port The secured protocol port to use.
@@ -268,14 +271,14 @@ typedef enum coap_resolve_type_t {
  *
  * @return One or more linked sets of coap_addr_info_t or @c NULL if error.
  */
-coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *address,
-                                            uint16_t port,
-                                            uint16_t secure_port,
-                                            uint16_t ws_port,
-                                            uint16_t ws_secure_port,
-                                            int ai_hints_flags,
-                                            int scheme_hint_bits,
-                                            coap_resolve_type_t type);
+COAP_API coap_addr_info_t *coap_resolve_address_info(const coap_str_const_t *address,
+                                                     uint16_t port,
+                                                     uint16_t secure_port,
+                                                     uint16_t ws_port,
+                                                     uint16_t ws_secure_port,
+                                                     int ai_hints_flags,
+                                                     int scheme_hint_bits,
+                                                     coap_resolve_type_t type);
 
 /**
  * Free off the one or more linked sets of coap_addr_info_t returned from

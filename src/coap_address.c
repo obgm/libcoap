@@ -666,14 +666,14 @@ update_coap_addr_port(coap_uri_scheme_t scheme, coap_addr_info_t *info,
 #if defined(WITH_LWIP) && !(LWIP_DNS)
 
 coap_addr_info_t *
-coap_resolve_address_info(const coap_str_const_t *address,
-                          uint16_t port,
-                          uint16_t secure_port,
-                          uint16_t ws_port,
-                          uint16_t ws_secure_port,
-                          int ai_hints_flags,
-                          int scheme_hint_bits,
-                          coap_resolve_type_t type) {
+coap_resolve_address_info_lkd(const coap_str_const_t *address,
+                              uint16_t port,
+                              uint16_t secure_port,
+                              uint16_t ws_port,
+                              uint16_t ws_secure_port,
+                              int ai_hints_flags,
+                              int scheme_hint_bits,
+                              coap_resolve_type_t type) {
   ip_addr_t addr_ip;
   coap_addr_info_t *info = NULL;
   coap_addr_info_t *info_prev = NULL;
@@ -681,6 +681,8 @@ coap_resolve_address_info(const coap_str_const_t *address,
   coap_uri_scheme_t scheme;
 
   (void)ai_hints_flags;
+
+  coap_lock_check_locked();
 
   if (address == NULL || address->length == 0) {
     memset(&addr_ip, 0, sizeof(addr_ip));
@@ -718,24 +720,30 @@ coap_resolve_address_info(const coap_str_const_t *address,
 #elif !defined(RIOT_VERSION) && !defined(WITH_CONTIKI)
 
 coap_addr_info_t *
-coap_resolve_address_info(const coap_str_const_t *address,
-                          uint16_t port,
-                          uint16_t secure_port,
-                          uint16_t ws_port,
-                          uint16_t ws_secure_port,
-                          int ai_hints_flags,
-                          int scheme_hint_bits,
-                          coap_resolve_type_t type) {
+coap_resolve_address_info_lkd(const coap_str_const_t *address,
+                              uint16_t port,
+                              uint16_t secure_port,
+                              uint16_t ws_port,
+                              uint16_t ws_secure_port,
+                              int ai_hints_flags,
+                              int scheme_hint_bits,
+                              coap_resolve_type_t type) {
 
   struct addrinfo *res, *ainfo;
   struct addrinfo hints;
+#if COAP_CONSTRAINED_STACK
   static char addrstr[256];
+#else /* ! COAP_CONSTRAINED_STACK */
+  char addrstr[256];
+#endif /* ! COAP_CONSTRAINED_STACK */
   int error;
   coap_addr_info_t *info = NULL;
   coap_addr_info_t *info_prev = NULL;
   coap_addr_info_t *info_list = NULL;
   coap_addr_info_t *info_tmp;
   coap_uri_scheme_t scheme;
+
+  coap_lock_check_locked();
 
 #if COAP_AF_UNIX_SUPPORT
   if (address && coap_host_is_unix_domain(address)) {
@@ -915,14 +923,14 @@ coap_resolve_address_info(const coap_str_const_t *address,
 #include "net/utils.h"
 
 coap_addr_info_t *
-coap_resolve_address_info(const coap_str_const_t *address,
-                          uint16_t port,
-                          uint16_t secure_port,
-                          uint16_t ws_port,
-                          uint16_t ws_secure_port,
-                          int ai_hints_flags,
-                          int scheme_hint_bits,
-                          coap_resolve_type_t type) {
+coap_resolve_address_info_lkd(const coap_str_const_t *address,
+                              uint16_t port,
+                              uint16_t secure_port,
+                              uint16_t ws_port,
+                              uint16_t ws_secure_port,
+                              int ai_hints_flags,
+                              int scheme_hint_bits,
+                              coap_resolve_type_t type) {
 #if COAP_IPV6_SUPPORT
   ipv6_addr_t addr_ipv6;
 #endif /* COAP_IPV6_SUPPORT */
@@ -936,6 +944,8 @@ coap_resolve_address_info(const coap_str_const_t *address,
   coap_uri_scheme_t scheme;
   (void)ai_hints_flags;
   int family = AF_UNSPEC;
+
+  coap_lock_check_locked();
 
   if (address == NULL || address->length == 0) {
     memset(&addr_ipv6, 0, sizeof(addr_ipv6));
@@ -1009,14 +1019,14 @@ coap_resolve_address_info(const coap_str_const_t *address,
 #include <os/net/ipv6/uiplib.h>
 
 coap_addr_info_t *
-coap_resolve_address_info(const coap_str_const_t *address,
-                          uint16_t port,
-                          uint16_t secure_port,
-                          uint16_t ws_port,
-                          uint16_t ws_secure_port,
-                          int ai_hints_flags,
-                          int scheme_hint_bits,
-                          coap_resolve_type_t type) {
+coap_resolve_address_info_lkd(const coap_str_const_t *address,
+                              uint16_t port,
+                              uint16_t secure_port,
+                              uint16_t ws_port,
+                              uint16_t ws_secure_port,
+                              int ai_hints_flags,
+                              int scheme_hint_bits,
+                              coap_resolve_type_t type) {
   uip_ipaddr_t addr_ip;
   coap_addr_info_t *info = NULL;
   coap_addr_info_t *info_prev = NULL;
@@ -1025,6 +1035,8 @@ coap_resolve_address_info(const coap_str_const_t *address,
   int parsed_ip = 0;
 
   (void)ai_hints_flags;
+
+  coap_lock_check_locked();
 
   if (address == NULL || address->length == 0) {
     memset(&addr_ip, 0, sizeof(addr_ip));
@@ -1075,6 +1087,20 @@ coap_resolve_address_info(const coap_str_const_t *address,
 #error "OS type not supported"
 
 coap_addr_info_t *
+coap_resolve_address_info_lkd(const coap_str_const_t *address,
+                              uint16_t port,
+                              uint16_t secure_port,
+                              uint16_t ws_port,
+                              uint16_t ws_secure_port,
+                              int ai_hints_flags,
+                              int scheme_hint_bits,
+                              coap_resolve_type_t type) {
+  return NULL;
+}
+
+#endif
+
+COAP_API coap_addr_info_t *
 coap_resolve_address_info(const coap_str_const_t *address,
                           uint16_t port,
                           uint16_t secure_port,
@@ -1083,10 +1109,15 @@ coap_resolve_address_info(const coap_str_const_t *address,
                           int ai_hints_flags,
                           int scheme_hint_bits,
                           coap_resolve_type_t type) {
-  return NULL;
-}
+  coap_addr_info_t *info_list;
 
-#endif
+  coap_lock_lock(return NULL);
+  info_list = coap_resolve_address_info_lkd(address, port, secure_port, ws_port,
+                                            ws_secure_port, ai_hints_flags,
+                                            scheme_hint_bits, type);
+  coap_lock_unlock();
+  return info_list;
+}
 
 void
 coap_free_address_info(coap_addr_info_t *info) {
