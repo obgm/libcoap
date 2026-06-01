@@ -276,6 +276,33 @@ COAP_API int coap_delete_node(coap_queue_t *node);
 int coap_delete_node_lkd(coap_queue_t *node);
 
 /**
+ * Resolve the specified @p address into a set of coap_address_t that can
+ * be used to bind() (local) or connect() (remote) to.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param address The Address to resolve.
+ * @param port    The unsecured protocol port to use.
+ * @param secure_port The secured protocol port to use.
+ * @param ws_port The unsecured WebSockets port to use.
+ * @param ws_secure_port The secured WebSockets port to use.
+ * @param ai_hints_flags AI_* Hint flags to use for internal getaddrinfo().
+ * @param scheme_hint_bits Which schemes to return information for. One or
+ *                         more of COAP_URI_SCHEME_*_BIT or'd together.
+ * @param type COAP_ADDRESS_TYPE_LOCAL or COAP_ADDRESS_TYPE_REMOTE
+ *
+ * @return One or more linked sets of coap_addr_info_t or @c NULL if error.
+ */
+coap_addr_info_t *coap_resolve_address_info_lkd(const coap_str_const_t *address,
+                                                uint16_t port,
+                                                uint16_t secure_port,
+                                                uint16_t ws_port,
+                                                uint16_t ws_secure_port,
+                                                int ai_hints_flags,
+                                                int scheme_hint_bits,
+                                                coap_resolve_type_t type);
+
+/**
  * Removes all items from given @p queue and frees the allocated storage.
  *
  * Internal function.

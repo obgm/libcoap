@@ -602,14 +602,14 @@ coap_proxy_get_ongoing_session(coap_session_t *session,
     coap_address_t *local_addr = NULL;
 
     /* resolve destination address where data should be sent */
-    info_list = coap_resolve_address_info(&server_use.uri.host,
-                                          server_use.uri.port,
-                                          server_use.uri.port,
-                                          server_use.uri.port,
-                                          server_use.uri.port,
-                                          0,
-                                          1 << server_use.uri.scheme,
-                                          COAP_RESOLVE_TYPE_REMOTE);
+    info_list = coap_resolve_address_info_lkd(&server_use.uri.host,
+                                              server_use.uri.port,
+                                              server_use.uri.port,
+                                              server_use.uri.port,
+                                              server_use.uri.port,
+                                              0,
+                                              1 << server_use.uri.scheme,
+                                              COAP_RESOLVE_TYPE_REMOTE);
 
     if (info_list == NULL) {
       response->code = COAP_RESPONSE_CODE(502);
@@ -1644,10 +1644,10 @@ coap_new_client_session_proxy_lkd(coap_context_t *ctx,
 #endif /* !COAP_IPV6_SUPPORT && ! COAP_IPV4_SUPPORT */
   remote.length = strlen((const char *)remote.s);
   /* resolve internal remote address where proxy session is 'connecting' to */
-  info_list = coap_resolve_address_info(&remote, 0, 0, 0, 0,
-                                        0,
-                                        1 << COAP_URI_SCHEME_COAP,
-                                        COAP_RESOLVE_TYPE_REMOTE);
+  info_list = coap_resolve_address_info_lkd(&remote, 0, 0, 0, 0,
+                                            0,
+                                            1 << COAP_URI_SCHEME_COAP,
+                                            COAP_RESOLVE_TYPE_REMOTE);
   if (!info_list) {
     coap_log_warn("coap_new_client_session_proxy: Unable to resolve IP address\n");
     return NULL;
