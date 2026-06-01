@@ -3289,6 +3289,11 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
 #else /* ! COAP_SERVER_SUPPORT */
   (void)role;
 #endif /* ! COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
+  if (role == COAP_DTLS_ROLE_CLIENT) {
+    context->psk_pki_enabled &= ~IS_PSK;
+  }
+#endif /* COAP_CLIENT_SUPPORT */
 
   if (!context->dtls.ssl) {
     /* This is set up to handle new incoming sessions to a server */
