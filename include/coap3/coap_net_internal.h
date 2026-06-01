@@ -97,6 +97,9 @@ struct coap_context_t {
   uint8_t timer_configured;       /**< Set to 1 when a retransmission is
                                    *   scheduled using lwIP timers for this
                                    *   context, otherwise 0. */
+#if NO_SYS == 0
+  sys_sem_t coap_io_timeout_sem; /**< Semaphore to wait on for input activity */
+#endif /* NO_SYS == 0 */
 #endif /* WITH_LWIP */
 #ifdef RIOT_VERSION
   thread_t *selecting_thread;

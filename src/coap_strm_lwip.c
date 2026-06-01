@@ -31,7 +31,6 @@ coap_tcp_is_supported(void) {
 #include <lwip/tcp.h>
 
 #if NO_SYS == 0
-extern sys_sem_t coap_io_timeout_sem;
 extern uint32_t coap_lwip_in_call_back_ref;
 #endif /* NO_SYS == 0 */
 
@@ -68,7 +67,7 @@ do_tcp_err(void *arg, err_t err) {
 #endif /* NO_SYS == 0 */
   coap_lock_unlock();
 #if NO_SYS == 0
-  sys_sem_signal(&coap_io_timeout_sem);
+  sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
 }
 
@@ -97,7 +96,7 @@ coap_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
     coap_lock_unlock();
 #if NO_SYS == 0
-    sys_sem_signal(&coap_io_timeout_sem);
+    sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
     return ERR_OK;
   } else if (err != ERR_OK) {
@@ -107,7 +106,7 @@ coap_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     }
     tcp_recved(sock->tcp_pcb, p->tot_len);
 #if NO_SYS == 0
-    sys_sem_signal(&coap_io_timeout_sem);
+    sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
     return err;
   }
@@ -124,7 +123,7 @@ coap_tcp_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
 #endif /* NO_SYS == 0 */
   coap_lock_unlock();
 #if NO_SYS == 0
-  sys_sem_signal(&coap_io_timeout_sem);
+  sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
   return ERR_OK;
 }
@@ -153,7 +152,7 @@ do_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
 #endif /* NO_SYS == 0 */
   coap_lock_unlock();
 #if NO_SYS == 0
-  sys_sem_signal(&coap_io_timeout_sem);
+  sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
   return ERR_OK;
 }
@@ -263,7 +262,7 @@ do_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
 #endif /* NO_SYS == 0 */
   coap_lock_unlock();
 #if NO_SYS == 0
-  sys_sem_signal(&coap_io_timeout_sem);
+  sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
   return ret_err;
 }
@@ -342,7 +341,7 @@ coap_lwip_tcp_write(void *ctx) {
     }
     pbuf_free(cb_ctx->pbuf);
     coap_free_type(COAP_STRING, cb_ctx);
-    sys_sem_signal(&coap_io_timeout_sem);
+    sys_sem_signal(&cb_ctx->session->context->coap_io_timeout_sem);
   }
 }
 #endif /* NO_SYS == 0 */

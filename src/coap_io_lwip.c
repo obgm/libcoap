@@ -24,7 +24,6 @@
 #include <lwip/tcpip.h>
 
 #if NO_SYS == 0
-sys_sem_t coap_io_timeout_sem;
 uint32_t coap_lwip_in_call_back_ref = 0; /* Used if in LwIP call back, under
                                             protection of global lock if
                                             thread safe libcoap code */
@@ -40,24 +39,18 @@ coap_lwip_set_input_wait_handler(coap_context_t *context,
 
 void
 coap_io_lwip_init(void) {
-#if NO_SYS == 0
-  if (sys_sem_new(&coap_io_timeout_sem, 0) != ERR_OK)
-    coap_log_warn("coap_io_lwip_init: Failed to set up semaphore\n");
-#endif /* NO_SYS == 0 */
 }
 
 void
 coap_io_lwip_cleanup(void) {
-#if NO_SYS == 0
-  sys_sem_free(&coap_io_timeout_sem);
-#endif /* NO_SYS == 0 */
 }
 
 void
 coap_io_process_timeout(void *arg) {
   (void)arg;
 #if NO_SYS == 0
-  sys_sem_signal(&coap_io_timeout_sem);
+  coap_context_t *context = (coap_context_t *)arg;
+  sys_sem_signal(&context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
 }
 
@@ -116,7 +109,7 @@ coap_io_process_lkd(coap_context_t *context, uint32_t timeout_ms) {
                                return 0);
 #if NO_SYS == 0
   } else {
-    coap_lock_callback_release(sys_arch_sem_wait(&coap_io_timeout_sem, timeout),
+    coap_lock_callback_release(sys_arch_sem_wait(&context->coap_io_timeout_sem, timeout),
                                return 0);
 #endif /* NO_SYS == 0 */
   }

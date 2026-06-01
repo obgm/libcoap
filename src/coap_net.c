@@ -805,6 +805,12 @@ coap_new_context(const coap_address_t *listen_addr) {
 
   c->max_token_size = COAP_TOKEN_DEFAULT_MAX; /* RFC8974 */
 
+#if defined(WITH_LWIP)
+#if NO_SYS == 0
+  if (sys_sem_new(&c->coap_io_timeout_sem, 0) != ERR_OK)
+    coap_log_warn("coap_new_context: Failed to set up semaphore\n");
+#endif /* NO_SYS == 0 */
+#endif /* ! WITH_LWIP */
   coap_lock_unlock();
   return c;
 
@@ -933,6 +939,11 @@ coap_free_context_lkd(coap_context_t *context) {
   if (context->app_cb) {
     coap_lock_callback(context->app_cb(context->app_data));
   }
+#if defined(WITH_LWIP)
+#if NO_SYS == 0
+  sys_sem_free(&context->coap_io_timeout_sem);
+#endif /* NO_SYS == 0 */
+#endif /* ! WITH_LWIP */
 #if COAP_THREAD_SAFE && !WITH_LWIP
   coap_io_process_remove_threads_lkd(context);
 #endif /* COAP_THREAD_SAFE && !WITH_LWIP */

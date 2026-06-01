@@ -27,7 +27,6 @@
 #endif /* !COAP_DISABLE_TCP */
 
 #if NO_SYS == 0
-extern sys_sem_t coap_io_timeout_sem;
 extern uint32_t coap_lwip_in_call_back_ref;
 #endif /* NO_SYS == 0 */
 
@@ -110,7 +109,7 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
         coap_delete_pdu_lkd(pdu);
         coap_lock_unlock();
 #if NO_SYS == 0
-        sys_sem_signal(&coap_io_timeout_sem);
+        sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
         return;
       } else {
@@ -126,7 +125,7 @@ coap_recvc(void *arg, struct udp_pcb *upcb, struct pbuf *p,
 #endif /* NO_SYS == 0 */
   }
 #if NO_SYS == 0
-  sys_sem_signal(&coap_io_timeout_sem);
+  sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
   coap_delete_pdu_lkd(pdu);
   coap_lock_unlock();
@@ -142,7 +141,7 @@ error:
   coap_delete_pdu_lkd(pdu);
   coap_lock_unlock();
 #if NO_SYS == 0
-  sys_sem_signal(&coap_io_timeout_sem);
+  sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
   return;
 }
@@ -251,7 +250,7 @@ coap_udp_recvs(void *arg, struct udp_pcb *upcb, struct pbuf *p,
   coap_free_packet(packet);
   coap_lock_unlock();
 #if NO_SYS == 0
-  sys_sem_signal(&coap_io_timeout_sem);
+  sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
   return;
 
@@ -270,7 +269,7 @@ cleanup:
   coap_free_packet(packet);
   coap_lock_unlock();
 #if NO_SYS == 0
-  sys_sem_signal(&coap_io_timeout_sem);
+  sys_sem_signal(&session->context->coap_io_timeout_sem);
 #endif /* NO_SYS == 0 */
   return;
 }
