@@ -965,6 +965,11 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
                                           &opt_iter);
   coap_proxy_cache_t *proxy_cache = NULL;
   coap_proxy_t proxy_type;
+  coap_tick_t now;
+  uint32_t new_maxage;
+  uint8_t buf[4];
+
+  coap_ticks(&now);
 
   /* Set up ongoing session (if not already done) */
   proxy_entry = coap_proxy_get_ongoing_session(session, request, response,
@@ -994,8 +999,6 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   if (proxy_cache) {
     proxy_req = coap_proxy_get_req(proxy_entry, proxy_cache, session);
     if (proxy_req) {
-      coap_tick_t now;
-
       if (obs_opt) {
         int observe_action;
 
@@ -1025,7 +1028,6 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
           }
         } else if (observe_action == COAP_OBSERVE_ESTABLISH) {
           /* Client must be re-registering */
-          coap_ticks(&now);
           if (proxy_cache && (proxy_cache->expire + COAP_TICKS_PER_SECOND) < now) {
             /* Need to get an updated rsp_pdu */
             coap_proxy_del_req(proxy_entry, proxy_req);
@@ -1036,7 +1038,6 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
           }
         }
       } else {
-        coap_ticks(&now);
         if (proxy_cache && (proxy_cache->expire + COAP_TICKS_PER_SECOND) < now) {
           /* Need to get an updated rsp_pdu */
           coap_proxy_del_req(proxy_entry, proxy_req);
@@ -1227,6 +1228,16 @@ return_cached_info:
                  coap_session_str(session),
                  proxy_cache->ref);
   coap_proxy_log_entry(session, request, &proxy_cache->rsp_pdu->actual_token,  "rspc");
+  if (now < proxy_cache->expire) {
+    new_maxage = (uint32_t)((proxy_cache->expire - now) / COAP_TICKS_PER_SECOND);
+    if (new_maxage == 0)
+      new_maxage = 1;
+  } else {
+    new_maxage = 1;
+  }
+  coap_update_option(proxy_cache->rsp_pdu,
+                     COAP_OPTION_MAXAGE,
+                     coap_encode_var_safe(buf, sizeof(buf), new_maxage), buf);
   coap_proxy_call_response_handler(session, request, proxy_cache->rsp_pdu,
                                    &r_token, proxy_req, 1, obs_opt ? 0 : 1);
   if (!obs_opt)
@@ -1442,11 +1453,27 @@ coap_proxy_process_incoming(coap_session_t *session,
   coap_opt_iterator_t opt_iter;
   coap_response_t ret = COAP_RESPONSE_FAIL;
   coap_bin_const_t token;
+  int can_cache = 0;
 
+  if (COAP_RESPONSE_CLASS(rcvd->code) == 2) {
+    switch ((int)rcvd->code) {
+    case COAP_RESPONSE_CODE(201):
+    case COAP_RESPONSE_CODE(202):
+    case COAP_RESPONSE_CODE(203):
+    case COAP_RESPONSE_CODE(204):
+    case COAP_RESPONSE_CODE(205):
+      can_cache = 1;
+      break;
+    /* 2.13 should be handled by block transfer logic */
+    case COAP_RESPONSE_CODE(213):
+    default:
+      break;
+    }
+  }
   obs_opt = coap_check_option(rcvd, COAP_OPTION_OBSERVE, &opt_iter);
 
   /* See if we are doing proxy caching */
-  if (obs_opt) {
+  if (can_cache && obs_opt) {
     coap_proxy_cache_t *proxy_cache;
     coap_cache_key_t *cache_key_l;
     coap_tick_t now;
