@@ -15,13 +15,13 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#if ! (defined(WITH_LWIP) && ! MEM_LIBC_MALLOC)
+#if ! (defined(WITH_LWIP) && ! MEM_LIBC_MALLOC) && !defined(COAP_LWIP_USE_STDLIB_ALLOC)
 #if COAP_MEMORY_TYPE_TRACK
 static int track_counts[COAP_MEM_TAG_LAST];
 static int peak_counts[COAP_MEM_TAG_LAST];
 static int fail_counts[COAP_MEM_TAG_LAST];
 #endif /* COAP_MEMORY_TYPE_TRACK */
-#endif /* ! (WITH_LWIP && ! MEM_LIBC_MALLOC) */
+#endif /* ! (WITH_LWIP && ! MEM_LIBC_MALLOC) && !COAP_LWIP_USE_STDLIB_ALLOC */
 
 #if defined(RIOT_VERSION) && defined(MODULE_MEMARRAY)
 #include <memarray.h>
@@ -660,7 +660,7 @@ coap_free_type(coap_memory_tag_t type, void *ptr) {
 
 #endif /* WITH_CONTIKI */
 
-#if ! (defined(WITH_LWIP) && ! MEM_LIBC_MALLOC)
+#if ! (defined(WITH_LWIP) && ! MEM_LIBC_MALLOC) && !defined(COAP_LWIP_USE_STDLIB_ALLOC)
 #define MAKE_CASE(n) case n: name = #n; break
 void
 coap_dump_memory_type_counts(coap_log_t level) {
@@ -713,4 +713,4 @@ coap_dump_memory_type_counts(coap_log_t level) {
   (void)level;
 #endif /* COAP_MEMORY_TYPE_TRACK */
 }
-#endif /* ! (WITH_LWIP && ! MEM_LIBC_MALLOC) */
+#endif /* ! (WITH_LWIP && ! MEM_LIBC_MALLOC) && !COAP_LWIP_USE_STDLIB_ALLOC */

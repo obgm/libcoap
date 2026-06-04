@@ -109,7 +109,7 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
   assert(mid >= 0 && mid <= 0xffff);
 #endif /* RIOT_VERSION */
 
-#if defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS
+#if defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS && defined(MEMP_COAP_PDU) && !defined(COAP_LWIP_USE_STDLIB_ALLOC)
 #if MEMP_STATS
   /* Reserve 1 PDU for a response packet */
   if (memp_pools[MEMP_COAP_PDU]->stats->used + 1 >=
@@ -118,7 +118,7 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
     return NULL;
   }
 #endif /* MEMP_STATS */
-#endif /* LWIP && MEMP_USE_CUSTOM_POOLS */
+#endif /* LWIP && MEMP_USE_CUSTOM_POOLS && MEMP_COAP_PDU && !COAP_LWIP_USE_STDLIB_ALLOC */
   pdu = coap_malloc_type(COAP_PDU, sizeof(coap_pdu_t));
   if (!pdu)
     return NULL;

@@ -122,4 +122,18 @@
 #define HAVE_SNPRINTF 1
 
 
+#ifndef HAVE_GAI_STRERROR
+/* Minimal fallback for platforms without gai_strerror support */
+static inline const char *gai_strerror(int err) {
+  return "getaddrinfo error";
+}
+#endif
+
+#ifndef IN6_IS_ADDR_V4MAPPED
+#define IN6_IS_ADDR_V4MAPPED(a) \
+  ((((const uint32_t *)(a))[0] == 0) && \
+   (((const uint32_t *)(a))[1] == 0) && \
+   (((const uint32_t *)(a))[2] == htonl(0x0000ffff)))
+#endif
+
 #endif /* COAP_CONFIG_H_ */

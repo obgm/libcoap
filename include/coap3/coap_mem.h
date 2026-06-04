@@ -71,6 +71,31 @@ typedef enum {
  */
 void coap_dump_memory_type_counts(coap_log_t log_level);
 
+#if defined(WITH_LWIP) && defined(COAP_LWIP_USE_STDLIB_ALLOC)
+
+#include <stdlib.h>
+
+COAP_STATIC_INLINE void
+coap_memory_init(void) {}
+
+#define coap_malloc_type(type, asize) malloc(asize)
+#define coap_free_type(type, p) free(p)
+#define coap_realloc_type(type, p, asize) realloc(p, asize)
+
+COAP_STATIC_INLINE void *
+coap_malloc(size_t size) {
+  return malloc(size);
+}
+
+COAP_STATIC_INLINE void
+coap_free(void *pointer) {
+  free(pointer);
+}
+
+#define coap_dump_memory_type_counts(l)
+
+#else /* !WITH_LWIP || !COAP_LWIP_USE_STDLIB_ALLOC */
+
 #if ! defined(WITH_LWIP) || (defined(WITH_LWIP) && ! MEMP_USE_CUSTOM_POOLS && ! MEM_USE_POOLS)
 
 /**
@@ -226,6 +251,8 @@ coap_free(void *pointer) {
 }
 
 #endif /* WITH_LWIP && (MEMP_USE_CUSTOM_POOLS || MEM_USE_POOLS) */
+
+#endif /* !WITH_LWIP || !COAP_LWIP_USE_STDLIB_ALLOC */
 
 #ifdef __cplusplus
 }

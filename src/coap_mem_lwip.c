@@ -16,6 +16,8 @@
 
 #include "coap3/coap_libcoap_build.h"
 
+#if !defined(COAP_LWIP_USE_STDLIB_ALLOC)
+
 #if defined(WITH_LWIP) && MEMP_USE_CUSTOM_POOLS
 
 #if MEM_USE_POOLS
@@ -244,3 +246,5 @@ coap_dump_memory_type_counts(coap_log_t level) {
 }
 
 #endif /* WITH_LWIP && ! MEMP_USE_CUSTOM_POOLS && | MEM_LIBC_MALLOC */
+
+#endif /* !COAP_LWIP_USE_STDLIB_ALLOC */
