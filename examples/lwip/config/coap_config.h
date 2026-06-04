@@ -124,7 +124,8 @@
 
 #ifndef HAVE_GAI_STRERROR
 /* Minimal fallback for platforms without gai_strerror support */
-static inline const char *gai_strerror(int err) {
+static inline const char *
+gai_strerror(int err) {
   return "getaddrinfo error";
 }
 #endif
