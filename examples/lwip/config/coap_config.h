@@ -126,6 +126,7 @@
 /* Minimal fallback for platforms without gai_strerror support */
 static inline const char *
 gai_strerror(int err) {
+  (void)err;
   return "getaddrinfo error";
 }
 #endif
