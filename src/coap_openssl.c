@@ -2,7 +2,7 @@
  * coap_openssl.c -- Datagram Transport Layer Support for libcoap with openssl
  *
  * Copyright (C) 2017      Jean-Claude Michelou <jcm@spinetix.com>
- * Copyright (C) 2018-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -17,7 +17,7 @@
 
 #include "coap3/coap_libcoap_build.h"
 
-#ifdef COAP_WITH_LIBOPENSSL
+#if COAP_WITH_LIBOPENSSL
 
 /*
  * OpenSSL 1.1.0 has support for making decisions during receipt of
@@ -33,7 +33,7 @@
  * OpenSSL 1.1.1 introduces a new function SSL_CTX_set_client_hello_cb().
  * The call back is invoked early on in the Client Hello processing giving
  * the ability to easily use different Preshared Keys, Certificates etc.
- * Certificates do not have to be set up in the SSL CTX before SSL_Accept is
+ * Certificates do not have to be set up in the SSL CTX before SSL_accept is
  * called.
  * Later in the Client Hello code, the callback for
  * SSL_CTX_set_tlsext_servername_callback() is still called, but only if SNI
@@ -1062,7 +1062,7 @@ coap_sock_write(BIO *a, const char *in, int inl) {
 
   if (!session) {
     errno = ENOMEM;
-    ret = -1;
+    return -1;
   } else {
     ret = (int)session->sock.lfunc[COAP_LAYER_TLS].l_write(session,
                                                            (const uint8_t *)in,
@@ -1181,6 +1181,8 @@ coap_dtls_new_context(coap_context_t *coap_context) {
       coap_prng_lkd(cookie_secret, sizeof(cookie_secret));
     }
     context->dtls.cookie_hmac = HMAC_CTX_new();
+    if (!context->dtls.cookie_hmac)
+      goto error;
     if (!HMAC_Init_ex(context->dtls.cookie_hmac, cookie_secret, (int)sizeof(cookie_secret),
                       EVP_sha256(), NULL))
       goto error;
@@ -1589,11 +1591,12 @@ load_in_cas_ctx(SSL_CTX *ctx,
   /* Add CA to the trusted root CA store */
   st = SSL_CTX_get_cert_store(ctx);
   in = BIO_new(BIO_s_file());
+  if (!in)
+    return 0;
   /* Need to do this to not get a compiler warning about const parameters */
   memcpy(&rw_var, &ca_file, sizeof(rw_var));
   if (!BIO_read_filename(in, rw_var)) {
     BIO_free(in);
-    X509_free(x);
     return 0;
   }
 
@@ -2047,6 +2050,8 @@ load_in_cas(SSL *ssl,
 
   /* Add CA to the trusted root CA store */
   in = BIO_new(BIO_s_file());
+  if (!in)
+    return 0;
   /* Need to do this to not get a compiler warning about const parameters */
   memcpy(&rw_var, &ca_file, sizeof(rw_var));
   if (!BIO_read_filename(in, rw_var)) {
@@ -2628,9 +2633,11 @@ tls_secret_call_back(SSL *ssl,
       X509_VERIFY_PARAM *param;
 
       param = X509_VERIFY_PARAM_new();
-      X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
-      SSL_set1_param(ssl, param);
-      X509_VERIFY_PARAM_free(param);
+      if (param) {
+        X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
+        SSL_set1_param(ssl, param);
+        X509_VERIFY_PARAM_free(param);
+      }
     }
     if (setup_data->additional_tls_setup_call_back) {
       /* Additional application setup wanted */
@@ -2653,6 +2660,14 @@ tls_secret_call_back(SSL *ssl,
      * Force a PSK algorithm to be used, so we do PSK
      */
     SSL_set_cipher_list(ssl, COAP_OPENSSL_PSK_CIPHERS);
+#ifdef COAP_OPENSSL_PSK_SECURITY_LEVEL
+    /*
+     * Set to 0 if, for example, PSK-AES128-CCM8 is to be supported (64 bits).
+     * Potentially opens up security vulnerabilities.
+     * Default value is 1.
+    */
+    SSL_set_security_level(ssl, COAP_OPENSSL_PSK_SECURITY_LEVEL);
+#endif /* COAP_OPENSSL_PSK_SECURITY_LEVEL */
     SSL_set_psk_server_callback(ssl, coap_dtls_psk_server_callback);
   }
   return 0;
@@ -2685,25 +2700,25 @@ tls_server_name_call_back(SSL *ssl,
     const char *sni = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
     size_t i;
 
-    if !context)
-    return SSL_TLSEXT_ERR_NOACK;
+    if (!context)
+      return SSL_TLSEXT_ERR_NOACK;
 
     if (!sni || !sni[0]) {
-        sni = "";
-      }
+      sni = "";
+    }
     for (i = 0; i < context->sni_count; i++) {
-    if (!strcasecmp(sni, context->sni_entry_list[i].sni)) {
+      if (!strcasecmp(sni, context->sni_entry_list[i].sni)) {
         break;
       }
     }
     if (i == context->sni_count) {
-    SSL_CTX *ctx;
-    coap_dtls_pki_t sni_setup_data;
-    coap_dtls_key_t *new_entry;
+      SSL_CTX *ctx;
+      coap_dtls_pki_t sni_setup_data;
+      coap_dtls_key_t *new_entry;
 
-    coap_lock_callback_ret(new_entry, c_session->context,
-                           setup_data->validate_sni_call_back(sni,
-                                                              setup_data->sni_call_back_arg));
+      coap_lock_callback_ret(new_entry, c_session->context,
+                             setup_data->validate_sni_call_back(sni,
+                                                                setup_data->sni_call_back_arg));
       if (!new_entry) {
         return SSL_TLSEXT_ERR_ALERT_FATAL;
       }
@@ -3072,9 +3087,11 @@ is_x509:
     X509_VERIFY_PARAM *param;
 
     param = X509_VERIFY_PARAM_new();
-    X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
-    SSL_set1_param(ssl, param);
-    X509_VERIFY_PARAM_free(param);
+    if (param) {
+      X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
+      SSL_set1_param(ssl, param);
+      X509_VERIFY_PARAM_free(param);
+    }
   }
   if (setup_data->additional_tls_setup_call_back) {
     /* Additional application setup wanted */
@@ -3508,6 +3525,14 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
     SSL_set_psk_server_callback(ssl, coap_dtls_psk_server_callback);
 #endif /* COAP_SERVER_SUPPORT */
     SSL_set_cipher_list(ssl, COAP_OPENSSL_PSK_CIPHERS);
+#ifdef COAP_OPENSSL_PSK_SECURITY_LEVEL
+    /*
+     * Set to 0 if, for example, PSK-AES128-CCM8 is to be supported (64 bits).
+     * Potentially opens up security vulnerabilities.
+     * Default value is 1.
+    */
+    SSL_set_security_level(ssl, COAP_OPENSSL_PSK_SECURITY_LEVEL);
+#endif /* COAP_OPENSSL_PSK_SECURITY_LEVEL */
     if (setup_data->validate_ih_call_back) {
       if (session->proto == COAP_PROTO_DTLS) {
         SSL_set_max_proto_version(ssl, DTLS1_2_VERSION);
@@ -3561,9 +3586,11 @@ setup_client_ssl_session(coap_session_t *session, SSL *ssl
       X509_VERIFY_PARAM *param;
 
       param = X509_VERIFY_PARAM_new();
-      X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
-      SSL_set1_param(ssl, param);
-      X509_VERIFY_PARAM_free(param);
+      if (param) {
+        X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
+        SSL_set1_param(ssl, param);
+        X509_VERIFY_PARAM_free(param);
+      }
     }
 
     /* Verify Peer */
@@ -3744,14 +3771,16 @@ int
 coap_dtls_handle_timeout(coap_session_t *session) {
   SSL *ssl = (SSL *)session->tls;
 
-  assert(ssl != NULL && session->state == COAP_SESSION_STATE_HANDSHAKE);
-  if ((++session->dtls_timeout_count > session->max_retransmit) ||
-      (DTLSv1_handle_timeout(ssl) < 0)) {
-    /* Too many retries */
-    coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
-    return 1;
+  if (ssl != NULL && session->state == COAP_SESSION_STATE_HANDSHAKE) {
+    if ((++session->dtls_timeout_count > session->max_retransmit) ||
+        (DTLSv1_handle_timeout(ssl) < 0)) {
+      /* Too many retries */
+      coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
+      return 1;
+    }
+    return 0;
   }
-  return 0;
+  return 1;
 }
 
 #if COAP_SERVER_SUPPORT
@@ -4183,7 +4212,7 @@ coap_tls_write(coap_session_t *session, const uint8_t *data, size_t data_len) {
       coap_log_debug("*  %s: tls:   sent %4d bytes\n",
                      coap_session_str(session), r);
     else
-      coap_log_debug("*  %s: tls:   sent %4d of %4zd bytes\n",
+      coap_log_debug("*  %s: tls:   sent %4d of %4" PRIdS " bytes\n",
                      coap_session_str(session), r, data_len);
   }
   return r;
@@ -4485,6 +4514,7 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
   const coap_crypto_aes_ccm_t *ccm;
   int tmp;
   int result_len = (int)(*max_result_len & INT_MAX);
+  EVP_CIPHER_CTX *ctx;
 
   if (data == NULL)
     return 0;
@@ -4497,7 +4527,9 @@ coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
   /* TODO: set evp_md depending on params->alg */
   ccm = &params->params.aes;
 
-  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  ctx = EVP_CIPHER_CTX_new();
+  if (!ctx)
+    return 0;
 
   /* EVP_CIPHER_CTX_init(ctx); */
   C(EVP_EncryptInit_ex(ctx, cipher, NULL, NULL, NULL));
@@ -4547,6 +4579,7 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
   int len;
   const uint8_t *tag;
   uint8_t *rwtag;
+  EVP_CIPHER_CTX *ctx;
 
   if (data == NULL)
     return 0;
@@ -4567,7 +4600,9 @@ coap_crypto_aead_decrypt(const coap_crypto_param_t *params,
     memcpy(&rwtag, &tag, sizeof(rwtag));
   }
 
-  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  ctx = EVP_CIPHER_CTX_new();
+  if (!ctx)
+    return 0;
 
   C(EVP_DecryptInit_ex(ctx, cipher, NULL, NULL, NULL));
   C(EVP_CIPHER_CTX_ctrl(ctx,
@@ -4630,13 +4665,14 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
     return 1;
   }
 
+  coap_delete_binary(dummy);
   coap_crypto_output_errors("coap_crypto_hmac");
   return 0;
 }
 
 #endif /* COAP_OSCORE_SUPPORT */
 
-#else /* !COAP_WITH_LIBOPENSSL */
+#else /* ! COAP_WITH_LIBOPENSSL */
 
 #ifdef __clang__
 /* Make compilers happy that do not like empty modules. As this function is
@@ -4648,4 +4684,4 @@ static inline void
 dummy(void) {
 }
 
-#endif /* COAP_WITH_LIBOPENSSL */
+#endif /* ! COAP_WITH_LIBOPENSSL */
