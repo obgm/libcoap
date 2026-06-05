@@ -74,7 +74,7 @@
 #if MEMP_USE_CUSTOM_POOLS
 /*
  * Set to 0 if defined memory pools is not required, only custom pools.
- * Memory pools are only used for COAP_SRING type mmemory allocations.
+ * Memory pools are only used for COAP_STRING type mmemory allocations.
  *
  * [Update the LWIP_MALLOC_MEMPOOL definitions in lwippools.h.]
  */

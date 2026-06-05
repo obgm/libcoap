@@ -65,17 +65,11 @@ coap_dtls_map_key_type_to_define(const coap_dtls_pki_t *setup_data, coap_dtls_ke
 
     if (setup_data->is_rpk_not_cert) {
       key->key.define.public_cert_def = COAP_PKI_KEY_DEF_RPK_BUF;
-    } else {
-      key->key.define.public_cert_def = COAP_PKI_KEY_DEF_PEM_BUF;
-    }
-    if (setup_data->is_rpk_not_cert) {
       key->key.define.private_key_def = COAP_PKI_KEY_DEF_RPK_BUF;
-    } else {
-      key->key.define.private_key_def = COAP_PKI_KEY_DEF_PEM_BUF;
-    }
-    if (setup_data->is_rpk_not_cert) {
       key->key.define.ca_def = COAP_PKI_KEY_DEF_RPK_BUF;
     } else {
+      key->key.define.public_cert_def = COAP_PKI_KEY_DEF_PEM_BUF;
+      key->key.define.private_key_def = COAP_PKI_KEY_DEF_PEM_BUF;
       key->key.define.ca_def = COAP_PKI_KEY_DEF_PEM_BUF;
     }
     break;
