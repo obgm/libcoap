@@ -604,8 +604,8 @@ usage(const char *program, const char *version) {
           "\t\t[-l loss] [-m method] [-o file] [-p port] [-q tls_engine_conf_file]\n"
           "\t\t[-r] [-s duration] [-t type] [-v num] [-w] [-x] [-y rec_secs]\n"
           "\t\t[-z] [-A type] [-B seconds] [-E oscore_conf_file[,seq_file]]\n"
-          "\t\t[-G count] [-H hoplimit] [-I rate_limit_ppm]\n"
-          "\t\t[-K interval] [-N] [-O num,text] [-P scheme://address[:port]\n"
+          "\t\t[-G count] [-H hoplimit] [-I rate_limit_ppm] [-K interval]\n"
+          "\t\t[-L value] [-N] [-O num,text] [-P scheme://address[:port]\n"
           "\t\t[-S] [-T token] [-U] [-V num] [-X size] [-Z fail] [-3]\n"
           "\t\t[[-d count]]\n"
           "\t\t[[h match_hint_file] [-k key] [-u user] [-2]]\n"
@@ -1649,7 +1649,7 @@ setup_pki(coap_context_t *ctx, coap_dtls_role_t role) {
    */
   dtls_pki.verify_peer_cert        = verify_peer_cert;
   dtls_pki.check_common_ca         = ca_file != NULL;
-  dtls_pki.allow_self_signed       = !(root_ca_file || ca_file);;
+  dtls_pki.allow_self_signed       = !(root_ca_file || ca_file);
   dtls_pki.allow_expired_certs     = 1;
   dtls_pki.cert_chain_validation   = 1;
   dtls_pki.cert_chain_verify_depth = 2;

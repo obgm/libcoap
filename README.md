@@ -1,6 +1,5 @@
 # libcoap: A C implementation of the Constrained Application Protocol (RFC 7252)
 
-[![Build Status: main](https://github.com/obgm/libcoap/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/obgm/libcoap/actions?query=branch:main)
 [![Build Status: develop](https://github.com/obgm/libcoap/actions/workflows/main.yml/badge.svg?branch=develop)](https://github.com/obgm/libcoap/actions?query=branch:develop)
 [![Static Analysis](https://scan.coverity.com/projects/10970/badge.svg?flat=1)](https://scan.coverity.com/projects/obgm-libcoap)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/libcoap.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:libcoap)
@@ -67,7 +66,7 @@ The following RFCs are supported
 
 The following Internet Draft is supported
 
-* [I-D URI-Path abbreviation in CoAP](https://datatracker.ietf.org/doc/html/draft-ietf-core-uri-path-abbrev-04)
+* [I-D URI-Path abbreviation in CoAP](https://datatracker.ietf.org/doc/html/draft-ietf-core-uri-path-abbrev-05)
 
 There is (D)TLS support for the following libraries
 

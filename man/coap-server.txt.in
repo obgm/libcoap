@@ -13,8 +13,12 @@ NAME
 coap-server,
 coap-server-gnutls,
 coap-server-mbedtls,
-coap-server-openssl,
+coap-server-mbedtls-oscore,
 coap-server-openhitls,
+coap-server-openhitls-oscore,
+coap-server-openssl,
+coap-server-tinydtls,
+coap-server-wolfssl,
 coap-server-notls
 - CoAP Server based on libcoap
 
@@ -161,7 +165,7 @@ OPTIONS - General
 
 *-L* value::
    Sum of one or more COAP_BLOCK_* flag values for different block handling
-   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP). This vlue can be set as a
+   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP). This value can be set as a
    hex value - e.g. 0x103.
 
      COAP_BLOCK_USE_LIBCOAP         1

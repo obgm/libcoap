@@ -50,7 +50,7 @@ The following RFCs are supported
 
 The following Internet Draft is supported
 
-* [I-D URI-Path abbreviation in CoAP](https://datatracker.ietf.org/doc/html/draft-ietf-core-uri-path-abbrev-04)
+* [I-D URI-Path abbreviation in CoAP](https://datatracker.ietf.org/doc/html/draft-ietf-core-uri-path-abbrev-05)
 
 There is (D)TLS support for the following libraries
 
@@ -63,6 +63,8 @@ There is (D)TLS support for the following libraries
 * [wolfSSL](https://wolfssl.com) (Minimum version 5.2.0) [PKI, PSK, RPK(5.6.4+) and DTLS1.3(5.4.0+)]
 
 * [TinyDTLS](https://github.com/eclipse/tinydtls) [PSK and RPK] [DTLS Only]
+
+* [openHiTLS](https://gitcode.com/openHiTLS/openhitls) (Minimum version 0.4.0) [PKI and PSK]
 
 Documentation
 =============

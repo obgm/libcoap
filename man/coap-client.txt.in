@@ -13,8 +13,12 @@ NAME
 coap-client,
 coap-client-gnutls,
 coap-client-mbedtls,
-coap-client-openssl,
+coap-client-mbedtls-oscore,
 coap-client-openhitls,
+coap-client-openhitls-oscore,
+coap-client-openssl,
+coap-client-tinydtls,
+coap-client-wolfssl,
 coap-client-notls
 - CoAP Client based on libcoap
 
@@ -183,7 +187,7 @@ OPTIONS - General
 
 *-L* value::
    Sum of one or more COAP_BLOCK_* flag values for different block handling
-   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP). This vlue can be set as a
+   methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP). This value can be set as a
    hex value - e.g. 0x13.
 
      COAP_BLOCK_USE_LIBCOAP         1

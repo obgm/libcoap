@@ -108,8 +108,8 @@ FUNCTIONS
 
 The *coap_context_set_pki*() function, for a specific _context_, is used to
 configure the (D)TLS context using the _setup_data_ PKI variables as defined in
-the coap_dtls_pki_t structure  - see *coap_encryption*(3). This should not be
-used for setting up client sessions.
+the coap_dtls_pki_t structure  - see *coap_encryption*(3). This cannot be
+used for setting up client sessions as there is no support for client only builds.
 
 *Function: coap_context_set_psk2()*
 

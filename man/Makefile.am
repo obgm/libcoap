@@ -263,6 +263,9 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_supported.3" > coap_wss_is_supported.3
 	@echo ".so man3/coap_uri.3" > coap_upa_client_fallback.3
 	@echo ".so man3/coap_uri.3" > coap_upa_server_mapping.3
+	@echo ".so man5/coap-client.5" > coap-client-notls.5
+	@echo ".so man5/coap-rd.5" > coap-rd-notls.5
+	@echo ".so man5/coap-client.5" > coap-server-notls.5
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_3) "$(DESTDIR)$(man3dir)"
 	$(INSTALL_DATA) $(A2X_EXTRA_PAGES_5) "$(DESTDIR)$(man5dir)"
 
