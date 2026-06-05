@@ -68,11 +68,14 @@
  + -DCOAP_OPENSSL_PKCS11_ENGINE_ID='\"pkcs11\"'
  *
  * The PSK security level can be defined by (example)
- + -DCOAP_OPENSSL_PSK_SECURITY_LEVEL=0
+ * -DCOAP_OPENSSL_PSK_SECURITY_LEVEL=0
  *
+ * ENINE_* functions are no longer supported by OpenSSL 4.0 and later.
  */
 #include <openssl/ssl.h>
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
 #include <openssl/engine.h>
+#endif /* OPENSSL_VERSION_NUMBER < 0x40000000L */
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
@@ -249,7 +252,11 @@ coap_dtls_pki_is_supported(void) {
  */
 int
 coap_dtls_pkcs11_is_supported(void) {
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
   return 1;
+#else /* OPENSSL_VERSION_NUMBER >= 0x40000000L */
+  return 0;
+#endif /* OPENSSL_VERSION_NUMBER >= 0x40000000L */
 }
 
 /*
@@ -288,14 +295,18 @@ coap_get_tls_library_version(void) {
   return &version;
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
 static ENGINE *pkcs11_engine = NULL;
 static ENGINE *defined_engine = NULL;
+#endif /* OPENSSL_VERSION_NUMBER < 0x40000000L */
 
 void
 coap_dtls_startup(void) {
   SSL_load_error_strings();
   SSL_library_init();
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
   ENGINE_load_dynamic();
+#endif /* OPENSSL_VERSION_NUMBER < 0x40000000L */
 }
 
 void
@@ -311,10 +322,10 @@ coap_dtls_shutdown(void) {
     ENGINE_finish(defined_engine);
     defined_engine = NULL;
   }
-#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+#elif OPENSSL_VERSION_NUMBER < 0x40000000L
   pkcs11_engine = NULL;
   defined_engine = NULL;
-#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L && < 0x40000000L */
   ERR_free_strings();
   coap_dtls_set_log_level(COAP_LOG_EMERG);
 }
@@ -334,6 +345,7 @@ coap_dtls_get_tls(const coap_session_t *c_session,
   return NULL;
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
 static int
 get_split_conf_entry(const uint8_t **start, size_t size, const char *get_keyword,
                      coap_str_const_t **p1, coap_str_const_t **p2) {
@@ -555,6 +567,19 @@ coap_tls_engine_remove(void) {
   }
   return 0;
 }
+#else /*  OPENSSL_VERSION_NUMBER >= 0x40000000L */
+
+int
+coap_tls_engine_configure(coap_str_const_t *conf_mem) {
+  (void)conf_mem;
+  return 0;
+}
+
+int
+coap_tls_engine_remove(void) {
+  return 0;
+}
+#endif /* OPENSSL_VERSION_NUMBER >= 0x40000000L */
 
 /*
  * Logging levels use the standard CoAP logging levels
@@ -1413,6 +1438,7 @@ add_ca_to_cert_store(X509_STORE *st, X509 *x509) {
   }
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
 static X509 *
 missing_ENGINE_load_cert(ENGINE *engine, const char *cert_id) {
   struct {
@@ -1461,6 +1487,7 @@ check_pkcs11_engine(void) {
   }
   return 1;
 }
+#endif /* OPENSSL_VERSION_NUMBER < 0x40000000L */
 
 #if OPENSSL_VERSION_NUMBER < 0x10101000L && COAP_SERVER_SUPPORT
 
@@ -1905,10 +1932,11 @@ setup_pki_server(SSL_CTX *ctx,
 
   return 1;
 }
-#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
+#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L && COAP_SERVER_SUPPORT */
 
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L || COAP_CLIENT_SUPPORT
 
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
 static int
 install_engine_public_cert(ENGINE *engine, SSL *ssl, const char *public_cert,
                            coap_dtls_role_t role) {
@@ -1996,6 +2024,7 @@ install_engine_ca(ENGINE *engine, SSL *ssl, const char *ca,
   X509_free(x509);
   return 1;
 }
+#endif /* OPENSSL_VERSION_NUMBER < 0x40000000L */
 
 static int
 load_in_cas(SSL *ssl,
@@ -2060,9 +2089,7 @@ setup_pki_ssl(SSL *ssl,
       if (!(SSL_use_PrivateKey_file(ssl,
                                     key.key.define.private_key.s_byte,
                                     SSL_FILETYPE_PEM))) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_private;
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define private key */
@@ -2076,31 +2103,23 @@ setup_pki_ssl(SSL *ssl,
             BIO_free(bp);
           if (pkey)
             EVP_PKEY_free(pkey);
-          return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                        COAP_DEFINE_FAIL_BAD,
-                                        &key, role, 0);
+          goto fail_bad_private;
         }
         if (bp)
           BIO_free(bp);
         if (pkey)
           EVP_PKEY_free(pkey);
       } else {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                      COAP_DEFINE_FAIL_NONE,
-                                      &key, role, 0);
+        goto fail_none_private;
       }
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define private key */
-      return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role, 0);
+      goto fail_ns_private;
     case COAP_PKI_KEY_DEF_DER: /* define private key */
       if (!(SSL_use_PrivateKey_file(ssl,
                                     key.key.define.private_key.s_byte,
                                     SSL_FILETYPE_ASN1))) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_private;
       }
       break;
     case COAP_PKI_KEY_DEF_DER_BUF: /* define private key */
@@ -2109,14 +2128,13 @@ setup_pki_ssl(SSL *ssl,
                                     ssl,
                                     key.key.define.private_key.u_byte,
                                     (long)key.key.define.private_key_len))) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_private;
       }
       break;
     case COAP_PKI_KEY_DEF_PKCS11: /* define private key */
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
       if (!check_pkcs11_engine()) {
-        return 0;
+        goto fail_bad_private;
       }
       if (key.key.define.user_pin) {
         /* If not set, pin-value may be held in pkcs11: URI */
@@ -2125,39 +2143,36 @@ setup_pki_ssl(SSL *ssl,
                                    key.key.define.user_pin, 0) == 0) {
           coap_log_warn("*** setup_pki: (D)TLS: PKCS11: %s: Unable to set pin\n",
                         key.key.define.user_pin);
-          return 0;
+          goto fail_bad_private;
         }
       }
       if (!install_engine_private_key(pkcs11_engine, ssl,
                                       key.key.define.private_key.s_byte,
                                       role)) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_private;
       }
+#else /* OPENSSL_VERSION_NUMBER >= 0x40000000L */
+      goto fail_bad_private;
+#endif /* OPENSSL_VERSION_NUMBER >= 0x40000000L */
       break;
     case COAP_PKI_KEY_DEF_ENGINE: /* define private key */
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
       if (!defined_engine ||
           !install_engine_private_key(defined_engine, ssl,
                                       key.key.define.private_key.s_byte,
                                       role)) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_private;
       }
       break;
+#endif /* OPENSSL_VERSION_NUMBER < 0x40000000L */
     case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define private key */
     default:
-      return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role, 0);
+      goto fail_ns_private;
     }
   } else if (role == COAP_DTLS_ROLE_SERVER ||
              (key.key.define.public_cert.u_byte &&
               key.key.define.public_cert.u_byte[0])) {
-    return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
-                                  COAP_DEFINE_FAIL_NONE,
-                                  &key, role, 0);
+    goto fail_none_private;
   }
 
   /*
@@ -2173,16 +2188,12 @@ setup_pki_ssl(SSL *ssl,
         if (!(SSL_use_certificate_file(ssl,
                                        key.key.define.public_cert.s_byte,
                                        SSL_FILETYPE_PEM))) {
-          return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                        COAP_DEFINE_FAIL_BAD,
-                                        &key, role, 0);
+          goto fail_bad_public;
         }
       } else {
         if (!SSL_use_certificate_chain_file(ssl,
                                             key.key.define.public_cert.s_byte)) {
-          return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                        COAP_DEFINE_FAIL_BAD,
-                                        &key, role, 0);
+          goto fail_bad_public;
         }
       }
       break;
@@ -2197,31 +2208,23 @@ setup_pki_ssl(SSL *ssl,
             BIO_free(bp);
           if (cert)
             X509_free(cert);
-          return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                        COAP_DEFINE_FAIL_BAD,
-                                        &key, role, 0);
+          goto fail_bad_public;
         }
         if (bp)
           BIO_free(bp);
         if (cert)
           X509_free(cert);
       } else {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_public;
       }
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define public cert */
-      return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role, 0);
+      goto fail_ns_public;
     case COAP_PKI_KEY_DEF_DER: /* define public cert */
       if (!(SSL_use_certificate_file(ssl,
                                      key.key.define.public_cert.s_byte,
                                      SSL_FILETYPE_ASN1))) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_public;
       }
       break;
     case COAP_PKI_KEY_DEF_DER_BUF: /* define public cert */
@@ -2229,42 +2232,41 @@ setup_pki_ssl(SSL *ssl,
           !(SSL_use_certificate_ASN1(ssl,
                                      key.key.define.public_cert.u_byte,
                                      (int)key.key.define.public_cert_len))) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_public;
       }
       break;
     case COAP_PKI_KEY_DEF_PKCS11: /* define public cert */
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
       if (!check_pkcs11_engine()) {
-        return 0;
+        goto fail_bad_public;
       }
       if (!install_engine_public_cert(pkcs11_engine, ssl,
                                       key.key.define.public_cert.s_byte,
                                       role)) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_public;
       }
+#else /* OPENSSL_VERSION_NUMBER >= 0x40000000L */
+      goto fail_bad_public;
+#endif /* OPENSSL_VERSION_NUMBER >= 0x40000000L */
       break;
     case COAP_PKI_KEY_DEF_ENGINE: /* define public cert */
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
       if (!defined_engine ||
           !install_engine_public_cert(defined_engine, ssl,
                                       key.key.define.public_cert.s_byte,
                                       role)) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_public;
       }
       break;
+#endif /* OPENSSL_VERSION_NUMBER < 0x40000000L */
     case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define public cert */
     default:
-      return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
-                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role, 0);
+      goto fail_ns_public;
     }
   } else if (role == COAP_DTLS_ROLE_SERVER ||
              (key.key.define.private_key.u_byte &&
               key.key.define.private_key.u_byte[0])) {
+
     return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                   COAP_DEFINE_FAIL_NONE,
                                   &key, role, 0);
@@ -2278,9 +2280,7 @@ setup_pki_ssl(SSL *ssl,
     switch (key.key.define.ca_def) {
     case COAP_PKI_KEY_DEF_PEM:
       if (!load_in_cas(ssl, key.key.define.ca.s_byte, role)) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_ca;
       }
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define ca */
@@ -2303,22 +2303,16 @@ setup_pki_ssl(SSL *ssl,
           BIO_free(bp);
         }
       } else {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_ca;
       }
       break;
     case COAP_PKI_KEY_DEF_RPK_BUF: /* define ca */
-      return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
-                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role, 0);
+      goto fail_ns_ca;
     case COAP_PKI_KEY_DEF_DER: /* define ca */
       if (!(SSL_use_certificate_file(ssl,
                                      key.key.define.ca.s_byte,
                                      SSL_FILETYPE_ASN1))) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_ca;
       }
       break;
     case COAP_PKI_KEY_DEF_DER_BUF: /* define ca */
@@ -2332,9 +2326,7 @@ setup_pki_ssl(SSL *ssl,
         if (role == COAP_DTLS_ROLE_SERVER) {
           if (!x509 || !SSL_add_client_CA(ssl, x509)) {
             X509_free(x509);
-            return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
-                                          COAP_DEFINE_FAIL_BAD,
-                                          &key, role, 0);
+            goto fail_bad_ca;
           }
         }
 
@@ -2346,36 +2338,66 @@ setup_pki_ssl(SSL *ssl,
       }
       break;
     case COAP_PKI_KEY_DEF_PKCS11: /* define ca */
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
       if (!check_pkcs11_engine()) {
-        return 0;
+        goto fail_bad_ca;
       }
       if (!install_engine_ca(pkcs11_engine, ssl,
                              key.key.define.ca.s_byte,
                              role)) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_ca;
       }
+#else /* OPENSSL_VERSION_NUMBER >= 0x40000000L */
+      goto fail_bad_ca;
+#endif /* OPENSSL_VERSION_NUMBER >= 0x40000000L */
       break;
     case COAP_PKI_KEY_DEF_ENGINE: /* define ca */
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
       if (!defined_engine ||
           !install_engine_ca(defined_engine, ssl,
                              key.key.define.ca.s_byte,
                              role)) {
-        return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
-                                      COAP_DEFINE_FAIL_BAD,
-                                      &key, role, 0);
+        goto fail_bad_ca;
       }
       break;
+#endif /* OPENSSL_VERSION_NUMBER < 0x40000000L */
     case COAP_PKI_KEY_DEF_PKCS11_RPK: /* define ca */
     default:
-      return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
-                                    COAP_DEFINE_FAIL_NOT_SUPPORTED,
-                                    &key, role, 0);
+      goto fail_ns_ca;
     }
   }
 
   return 1;
+
+fail_bad_private:
+  return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                COAP_DEFINE_FAIL_BAD,
+                                &key, role, 0);
+fail_ns_private:
+  return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                &key, role, 0);
+fail_none_private:
+  return coap_dtls_define_issue(COAP_DEFINE_KEY_PRIVATE,
+                                COAP_DEFINE_FAIL_NONE,
+                                &key, role, 0);
+fail_bad_public:
+  return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                COAP_DEFINE_FAIL_BAD,
+                                &key, role, 0);
+fail_ns_public:
+  return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
+                                COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                &key, role, 0);
+fail_bad_ca:
+  return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                COAP_DEFINE_FAIL_BAD,
+                                &key, role, 0);
+fail_ns_ca:
+  return coap_dtls_define_issue(COAP_DEFINE_KEY_CA,
+                                COAP_DEFINE_FAIL_NOT_SUPPORTED,
+                                &key, role, 0);
+
 }
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L || COAP_CLIENT_SUPPORT */
 
@@ -3220,6 +3242,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
     return 0;
   context->setup_data = *setup_data;
 
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
   if (context->setup_data.pki_key.key_type == COAP_PKI_KEY_DEFINE) {
     if (context->setup_data.pki_key.key.define.ca_def == COAP_PKI_KEY_DEF_ENGINE ||
         context->setup_data.pki_key.key.define.public_cert_def == COAP_PKI_KEY_DEF_ENGINE ||
@@ -3230,6 +3253,7 @@ coap_dtls_context_set_pki(coap_context_t *ctx,
       }
     }
   }
+#endif /* OPENSSL_VERSION_NUMBER < 0x40000000L */
 
   if (!context->setup_data.verify_peer_cert) {
     /* Needs to be clear so that no CA DNs are transmitted */
