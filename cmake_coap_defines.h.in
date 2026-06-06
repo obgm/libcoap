@@ -74,6 +74,9 @@
 /* Define to 1 if the system has libmbedtls */
 #cmakedefine COAP_WITH_LIBMBEDTLS @COAP_WITH_LIBMBEDTLS@
 
+/* Define to 1 if the system has libmbedtls and OSCORE only */
+#cmakedefine COAP_WITH_LIBMBEDTLS_OSCORE @COAP_WITH_LIBMBEDTLS_OSCORE@
+
 /* Define to 1 if the system has openssl */
 #cmakedefine COAP_WITH_LIBOPENSSL @COAP_WITH_LIBOPENSSL@
 

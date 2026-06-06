@@ -1314,7 +1314,9 @@ coap_string_tls_support(char *buffer, size_t bufsize) {
   const int have_ws = coap_ws_is_supported();
 
   if (have_dtls == 0 && have_tls == 0) {
-    snprintf(buffer, bufsize, "(No DTLS or TLS support)");
+    snprintf(buffer, bufsize, "(No DTLS or TLS support)\n(%sOSCORE)\n(%sWebSockets)",
+             have_oscore ? "Have " : "No ",
+             have_ws ? "Have " : "No ");
     return buffer;
   }
   snprintf(buffer, bufsize,

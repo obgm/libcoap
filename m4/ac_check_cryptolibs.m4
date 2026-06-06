@@ -1,14 +1,14 @@
 #
 # SYNOPSIS
 #
-#   AX_CHECK_{GNUTLS|OPENSSL}_VERSION
+#   AX_CHECK_{GNUTLS|OPENSSL|MBEDTLS|WOLFSSL|TINYDTLS}_VERSION
 #
 # DESCRIPTION
 #
 #   This m4 file contains helper functions for checking the version of the
-#   respective cryptographic library version of GnuTLS, Mbed TLS or OpenSSL on
-#   the host. The variables '$gnutls_version_required',
-#   '$mbedtls_version_required' and '$openssl_version_required' hold the
+#   respective cryptographic library version of GnuTLS, OpenSSL, Mbed TLS,
+#   WolfSSL and TinyDTLS on the host. The variables '$gnutls_version_required',
+#   '$mbedtls_version_required' and '$openssl_version_required' etc. hold the
 #   minimum required version and are set up externaly in configure.ac.
 #
 #   Example:

@@ -134,6 +134,21 @@ set_property(
            wolfssl
            mbedtls
            tinydtls)
+set(OSCORE_BACKEND
+    "none"
+    CACHE
+      STRING
+      "\
+Name of the oscore backend, only relevant if `ENABLE_DTLS` is OFF which is not the \
+default. Possible values: none and mbedtls. \
+If specified then this library will be searched and if found also used. \
+If not found then the cmake configuration will stop with an error. \
+    ")
+set_property(
+  CACHE OSCORE_BACKEND
+  PROPERTY STRINGS
+           none
+           mbedtls)
 option(
   USE_VENDORED_TINYDTLS
   "compile with the tinydtls project in the submodule if on, otherwise try to find the compiled lib with find_package"
@@ -355,7 +370,7 @@ if(NOT ZEPHYR_BASE)
         sys/socket.h
         HAVE_STRUCT_CMSGHDR)
   endif()
-endif()
+endif() # ! ZEPHYR_BASE
 
 if(${ENABLE_CLIENT_MODE})
   set(COAP_CLIENT_SUPPORT "1")
@@ -384,8 +399,9 @@ else()
   message(STATUS "compiling without proxy support")
 endif()
 
-if(${ENABLE_OSCORE})
+if((${ENABLE_OSCORE}) OR (${WITH_MBEDTLS_OSCORE}))
   set(COAP_OSCORE_SUPPORT "1")
+  set(ENABLE_OSCORE ON)
   message(STATUS "compiling with OSCORE support")
 else()
   message(STATUS "compiling without OSCORE support")
@@ -509,6 +525,7 @@ set(WITH_GNUTLS OFF)
 set(WITH_OPENSSL OFF)
 set(WITH_TINYDTLS OFF)
 set(WITH_MBEDTLS OFF)
+set(WITH_MBEDTLS_OSCORE OFF)
 set(WITH_WOLFSSL OFF)
 
 if(ENABLE_DTLS)
@@ -560,6 +577,17 @@ if(ENABLE_DTLS)
     # libmbedtls (e.g. debian libmbedtls-dev)
     find_package(MbedTLS ${DTLS_REQUIRED})
     if(MbedTLS_FOUND)
+      set(WITH_MBEDTLS_OSCORE ON)
+      message(STATUS "compiling with mbedtls support")
+      set(COAP_WITH_LIBMBEDTLS 1)
+      set(DTLS_FOUND ON)
+    endif()
+  endif()
+
+  if((OSCORE_BACKEND STREQUAL "mbedtls") OR ((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND)))
+    # libmbedtls (e.g. debian libmbedtls-dev)
+    find_package(MbedTLS ${DTLS_REQUIRED})
+    if(MbedTLS_FOUND)
       set(WITH_MBEDTLS ON)
       message(STATUS "compiling with mbedtls support")
       set(COAP_WITH_LIBMBEDTLS 1)
@@ -592,11 +620,39 @@ if(ENABLE_DTLS)
     endif()
   endif()
 
-  if((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND))
+  if(((DTLS_BACKEND STREQUAL "default") OR (DTLS_BACKEND STREQUAL "ignore")) AND (NOT DTLS_FOUND))
     # no cryto lib found
     message(
       FATAL_ERROR
-      "cannot find any cryto lib, either install one or compile without DTLS support"
+      "cannot find any defined cryto lib, either install one or compile without DTLS support"
+    )
+  endif()
+
+elseif(NOT ((OSCORE_BACKEND STREQUAL "none") OR (OSCORE_BACKEND STREQUAL "")))
+
+  if((OSCORE_BACKEND STREQUAL "mbedtls") AND (NOT DTLS_FOUND))
+    # libmbedtls (e.g. debian libmbedtls-dev)
+    find_package(MbedTLS REQUIRED)
+    if(MbedTLS_FOUND)
+      set(WITH_MBEDTLS_OSCORE ON)
+      message(STATUS "compiling with mbedtls OSCORE support")
+      set(COAP_WITH_LIBMBEDTLS_OSCORE 1)
+      set(DTLS_FOUND ON)
+    endif()
+  endif()
+
+  if((ZEPHYR_BASE) AND (OSCORE_BACKEND STREQUAL "zephyr") AND (NOT DTLS_FOUND))
+    set(WITH_MBEDTLS_OSCORE ON)
+    message(STATUS "compiling with mbedtls OSCORE support")
+    set(COAP_WITH_LIBMBEDTLS_OSCORE 1)
+    set(DTLS_FOUND ON)
+  endif()
+
+  if((NOT ZEPHYR_BASE) AND (NOT DTLS_FOUND))
+    # no defined cryto lib found
+    message(
+      FATAL_ERROR
+      "cannot find any defined cryto lib for OSCORE, either install one or compile without OSCORE support"
     )
   endif()
 
@@ -654,16 +710,20 @@ message(STATUS "ENABLE_DOCS:.....................${ENABLE_DOCS}")
 message(STATUS "ENABLE_EXAMPLES:.................${ENABLE_EXAMPLES}")
 message(STATUS "ENABLE_SANITIZER:................${ENABLE_SANITIZER}")
 message(STATUS "DTLS_BACKEND:....................${DTLS_BACKEND}")
+if(NOT ENABLE_DTLS)
+message(STATUS "OSCORE_BACKEND:..................${OSCORE_BACKEND}")
+endif()
 message(STATUS "WITH_GNUTLS:.....................${WITH_GNUTLS}")
 message(STATUS "WITH_TINYDTLS:...................${WITH_TINYDTLS}")
 message(STATUS "WITH_OPENSSL:....................${WITH_OPENSSL}")
 message(STATUS "WITH_WOLFSSL:....................${WITH_WOLFSSL}")
 message(STATUS "WITH_MBEDTLS:....................${WITH_MBEDTLS}")
-message(STATUS "HAVE_LIBTINYDTLS:................${COAP_WITH_LIBTINYDTLS}")
-message(STATUS "HAVE_LIBGNUTLS:..................${COAP_WITH_LIBGNUTLS}")
-message(STATUS "HAVE_LIBOPENSSL:.................${COAP_WITH_LIBOPENSSL}")
-message(STATUS "HAVE_LIBWOLFSSL:.................${COAP_WITH_LIBWOLFSSL}")
-message(STATUS "HAVE_LIBMBEDTLS:.................${COAP_WITH_LIBMBEDTLS}")
+message(STATUS "WITH_MBEDTLS_OSCORE:.............${WITH_MBEDTLS_OSCORE}")
+message(STATUS "HAVE_LIBTINYDTLS:................${TinyDTLS_VERSION}")
+message(STATUS "HAVE_LIBGNUTLS:..................${GNUTLS_VERSION}")
+message(STATUS "HAVE_LIBOPENSSL:.................${OPENSSL_VERSION}")
+message(STATUS "HAVE_LIBWOLFSSL:.................${wolfssl_VERSION}")
+message(STATUS "HAVE_LIBMBEDTLS:.................${MbedTLS_VERSION}")
 message(STATUS "WITH_EPOLL:......................${WITH_EPOLL}")
 message(STATUS "WITH_OBSERVE_PERSIST:............${WITH_OBSERVE_PERSIST}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
@@ -746,6 +806,7 @@ target_sources(
           $<$<BOOL:${COAP_WITH_LIBTINYDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_tinydtls.c>
           $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
           $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
+          $<$<BOOL:${COAP_WITH_LIBMBEDTLS_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
           # needed for OSCORE if enabled
           $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore.c>
           $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cbor.c>
@@ -791,6 +852,7 @@ target_link_libraries(
          $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:GnuTLS::GnuTLS>
          $<$<BOOL:${COAP_WITH_LIBTINYDTLS}>:TinyDTLS::tinydtls>
          $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:MbedTLS::mbedtls>
+         $<$<BOOL:${COAP_WITH_LIBMBEDTLS_OSCORE}>:MbedTLS::mbedtls>
          $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:wolfssl::wolfssl>
          $<$<BOOL:${WIN32}>:ws2_32>
          $<$<BOOL:${WIN32}>:iphlpapi>

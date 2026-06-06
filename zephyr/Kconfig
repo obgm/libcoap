@@ -224,25 +224,20 @@ config LIBCOAP_DEFAULT_SESSION_TIMEOUT
 
 if MBEDTLS
 
+config MBEDTLS_OSCORE
+    bool "Set if OSCORE only"
+    default n
+
 config MBEDTLS_CIPHER_CCM_ENABLED
     bool
     default y
 config MBEDTLS_DEBUG
     bool
     default y
-config MBEDTLS_SERVER_NAME_INDICATION
-    bool
-    default y
 config MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
     bool
     default y
 config MBEDTLS_ENTROPY_ENABLED
-    bool
-    default y
-config MBEDTLS_SSL_PROTO_DTLS
-    bool
-    default y
-config MBEDTLS_SSL_DTLS_CONNECTION_ID
     bool
     default y
 config MBEDTLS_ZEPHYR_ENTROPY
@@ -278,12 +273,24 @@ config MBEDTLS_ECJPAKE_C
 config MBEDTLS_ECP_C
     bool
     default y
+if ! MBEDTLS_OSCORE
+config MBEDTLS_SERVER_NAME_INDICATION
+    bool
+    default y
+config MBEDTLS_SSL_PROTO_DTLS
+    bool
+    default y
+config MBEDTLS_SSL_DTLS_CONNECTION_ID
+    bool
+    default y
 config MBEDTLS_PEM_CERTIFICATE_FORMAT
     bool
     default y
 config MBEDTLS_SSL_EXTENDED_MASTER_SECRET
     bool
     default y
+endif # ! MBEDTLS_OSCORE
+
 config MBEDTLS_HAVE_TIME_DATE
     bool
     default y

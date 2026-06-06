@@ -84,6 +84,41 @@ jobs:
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}
           libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
+          examples/coap-server -? 2>&1 | head -10
+  build-linux2:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        CC: ["gcc", "clang"]
+        TLS: ["mbedtls"]
+        OSCORE_ONLY: ["yes", "no"]
+    steps:
+      - uses: actions/checkout@v6
+      - name: setup
+        run: |
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags valgrind
+          ./autogen.sh
+      - name: configure OSCORE Only
+        if: matrix.OSCORE_ONLY == 'yes'
+        run: |
+          mkdir build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
+          cd build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
+          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-${{matrix.TLS}}-oscore --disable-dtls CC=${{matrix.CC}}
+      - name: configure OSCORE + DTLS
+        if: matrix.OSCORE_ONLY == 'no'
+        run: |
+          mkdir build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
+          cd build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
+          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-${{matrix.TLS}}-oscore --enable-dtls CC=${{matrix.CC}}
+      - name: compile
+        run: |
+          cd build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
+          make EXTRA_CFLAGS=-Werror && make check EXTRA_CFLAGS=-Werror
+      - name: test
+        run: |
+          cd build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
+          libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
+          examples/coap-server -? 2>&1 | head -10
   tinydtls-build:
     runs-on: ubuntu-latest
     steps:
@@ -114,7 +149,7 @@ jobs:
           submodules: recursive
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev valgrind
           cmake -E make_directory $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
       - name: configure no-TLS
         if: matrix.TLS == 'no'
@@ -122,7 +157,7 @@ jobs:
           cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
           cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DENABLE_DTLS=OFF -DENABLE_DOCS=OFF -DWARNING_TO_ERROR=ON
       - name: configure TLS
-        if: matrix.TLS != 'no'
+        if: matrix.TLS != 'no' && matrix.TLS != 'mbedtls-oscore-only'
         run: |
           cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
           cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DENABLE_DTLS=ON -DENABLE_DOCS=OFF -DDTLS_BACKEND=${{matrix.TLS}} -DWARNING_TO_ERROR=ON
@@ -130,6 +165,44 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
           cmake --build .
+      - name: test
+        run: |
+          cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
+          valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression ./testdriver
+          ./coap-server -? 2>&1 | head -10
+  cmake-build2:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        TLS: ["mbedtls"]
+        OSCORE_ONLY: ["yes", "no"]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: setup
+        run: |
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev valgrind
+          cmake -E make_directory $GITHUB_WORKSPACE/build-${{matrix.TLS}}-${{matrix.OSCORE_ONLY}}-cmake
+      - name: configure OSCORE Only
+        if: matrix.OSCORE_ONLY == 'yes'
+        run: |
+          cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-${{matrix.OSCORE_ONLY}}-cmake
+          cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DOSCORE_BACKEND=${{matrix.TLS}} -DENABLE_DTLS=OFF -DENABLE_DOCS=OFF -DWARNING_TO_ERROR=ON
+      - name: configure OSCORE and DTLS
+        if: matrix.OSCORE_ONLY == 'no'
+        run: |
+          cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-${{matrix.OSCORE_ONLY}}-cmake
+          cmake $GITHUB_WORKSPACE -DENABLE_EXAMPLES=ON -DENABLE_TESTS=ON -DOSCORE_BACKEND=${{matrix.TLS}} -DENABLE_DTLS=ON -DENABLE_DOCS=OFF -DWARNING_TO_ERROR=ON
+      - name: build
+        run: |
+          cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-${{matrix.OSCORE_ONLY}}-cmake
+          cmake --build .
+      - name: test
+        run: |
+          cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-${{matrix.OSCORE_ONLY}}-cmake
+          valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression ./testdriver
+          ./coap-server -? 2>&1 | head -10
   cmake-macos:
     runs-on: macos-latest
 

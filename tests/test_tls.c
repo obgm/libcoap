@@ -45,10 +45,14 @@
 #include <gnutls/gnutls.h>
 #endif /* COAP_WITH_LIBGNUTLS */
 
-#ifdef COAP_WITH_LIBMBEDTLS
+#if COAP_WITH_LIBMBEDTLS
 #define HAVE_DTLS 1
 #include <mbedtls/version.h>
 #endif /* COAP_WITH_LIBMBEDTLS */
+
+#if COAP_WITH_LIBMBEDTLS_OSCORE
+#include <mbedtls/version.h>
+#endif /* COAP_WITH_LIBMBEDTLS_OSCORE */
 
 #define ReturnIf_CU_ASSERT_PTR_NOT_NULL(value) \
   CU_ASSERT_PTR_NOT_NULL(value); \
@@ -97,7 +101,7 @@ t_tls2(void) {
 #elif defined(COAP_WITH_LIBGNUTLS)
   version.version = GNUTLS_VERSION_NUMBER;
   version.type = COAP_TLS_LIBRARY_GNUTLS;
-#elif defined(COAP_WITH_LIBMBEDTLS)
+#elif COAP_WITH_LIBMBEDTLS || COAP_WITH_LIBMBEDTLS_OSCORE
   version.version = MBEDTLS_VERSION_NUMBER;
   version.type = COAP_TLS_LIBRARY_MBEDTLS;
 #else /* no DTLS */
