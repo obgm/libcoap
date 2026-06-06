@@ -398,11 +398,12 @@ AM_CONDITIONAL(BUILD_MANPAGES, [test "x$build_manpages" = "xyes"])
 # __dtls__
 # The Datagram Transport Layer Security (DTLS) feature needs cryptography
 # functions.
-# We currently support the GnuTLS and OpenSSL library. The user can preselect
-# the cryptography library that should be used by adding '--with-gnutls' or
-# '--with-openssl'.
+# We currently support the GnuTLS, OpenSSL, WolfSSL, MbedTLS and TinyDLTS libraries.
+# The user can preselect the cryptography library that should be used by adding '--with-gnutls',
+# '--with-openssl', --with-wolfssl, --with-mbedtls or --with-tinydtls.
+#
 # If the user isn't using a selection we first search for GnuTLS and fallback
-# to OpenSSL if the GnuTLS library couldn't be found.
+# to OpenSSL, WolfSSL, mbedtls or TinyDTLS if a TLS library couldn't be found.
 
 gnutls_version_required=3.3.0
 openssl_version_required=1.1.0
@@ -418,27 +419,33 @@ AC_ARG_ENABLE([dtls],
 
 AC_ARG_WITH([gnutls],
             [AS_HELP_STRING([--with-gnutls],
-                            [Use GnuTLS for DTLS functions])],
+                            [Use GnuTLS for DTLS/OSCORE functions])],
             [with_gnutls="$withval"],
             [with_gnutls="no"])
 
 AC_ARG_WITH([openssl],
             [AS_HELP_STRING([--with-openssl],
-                            [Use OpenSSL for DTLS functions])],
+                            [Use OpenSSL for DTLS/OSCORE functions])],
             [with_openssl="$withval"],
             [with_openssl="no"])
 
 AC_ARG_WITH([wolfssl],
             [AS_HELP_STRING([--with-wolfssl],
-                            [Use wolfSSL for DTLS functions])],
+                            [Use wolfSSL for DTLS/OSCORE functions])],
             [with_wolfssl="$withval"],
             [with_wolfssl="no"])
 
 AC_ARG_WITH([mbedtls],
             [AS_HELP_STRING([--with-mbedtls],
-                            [Use Mbed TLS for DTLS functions])],
+                            [Use Mbed TLS for DTLS/OSCORE functions])],
             [with_mbedtls="$withval"],
             [with_mbedtls="no"])
+
+AC_ARG_WITH([mbedtls-oscore],
+            [AS_HELP_STRING([--with-mbedtls-oscore],
+                            [Use Mbed TLS for OSCORE functions])],
+            [with_mbedtls_oscore="$withval"],
+            [with_mbedtls_oscore="no"])
 
 AC_ARG_WITH([tinydtls],
            [AS_HELP_STRING([--with-tinydtls],
@@ -457,6 +464,12 @@ if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes" -o "x$with_wolfssl
         # Give an advice that '--with_gnutls', '--with_openssl', '--with_wolfssl', '--with-mbedtls' or '--with-tinydtls' was used but
         # DTLS support isn't configured.
         AC_MSG_WARN([==> Using the configure options '--with-gnutls', '--with-openssl', '--with_wolfssl', '--with-mbedtls' or '--with-tinydtls' without '--enable-dtls' is useless and will be ignored.])
+        with_gnutls="no"
+        with_openssl="no"
+        with_wolfssl="no"
+        with_mbedtls="no"
+        with_tinydtls="no"
+        with_submodule_tinydtls="no"
     fi
 fi
 if test "x$with_submodule_tinydtls" = "xyes"; then
@@ -482,11 +495,14 @@ if test "x$build_dtls" = "xyes"; then
     if test "x$with_mbedtls" = "xyes"; then
         TLSCOUNT=`expr $TLSCOUNT + 1`
     fi
+    if test "x$with_mbedtls_oscore" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
     if test "x$with_tinydtls" = "xyes"; then
         TLSCOUNT=`expr $TLSCOUNT + 1`
     fi
     if test "$TLSCOUNT" -gt 1; then
-        AC_MSG_ERROR([==> You can't use more than 1 of the options '--with-gnutls', '--with-openssl', '--with-mbedtls' or '--with-tinydtls' at the same time while '--enable-dtls' is selected!
+        AC_MSG_ERROR([==> You can't use more than 1 of the options '--with-gnutls', '--with-openssl', '--with-mbedtls', '--with-mbedtls-odcore' or '--with-tinydtls' at the same time while '--enable-dtls' is selected!
                   ==> Please note, the option '--enable-dtls' is turned on by default if not explicitly disabled!])
     fi
 
@@ -510,98 +526,10 @@ if test "x$build_dtls" = "xyes"; then
                   [have_wolfssl="no"])
 
     # Mbed TLS
-    if test "x${MbedTLS_CFLAGS+set}" = "xset"; then
-        mbedtls_cflags_overridden="yes"
-    else
-        mbedtls_cflags_overridden="no"
-    fi
-
-    if test "x${MbedTLS_LIBS+set}" = "xset"; then
-        mbedtls_libs_overridden="yes"
-    else
-        mbedtls_libs_overridden="no"
-    fi
-
-    # If MbedTLS_CFLAGS and MbedTLS_LIBS are overridden, pkg-config will always assume the library was found, even
-    # though MbedTLS doesn't necessarily have a pkg-config file. Therefore, we might as well use the "old" way to
-    # determine whether we can link MbedTLS (and which version we have).
-    if test "x$mbedtls_libs_overridden" = "xyes" -a "x$mbedtls_cflags_overridden" = "xyes"; then
-      have_mbedtls="no"
-      mbedtls_has_pkgconfig="no"
-    else
-      # Attempt to find MbedTLS using pkg-config.
-
-      # When statically linking against libcoap, all transitive dependencies need to be specified as linker flags
-      # as well. Use pkg-config --static for that.
-      if test "x$enable_static" = "xyes"; then
-        KEEP_PKG_CONFIG=$PKG_CONFIG
-        PKG_CONFIG="$PKG_CONFIG --static"
-        PKG_CHECK_MODULES([MbedTLS],
-                          [mbedtls],
-                          [have_mbedtls="yes"; mbedtls_has_pkgconfig="yes"],
-                          [have_mbedtls="no"; mbedtls_has_pkgconfig="no"])
-        PKG_CONFIG=$KEEP_PKG_CONFIG
-      else
-        PKG_CHECK_MODULES([MbedTLS],
-                          [mbedtls],
-                          [have_mbedtls="yes"; mbedtls_has_pkgconfig="yes"],
-                          [have_mbedtls="no"; mbedtls_has_pkgconfig="no"])
-      fi
-    fi
-
-    if test "x$have_mbedtls" = "xno"; then
-      # Attempt to find mbedtls without pkg-config.
-
-      # default linker flags (default CFLAGS are empty, so they don't need to be set).
-      if test "x$mbedtls_libs_overridden" == "xno"; then
-        MbedTLS_LIBS="-lmbedtls -lmbedcrypto -lmbedx509"
-      fi
-
-      # check whether we can find MbedTLS
-      local_MbedTLS_save_CFLAGS=$CFLAGS
-      CFLAGS="$MbedTLS_CFLAGS $CFLAGS"
-      local_MbedTLS_save_LIBS=$LIBS
-      LIBS="$MbedTLS_LIBS $LIBS"
-      AC_CHECK_LIB(mbedtls, mbedtls_version_get_string,
-                   [have_mbedtls="yes"],
-                   [have_mbedtls="no"])
-      LIBS=$local_MbedTLS_save_LIBS
-      CFLAGS=$local_MbedTLS_save_CFLAGS
-    fi
-
-    # here, we know whether we can find MbedTLS, but need to determine the version.
-    if test "x$have_mbedtls" = "xyes"; then
-        if test "x$mbedtls_has_pkgconfig" = "xyes"; then
-          # If pkg-config found mbedtls, use it to determine the version.
-          mbedtls_version=`$PKG_CONFIG --modversion mbedtls`;
-        elif test "x$cross_compiling" = "xyes" ; then
-            # Have no option but to do this
-            mbedtls_version=$mbedtls_version_required
-        else
-            # Get actual library version by compiling a test program.
-            local_MbedTLS_save_CFLAGS=$CFLAGS
-            CFLAGS="$MbedTLS_CFLAGS $CFLAGS"
-            local_MbedTLS_save_LIBS=$LIBS
-            LIBS="$MbedTLS_LIBS $LIBS"
-            AC_LANG_PUSH(C)
-            AC_LINK_IFELSE([dnl
-                AC_LANG_SOURCE(
-                    [[#include <stdio.h>
-                     #include <mbedtls/version.h>
-                     int main () {
-                       char str[20];
-                       mbedtls_version_get_string(str);
-                       fprintf(stdout,"%s\n",str);
-                       return 0;
-                     }]])],
-               [mbedtls_version=$(./conftest$EXEEXT)],
-               [AC_MSG_WARN(Failed to determine Mbed TLS version)
-                have_mbedtls=no])
-            AC_LANG_POP(C)
-            LIBS=$local_MbedTLS_save_LIBS
-            CFLAGS=$local_MbedTLS_save_CFLAGS
-        fi
-    fi
+    AX_PKG_CHECK_MBEDTLS([MbedTLS],
+                         [mbedtls],
+                         [have_mbedtls="yes"],
+                         [have_mbedtls="no"])
 
     if test "${TinyDTLS_CFLAGS+set}" = "set"; then
         tinydtls_cflags_overridden="yes"
@@ -831,6 +759,14 @@ if test "x$build_dtls" = "xyes"; then
         DTLS_LIBS="$MbedTLS_LIBS"
         AC_DEFINE(COAP_WITH_LIBMBEDTLS, [1], [Define to 1 if the system has libmbedtls2.7.10.])
     fi
+    if test "x$with_mbedtls_oscore" = "xyes"; then
+        DTLS_CFLAGS="$MbedTLS_CFLAGS"
+        DTLS_LIBS="$MbedTLS_LIBS"
+        AC_DEFINE(COAP_WITH_LIBMBEDTLS, [1], [Define to 1 if the system has libmbedtls2.7.10.])
+        # As we have both DTLS and OSCORE
+        with_mbedtls="yes"
+        with_mbedtls_oscore="no"
+    fi
     if test "x$with_tinydtls" = "xyes" -o "x$with_tinydtls_auto" = "xyes"; then
         DTLS_CFLAGS="$TinyDTLS_CFLAGS"
         DTLS_LIBS="$TinyDTLS_LIBS"
@@ -838,6 +774,29 @@ if test "x$build_dtls" = "xyes"; then
     fi
     AC_SUBST(DTLS_CFLAGS)
     AC_SUBST(DTLS_LIBS)
+else
+    # The user can't select multiple crypto libraries.
+    TLSCOUNT=0
+    if test "x$with_mbedtls_oscore" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
+    if test "$TLSCOUNT" -gt 1; then
+        AC_MSG_ERROR([==> You can't use more than 1 of the options '--with-mbedtls-oscore' at the same time while '--disable-dtls' is selected!
+                  ==> Please note, the option '--enable-dtls' is turned on by default if not explicitly disabled!])
+    fi
+
+    # Mbed TLS
+    AX_PKG_CHECK_MBEDTLS([MbedTLS],
+                         [mbedtls_oscore],
+                         [have_mbedtls_oscore="yes"],
+                         [have_mbedtls_oscore="no"])
+
+    if test "x$with_mbedtls_oscore" = "xyes"; then
+        DTLS_CFLAGS="$MbedTLS_CFLAGS"
+        DTLS_LIBS="$MbedTLS_LIBS"
+        AC_DEFINE(COAP_WITH_LIBMBEDTLS_OSCORE, [1], [Define to 1 if the system has libmbedtls2.7.10.])
+    fi
+
 fi
 
 # Define the Library name extension for the TLS the library was linked against
@@ -849,6 +808,8 @@ elif test "x$with_gnutls" = "xyes" -o "x$with_gnutls_auto" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-gnutls
 elif test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-mbedtls
+elif test "x$with_mbedtls_oscore" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-mbedtls-oscore
 elif test "x$with_tinydtls" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls
 else
@@ -875,6 +836,10 @@ AC_ARG_ENABLE([oscore],
 if test "x$build_oscore" = "xyes"; then
     if test "x$LIBCOAP_DTLS_LIB_EXTENSION_NAME" = "x-notls"; then
         AC_MSG_WARN([==> --enable-oscore requires crypto support from TLS library or OS])
+    fi
+else
+    if test "x$with_mbedtls_oscore" = "xyes"; then
+        AC_MSG_ERROR([==> --with-mbedtls-oscore and --dsable-oscore incompatible])
     fi
 fi
 
@@ -1514,6 +1479,20 @@ if test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
     AC_MSG_RESULT([              MbedTLS_CFLAGS         : "$MbedTLS_CFLAGS"])
     AC_MSG_RESULT([              MbedTLS_LIBS           : "$MbedTLS_LIBS"])
 fi
+if test "x$with_mbedtls_oscore" = "xyes" ; then
+    if test "x$build_dtls" = "xyes"; then
+      AC_MSG_RESULT([      build DTLS support             : "yes"])
+    else
+      AC_MSG_RESULT([      build OSCORE support           : "yes"])
+    fi
+    if test "x$mbedtls_has_pkgconfig" = "xyes"; then
+      AC_MSG_RESULT([         -->  Mbed TLS around        : "yes" (found Mbed TLS $mbedtls_version using pkg-config)])
+    else
+      AC_MSG_RESULT([         -->  Mbed TLS around        : "yes" (found Mbed TLS $mbedtls_version without pkg-config)])
+    fi
+    AC_MSG_RESULT([              MbedTLS_CFLAGS         : "$MbedTLS_CFLAGS"])
+    AC_MSG_RESULT([              MbedTLS_LIBS           : "$MbedTLS_LIBS"])
+fi
 if test "x$with_tinydtls" = "xyes"; then
     AC_MSG_RESULT([      build DTLS support             : "yes"])
     if test "x$have_submodule_tinydtls" = "xyes"; then
@@ -1550,6 +1529,11 @@ if test "x$build_oscore" != "xno"; then
     AC_MSG_RESULT([      enable OSCORE support          : "yes"])
 else
     AC_MSG_RESULT([      enable OSCORE support          : "no"])
+fi
+if test "x$build_ws" != "xno"; then
+    AC_MSG_RESULT([      enable WebSockets support      : "yes"])
+else
+    AC_MSG_RESULT([      enable WebSockets support      : "no"])
 fi
 if test "x$build_q_block" != "xno"; then
     AC_MSG_RESULT([      enable Q-Block support         : "yes"])
