@@ -2,7 +2,7 @@
  * server-coap.c -- LwIP example
  *
  * Copyright (C) 2013-2016 Christian Amsüss <chrysn@fsfe.org>
- * Copyright (C) 2018-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) 2018-2026 Jon Shallow <supjps-libcoap@jpshallow.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
