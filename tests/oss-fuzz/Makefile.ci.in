@@ -24,12 +24,15 @@ PROGRAMS:=$(patsubst %_target.o, %_fuzzer, $(OBJECTS))
 
 .PHONY: all check
 
-all: $(PROGRAMS)
+all: $(OUT)/coap_fuzz_helper.a $(PROGRAMS)
 
 $(OUT)/%.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) -c $^ -o $@
 
-%_fuzzer: %_target.o
+$(OUT)/coap_fuzz_helper.a: $(OUT)/coap_fuzz_helper.o
+	$(AR) rcs $@ $^
+
+%_fuzzer: %_target.o $(OUT)/coap_fuzz_helper.a
 	$(LINK.cc) $(CXXFLAGS) $^ $(top_builddir)/.libs/$(libcoap).a $(LDFLAGS) $(LDLIBS) $(DTLS_LIBS) -o $@
 	@if [ -d "$(top_srcdir)/tests/oss-fuzz/$(notdir $*)_seed_corpus" ]; then \
 		echo "Found seed corpus for $@, creating zip..."; \
@@ -39,4 +42,4 @@ $(OUT)/%.o: %.c
 check: $(OBJECTS)
 
 clean:
-	@-$(RM) -f $(OBJECTS) $(PROGRAMS)
+	@-$(RM) -f $(OBJECTS) $(PROGRAMS) $(OUT)/coap_fuzz_helper.o $(OUT)/coap_fuzz_helper.a

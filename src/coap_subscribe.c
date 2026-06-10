@@ -962,6 +962,8 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
                           raw_packet->length, request)) {
         goto fail;
       }
+      if (request->code == 0 || request->code > 7)
+        goto fail;
       r = ctx->unknown_resource;
       if (!r->handler[request->code-1])
         goto fail;
