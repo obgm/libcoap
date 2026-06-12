@@ -240,9 +240,11 @@ WARNING_CFLAGS="\
 -Wwrite-strings \
 "
 
+CC_BASE_NAME=`basename $CC`
+
 # check whether or not the compiler supports -Wlogical-op (clang does not...)
-# Note oss-fuzz uses clang and adds in option -Wno-error=unknown-warning-option which overrides -Werror
-if test "x$CC" != "xclang"; then
+# Note oss-fuzz uses clang / afl and adds in option -Wno-error=unknown-warning-option which overrides -Werror
+if test "x$CC_BASE_NAME" != "xclang" -a "x$CC_BASE_NAME" != "xafl-clang-fast" ; then
     AX_CHECK_COMPILE_FLAG([-Wlogical-op], [WARNING_CFLAGS="$WARNING_CFLAGS -Wlogical-op"],,[-Werror])
 fi
 AX_CHECK_COMPILE_FLAG([-fdiagnostics-color], [CFLAGS="$CFLAGS -fdiagnostics-color"],,[-Werror])
