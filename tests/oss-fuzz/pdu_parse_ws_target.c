@@ -7,7 +7,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   coap_startup();
   pdu = coap_pdu_init(0, 0, 0, size);
   if (pdu) {
-    coap_set_log_level(COAP_LOG_ERR);
+    coap_set_log_level(COAP_LOG_EMERG);
     if (coap_pdu_parse(COAP_PROTO_WS, data, size, pdu)) {
       coap_string_t *query = coap_get_query(pdu);
       coap_string_t *uri_path = coap_get_uri_path(pdu);
