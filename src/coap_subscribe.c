@@ -477,11 +477,11 @@ coap_op_observe_load_disk(coap_context_t *ctx) {
       if (!coap_op_observe_write(fp_new, observe_key, e_proto, e_listen_addr,
                                  s_addr_info, raw_packet, oscore_info))
         goto fail;
-      coap_delete_bin_const(raw_packet);
-      raw_packet = NULL;
-      coap_delete_bin_const(oscore_info);
-      oscore_info = NULL;
     }
+    coap_delete_bin_const(raw_packet);
+    raw_packet = NULL;
+    coap_delete_bin_const(oscore_info);
+    oscore_info = NULL;
   }
   coap_delete_bin_const(raw_packet);
   raw_packet = NULL;
