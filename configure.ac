@@ -400,18 +400,22 @@ AM_CONDITIONAL(BUILD_MANPAGES, [test "x$build_manpages" = "xyes"])
 # __dtls__
 # The Datagram Transport Layer Security (DTLS) feature needs cryptography
 # functions.
-# We currently support the GnuTLS, OpenSSL, WolfSSL, MbedTLS and TinyDLTS libraries.
+# We currently support the GnuTLS, OpenSSL, WolfSSL, MbedTLS, TinyDTLS
+# and openHiTLS libraries.
 # The user can preselect the cryptography library that should be used by adding '--with-gnutls',
-# '--with-openssl', --with-wolfssl, --with-mbedtls or --with-tinydtls.
+# '--with-openssl', --with-wolfssl, --with-mbedtls, --with-tinydtls or
+# --with-openhitls.
 #
 # If the user isn't using a selection we first search for GnuTLS and fallback
-# to OpenSSL, WolfSSL, mbedtls or TinyDTLS if a TLS library couldn't be found.
+# to OpenSSL, WolfSSL, mbedtls, TinyDTLS or openHiTLS if a TLS library couldn't
+# be found.
 
 gnutls_version_required=3.3.0
 openssl_version_required=1.1.0
 mbedtls_version_required=2.7.10
 wolfssl_version_required=5.2.0
 tinydtls_version_required=0.8.6
+openhitls_version_required=0.4.0
 
 AC_ARG_ENABLE([dtls],
               [AS_HELP_STRING([--enable-dtls],
@@ -455,22 +459,52 @@ AC_ARG_WITH([tinydtls],
            [with_tinydtls="$withval"],
            [with_tinydtls="no"])
 
+AC_ARG_WITH([openhitls],
+           [AS_HELP_STRING([--with-openhitls],
+                           [Use openHiTLS for DTLS/TLS functions])],
+           [with_openhitls="$withval"],
+           [with_openhitls="no"])
+
+AC_ARG_WITH([openhitls-oscore],
+           [AS_HELP_STRING([--with-openhitls-oscore],
+                           [Use openHiTLS for OSCORE functions])],
+           [with_openhitls_oscore="$withval"],
+           [with_openhitls_oscore="no"])
+
 AC_ARG_WITH([submodule-tinydtls],
            [AS_HELP_STRING([--with-submodule-tinydtls],
                            [Use the TinyDTLS provided in the git submodule over the system-provided version [default=fallback to submodule if --with-tinydtls is explicitly set and no system-provided version was found])])],
            [with_submodule_tinydtls="$withval"],
            [with_submodule_tinydtls="explicit_fallback"])
 
-if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes" -o "x$with_wolfssl" = "xyes" -o "x$with_mbedtls" = "xyes" -o "x$with_tinydtls" = "xyes"; then
+case "$with_openhitls" in
+yes|no) ;;
+*) AC_MSG_ERROR([==> --with-openhitls only accepts yes or no. Use OpenHiTLS_CFLAGS/OpenHiTLS_LIBS for a non-default installation prefix.]) ;;
+esac
+
+case "$with_openhitls_oscore" in
+yes|no) ;;
+*) AC_MSG_ERROR([==> --with-openhitls-oscore only accepts yes or no. Use OpenHiTLS_CFLAGS/OpenHiTLS_LIBS for a non-default installation prefix.]) ;;
+esac
+
+if test "x$build_dtls" = "xyes" -a "x$with_openhitls_oscore" = "xyes"; then
+    if test "x$with_openhitls" = "xno"; then
+        with_openhitls="yes"
+        with_openhitls_oscore="no"
+    fi
+fi
+
+if test "x$with_gnutls" = "xyes" -o "x$with_openssl" = "xyes" -o "x$with_wolfssl" = "xyes" -o "x$with_mbedtls" = "xyes" -o "x$with_tinydtls" = "xyes" -o "x$with_openhitls" = "xyes"; then
     if test "x$build_dtls" = "xno"; then
-        # Give an advice that '--with_gnutls', '--with_openssl', '--with_wolfssl', '--with-mbedtls' or '--with-tinydtls' was used but
+        # Give an advice that '--with-gnutls', '--with-openssl', '--with-wolfssl', '--with-mbedtls', '--with-tinydtls' or '--with-openhitls' was used but
         # DTLS support isn't configured.
-        AC_MSG_WARN([==> Using the configure options '--with-gnutls', '--with-openssl', '--with_wolfssl', '--with-mbedtls' or '--with-tinydtls' without '--enable-dtls' is useless and will be ignored.])
+        AC_MSG_WARN([==> Using the configure options '--with-gnutls', '--with-openssl', '--with-wolfssl', '--with-mbedtls', '--with-tinydtls' or '--with-openhitls' without '--enable-dtls' is useless and will be ignored.])
         with_gnutls="no"
         with_openssl="no"
         with_wolfssl="no"
         with_mbedtls="no"
         with_tinydtls="no"
+        with_openhitls="no"
         with_submodule_tinydtls="no"
     fi
 fi
@@ -503,8 +537,14 @@ if test "x$build_dtls" = "xyes"; then
     if test "x$with_tinydtls" = "xyes"; then
         TLSCOUNT=`expr $TLSCOUNT + 1`
     fi
+    if test "x$with_openhitls" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
+    if test "x$with_openhitls_oscore" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
     if test "$TLSCOUNT" -gt 1; then
-        AC_MSG_ERROR([==> You can't use more than 1 of the options '--with-gnutls', '--with-openssl', '--with-mbedtls', '--with-mbedtls-odcore' or '--with-tinydtls' at the same time while '--enable-dtls' is selected!
+        AC_MSG_ERROR([==> You can't use more than 1 of the options '--with-gnutls', '--with-openssl', '--with-mbedtls', '--with-mbedtls-oscore', '--with-tinydtls', '--with-openhitls' or '--with-openhitls-oscore' at the same time while '--enable-dtls' is selected!
                   ==> Please note, the option '--enable-dtls' is turned on by default if not explicitly disabled!])
     fi
 
@@ -533,6 +573,11 @@ if test "x$build_dtls" = "xyes"; then
                          [have_mbedtls="yes"],
                          [have_mbedtls="no"])
 
+    # openHiTLS
+    AX_PKG_CHECK_OPENHITLS([dtls],
+                           [have_openhitls="yes"],
+                           [have_openhitls="no"])
+
     if test "${TinyDTLS_CFLAGS+set}" = "set"; then
         tinydtls_cflags_overridden="yes"
     fi
@@ -544,6 +589,20 @@ if test "x$build_dtls" = "xyes"; then
                       [tinydtls],
                       [have_tinydtls="yes"],
                       [have_tinydtls="no"])
+
+    if test "x$with_openhitls" = "xyes"; then
+        if test "x$have_openhitls" != "xyes"; then
+            AC_MSG_ERROR([==> You want to build libcoap with DTLS support by the openHiTLS library but the openHiTLS libraries could not be found!
+                      Build and install openHiTLS with HITLS_BUILD_PROFILE=full,
+                      or select a different TLS library or disable the DTLS support using '--disable-dtls'.])
+        fi
+        AC_MSG_NOTICE([The use of openHiTLS was explicitly requested with configure option '--with-openhitls'!])
+        have_gnutls="no"
+        have_openssl="no"
+        have_wolfssl="no"
+        have_mbedtls="no"
+        have_tinydtls="no"
+    fi
 
     # TBD ?
 
@@ -731,11 +790,21 @@ if test "x$build_dtls" = "xyes"; then
         have_openssl="no" # don't confuse AC_MSG_RESULT at the end of the script
         have_wolfssl="no" # don't confuse AC_MSG_RESULT at the end of the script
 
+      # ... and if not found check openHiTLS is suitable.
+      elif test "x$have_openhitls" = "xyes"; then
+        AC_MSG_NOTICE([Using auto selected library openHiTLS for DTLS support!])
+        with_openhitls_auto="yes"
+        have_gnutls="no"
+        have_wolfssl="no"
+        have_openssl="no"
+        have_mbedtls="no"
+        have_tinydtls="no"
+
       # Note that the TinyDTLS submodule is used only when explicitly requested.
       # Giving out an error message if we haven't found at least one crypto library.
       else
-          AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries GnuTLS, OpenSSL, wolfSSL, Mbed TLS or TinyDTLS could be found!
-                        Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required), OpenSSL(>= $openssl_version_required), wolfSSL(>= $wolfssl_version_required), Mbed TLS(>= $mbedtls_version_required), or TinyDTLS(>= $tinydtls_version_required)
+          AC_MSG_ERROR([==> Option '--enable-dtls' is set but none of the needed cryptography libraries GnuTLS, OpenSSL, wolfSSL, Mbed TLS, TinyDTLS or openHiTLS could be found!
+                        Install at least one of the package(s) that contains the development files for GnuTLS (>= $gnutls_version_required), OpenSSL(>= $openssl_version_required), wolfSSL(>= $wolfssl_version_required), Mbed TLS(>= $mbedtls_version_required), TinyDTLS(>= $tinydtls_version_required), or openHiTLS(>= $openhitls_version_required),
                         or disable the DTLS support using '--disable-dtls'.])
       fi
     fi
@@ -774,6 +843,11 @@ if test "x$build_dtls" = "xyes"; then
         DTLS_LIBS="$TinyDTLS_LIBS"
         AC_DEFINE(COAP_WITH_LIBTINYDTLS, [1], [Define to 1 if the system has libtinydtls.])
     fi
+    if test "x$with_openhitls" = "xyes" -o "x$with_openhitls_auto" = "xyes"; then
+        DTLS_CFLAGS="$OpenHiTLS_CFLAGS"
+        DTLS_LIBS="$OpenHiTLS_LIBS"
+        AC_DEFINE(COAP_WITH_LIBOPENHITLS, [1], [Define to 1 if the system has openHiTLS.])
+    fi
     AC_SUBST(DTLS_CFLAGS)
     AC_SUBST(DTLS_LIBS)
 else
@@ -782,8 +856,11 @@ else
     if test "x$with_mbedtls_oscore" = "xyes"; then
         TLSCOUNT=`expr $TLSCOUNT + 1`
     fi
+    if test "x$with_openhitls_oscore" = "xyes"; then
+        TLSCOUNT=`expr $TLSCOUNT + 1`
+    fi
     if test "$TLSCOUNT" -gt 1; then
-        AC_MSG_ERROR([==> You can't use more than 1 of the options '--with-mbedtls-oscore' at the same time while '--disable-dtls' is selected!
+        AC_MSG_ERROR([==> You can't use more than 1 of the options '--with-mbedtls-oscore' or '--with-openhitls-oscore' at the same time while '--disable-dtls' is selected!
                   ==> Please note, the option '--enable-dtls' is turned on by default if not explicitly disabled!])
     fi
 
@@ -799,6 +876,22 @@ else
         AC_DEFINE(COAP_WITH_LIBMBEDTLS_OSCORE, [1], [Define to 1 if the system has libmbedtls2.7.10.])
     fi
 
+    if test "x$with_openhitls_oscore" = "xyes"; then
+        AX_PKG_CHECK_OPENHITLS([oscore],
+                               [have_openhitls_oscore="yes"],
+                               [have_openhitls_oscore="no"])
+        if test "x$have_openhitls_oscore" != "xyes"; then
+            AC_MSG_ERROR([==> You want to build libcoap with OSCORE support by the openHiTLS library but the openHiTLS libraries could not be found!
+                      Build and install openHiTLS with HITLS_BUILD_PROFILE=full,
+                      or disable the OSCORE support using '--disable-oscore'.])
+        fi
+        AC_MSG_NOTICE([The use of openHiTLS was explicitly requested with configure option '--with-openhitls-oscore'!])
+
+        DTLS_CFLAGS="$OpenHiTLS_CFLAGS"
+        DTLS_LIBS="$OpenHiTLS_LIBS"
+        AC_DEFINE(COAP_WITH_LIBOPENHITLS_OSCORE, [1], [Define to 1 if the system has openHiTLS OSCORE crypto support.])
+    fi
+
 fi
 
 # Define the Library name extension for the TLS the library was linked against
@@ -812,8 +905,12 @@ elif test "x$with_mbedtls" = "xyes" -o "x$with_mbedtls_auto" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-mbedtls
 elif test "x$with_mbedtls_oscore" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-mbedtls-oscore
+elif test "x$with_openhitls_oscore" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-openhitls-oscore
 elif test "x$with_tinydtls" = "xyes"; then
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-tinydtls
+elif test "x$with_openhitls" = "xyes" -o "x$with_openhitls_auto" = "xyes"; then
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=-openhitls
 else
     LIBCOAP_DTLS_LIB_EXTENSION_NAME=-notls
     AC_DEFINE(HAVE_NOTLS, [1], [Define to 1 if libcoap has no tls library support.])
@@ -841,7 +938,10 @@ if test "x$build_oscore" = "xyes"; then
     fi
 else
     if test "x$with_mbedtls_oscore" = "xyes"; then
-        AC_MSG_ERROR([==> --with-mbedtls-oscore and --dsable-oscore incompatible])
+        AC_MSG_ERROR([==> --with-mbedtls-oscore and --disable-oscore are incompatible])
+    fi
+    if test "x$with_openhitls_oscore" = "xyes"; then
+        AC_MSG_ERROR([==> --with-openhitls-oscore and --disable-oscore are incompatible])
     fi
 fi
 
@@ -1504,6 +1604,26 @@ if test "x$with_tinydtls" = "xyes"; then
     fi
     AC_MSG_RESULT([              TinyDTLS_CFLAGS        : "$DTLS_CFLAGS"])
     AC_MSG_RESULT([              TinyDTLS_LIBS          : "$DTLS_LIBS"])
+fi
+if test "x$with_openhitls" = "xyes" -o "x$with_openhitls_auto" = "xyes"; then
+    AC_MSG_RESULT([      build DTLS support             : "yes"])
+    if test "x$openhitls_has_pkgconfig" = "xyes"; then
+      AC_MSG_RESULT([         -->  openHiTLS around       : "yes" (found openHiTLS $openhitls_version using pkg-config)])
+    else
+      AC_MSG_RESULT([         -->  openHiTLS around       : "yes" (found openHiTLS $openhitls_version without pkg-config)])
+    fi
+    AC_MSG_RESULT([              openHiTLS_CFLAGS       : "$OpenHiTLS_CFLAGS"])
+    AC_MSG_RESULT([              openHiTLS_LIBS         : "$OpenHiTLS_LIBS"])
+fi
+if test "x$with_openhitls_oscore" = "xyes"; then
+    AC_MSG_RESULT([      build OSCORE support           : "yes"])
+    if test "x$openhitls_has_pkgconfig" = "xyes"; then
+      AC_MSG_RESULT([         -->  openHiTLS around       : "yes" (found openHiTLS $openhitls_version using pkg-config)])
+    else
+      AC_MSG_RESULT([         -->  openHiTLS around       : "yes" (found openHiTLS $openhitls_version without pkg-config)])
+    fi
+    AC_MSG_RESULT([              openHiTLS_CFLAGS       : "$OpenHiTLS_CFLAGS"])
+    AC_MSG_RESULT([              openHiTLS_LIBS         : "$OpenHiTLS_LIBS"])
 fi
 if test "x$build_dtls" != "xyes"; then
     AC_MSG_RESULT([      build DTLS support             : "no"])

@@ -1,7 +1,7 @@
 #
 # SYNOPSIS
 #
-#   AX_CHECK_{GNUTLS|OPENSSL|MBEDTLS|WOLFSSL|TINYDTLS}_VERSION
+#   AX_CHECK_{GNUTLS|OPENSSL|MBEDTLS|WOLFSSL|TINYDTLS|OPENHITLS}_VERSION
 #
 # DESCRIPTION
 #
@@ -96,3 +96,50 @@ AC_DEFUN([AX_CHECK_TINYDTLS_VERSION],
         AC_MSG_ERROR([==> TinyDTLS $tinydtls_version too old. TinyDTLS >= $tinydtls_version_required required for suitable DTLS support build.])
     fi
 ]) dnl AX_CHECK_TINYDTLS_VERSION
+
+AC_DEFUN([AX_CHECK_OPENHITLS_VERSION],
+         [openhitls_version_check_result="no"
+          AC_MSG_CHECKING([for openHiTLS headers])
+          AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <hitls/bsl/bsl_version.h>
+#ifndef OPENHITLS_VERSION_I
+#error OPENHITLS_VERSION_I missing
+#endif
+]], [[]])],
+                            [AC_MSG_RESULT([yes])
+                             openhitls_version_check_result="yes"],
+                            [AC_MSG_RESULT([no])])
+          if test "x$openhitls_version_check_result" = "xyes"; then
+              AC_COMPUTE_INT([openhitls_version_i],
+                             [OPENHITLS_VERSION_I],
+                             [[#include <hitls/bsl/bsl_version.h>]],
+                             [openhitls_version_i=0])
+              if test "x$openhitls_version_i" = "x0"; then
+                  openhitls_version="unknown"
+              else
+                  openhitls_version_major=`expr $openhitls_version_i / 268435456`
+                  openhitls_version_minor=`expr \( $openhitls_version_i % 268435456 \) / 1048576`
+                  openhitls_version_patch=`expr \( $openhitls_version_i % 1048576 \) / 65536`
+                  openhitls_version="$openhitls_version_major.$openhitls_version_minor.$openhitls_version_patch"
+              fi
+              AC_MSG_CHECKING([for compatible openHiTLS version (>= $openhitls_version_required)])
+              openhitls_version_required_major=`printf '%s\n' "$openhitls_version_required" | sed -n 's/^\([[0-9]][[0-9]]*\)\.\([[0-9]][[0-9]]*\)\.\([[0-9]][[0-9]]*\)$/\1/p'`
+              openhitls_version_required_minor=`printf '%s\n' "$openhitls_version_required" | sed -n 's/^\([[0-9]][[0-9]]*\)\.\([[0-9]][[0-9]]*\)\.\([[0-9]][[0-9]]*\)$/\2/p'`
+              openhitls_version_required_patch=`printf '%s\n' "$openhitls_version_required" | sed -n 's/^\([[0-9]][[0-9]]*\)\.\([[0-9]][[0-9]]*\)\.\([[0-9]][[0-9]]*\)$/\3/p'`
+              if test "x$openhitls_version_required_major" = "x" ||
+                 test "x$openhitls_version_required_minor" = "x" ||
+                 test "x$openhitls_version_required_patch" = "x"; then
+                  AC_MSG_ERROR([==> Invalid openHiTLS required version '$openhitls_version_required'.])
+              fi
+              openhitls_version_required_i=`expr \( $openhitls_version_required_major \* 268435456 \) + \( $openhitls_version_required_minor \* 1048576 \) + \( $openhitls_version_required_patch \* 65536 \)`
+              AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <hitls/bsl/bsl_version.h>
+#if OPENHITLS_VERSION_I < $openhitls_version_required_i
+#error openHiTLS version too old
+#endif
+]], [[]])],
+                                [AC_MSG_RESULT([yes])],
+                                [AC_MSG_RESULT([no])
+                                 openhitls_version_check_result="no"])
+          fi
+]) dnl AX_CHECK_OPENHITLS_VERSION

@@ -16,6 +16,9 @@ env:
   PLATFORM: posix
   TESTS: yes
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  OPENHITLS_REPO: https://gitcode.com/openHiTLS/openhitls.git
+  # Pinned until the next openHiTLS release
+  OPENHITLS_REF: 0a7d5a3748f94c594832a16a7a970cb19d8b4b12
 
 jobs:
   pre-commit:
@@ -57,13 +60,37 @@ jobs:
     strategy:
       matrix:
         CC: ["gcc", "clang"]
-        TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl"]
+        TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl", "openhitls"]
     steps:
       - uses: actions/checkout@v6
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags valgrind
           ./autogen.sh
+      - name: cache openHiTLS
+        if: matrix.TLS == 'openhitls'
+        id: cache_openhitls
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/openhitls-prefix
+          key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
+      - name: build openHiTLS
+        if: matrix.TLS == 'openhitls' && steps.cache_openhitls.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "$RUNNER_TEMP/openhitls-src" "$RUNNER_TEMP/openhitls-prefix"
+          git init "$RUNNER_TEMP/openhitls-src"
+          cd "$RUNNER_TEMP/openhitls-src"
+          git remote add origin "$OPENHITLS_REPO"
+          git fetch --depth 1 origin "$OPENHITLS_REF"
+          git checkout FETCH_HEAD
+          cmake -S . -B build -DHITLS_BUILD_PROFILE=full -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel "$(nproc)"
+          cmake --install build --prefix "$RUNNER_TEMP/openhitls-prefix"
+      - name: install openHiTLS
+        if: matrix.TLS == 'openhitls'
+        run: |
+          sudo cp -a "$RUNNER_TEMP/openhitls-prefix/." /usr/local/
+          sudo ldconfig
       - name: configure no-TLS
         if: matrix.TLS == 'no'
         run: |
@@ -90,7 +117,7 @@ jobs:
     strategy:
       matrix:
         CC: ["gcc", "clang"]
-        TLS: ["mbedtls"]
+        TLS: ["mbedtls", "openhitls"]
         OSCORE_ONLY: ["yes", "no"]
     steps:
       - uses: actions/checkout@v6
@@ -98,6 +125,30 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags valgrind
           ./autogen.sh
+      - name: cache openHiTLS
+        if: matrix.TLS == 'openhitls'
+        id: cache_openhitls
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/openhitls-prefix
+          key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
+      - name: build openHiTLS
+        if: matrix.TLS == 'openhitls' && steps.cache_openhitls.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "$RUNNER_TEMP/openhitls-src" "$RUNNER_TEMP/openhitls-prefix"
+          git init "$RUNNER_TEMP/openhitls-src"
+          cd "$RUNNER_TEMP/openhitls-src"
+          git remote add origin "$OPENHITLS_REPO"
+          git fetch --depth 1 origin "$OPENHITLS_REF"
+          git checkout FETCH_HEAD
+          cmake -S . -B build -DHITLS_BUILD_PROFILE=full -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel "$(nproc)"
+          cmake --install build --prefix "$RUNNER_TEMP/openhitls-prefix"
+      - name: install openHiTLS
+        if: matrix.TLS == 'openhitls'
+        run: |
+          sudo cp -a "$RUNNER_TEMP/openhitls-prefix/." /usr/local/
+          sudo ldconfig
       - name: configure OSCORE Only
         if: matrix.OSCORE_ONLY == 'yes'
         run: |
@@ -142,7 +193,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl", "tinydtls"]
+        TLS: ["no", "openssl", "gnutls", "mbedtls", "wolfssl", "tinydtls", "openhitls"]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -151,6 +202,30 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev valgrind
           cmake -E make_directory $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
+      - name: cache openHiTLS
+        if: matrix.TLS == 'openhitls'
+        id: cache_openhitls
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/openhitls-prefix
+          key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
+      - name: build openHiTLS
+        if: matrix.TLS == 'openhitls' && steps.cache_openhitls.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "$RUNNER_TEMP/openhitls-src" "$RUNNER_TEMP/openhitls-prefix"
+          git init "$RUNNER_TEMP/openhitls-src"
+          cd "$RUNNER_TEMP/openhitls-src"
+          git remote add origin "$OPENHITLS_REPO"
+          git fetch --depth 1 origin "$OPENHITLS_REF"
+          git checkout FETCH_HEAD
+          cmake -S . -B build -DHITLS_BUILD_PROFILE=full -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel "$(nproc)"
+          cmake --install build --prefix "$RUNNER_TEMP/openhitls-prefix"
+      - name: install openHiTLS
+        if: matrix.TLS == 'openhitls'
+        run: |
+          sudo cp -a "$RUNNER_TEMP/openhitls-prefix/." /usr/local/
+          sudo ldconfig
       - name: configure no-TLS
         if: matrix.TLS == 'no'
         run: |
@@ -174,7 +249,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        TLS: ["mbedtls"]
+        TLS: ["mbedtls", "openhitls"]
         OSCORE_ONLY: ["yes", "no"]
     steps:
       - uses: actions/checkout@v6
@@ -184,6 +259,30 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev valgrind
           cmake -E make_directory $GITHUB_WORKSPACE/build-${{matrix.TLS}}-${{matrix.OSCORE_ONLY}}-cmake
+      - name: cache openHiTLS
+        if: matrix.TLS == 'openhitls'
+        id: cache_openhitls
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/openhitls-prefix
+          key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
+      - name: build openHiTLS
+        if: matrix.TLS == 'openhitls' && steps.cache_openhitls.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "$RUNNER_TEMP/openhitls-src" "$RUNNER_TEMP/openhitls-prefix"
+          git init "$RUNNER_TEMP/openhitls-src"
+          cd "$RUNNER_TEMP/openhitls-src"
+          git remote add origin "$OPENHITLS_REPO"
+          git fetch --depth 1 origin "$OPENHITLS_REF"
+          git checkout FETCH_HEAD
+          cmake -S . -B build -DHITLS_BUILD_PROFILE=full -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel "$(nproc)"
+          cmake --install build --prefix "$RUNNER_TEMP/openhitls-prefix"
+      - name: install openHiTLS
+        if: matrix.TLS == 'openhitls'
+        run: |
+          sudo cp -a "$RUNNER_TEMP/openhitls-prefix/." /usr/local/
+          sudo ldconfig
       - name: configure OSCORE Only
         if: matrix.OSCORE_ONLY == 'yes'
         run: |

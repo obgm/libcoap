@@ -3042,21 +3042,12 @@ coap_oscore_register_external_handlers(coap_context_t                       *con
 }
 
 COAP_API int
-coap_oscore_recipient_set_last_seq(coap_oscore_conf_t *oscore_conf,
-                                   const coap_bin_const_t *recipient_id,
-                                   uint64_t last_seq) {
+coap_oscore_recipient_set_latest_seq(coap_oscore_conf_t *oscore_conf,
+                                     const coap_bin_const_t *recipient_id,
+                                     uint64_t last_seq, uint64_t seq_window) {
   (void)oscore_conf;
   (void)recipient_id;
   (void)last_seq;
-  return 0;
-}
-
-COAP_API int
-coap_oscore_recipient_set_seq_window(coap_oscore_conf_t *oscore_conf,
-                                     const coap_bin_const_t *recipient_id,
-                                     uint64_t seq_window) {
-  (void)oscore_conf;
-  (void)recipient_id;
   (void)seq_window;
   return 0;
 }

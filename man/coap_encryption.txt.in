@@ -36,8 +36,9 @@ const char *_ca_file_, const char *_ca_dir_);*
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
 *-lcoap-@LIBCOAP_API_VERSION@-openssl*, *-lcoap-@LIBCOAP_API_VERSION@-mbedtls*,
-*-lcoap-@LIBCOAP_API_VERSION@-wolfssl*
-or *-lcoap-@LIBCOAP_API_VERSION@-tinydtls*.   Otherwise, link with
+*-lcoap-@LIBCOAP_API_VERSION@-wolfssl*,
+*-lcoap-@LIBCOAP_API_VERSION@-tinydtls*
+or *-lcoap-@LIBCOAP_API_VERSION@-openhitls*. Otherwise, link with
 *-lcoap-@LIBCOAP_API_VERSION@* to get the default (D)TLS library support.
 
 DESCRIPTION
@@ -49,7 +50,8 @@ specific underlying TLS implementation type (e.g. https://www.openssl.org[OpenSS
 https://www.gnutls.org[GnuTLS],
 https://www.trustedfirmware.org/projects/mbed-tls/[Mbed TLS],
 https://wolfssl.com[wolfSSL],
-https://github.com/eclipse/tinydtls[TinyDTLS] or noTLS).
+https://github.com/eclipse/tinydtls[TinyDTLS],
+https://gitcode.com/openHiTLS/openhitls[openHiTLS] or noTLS).
 When the libcoap library is linked into an application, it is possible
 that the application needs to dynamically determine whether DTLS or TLS is
 supported, what type of TLS implementation libcoap was compiled with, as well
@@ -67,6 +69,9 @@ version is 1.1.0.
 *NOTE:* If wolfSSL is being used, then the minimum wolfSSL library version is
 5.2.0.
 
+*NOTE:* If openHiTLS is being used, then the minimum openHiTLS library version is
+0.4.0.
+
 *NOTE:* If GnuTLS is going to interoperate with TinyDTLS, then a minimum
 revision of GnuTLS 3.5.5 which supports CCM algorithms is required
 by TinyDTLS as TinyDTLS currently only supports CCM.
@@ -79,8 +84,8 @@ as TinyDTLS currently only supports CCM.
 *NOTE:* For Raw Public Key support, GnuTLS library version must be 3.6.6 or
 later. For Raw Public Key support, wolfSSL library version must be 5.6.4 or
 later. TinyDTLS only supports TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8, curve
-secp256r1 and hash SHA-256.  There currently is no OpenSSL or Mbed TLS RPK support
-(respective library limitations).
+secp256r1 and hash SHA-256.  There currently is no OpenSSL, Mbed TLS
+or openHiTLS RPK support (respective library limitations).
 
 Network traffic can be un-encrypted or encrypted with libcoap if there is an
 underlying TLS library.
