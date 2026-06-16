@@ -164,9 +164,11 @@ static coap_dtls_pki_t *setup_pki(coap_context_t *ctx, coap_dtls_role_t role, ch
 
 static uint8_t *read_file_mem(const char *file, size_t *length);
 
+#if COAP_OSCORE_SUPPORT
 static char *oscore_make_credential_file_name(const coap_bin_const_t *rcpkey_id,
                                               const coap_bin_const_t *ctxkey_id,
                                               int seq_file);
+#endif /* COAP_OSCORE_SUPPORT */
 
 typedef struct psk_sni_def_t {
   char *sni_match;
@@ -316,6 +318,7 @@ hnd_get_index(coap_resource_t *resource,
                                (const uint8_t *)INDEX, NULL, NULL);
 }
 
+#if COAP_OSCORE_SUPPORT
 static int
 update_seq_num_handler(const coap_session_t *session,
                        const coap_bin_const_t *rcpkey_id,
@@ -418,6 +421,7 @@ exit:
   coap_free(buf);
   return t_oscore_conf;
 }
+#endif /* COAP_OSCORE_SUPPORT */
 
 static void
 hnd_get_fetch_time(coap_resource_t *resource,
@@ -2333,6 +2337,7 @@ oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
 }
 
 
+#if COAP_OSCORE_SUPPORT
 /*
  * Build "${oscore_cred_dir}/<ctxkey_id_hex>_<rcpkey_id_hex>[_seq].txt".
  * Caller must free with coap_free().
@@ -2368,6 +2373,7 @@ oscore_make_credential_file_name(const coap_bin_const_t *rcpkey_id,
   snprintf(p, end - p, ".txt");
   return result;
 }
+#endif /* COAP_OSCORE_SUPPORT */
 
 static coap_oscore_conf_t *
 get_oscore_conf(coap_context_t *context) {
@@ -3114,10 +3120,12 @@ main(int argc, char **argv) {
       goto failed;
   }
   if (oscore_cred_dir) {
+#if COAP_OSCORE_SUPPORT
     /* register example local OSCORE credential storage */
     coap_oscore_register_external_handlers(ctx,
                                            coap_oscore_ctx_find,
                                            update_seq_num_handler);
+#endif /* COAP_OSCORE_SUPPORT */
   }
 #if COAP_PROXY_SUPPORT
   if (reverse_proxy.entry_count) {

@@ -119,11 +119,11 @@ set(DTLS_BACKEND
       STRING
       "\
 Name of the dtls backend, only relevant if `ENABLE_DTLS` is ON which is default. \
-Possible values: default, gnutls, openssl, wolfssl, mbedtls and tinydtls. \
+Possible values: default, gnutls, openssl, wolfssl, mbedtls, tinydtls and openhitls. \
 If specified then this library will be searched and if found also used. \
 If not found then the cmake configuration will stop with an error. \
 If not specified, then cmake will try to use the first one found in the following order: \
-gnutls, openssl, wolfssl, mbedtls, tinydtls \
+gnutls, openssl, wolfssl, mbedtls, tinydtls, openhitls \
     ")
 set_property(
   CACHE DTLS_BACKEND
@@ -133,14 +133,15 @@ set_property(
            openssl
            wolfssl
            mbedtls
-           tinydtls)
+           tinydtls
+           openhitls)
 set(OSCORE_BACKEND
     "none"
     CACHE
       STRING
       "\
 Name of the oscore backend, only relevant if `ENABLE_DTLS` is OFF which is not the \
-default. Possible values: none and mbedtls. \
+default. Possible values: none, mbedtls and openhitls. \
 If specified then this library will be searched and if found also used. \
 If not found then the cmake configuration will stop with an error. \
     ")
@@ -148,7 +149,8 @@ set_property(
   CACHE OSCORE_BACKEND
   PROPERTY STRINGS
            none
-           mbedtls)
+           mbedtls
+           openhitls)
 option(
   USE_VENDORED_TINYDTLS
   "compile with the tinydtls project in the submodule if on, otherwise try to find the compiled lib with find_package"
@@ -527,6 +529,8 @@ set(WITH_TINYDTLS OFF)
 set(WITH_MBEDTLS OFF)
 set(WITH_MBEDTLS_OSCORE OFF)
 set(WITH_WOLFSSL OFF)
+set(WITH_OPENHITLS OFF)
+set(WITH_OPENHITLS_OSCORE OFF)
 
 if(ENABLE_DTLS)
   message(STATUS "compiling with DTLS support")
@@ -620,6 +624,27 @@ if(ENABLE_DTLS)
     endif()
   endif()
 
+  if((DTLS_BACKEND STREQUAL "openhitls") OR ((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND)))
+    if(DTLS_BACKEND STREQUAL "openhitls")
+      find_package(openHiTLS REQUIRED COMPONENTS tls)
+    else()
+      find_package(openHiTLS QUIET COMPONENTS tls)
+    endif()
+    if(openHiTLS_FOUND)
+      set(OPENHITLS_VERSION_S "openHiTLS")
+      set(WITH_OPENHITLS ON)
+      message(STATUS "compiling with openHiTLS support")
+      set(COAP_WITH_LIBOPENHITLS 1)
+      set(DTLS_FOUND ON)
+    endif()
+  endif()
+
+  if((NOT (DTLS_BACKEND STREQUAL "default")) AND
+     (NOT (DTLS_BACKEND STREQUAL "ignore")) AND
+     (NOT DTLS_FOUND))
+    message(FATAL_ERROR "cannot find requested DTLS backend: ${DTLS_BACKEND}")
+  endif()
+
   if(((DTLS_BACKEND STREQUAL "default") OR (DTLS_BACKEND STREQUAL "ignore")) AND (NOT DTLS_FOUND))
     # no cryto lib found
     message(
@@ -639,6 +664,15 @@ elseif(NOT ((OSCORE_BACKEND STREQUAL "none") OR (OSCORE_BACKEND STREQUAL "")))
       set(COAP_WITH_LIBMBEDTLS_OSCORE 1)
       set(DTLS_FOUND ON)
     endif()
+  endif()
+
+  if((OSCORE_BACKEND STREQUAL "openhitls") AND (NOT DTLS_FOUND))
+    find_package(openHiTLS REQUIRED)
+    set(OPENHITLS_VERSION_S "openHiTLS")
+    set(WITH_OPENHITLS_OSCORE ON)
+    message(STATUS "compiling with openHiTLS OSCORE support")
+    set(COAP_WITH_LIBOPENHITLS_OSCORE 1)
+    set(DTLS_FOUND ON)
   endif()
 
   if((ZEPHYR_BASE) AND (OSCORE_BACKEND STREQUAL "zephyr") AND (NOT DTLS_FOUND))
@@ -719,11 +753,14 @@ message(STATUS "WITH_OPENSSL:....................${WITH_OPENSSL}")
 message(STATUS "WITH_WOLFSSL:....................${WITH_WOLFSSL}")
 message(STATUS "WITH_MBEDTLS:....................${WITH_MBEDTLS}")
 message(STATUS "WITH_MBEDTLS_OSCORE:.............${WITH_MBEDTLS_OSCORE}")
+message(STATUS "WITH_OPENHITLS:..................${WITH_OPENHITLS}")
+message(STATUS "WITH_OPENHITLS_OSCORE:...........${WITH_OPENHITLS_OSCORE}")
 message(STATUS "HAVE_LIBTINYDTLS:................${TinyDTLS_VERSION}")
 message(STATUS "HAVE_LIBGNUTLS:..................${GNUTLS_VERSION}")
 message(STATUS "HAVE_LIBOPENSSL:.................${OPENSSL_VERSION}")
 message(STATUS "HAVE_LIBWOLFSSL:.................${wolfssl_VERSION}")
 message(STATUS "HAVE_LIBMBEDTLS:.................${MbedTLS_VERSION}")
+message(STATUS "HAVE_LIBOPENHITLS:...............${OPENHITLS_VERSION_S}")
 message(STATUS "WITH_EPOLL:......................${WITH_EPOLL}")
 message(STATUS "WITH_OBSERVE_PERSIST:............${WITH_OBSERVE_PERSIST}")
 message(STATUS "BUILD_SHARED_LIBS:...............${BUILD_SHARED_LIBS}")
@@ -807,6 +844,8 @@ target_sources(
           $<$<BOOL:${COAP_WITH_LIBGNUTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_gnutls.c>
           $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
           $<$<BOOL:${COAP_WITH_LIBMBEDTLS_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_mbedtls.c>
+          $<$<BOOL:${COAP_WITH_LIBOPENHITLS}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openhitls.c>
+          $<$<BOOL:${COAP_WITH_LIBOPENHITLS_OSCORE}>:${CMAKE_CURRENT_LIST_DIR}/src/coap_openhitls.c>
           # needed for OSCORE if enabled
           $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore.c>
           $<$<BOOL:${COAP_OSCORE_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore/oscore_cbor.c>
@@ -854,6 +893,8 @@ target_link_libraries(
          $<$<BOOL:${COAP_WITH_LIBMBEDTLS}>:MbedTLS::mbedtls>
          $<$<BOOL:${COAP_WITH_LIBMBEDTLS_OSCORE}>:MbedTLS::mbedtls>
          $<$<BOOL:${COAP_WITH_LIBWOLFSSL}>:wolfssl::wolfssl>
+         $<$<BOOL:${COAP_WITH_LIBOPENHITLS}>:openHiTLS::openhitls>
+         $<$<BOOL:${COAP_WITH_LIBOPENHITLS_OSCORE}>:openHiTLS::openhitls>
          $<$<BOOL:${WIN32}>:ws2_32>
          $<$<BOOL:${WIN32}>:iphlpapi>
          $<$<BOOL:${MINGW}>:pthread>)

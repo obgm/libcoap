@@ -80,6 +80,12 @@
 /* Define to 1 if the system has openssl */
 #cmakedefine COAP_WITH_LIBOPENSSL @COAP_WITH_LIBOPENSSL@
 
+/* Define to 1 if the system has openHiTLS */
+#cmakedefine COAP_WITH_LIBOPENHITLS @COAP_WITH_LIBOPENHITLS@
+
+/* Define to 1 if the system has openHiTLS and OSCORE only */
+#cmakedefine COAP_WITH_LIBOPENHITLS_OSCORE @COAP_WITH_LIBOPENHITLS_OSCORE@
+
 /* Define to 1 if the system has libtinydtls */
 #cmakedefine COAP_WITH_LIBTINYDTLS @COAP_WITH_LIBTINYDTLS@
 

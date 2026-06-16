@@ -30,7 +30,7 @@ coap_tls_engine_remove(void) {
 }
 #endif /* ! COAP_WITH_LIBOPENSSL */
 
-#if ! COAP_WITH_LIBTINYDTLS && ! COAP_WITH_LIBOPENSSL && ! COAP_WITH_LIBWOLFSSL && ! COAP_WITH_LIBGNUTLS && ! COAP_WITH_LIBMBEDTLS
+#if ! COAP_WITH_LIBTINYDTLS && ! COAP_WITH_LIBOPENSSL && ! COAP_WITH_LIBWOLFSSL && ! COAP_WITH_LIBGNUTLS && ! COAP_WITH_LIBMBEDTLS && ! COAP_WITH_LIBOPENHITLS
 
 int
 coap_dtls_is_supported(void) {
@@ -96,7 +96,7 @@ coap_dtls_set_cid_tuple_change(coap_context_t *c_context, uint8_t every) {
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
-#if ! COAP_WITH_LIBMBEDTLS_OSCORE
+#if ! COAP_WITH_LIBMBEDTLS_OSCORE && ! COAP_WITH_LIBOPENHITLS && ! COAP_WITH_LIBOPENHITLS_OSCORE
 coap_tls_version_t *
 coap_get_tls_library_version(void) {
   static coap_tls_version_t version;
@@ -250,7 +250,7 @@ coap_digest_final(coap_digest_ctx_t *digest_ctx,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
-#endif /* ! COAP_WITH_LIBMBEDTLS_OSCORE */
+#endif /* ! COAP_WITH_LIBMBEDTLS_OSCORE && ! COAP_WITH_LIBOPENHITLS && ! COAP_WITH_LIBOPENHITLS_OSCORE */
 
 /* (D)TLS specific functions */
 
