@@ -14,6 +14,7 @@ coap-server,
 coap-server-gnutls,
 coap-server-mbedtls,
 coap-server-openssl,
+coap-server-openhitls,
 coap-server-notls
 - CoAP Server based on libcoap
 
@@ -39,8 +40,9 @@ SYNOPSIS
 
 For *coap-server* versions that use libcoap compiled for different
 (D)TLS libraries, *coap-server-notls*, *coap-server-gnutls*,
-*coap-server-openssl*, *coap-server-mbedtls* or *coap-server-tinydtls* may be
-available.  Otherwise, *coap-server* uses the default libcoap (D)TLS support.
+*coap-server-openssl*, *coap-server-mbedtls*, *coap-server-tinydtls* or
+*coap-server-openhitls* may be available. Otherwise, *coap-server* uses the
+default libcoap (D)TLS support.
 
 DESCRIPTION
 -----------

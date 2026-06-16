@@ -81,6 +81,8 @@ There is (D)TLS support for the following libraries
 
 * [TinyDTLS](https://github.com/eclipse/tinydtls) [PSK and RPK] [DTLS Only]
 
+* [openHiTLS](https://gitcode.com/openHiTLS/openhitls) (Minimum version 0.4.0) [PKI and PSK]
+
 The examples directory contain a CoAP client, CoAP Resource Directory server
 and a CoAP server to demonstrate the use of this library.
 

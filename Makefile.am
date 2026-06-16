@@ -38,6 +38,7 @@ EXTRA_DIST = \
   cmake/FindCUnit.cmake \
   cmake/FindMbedTLS.cmake \
   cmake/FindTinyDTLS.cmake \
+  cmake/FindopenHiTLS.cmake \
   cmake/Findwolfssl.cmake \
   coap_config.h.contiki \
   coap_config.h.riot \
@@ -215,6 +216,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_net.c \
   src/coap_netif.c \
   src/coap_notls.c \
+  src/coap_openhitls.c \
   src/coap_openssl.c \
   src/coap_option.c \
   src/coap_oscore.c \

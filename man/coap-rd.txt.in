@@ -14,6 +14,7 @@ coap-rd,
 coap-rd-gnutls ,
 coap-rd-mbedtls,
 coap-rd-openssl,
+coap-rd-openhitls,
 coap-rd-notls
 - CoAP Resource Directory based on libcoap
 
@@ -26,8 +27,9 @@ SYNOPSIS
 
 For *coap-rd* versions that use libcoap compiled for different
 (D)TLS libraries, *coap-rd-notls*, *coap-rd-gnutls*,
-*coap-rd-openssl*, *coap-rd-mbedtls* or *coap-rd-tinydtls* may be
-available.  Otherwise, *coap-rd* uses the default libcoap (D)TLS support.
+*coap-rd-openssl*, *coap-rd-mbedtls*, *coap-rd-tinydtls* or
+*coap-rd-openhitls* may be available. Otherwise, *coap-rd* uses the default
+libcoap (D)TLS support.
 
 DESCRIPTION
 -----------

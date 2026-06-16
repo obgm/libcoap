@@ -14,6 +14,7 @@ coap-client,
 coap-client-gnutls,
 coap-client-mbedtls,
 coap-client-openssl,
+coap-client-openhitls,
 coap-client-notls
 - CoAP Client based on libcoap
 
@@ -35,8 +36,9 @@ SYNOPSIS
 
 For *coap-client* versions that use libcoap compiled for different
 (D)TLS libraries, *coap-client-notls*, *coap-client-gnutls*,
-*coap-client-openssl*, *coap-client-mbedtls* or *coap-client-tinydtls* may be
-available.  Otherwise, *coap-client* uses the default libcoap (D)TLS support.
+*coap-client-openssl*, *coap-client-mbedtls*, *coap-client-tinydtls* or
+*coap-client-openhitls* may be available. Otherwise, *coap-client* uses the
+default libcoap (D)TLS support.
 
 DESCRIPTION
 -----------

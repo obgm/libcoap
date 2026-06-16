@@ -20,6 +20,7 @@ EXTRA_DIST = \
   interop/e_client.conf \
   interop/f_client.conf \
   interop/g_client.conf \
+  tls_backend_testcases.sh \
   oscore_testcases.sh
 
 # just do nothing if 'BUILD_EXAMPLES' isn't defined
