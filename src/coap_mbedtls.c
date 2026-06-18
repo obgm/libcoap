@@ -678,10 +678,30 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
   coap_dtls_pki_t *setup_data = &m_context->setup_data;
   char *cn = NULL;
 
-  if (*flags == 0)
-    return 0;
-
   cn = get_san_or_cn_from_cert(crt);
+  if (setup_data->validate_cn_call_back) {
+    int ret;
+
+    if (*flags & MBEDTLS_X509_BADCERT_CN_MISMATCH) {
+      *flags &= ~MBEDTLS_X509_BADCERT_CN_MISMATCH;
+    }
+    coap_lock_callback_ret(ret,
+                           setup_data->validate_cn_call_back(cn,
+                                                             crt->raw.p,
+                                                             crt->raw.len,
+                                                             c_session,
+                                                             depth,
+                                                             *flags == 0,
+                                                             setup_data->cn_call_back_arg));
+    if (!ret) {
+      *flags |= MBEDTLS_X509_BADCERT_CN_MISMATCH;
+    }
+  }
+  if (*flags == 0) {
+    if (cn)
+      mbedtls_free(cn);
+    return 0;
+  }
 
   if (*flags & MBEDTLS_X509_BADCERT_EXPIRED) {
     if (setup_data->allow_expired_certs) {
@@ -774,24 +794,6 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
                   cn ? cn : "?", depth);
   }
 
-  if (*flags & MBEDTLS_X509_BADCERT_CN_MISMATCH) {
-    *flags &= ~MBEDTLS_X509_BADCERT_CN_MISMATCH;
-  }
-  if (setup_data->validate_cn_call_back) {
-    int ret;
-
-    coap_lock_callback_ret(ret,
-                           setup_data->validate_cn_call_back(cn,
-                                                             crt->raw.p,
-                                                             crt->raw.len,
-                                                             c_session,
-                                                             depth,
-                                                             *flags == 0,
-                                                             setup_data->cn_call_back_arg));
-    if (!ret) {
-      *flags |= MBEDTLS_X509_BADCERT_CN_MISMATCH;
-    }
-  }
   if (*flags != 0) {
     char buf[128];
     char *tcp;
@@ -1890,6 +1892,8 @@ do_mbedtls_handshake(coap_session_t *c_session,
     }
 #endif /* COAP_CLIENT_SUPPORT */
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+    coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
+    c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
     break;
   case MBEDTLS_ERR_SSL_WANT_READ:
   case MBEDTLS_ERR_SSL_WANT_WRITE:
@@ -2814,12 +2818,6 @@ coap_dtls_receive(coap_session_t *c_session,
     uint8_t pdu[COAP_RXBUFFER_SIZE];
 #endif /* ! COAP_CONSTRAINED_STACK */
 
-    if (c_session->state == COAP_SESSION_STATE_HANDSHAKE) {
-      coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                            c_session);
-      c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
-    }
-
     ret = mbedtls_ssl_read(&m_env->ssl, pdu, sizeof(pdu));
     if (ret > 0) {
       coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
@@ -2982,7 +2980,6 @@ coap_tls_new_client_session(coap_session_t *c_session) {
   coap_mbedtls_env_t *m_env = coap_dtls_new_mbedtls_env(c_session,
                                                         COAP_DTLS_ROLE_CLIENT,
                                                         COAP_PROTO_TLS);
-  int ret;
   coap_tick_t now;
   coap_ticks(&now);
 
@@ -2991,11 +2988,7 @@ coap_tls_new_client_session(coap_session_t *c_session) {
 
   m_env->last_timeout = now;
   c_session->tls = m_env;
-  ret = do_mbedtls_handshake(c_session, m_env);
-  if (ret == 1) {
-    coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
-  }
+  do_mbedtls_handshake(c_session, m_env);
   return m_env;
 #endif /* MBEDTLS_SSL_CLI_C */
 }
@@ -3016,17 +3009,12 @@ coap_tls_new_server_session(coap_session_t *c_session) {
   coap_mbedtls_env_t *m_env = coap_dtls_new_mbedtls_env(c_session,
                                                         COAP_DTLS_ROLE_SERVER,
                                                         COAP_PROTO_TLS);
-  int ret;
 
   if (!m_env)
     return NULL;
 
   c_session->tls = m_env;
-  ret = do_mbedtls_handshake(c_session, m_env);
-  if (ret == 1) {
-    coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
-  }
+  do_mbedtls_handshake(c_session, m_env);
   return m_env;
 #endif /* MBEDTLS_SSL_SRV_C */
 }
@@ -3091,11 +3079,7 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
     }
   } else {
     ret = do_mbedtls_handshake(c_session, m_env);
-    if (ret == 1) {
-      coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                            c_session);
-      c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
-    } else {
+    if (ret != 1) {
       ret = -1;
     }
   }
@@ -3138,11 +3122,6 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
 
   if (!m_env->established && !m_env->sent_alert) {
     ret = do_mbedtls_handshake(c_session, m_env);
-    if (ret == 1) {
-      coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                            c_session);
-      c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
-    }
   }
 
   if (c_session->state != COAP_SESSION_STATE_NONE && m_env->established) {
