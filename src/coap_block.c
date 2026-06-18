@@ -2568,6 +2568,7 @@ coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual) {
   size_t token_len;
   uint8_t buf[4];
   coap_mid_t mid;
+  coap_bin_const_t *k_token;
 
 #if NDEBUG
   (void)actual;
@@ -2606,11 +2607,16 @@ coap_block_test_q_block(coap_session_t *session, coap_pdu_t *actual) {
                      coap_encode_var_safe(buf, sizeof(buf),
                                           (0 << 4) | (0 << 3) | 0),
                      buf);
+  k_token = coap_new_bin_const(pdu->actual_token.s, pdu->actual_token.length);
   set_block_mode_probe_q(session->block_mode);
   mid = coap_send_internal(session, pdu, NULL);
-  if (mid == COAP_INVALID_MID)
+  if (mid == COAP_INVALID_MID) {
+    coap_delete_bin_const(k_token);
     return COAP_INVALID_MID;
+  }
   session->remote_test_mid = mid;
+  coap_delete_bin_const(session->last_token);
+  session->last_token = k_token;
   return mid;
 }
 #endif /* COAP_Q_BLOCK_SUPPORT */

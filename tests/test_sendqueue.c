@@ -210,7 +210,8 @@ t_sendqueue7(void) {
   ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx->sendqueue->next);
   CU_ASSERT_PTR_EQUAL(ctx->sendqueue->next, node[1]);
 
-  result = coap_remove_from_queue(&ctx->sendqueue, session, 3, &tmp_node);
+  /* Check without token */
+  result = coap_remove_from_queue(&ctx->sendqueue, session, 3, NULL, &tmp_node);
 
   CU_ASSERT(result == 1);
   ReturnIf_CU_ASSERT_PTR_NOT_NULL(tmp_node);
@@ -227,7 +228,9 @@ t_sendqueue8(void) {
   int result;
   coap_queue_t *tmp_node;
 
-  result = coap_remove_from_queue(&ctx->sendqueue, session, 4, &tmp_node);
+  /* Check with token */
+  result = coap_remove_from_queue(&ctx->sendqueue, session, 4, &node[4]->pdu->actual_token,
+                                  &tmp_node);
 
   CU_ASSERT(result == 1);
   ReturnIf_CU_ASSERT_PTR_NOT_NULL(tmp_node);
@@ -359,6 +362,12 @@ t_sendqueue_tests_create(void) {
     node[n]->id = n;
     node[n]->t = timestamp[n];
     node[n]->session = coap_session_reference(session);
+    node[n]->pdu = coap_pdu_init(COAP_MESSAGE_CON, n, n, 0);
+    if (!node[n]->pdu) {
+      error = 1;
+      break;
+    }
+    coap_add_token(node[n]->pdu, sizeof(n), (uint8_t *)&n);
   }
 
   if (error) {

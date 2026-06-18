@@ -691,7 +691,7 @@ release_1:
          * or in the sendqueue if sent and is pending re-transmission.
          */
         LL_FOREACH_SAFE(s->delayqueue, q, tmp) {
-          if (q->pdu->mid == s->remote_test_mid) {
+          if (q->id == s->remote_test_mid) {
             if (q->pdu->type==COAP_MESSAGE_CON) {
               coap_handle_nack(s, q->pdu,
                                s->proto == COAP_PROTO_DTLS ?
@@ -699,7 +699,7 @@ release_1:
                                q->id);
             }
             coap_log_debug("** %s: mid=0x%04x: removed\n",
-                           coap_session_str(s), q->pdu->mid);
+                           coap_session_str(s), q->id);
             if (p) {
               p->next = q->next;
             } else {
@@ -710,7 +710,7 @@ release_1:
           }
           p = q;
         }
-        coap_remove_from_queue(&ctx->sendqueue, s, s->remote_test_mid, &sent);
+        coap_remove_from_queue(&ctx->sendqueue, s, s->remote_test_mid, s->last_token, &sent);
         if (sent && sent->pdu && sent->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(s->proto)) {
           if (s->con_active)
             s->con_active--;

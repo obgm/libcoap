@@ -377,7 +377,8 @@ int coap_handle_dgram(coap_context_t *ctx, coap_session_t *session, uint8_t *dat
  *
  * @param queue The queue to search for @p id.
  * @param session The session to look for.
- * @param id    The message id to look for.
+ * @param mid   The message id to look for.
+ * @param token The incoming pdu token to look for.
  * @param node  If found, @p node is updated to point to the removed node. You
  *              must release the storage pointed to by @p node manually.
  *
@@ -385,7 +386,8 @@ int coap_handle_dgram(coap_context_t *ctx, coap_session_t *session, uint8_t *dat
  */
 int coap_remove_from_queue(coap_queue_t **queue,
                            coap_session_t *session,
-                           coap_mid_t id,
+                           coap_mid_t mid,
+                           coap_bin_const_t *token,
                            coap_queue_t **node);
 
 coap_mid_t coap_wait_ack(coap_context_t *context, coap_session_t *session,

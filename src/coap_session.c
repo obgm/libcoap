@@ -820,8 +820,11 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
                        coap_queue_t *node) {
   if (node) {
     coap_queue_t *removed = NULL;
-    coap_remove_from_queue(&session->context->sendqueue, session, node->id, &removed);
+    /* Nodes are per ID, no notion of token */
+    coap_remove_from_queue(&session->context->sendqueue, session, node->id,
+                           NULL, &removed);
     assert(removed == node);
+    /* reuse node */
     coap_session_release_lkd(node->session);
     node->session = NULL;
     node->t = 0;
@@ -987,7 +990,7 @@ coap_session_connected(coap_session_t *session) {
     coap_address_copy(&remote, &session->addr_info.remote);
     coap_address_copy(&session->addr_info.remote, &q->remote);
     coap_log_debug("** %s: mid=0x%04x: transmitted after delay (2)\n",
-                   coap_session_str(session), (int)q->pdu->mid);
+                   coap_session_str(session), (int)q->id);
     bytes_written = coap_session_send_pdu(session, q->pdu);
     if (q->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(session->proto)) {
       if (coap_wait_ack(session->context, session, q) >= 0)
