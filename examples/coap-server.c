@@ -2751,10 +2751,10 @@ uint32_t syslog_pri = 0;
 
 static void
 syslog_handler(coap_log_t level, const char *message) {
-  char *cp = strchr(message, '\n');
+  const char *cp = strchr(message, '\n');
 
   if (cp) {
-    char *lcp = strchr(message, '\r');
+    const char *lcp = strchr(message, '\r');
     if (lcp && lcp < cp)
       cp = lcp;
   }
