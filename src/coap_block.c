@@ -4789,9 +4789,9 @@ give_to_app:
         goto skip_app_handler;
       goto expire_lg_crcv;
     } else if (rcvd->code == COAP_RESPONSE_CODE(402)) {
-      coap_opt_t *abb_opt = coap_check_option(sent,
-                                              COAP_OPTION_URI_PATH_ABB,
-                                              &opt_iter);
+      coap_opt_t *abb_opt = sent ? coap_check_option(sent,
+                                                     COAP_OPTION_URI_PATH_ABB,
+                                                     &opt_iter) : NULL;
       if (abb_opt) {
         /* Send the request again with the Uri-Path-Abbrev expanded out */
         coap_pdu_t *pdu;
