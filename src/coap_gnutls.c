@@ -872,6 +872,39 @@ cert_verify_gnutls(gnutls_session_t g_session) {
 
   coap_dtls_log(COAP_LOG_DEBUG, "error %x cert '%s'\n",
                 status, cert_info.san_or_cn);
+
+  if (g_context->setup_data.validate_cn_call_back) {
+    gnutls_x509_crt_t cert;
+    uint8_t der[2048];
+    size_t size;
+    /* status == 0 indicates that the certificate passed to
+     *  setup_data.validate_cn_call_back has been validated. */
+    const int cert_is_trusted = !status;
+
+    G_CHECK(gnutls_x509_crt_init(&cert), "gnutls_x509_crt_init");
+
+    /* Interested only in first cert in chain */
+    G_CHECK(gnutls_x509_crt_import(cert, &cert_info.cert_list[0],
+                                   GNUTLS_X509_FMT_DER), "gnutls_x509_crt_import");
+
+    size = sizeof(der);
+    G_CHECK(gnutls_x509_crt_export(cert, GNUTLS_X509_FMT_DER, der, &size),
+            "gnutls_x509_crt_export");
+    gnutls_x509_crt_deinit(cert);
+    coap_lock_callback_ret(ret,
+                           g_context->setup_data.validate_cn_call_back(OUTPUT_CERT_NAME,
+                               der,
+                               size,
+                               c_session,
+                               0,
+                               cert_is_trusted,
+                               g_context->setup_data.cn_call_back_arg));
+    if (!ret) {
+      alert = GNUTLS_A_ACCESS_DENIED;
+      goto fail;
+    }
+  }
+
   if (status) {
     status &= ~(GNUTLS_CERT_INVALID);
     if (status & (GNUTLS_CERT_NOT_ACTIVATED|GNUTLS_CERT_EXPIRED)) {
@@ -958,38 +991,6 @@ cert_verify_gnutls(gnutls_session_t g_session) {
 
   if (fail)
     goto fail;
-
-  if (g_context->setup_data.validate_cn_call_back) {
-    gnutls_x509_crt_t cert;
-    uint8_t der[2048];
-    size_t size;
-    /* status == 0 indicates that the certificate passed to
-     *  setup_data.validate_cn_call_back has been validated. */
-    const int cert_is_trusted = !status;
-
-    G_CHECK(gnutls_x509_crt_init(&cert), "gnutls_x509_crt_init");
-
-    /* Interested only in first cert in chain */
-    G_CHECK(gnutls_x509_crt_import(cert, &cert_info.cert_list[0],
-                                   GNUTLS_X509_FMT_DER), "gnutls_x509_crt_import");
-
-    size = sizeof(der);
-    G_CHECK(gnutls_x509_crt_export(cert, GNUTLS_X509_FMT_DER, der, &size),
-            "gnutls_x509_crt_export");
-    gnutls_x509_crt_deinit(cert);
-    coap_lock_callback_ret(ret,
-                           g_context->setup_data.validate_cn_call_back(OUTPUT_CERT_NAME,
-                               der,
-                               size,
-                               c_session,
-                               0,
-                               cert_is_trusted,
-                               g_context->setup_data.cn_call_back_arg));
-    if (!ret) {
-      alert = GNUTLS_A_ACCESS_DENIED;
-      goto fail;
-    }
-  }
 
   if (g_context->setup_data.additional_tls_setup_call_back) {
     /* Additional application setup wanted */
@@ -2085,7 +2086,9 @@ receive_timeout(gnutls_transport_ptr_t context, unsigned int ms COAP_UNUSED) {
   if (c_session) {
     fd_set readfds, writefds, exceptfds;
     struct timeval tv;
-    int nfds = c_session->sock.fd +1;
+    coap_fd_t fd = COAP_PROTO_NOT_RELIABLE(c_session->proto) ? c_session->type !=
+                   COAP_SESSION_TYPE_CLIENT ? c_session->endpoint->sock.fd : c_session->sock.fd : c_session->sock.fd;
+    int nfds = fd + 1;
     coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
 
     /* If data has been read in by libcoap ahead of GnuTLS, say it is there */
@@ -2097,10 +2100,10 @@ receive_timeout(gnutls_transport_ptr_t context, unsigned int ms COAP_UNUSED) {
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
     FD_ZERO(&exceptfds);
-    FD_SET(c_session->sock.fd, &readfds);
+    FD_SET(fd, &readfds);
     if (!(g_env && g_env->doing_dtls_timeout)) {
-      FD_SET(c_session->sock.fd, &writefds);
-      FD_SET(c_session->sock.fd, &exceptfds);
+      FD_SET(fd, &writefds);
+      FD_SET(fd, &exceptfds);
     }
     /* Polling */
     tv.tv_sec = 0;
@@ -2257,6 +2260,10 @@ do_gnutls_handshake(coap_session_t *c_session, coap_gnutls_env_t *g_env) {
     g_env->established = 1;
     coap_log_debug("*  %s: GnuTLS established\n",
                    coap_session_str(c_session));
+    coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
+                          c_session);
+    gnutls_transport_set_ptr(g_env->g_session, c_session);
+    c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
     ret = 1;
     break;
   case GNUTLS_E_INTERRUPTED:
@@ -2483,7 +2490,7 @@ coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now) {
         return g_env->last_timeout + COAP_DTLS_RETRANSMIT_COAP_TICKS;
     }
     /* Reset for the next time */
-    g_env->last_timeout = now;
+    g_env->last_timeout = now - rem_ms;
     return now + rem_ms;
   }
 
@@ -2536,12 +2543,6 @@ coap_dtls_receive(coap_session_t *c_session, const uint8_t *data,
 
   c_session->dtls_event = -1;
   if (g_env->established) {
-    if (c_session->state == COAP_SESSION_STATE_HANDSHAKE) {
-      coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                            c_session);
-      gnutls_transport_set_ptr(g_env->g_session, c_session);
-      c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
-    }
     ret = gnutls_record_recv(g_env->g_session, pdu, (int)sizeof(pdu));
     if (ret > 0) {
       coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
@@ -2787,11 +2788,7 @@ coap_tls_new_client_session(coap_session_t *c_session) {
   gnutls_handshake_set_timeout(g_env->g_session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 
   c_session->tls = g_env;
-  ret = do_gnutls_handshake(c_session, g_env);
-  if (ret == 1) {
-    coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
-  }
+  do_gnutls_handshake(c_session, g_env);
   return g_env;
 
 fail:
@@ -2833,11 +2830,7 @@ coap_tls_new_server_session(coap_session_t *c_session) {
                                GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 
   c_session->tls = g_env;
-  ret = do_gnutls_handshake(c_session, g_env);
-  if (ret == 1) {
-    coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED, c_session);
-    c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
-  }
+  do_gnutls_handshake(c_session, g_env);
   return g_env;
 
 fail:
@@ -2898,9 +2891,6 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
   } else {
     ret = do_gnutls_handshake(c_session, g_env);
     if (ret == 1) {
-      coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                            c_session);
-      c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
       ret = 0;
     } else {
       ret = -1;
@@ -2945,9 +2935,6 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
   if (!g_env->established && !g_env->sent_alert) {
     ret = do_gnutls_handshake(c_session, g_env);
     if (ret == 1) {
-      coap_handle_event_lkd(c_session->context, COAP_EVENT_DTLS_CONNECTED,
-                            c_session);
-      c_session->sock.lfunc[COAP_LAYER_TLS].l_establish(c_session);
       ret = 0;
     }
   }
