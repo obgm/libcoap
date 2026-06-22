@@ -1102,8 +1102,12 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
     snprintf(hint, sizeof(hint), "%.*s", (int)setup_data->psk_info.hint.length,
              setup_data->psk_info.hint.s);
     wolfSSL_CTX_use_psk_identity_hint(w_context->dtls.ctx, hint);
+    wolfSSL_CTX_set_max_proto_version(w_context->dtls.ctx,
+                                      DTLS1_2_VERSION);
 #if !COAP_DISABLE_TCP
     wolfSSL_CTX_use_psk_identity_hint(w_context->tls.ctx, hint);
+    wolfSSL_CTX_set_max_proto_version(w_context->tls.ctx,
+                                      TLS1_2_VERSION);
 #endif /* !COAP_DISABLE_TCP */
   }
   if (setup_data->validate_sni_call_back) {
@@ -1281,8 +1285,8 @@ setup_pki_ssl(WOLFSSL *ssl,
       break;
     case COAP_PKI_KEY_DEF_PEM_BUF: /* define public cert */
       if (!(wolfSSL_use_certificate_chain_buffer(ssl,
-                                                 key.key.define.private_key.u_byte,
-                                                 (long)key.key.define.private_key_len))) {
+                                                 key.key.define.public_cert.u_byte,
+                                                 (long)key.key.define.public_cert_len))) {
         return coap_dtls_define_issue(COAP_DEFINE_KEY_PUBLIC,
                                       COAP_DEFINE_FAIL_BAD,
                                       &key, role, 0);
@@ -1526,7 +1530,6 @@ tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
   int err = wolfSSL_X509_STORE_CTX_get_error(ctx);
   WOLFSSL_X509 *x509 = wolfSSL_X509_STORE_CTX_get_current_cert(ctx);
   char *cn = NULL;
-  int keep_preverify_ok = preverify_ok;
 
   if (!setup_data) {
     wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
@@ -1598,7 +1601,7 @@ tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
     }
   }
   /* Certificate - depth == 0 is the Client Cert */
-  if (setup_data->validate_cn_call_back && keep_preverify_ok) {
+  if (setup_data->validate_cn_call_back) {
     int length = wolfSSL_i2d_X509(x509, NULL);
 
     if (length > 0) {
@@ -2373,7 +2376,7 @@ coap_dtls_handle_timeout(coap_session_t *session) {
     coap_session_disconnected_lkd(session, COAP_NACK_TLS_FAILED);
     return 1;
   }
-  wolfSSL_dtls_retransmit(ssl);
+  wolfSSL_dtls_got_timeout(ssl);
   return 0;
 }
 
@@ -2604,7 +2607,7 @@ coap_tls_new_client_session(coap_session_t *session) {
       coap_dtls_new_wolfssl_env(session, COAP_DTLS_ROLE_CLIENT);
   coap_tick_t now;
 
-  if (!w_env)
+  if (!w_env || !w_context)
     goto error;
 
   if (!setup_tls_context(w_context))
