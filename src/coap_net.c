@@ -5264,12 +5264,13 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
 
   coap_log_debug("***EVENT: %s\n", coap_event_name(event));
 
+#if COAP_PROXY_SUPPORT
+  if (event == COAP_EVENT_SERVER_SESSION_DEL)
+    coap_proxy_remove_association(session, 0);
+#endif /* COAP_PROXY_SUPPORT */
+
   if (context->event_cb) {
     coap_lock_callback_ret(ret, context->event_cb(session, event));
-#if COAP_PROXY_SUPPORT
-    if (event == COAP_EVENT_SERVER_SESSION_DEL)
-      coap_proxy_remove_association(session, 0);
-#endif /* COAP_PROXY_SUPPORT */
 #if COAP_CLIENT_SUPPORT
     switch (event) {
     case COAP_EVENT_DTLS_CLOSED:
