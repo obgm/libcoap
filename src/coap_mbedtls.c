@@ -2663,9 +2663,8 @@ coap_dtls_send(coap_session_t *c_session,
   int ret;
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
-  assert(m_env != NULL);
-
   if (!m_env) {
+    errno = ENOTCONN;
     return -1;
   }
   c_session->dtls_event = -1;
@@ -2774,7 +2773,11 @@ int
 coap_dtls_handle_timeout(coap_session_t *c_session) {
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
-  assert(m_env != NULL && c_session->state == COAP_SESSION_STATE_HANDSHAKE);
+  if (m_env == NULL) {
+    errno = ENOTCONN;
+    return 1;
+  }
+  assert(c_session->state == COAP_SESSION_STATE_HANDSHAKE);
   m_env->retry_scalar++;
   if ((++c_session->dtls_timeout_count > c_session->max_retransmit) ||
       (do_mbedtls_handshake(c_session, m_env) < 0)) {
@@ -2800,7 +2803,10 @@ coap_dtls_receive(coap_session_t *c_session,
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
   coap_ssl_t *ssl_data;
 
-  assert(m_env != NULL);
+  if (m_env == NULL) {
+    errno = ENOTCONN;
+    return -1;
+  }
 
   ssl_data = &m_env->coap_ssl_data;
   if (ssl_data->pdu_len) {
@@ -3038,10 +3044,8 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
   size_t amount_sent = 0;
 
-  assert(m_env != NULL);
-
   if (!m_env) {
-    errno = ENXIO;
+    errno = ENOTCONN;
     return -1;
   }
   c_session->dtls_event = -1;
@@ -3114,7 +3118,7 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
   coap_mbedtls_env_t *m_env = (coap_mbedtls_env_t *)c_session->tls;
 
   if (!m_env) {
-    errno = ENXIO;
+    errno = ENOTCONN;
     return -1;
   }
 

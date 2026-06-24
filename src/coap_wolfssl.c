@@ -667,6 +667,7 @@ coap_dtls_psk_client_callback(WOLFSSL *ssl,
 }
 
 #if !COAP_DISABLE_TCP
+#ifndef WOLFSSL_TLS13
 static unsigned int
 coap_dtls_psk_client_cs_callback(WOLFSSL *ssl, const char *hint,
                                  char *identity, unsigned int max_identity_len,
@@ -680,6 +681,22 @@ coap_dtls_psk_client_cs_callback(WOLFSSL *ssl, const char *hint,
                                               max_psk_len);
 
   (void)ciphersuite;
+  return key_len;
+}
+#endif /* ! WOLFSSL_TLS13 */
+static unsigned int
+coap_tls_psk_client_cs_callback(WOLFSSL *ssl, const char *hint,
+                                char *identity, unsigned int max_identity_len,
+                                unsigned char *psk, unsigned int max_psk_len,
+                                const char **ciphersuite) {
+  int key_len = coap_dtls_psk_client_callback(ssl,
+                                              hint,
+                                              identity,
+                                              max_identity_len,
+                                              psk,
+                                              max_psk_len);
+
+  *ciphersuite = "TLS13-AES128-GCM-SHA256";
   return key_len;
 }
 #endif /* !COAP_DISABLE_TCP */
@@ -1017,8 +1034,13 @@ setup_tls_context(coap_wolfssl_context_t *w_context) {
     wolfSSL_SetIOSend(w_context->tls.ctx, coap_sock_write);
 #if COAP_CLIENT_SUPPORT
     if (w_context->psk_pki_enabled & IS_PSK) {
+#ifdef WOLFSSL_TLS13
+      wolfSSL_CTX_set_psk_client_tls13_callback(w_context->tls.ctx,
+                                                coap_tls_psk_client_cs_callback);
+#else /* ! WOLFSSL_TLS13 */
       wolfSSL_CTX_set_psk_client_cs_callback(w_context->tls.ctx,
                                              coap_dtls_psk_client_cs_callback);
+#endif /* ! WOLFSSL_TLS13 */
     }
 #endif /* COAP_CLIENT_SUPPORT */
     if (w_context->root_ca_file || w_context->root_ca_dir) {
@@ -2087,7 +2109,6 @@ setup_client_ssl_session(coap_session_t *session, WOLFSSL *ssl) {
 #endif /* !COAP_DISABLE_TCP */
       coap_log_debug("CoAP Client restricted to (D)TLS1.2 with Identity Hint callback\n");
     }
-    set_ciphersuites(ssl, COAP_ENC_PSK);
 
     /* Issue SNI if requested */
     if (setup_data->client_sni &&
@@ -2875,7 +2896,7 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
   int r, in_init;
 
   if (ssl == NULL) {
-    errno = ENXIO;
+    errno = ENOTCONN;
     return -1;
   }
 

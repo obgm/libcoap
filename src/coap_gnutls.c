@@ -2086,8 +2086,12 @@ receive_timeout(gnutls_transport_ptr_t context, unsigned int ms COAP_UNUSED) {
   if (c_session) {
     fd_set readfds, writefds, exceptfds;
     struct timeval tv;
+#if COAP_SERVER_SUPPORT
     coap_fd_t fd = COAP_PROTO_NOT_RELIABLE(c_session->proto) ? c_session->type !=
                    COAP_SESSION_TYPE_CLIENT ? c_session->endpoint->sock.fd : c_session->sock.fd : c_session->sock.fd;
+#else /* ! COAP_SERVER_SUPPORT */
+    coap_fd_t fd = c_session->sock.fd;
+#endif /* ! COAP_SERVER_SUPPORT */
     int nfds = fd + 1;
     coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
 
@@ -2410,7 +2414,9 @@ coap_dtls_send(coap_session_t *c_session,
   int ret;
   coap_gnutls_env_t *g_env = (coap_gnutls_env_t *)c_session->tls;
 
-  assert(g_env != NULL);
+  if (g_env == NULL) {
+    return -1;
+  }
 
   c_session->dtls_event = -1;
   coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
@@ -2927,7 +2933,7 @@ coap_tls_read(coap_session_t *c_session, uint8_t *data, size_t data_len) {
   int ret = -1;
 
   if (!g_env) {
-    errno = ENXIO;
+    errno = ENOTCONN;
     return -1;
   }
 

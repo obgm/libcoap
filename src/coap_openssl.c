@@ -4186,7 +4186,7 @@ coap_tls_read(coap_session_t *session, uint8_t *data, size_t data_len) {
   int r, in_init;
 
   if (ssl == NULL) {
-    errno = ENXIO;
+    errno = ENOTCONN;
     return -1;
   }
 

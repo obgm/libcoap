@@ -894,7 +894,10 @@ coap_dtls_send(coap_session_t *session,
   coap_tiny_context_t *t_context = (coap_tiny_context_t *)session->context->dtls_context;
   dtls_context_t *dtls_context = t_context ? t_context->dtls_context : NULL;
 
-  assert(dtls_context);
+  if (!dtls_context || !session->tls) {
+    errno = ENOTCONN;
+    return -1;
+  }
 
   coap_event_dtls = -1;
   coap_log_debug("*  %s: dtls:  sent %4d bytes\n",
@@ -978,7 +981,10 @@ coap_dtls_receive(coap_session_t *session,
   coap_tiny_context_t *t_context = (coap_tiny_context_t *)session->context->dtls_context;
   dtls_context_t *dtls_context = t_context ? t_context->dtls_context : NULL;
 
-  assert(dtls_context);
+  if (!dtls_context || !dtls_session) {
+    errno = ENOTCONN;
+    return -1;
+  }
   coap_event_dtls = -1;
   /* Need to do this to not get a compiler warning about const parameters */
   memcpy(&data_rw, &data, sizeof(data_rw));
