@@ -338,14 +338,17 @@ struct coap_dtls_pki_t {
   uint8_t use_cid;                 /**< 1 if DTLS Connection ID is to be
                                     *     used (Client only, server always enabled)
                                     *     if supported */
-  uint8_t reserved[2];             /**< Reserved - must be set to 0 for
+  uint8_t allow_sni_cn_mismatch:1; /**< 1 if SNI and returnd CN allowed to mismatch
+                                    *     (Client only). Not normally set */
+  uint8_t reserved[1];             /**< Reserved - must be set to 0 for
                                         future compatibility */
-  /* Size of 2 chosen to align to next
+  /* Size of 1 chosen to align to next
    * parameter, so if newly defined option
    * it can use one of the reserved slots so
    * no need to change
    * COAP_DTLS_PKI_SETUP_VERSION and just
    * decrement the reserved[] count.
+   * [Now just adding 1 bit at a time].
    */
 
   /** CN check callback function.

@@ -661,7 +661,7 @@ run_pki_client () {
 
   if [ -n "$root_ca_file" ]; then
     client_args="$client_args -R $root_ca_file"
-  else
+  elif  [ -n "$ca_file" ]; then
     client_args="$client_args -C $ca_file"
   fi
 
@@ -786,7 +786,8 @@ run_psk_identity_hint_callback () {
   run_client "$case_name" "$PSK_KEY" "" "$CLIENT_TIMEOUT" "$TARGET_URI" \
     "$hint_file"
 
-  if assert_contains "$LOGDIR/$case_name.client" "does not support Identity Hint selection"; then
+  if assert_contains "$LOGDIR/$case_name.client" "does not support Identity Hint" ||
+     assert_contains "$LOGDIR/$case_name.server" "does not support Identity Hint" ; then
     skip_case "Identity Hint not supported"
   elif assert_contains "$LOGDIR/$case_name.client" "Identity Hint '$PSK_HINT' provided" &&
      assert_contains "$LOGDIR/$case_name.client" "Switching to using '$PSK_IDENTITY' identity \\+ '$PSK_KEY' key" &&
@@ -1167,7 +1168,7 @@ run_pki_chain_depth_too_long () {
      assert_not_contains "$LOGDIR/$case_name.client" "2\\.05" &&
      assert_not_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'" &&
      assert_either_contains "$LOGDIR/$case_name.client" "$LOGDIR/$case_name.server" \
-       "certificate chain too long|constraint limits|unknown_ca|0x400000f|alert|No response received"; then
+       "The certificate's verify depth is too long|certificate chain too long|constraint limits|unknown_ca|0x400000f|alert|No response received"; then
     pass_case
   else
     fail_case "$case_name" "PKI chain beyond configured depth limit was accepted"
@@ -1189,7 +1190,7 @@ run_pki_self_signed_leaf () {
     return
   fi
 
-  run_pki_client "$case_name" "" "$CLIENT_TIMEOUT" no "$pki_dir/bad_ca.pem"
+  run_pki_client "$case_name" "" "$CLIENT_TIMEOUT"
 
   if assert_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
      assert_contains "$LOGDIR/$case_name.client" "2\\.05" &&
@@ -1241,7 +1242,7 @@ run_pki_non_self_signed_override () {
     return
   fi
 
-  run_pki_client "$case_name" "" "$CLIENT_TIMEOUT" no "$pki_dir/bad_ca.pem"
+  run_pki_client "$case_name" "" "$CLIENT_TIMEOUT"
 
   if assert_not_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
      assert_not_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'" &&

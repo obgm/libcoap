@@ -796,10 +796,8 @@ coap_hitls_validate_cn_cert(coap_session_t *session,
   uint8_t *der = NULL;
   uint32_t der_len = 0;
   BSL_Buffer cn;
-  int ret;
+  int ret = 1;
 
-  if (!setup_data->validate_cn_call_back)
-    return 1;
   memset(&cn, 0, sizeof(cn));
   (void)HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODELEN,
                             &der_len, sizeof(der_len));
@@ -809,11 +807,18 @@ coap_hitls_validate_cn_cert(coap_session_t *session,
   (void)HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_CN_STR,
                             &cn, sizeof(cn));
 
-  coap_lock_callback_ret(ret,
-                         setup_data->validate_cn_call_back(
-                             cn.data ? (const char *)cn.data : "",
-                             der, der_len, session, depth, validated,
-                             setup_data->cn_call_back_arg));
+  if (setup_data->validate_cn_call_back) {
+    coap_lock_callback_ret(ret,
+                           setup_data->validate_cn_call_back(
+                               cn.data ? (const char *)cn.data : "",
+                               der, der_len, session, depth, validated,
+                               setup_data->cn_call_back_arg));
+  }
+  if (depth == 0 && session->type == COAP_SESSION_TYPE_CLIENT &&
+      setup_data->client_sni && !setup_data->allow_sni_cn_mismatch &&
+      cn.data && strcmp((const char *)cn.data, setup_data->client_sni)) {
+    ret = 0;
+  }
   if (cn.data)
     BSL_SAL_Free(cn.data);
   return ret;

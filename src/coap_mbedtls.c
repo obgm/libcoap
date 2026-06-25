@@ -679,12 +679,15 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
   char *cn = NULL;
 
   cn = get_san_or_cn_from_cert(crt);
+  coap_dtls_log(COAP_LOG_DEBUG, "depth %d flags %x cert '%s'\n",
+                depth, *flags, cn);
+  if (depth == 0 && c_session->type == COAP_SESSION_TYPE_CLIENT && setup_data->client_sni && cn &&
+      strcmp(cn, setup_data->client_sni)) {
+    *flags |= MBEDTLS_X509_BADCERT_CN_MISMATCH;
+  }
   if (setup_data->validate_cn_call_back) {
     int ret;
 
-    if (*flags & MBEDTLS_X509_BADCERT_CN_MISMATCH) {
-      *flags &= ~MBEDTLS_X509_BADCERT_CN_MISMATCH;
-    }
     coap_lock_callback_ret(ret,
                            setup_data->validate_cn_call_back(cn,
                                                              crt->raw.p,
@@ -696,6 +699,14 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
     if (!ret) {
       *flags |= MBEDTLS_X509_BADCERT_CN_MISMATCH;
     }
+  }
+  if (setup_data->cert_chain_validation &&
+      depth > (setup_data->cert_chain_verify_depth + 2)) {
+    *flags |= MBEDTLS_X509_BADCERT_OTHER;
+    coap_log_warn("   %s: %s: '%s' depth %d\n",
+                  coap_session_str(c_session),
+                  "The certificate's verify depth is too long",
+                  cn ? cn : "?", depth);
   }
   if (*flags == 0) {
     if (cn)
@@ -733,6 +744,16 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
       coap_log_info("   %s: %s: overridden: '%s' depth %d\n",
                     coap_session_str(c_session),
                     "The certificate has a short RSA length", cn ? cn : "?", depth);
+    }
+  }
+  if (*flags & MBEDTLS_X509_BADCERT_CN_MISMATCH) {
+    if (setup_data->allow_sni_cn_mismatch) {
+      *flags &= ~MBEDTLS_X509_BADCERT_CN_MISMATCH;
+      coap_log_info("   %s: %s: overridden: '%s' v '%s' depth %d\n",
+                    coap_session_str(c_session),
+                    "The SNI does not match the returned CN",
+                    setup_data->client_sni ? setup_data->client_sni : "",
+                    cn ? cn : "?", depth);
     }
   }
   if (*flags & MBEDTLS_X509_BADCERT_NOT_TRUSTED) {
@@ -784,14 +805,6 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
     } else if (!setup_data->check_cert_revocation) {
       *flags &= ~MBEDTLS_X509_BADCRL_FUTURE;
     }
-  }
-  if (setup_data->cert_chain_validation &&
-      depth > (setup_data->cert_chain_verify_depth + 1)) {
-    *flags |= MBEDTLS_X509_BADCERT_OTHER;
-    coap_log_warn("   %s: %s: '%s' depth %d\n",
-                  coap_session_str(c_session),
-                  "The certificate's verify depth is too long",
-                  cn ? cn : "?", depth);
   }
 
   if (*flags != 0) {
@@ -2400,6 +2413,9 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
 #ifndef MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
     coap_log_warn("Mbed TLS not compiled for EC-JPAKE support\n");
 #endif /* ! MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
+  }
+  if (setup_data->psk_info.hint.length) {
+    coap_log_warn("CoAP Server with Mbed TLS does not support Identity Hint\n");
   }
   m_context->psk_pki_enabled |= IS_PSK;
   return 1;

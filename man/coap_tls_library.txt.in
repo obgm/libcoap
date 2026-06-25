@@ -211,6 +211,9 @@ setup_server_context_pki(const char *public_cert_file,
   dtls_pki.check_cert_revocation   = 1;
   dtls_pki.allow_no_crl            = 1;
   dtls_pki.allow_expired_crl       = 1;
+  dtls_pki.is_rpk_not_cert         = 0; /* Set to 1 if RPK */
+  dtls_pki.use_cid                 = 0;
+  dtls_pki.allow_sni_cn_mismatch   = 0;
   dtls_pki.pki_key.key_type                      = COAP_PKI_KEY_DEFINE;
   dtls_pki.pki_key.key.define.ca.s_byte          = ca_file;
   dtls_pki.pki_key.key.define.public_cert.s_byte = public_cert_file;

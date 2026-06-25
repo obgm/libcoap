@@ -515,6 +515,8 @@ typedef struct coap_dtls_pki_t {
   uint8_t use_cid;                  /* 1 if DTLS Connection ID is to be
                                      *   used (Client only, server always enabled)
                                      *   if supported */
+  uint8_t allow_sni_cn_mismatch:1;  /* 1 if SNI and returnd CN allowed to mismatch
+                                     * (Client only). Not normally set */
   uint8_t reserved[2];              /* Reserved - must be set to 0 for
                                        future compatibility */
 
@@ -574,8 +576,8 @@ for different versions of the coap_dtls_pki_t structure in the future.
 *verify_peer_cert* Set to 1 to check that the peer's certificate is valid if
 provided, else 0. If not set, check_common_ca, allow_self_signed,
 allow_expired_certs, cert_chain_validation, cert_chain_verify_depth,
-check_cert_revocation, allow_no_crl, allow_expired_crl, allow_bad_md_hash
-and allow_short_rsa_length settings are all ignored.
+check_cert_revocation, allow_no_crl, allow_expired_crl, allow_bad_md_hash,
+allow_short_rsa_length and allow_sni_cn_mismatch settings are all ignored.
 
 *check_common_ca* Set to 1 to check that the CA that signed the peer's
 certificate is the same CA that signed the local certificate
@@ -624,7 +626,11 @@ allow_no_crl, allow_expired_crl, allow_bad_md_hash and
 allow_short_rsa_length settings are all ignored.
 
 *use_cid* Set to 1 if the DTLS Client is to try to used Connection-ID.
-Server is alwys enabled if support available.
+Server is always enabled if support available.
+
+*allow_sni_cn_mismatch* Set to 1 if the DTLS Client is not to compare the
+Common Name (CN) of the received certificate with the sent SNI hostname.
+This is not recommended.
 
 *SECTION: PKI/RPK: coap_dtls_pki_t: Reserved*
 
@@ -1168,6 +1174,8 @@ setup_server_context_pki(const char *public_cert_file,
   dtls_pki.allow_bad_md_hash       = 0;
   dtls_pki.allow_short_rsa_length  = 0;
   dtls_pki.is_rpk_not_cert         = 0; /* Set to 1 if RPK */
+  dtls_pki.use_cid                 = 0;
+  dtls_pki.allow_sni_cn_mismatch   = 0;
   dtls_pki.validate_cn_call_back   = verify_cn_callback;
   dtls_pki.cn_call_back_arg        = valid_cn_list;
   dtls_pki.validate_sni_call_back  = verify_pki_sni_callback;
