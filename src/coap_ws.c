@@ -698,6 +698,8 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
                    " (%" PRIuS " > %" PRIuS ")\n", bytes_size, datalen);
       coap_handle_event_lkd(session->context, COAP_EVENT_WS_PACKET_SIZE, session);
       session->ws->close_reason = 1009;
+      session->ws->data_size = 0;
+      session->ws->data_ofs = 0;
       coap_ws_close(session);
       return 0;
     }
