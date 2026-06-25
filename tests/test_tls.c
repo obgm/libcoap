@@ -275,6 +275,7 @@ t_tls5(void) {
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+#if COAP_CLIENT_SUPPORT
 static void
 t_tls6(void) {
   coap_context_t *ctx;
@@ -288,6 +289,7 @@ t_tls6(void) {
 
   coap_free_context(ctx);
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 static void
 t_tls7(void) {
@@ -1188,7 +1190,9 @@ t_init_tls_tests(void) {
   TLS_TEST(suite, t_tls4);
   TLS_TEST(suite, t_tls5);
 #endif /* COAP_SERVER_SUPPORT */
+#if COAP_CLIENT_SUPPORT
   TLS_TEST(suite, t_tls6);
+#endif /* COAP_CLIENT_SUPPORT */
   TLS_TEST(suite, t_tls7);
   TLS_TEST(suite, t_tls8);
 #if COAP_SERVER_SUPPORT

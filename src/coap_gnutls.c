@@ -867,8 +867,18 @@ cert_verify_gnutls(gnutls_session_t g_session) {
       goto fail;
   }
 
-  G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
-          "gnutls_certificate_verify_peers");
+  if (c_session->type == COAP_SESSION_TYPE_CLIENT && g_context->setup_data.client_sni) {
+    gnutls_typed_vdata_st host;
+
+    host.type = GNUTLS_DT_DNS_HOSTNAME;
+    host.data = (uint8_t *)g_context->setup_data.client_sni;
+    host.size = strlen(g_context->setup_data.client_sni);
+    G_CHECK(gnutls_certificate_verify_peers(g_session, &host, 1, &status),
+            "gnutls_certificate_verify_peers");
+  } else {
+    G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
+            "gnutls_certificate_verify_peers");
+  }
 
   coap_dtls_log(COAP_LOG_DEBUG, "error %x cert '%s'\n",
                 status, cert_info.san_or_cn);
@@ -919,6 +929,23 @@ cert_verify_gnutls(gnutls_session_t g_session) {
         coap_log_warn("   %s: %s: '%s'\n",
                       coap_session_str(c_session),
                       "The certificate has an invalid usage date",
+                      OUTPUT_CERT_NAME);
+      }
+    }
+    if (status & (GNUTLS_CERT_UNEXPECTED_OWNER)) {
+      status &= ~(GNUTLS_CERT_UNEXPECTED_OWNER);
+      if (g_context->setup_data.allow_sni_cn_mismatch) {
+        coap_log_info("   %s: %s: overridden: '%s' v '%s'\n",
+                      coap_session_str(c_session),
+                      "The SNI does not match the returned CN",
+                      g_context->setup_data.client_sni,
+                      OUTPUT_CERT_NAME);
+      } else {
+        fail = 1;
+        coap_log_warn("   %s: %s: '%s' v '%s'\n",
+                      coap_session_str(c_session),
+                      "The SNI does not match the returned CN",
+                      g_context->setup_data.client_sni,
                       OUTPUT_CERT_NAME);
       }
     }

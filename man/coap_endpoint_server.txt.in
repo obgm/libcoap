@@ -390,6 +390,8 @@ setup_server_context_pki(const char *public_cert_file,
   dtls_pki.allow_bad_md_hash       = 0;
   dtls_pki.allow_short_rsa_length  = 0;
   dtls_pki.is_rpk_not_cert         = 0; /* Set to 1 if RPK */
+  dtls_pki.use_cid                 = 0;
+  dtls_pki.allow_sni_cn_mismatch   = 0;
   dtls_pki.validate_cn_call_back   = verify_cn_callback;
   dtls_pki.cn_call_back_arg        = valid_cn_list;
   dtls_pki.validate_sni_call_back  = verify_pki_sni_callback;

@@ -298,12 +298,13 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
   Disable remote peer certificate checking.
 
 *-C* cafile::
-PEM file or PKCS11 URI for the CA certificate and any intermediate CAs that was
+  PEM file or PKCS11 URI for the CA certificate and any intermediate CAs that was
   used to sign the server
   certfile. Ideally the client certificate should be signed by the same CA so that
   mutual authentication can take place. The contents of cafile are added
   to the trusted store of root CAs. Using the *-C* or *-R* options will trigger
-  the validation of the server certificate unless overridden by the *-n* option.
+  the validation of the server certificate (including not allowing self-signed
+  certificates) unless overridden by the *-n* option.
 
 *-J* pkcs11_pin::
   The user pin to unlock access to the PKCS11 token.
@@ -320,8 +321,8 @@ PEM file or PKCS11 URI for the CA certificate and any intermediate CAs that was
   to be in this list and is trusted for the validation. Using
   *-R trust_casfile* disables common CA mutual authentication which can only
   be done by using *-C cafile*. Using the *-C* or *-R* options will
-  trigger the validation of the server certificate unless overridden by the
-  *-n* option.
+  trigger the validation of the server certificate (including not allowing
+  self-signed certificates) unless overridden by the *-n* option.
 
 *-Y* ::
   Do not load the default system Trusted Root CA Store.

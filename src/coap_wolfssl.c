@@ -385,11 +385,11 @@ coap_dtls_rpk_is_supported(void) {
  */
 int
 coap_dtls_cid_is_supported(void) {
-#if defined(HAVE_RPK) && LIBWOLFSSL_VERSION_HEX >= 0x05006004
+#if defined(WOLFSSL_DTLS_CID)
   return 1;
-#else /* ! HAVE_RPK || LIBWOLFSSL_VERSION_HEX < 0x05006004 */
+#else /* ! WOLFSSL_DTLS_CID */
   return 0;
-#endif /* ! HAVE_RPK || LIBWOLFSSL_VERSION_HEX < 0x05006004 */
+#endif /* ! WOLFSSL_DTLS_CID */
 }
 
 #if COAP_CLIENT_SUPPORT
@@ -1565,6 +1565,12 @@ tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
   }
   coap_dtls_log(COAP_LOG_DEBUG, "depth %d error %x preverify %d cert '%s'\n",
                 depth, err, preverify_ok, cn ? cn : "");
+  if (depth == 0 && session->type == COAP_SESSION_TYPE_CLIENT && setup_data->client_sni && cn &&
+      strcmp(cn, setup_data->client_sni)) {
+    preverify_ok = 0;
+    X509_STORE_CTX_set_error(ctx, X509_V_ERR_SUBJECT_ISSUER_MISMATCH);
+    err = X509_V_ERR_SUBJECT_ISSUER_MISMATCH;
+  }
   if (!preverify_ok) {
     switch (err) {
     case X509_V_ERR_CERT_NOT_YET_VALID:
@@ -1595,6 +1601,10 @@ tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
     case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
     case X509_V_ERR_AKID_SKID_MISMATCH:
       if (!setup_data->verify_peer_cert)
+        preverify_ok = 1;
+      break;
+    case X509_V_ERR_SUBJECT_ISSUER_MISMATCH:
+      if (setup_data->allow_sni_cn_mismatch)
         preverify_ok = 1;
       break;
     default:

@@ -1648,17 +1648,18 @@ setup_pki(coap_context_t *ctx, coap_dtls_role_t role) {
    * but this is used to define what checking actually takes place.
    */
   dtls_pki.verify_peer_cert        = verify_peer_cert;
-  dtls_pki.check_common_ca         = !root_ca_file;
-  dtls_pki.allow_self_signed       = 1;
+  dtls_pki.check_common_ca         = ca_file != NULL;
+  dtls_pki.allow_self_signed       = !(root_ca_file || ca_file);;
   dtls_pki.allow_expired_certs     = 1;
   dtls_pki.cert_chain_validation   = 1;
   dtls_pki.cert_chain_verify_depth = 2;
   dtls_pki.check_cert_revocation   = 1;
   dtls_pki.allow_no_crl            = 1;
   dtls_pki.allow_expired_crl       = 1;
-  dtls_pki.is_rpk_not_cert = is_rpk_not_cert;
-  dtls_pki.use_cid = setup_cid;
-  dtls_pki.validate_cn_call_back = verify_cn_callback;
+  dtls_pki.is_rpk_not_cert         = is_rpk_not_cert;
+  dtls_pki.use_cid                 = setup_cid;
+  dtls_pki.allow_sni_cn_mismatch   = 0; /* Not recommended to set */
+  dtls_pki.validate_cn_call_back   = verify_cn_callback;
   if (role == COAP_DTLS_ROLE_CLIENT) {
     if (proxy.host.length) {
       snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)proxy.host.length, (int)proxy.host.length,

@@ -2469,7 +2469,6 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
   int err = X509_STORE_CTX_get_error(ctx);
   X509 *x509 = X509_STORE_CTX_get_current_cert(ctx);
   char *cn = x509 ? get_san_or_cn_from_cert(x509) : NULL;
-  int keep_preverify_ok = preverify_ok;
 
   coap_dtls_log(COAP_LOG_DEBUG, "depth %d error %x preverify %d cert '%s'\n",
                 depth, err, preverify_ok, cn);
@@ -2477,6 +2476,12 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
     X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
     OPENSSL_free(cn);
     return 0;
+  }
+  if (depth == 0 && session->type == COAP_SESSION_TYPE_CLIENT && setup_data->client_sni &&
+      !setup_data->allow_sni_cn_mismatch && cn && strcmp(cn, setup_data->client_sni)) {
+    preverify_ok = 0;
+    X509_STORE_CTX_set_error(ctx, X509_V_ERR_SUBJECT_ISSUER_MISMATCH);
+    err = X509_V_ERR_SUBJECT_ISSUER_MISMATCH;
   }
   if (!preverify_ok) {
     switch (err) {
@@ -2508,6 +2513,10 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
       if (!setup_data->verify_peer_cert)
         preverify_ok = 1;
       break;
+    case X509_V_ERR_SUBJECT_ISSUER_MISMATCH:
+      if (setup_data->allow_sni_cn_mismatch)
+        preverify_ok = 1;
+      break;
     default:
       break;
     }
@@ -2534,7 +2543,7 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
     }
   }
   /* Certificate - depth == 0 is the Client Cert */
-  if (setup_data->validate_cn_call_back && keep_preverify_ok) {
+  if (setup_data->validate_cn_call_back) {
     int length = i2d_X509(x509, NULL);
     uint8_t *base_buf;
     uint8_t *base_buf2 = base_buf = length > 0 ? OPENSSL_malloc(length) : NULL;
