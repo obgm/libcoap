@@ -129,6 +129,7 @@ set_property(
   CACHE DTLS_BACKEND
   PROPERTY STRINGS
            default
+           none
            gnutls
            openssl
            wolfssl
@@ -530,7 +531,13 @@ set(WITH_WOLFSSL OFF)
 
 if(ENABLE_DTLS)
   message(STATUS "compiling with DTLS support")
-  message(STATUS "DTLS_BACKEND: ${DTLS_BACKEND}")
+  if(NOT ((OSCORE_BACKEND STREQUAL "none") OR (OSCORE_BACKEND STREQUAL "")))
+    set(DTLS_BACKEND ${OSCORE_BACKEND})
+    message(STATUS "OSCORE_BACKEND: ${OSCORE_BACKEND}")
+    message(STATUS "Setting DTLS_BACKEND: ${DTLS_BACKEND}")
+  else()
+    message(STATUS "DTLS_BACKEND: ${DTLS_BACKEND}")
+  endif()
 
   set(DTLS_FOUND OFF)
   if(DTLS_BACKEND STREQUAL "default")
@@ -584,17 +591,6 @@ if(ENABLE_DTLS)
     endif()
   endif()
 
-  if((OSCORE_BACKEND STREQUAL "mbedtls") OR ((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND)))
-    # libmbedtls (e.g. debian libmbedtls-dev)
-    find_package(MbedTLS ${DTLS_REQUIRED})
-    if(MbedTLS_FOUND)
-      set(WITH_MBEDTLS ON)
-      message(STATUS "compiling with mbedtls support")
-      set(COAP_WITH_LIBMBEDTLS 1)
-      set(DTLS_FOUND ON)
-    endif()
-  endif()
-
   if((DTLS_BACKEND STREQUAL "tinydtls") OR ((DTLS_BACKEND STREQUAL "default") AND (NOT DTLS_FOUND)))
     if(USE_VENDORED_TINYDTLS)
       message(STATUS "compiling the tinydtls lib")
@@ -630,6 +626,8 @@ if(ENABLE_DTLS)
 
 elseif(NOT ((OSCORE_BACKEND STREQUAL "none") OR (OSCORE_BACKEND STREQUAL "")))
 
+  set(DTLS_BACKEND none)
+
   if((OSCORE_BACKEND STREQUAL "mbedtls") AND (NOT DTLS_FOUND))
     # libmbedtls (e.g. debian libmbedtls-dev)
     find_package(MbedTLS REQUIRED)
@@ -652,9 +650,13 @@ elseif(NOT ((OSCORE_BACKEND STREQUAL "none") OR (OSCORE_BACKEND STREQUAL "")))
     # no defined cryto lib found
     message(
       FATAL_ERROR
-      "cannot find any defined cryto lib for OSCORE, either install one or compile without OSCORE support"
+      "cannot find any defined cryto lib for OSCORE backend, either install one or compile without OSCORE support"
     )
   endif()
+
+else()
+
+  set(DTLS_BACKEND none)
 
 endif()
 
