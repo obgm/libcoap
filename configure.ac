@@ -848,8 +848,6 @@ if test "x$build_dtls" = "xyes"; then
         DTLS_LIBS="$OpenHiTLS_LIBS"
         AC_DEFINE(COAP_WITH_LIBOPENHITLS, [1], [Define to 1 if the system has openHiTLS.])
     fi
-    AC_SUBST(DTLS_CFLAGS)
-    AC_SUBST(DTLS_LIBS)
 else
     # The user can't select multiple crypto libraries.
     TLSCOUNT=0
@@ -893,6 +891,8 @@ else
     fi
 
 fi
+AC_SUBST(DTLS_CFLAGS)
+AC_SUBST(DTLS_LIBS)
 
 # Define the Library name extension for the TLS the library was linked against
 if test "x$with_openssl" = "xyes" -o "x$with_openssl_auto" = "xyes"; then
@@ -1023,11 +1023,18 @@ AC_ARG_ENABLE([sanitize],
               [build_sanitize="$enableval"],
               [build_sanitize="no"])
 
+SAN_CFLAGS=
+SAN_LIBS=
 if test "x$build_sanitize" = "xyes"; then
-   AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined], [CFLAGS="$CFLAGS -fsanitize=address,undefined"])
-   AX_CHECK_COMPILE_FLAG([-fno-omit-frame-pointer], [CFLAGS="$CFLAGS -fno-omit-frame-pointer"])
-   AX_CHECK_COMPILE_FLAG([-fsanitize-address-use-after-scope], [CFLAGS="$CFLAGS -fsanitize-address-use-after-scope"])
+   AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined], [SAN_CFLAGS="-fsanitize=address,undefined"])
+   SAN_LIBS="$SAN_CFLAGS"
+   AX_CHECK_COMPILE_FLAG([-fno-omit-frame-pointer], [SAN_CFLAGS="$SAN_CFLAGS -fno-omit-frame-pointer"])
+   AX_CHECK_COMPILE_FLAG([-fsanitize-address-use-after-scope], [SAN_CFLAGS="$SAN_CFLAGS -fsanitize-address-use-after-scope"])
+   CFLAGS="$CFLAGS $SAN_CFLAGS"
 fi
+
+AC_SUBST(SAN_CFLAGS)
+AC_SUBST(SAN_LIBS)
 
 # configure options
 # __license-install__

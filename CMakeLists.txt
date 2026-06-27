@@ -19,6 +19,7 @@ set(LIBCOAP_API_VERSION 3)
 set(LIBCOAP_ABI_VERSION 3.2.2)
 
 set(COAP_LIBRARY_NAME "coap-${LIBCOAP_API_VERSION}")
+set(LIBCOAP_NAME_SUFFIX "${LIBCOAP_API_VERSION}")
 
 if(NOT ZEPHYR_BASE)
 option(
@@ -80,9 +81,13 @@ if(ENABLE_SANITIZER)
   if(MSVC)
     add_compile_options(/fsanitize=address,undefined)
     add_link_options(/fsanitize=address,undefined)
+    set(SAN_CFLAGS "/fsanitize=address,undefined")
+    set(SAN_LIBS "/fsanitize=address,undefined")
   else()
     add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -fsanitize-address-use-after-scope)
     add_link_options(-fsanitize=address,undefined)
+    set(SAN_CFLAGS "-fsanitize=address,undefined -fno-omit-frame-pointer -fsanitize-address-use-after-scope")
+    set(SAN_LIBS "-fsanitize=address,undefined")
   endif()
   message(STATUS "AddressSanitizer (ASan) and UndefinedBehaviorSanitizer (UBSan) enabled")
 endif()
@@ -559,6 +564,7 @@ if(ENABLE_DTLS)
       message(STATUS "compiling with gnutls support")
       set(COAP_WITH_LIBGNUTLS 1)
       set(DTLS_FOUND ON)
+      set(T_DTLS_LIBS ${GNUTLS_LIBRARIES})
     endif()
   endif()
 
@@ -570,6 +576,7 @@ if(ENABLE_DTLS)
       message(STATUS "compiling with openssl support")
       set(COAP_WITH_LIBOPENSSL 1)
       set(DTLS_FOUND ON)
+      set(T_DTLS_LIBS ${OPENSSL_LIBRARIES})
     endif()
   endif()
 
@@ -581,6 +588,7 @@ if(ENABLE_DTLS)
       message(STATUS "compiling with wolfssl support")
       set(COAP_WITH_LIBWOLFSSL 1)
       set(DTLS_FOUND ON)
+      set(T_DTLS_LIBS ${WOLFSSL_LIBRARIES})
     endif()
   endif()
 
@@ -592,6 +600,7 @@ if(ENABLE_DTLS)
       message(STATUS "compiling with mbedtls support")
       set(COAP_WITH_LIBMBEDTLS 1)
       set(DTLS_FOUND ON)
+      set(T_DTLS_LIBS ${MBEDTLS_LIBRARIES})
     endif()
   endif()
 
@@ -617,6 +626,7 @@ if(ENABLE_DTLS)
       message(STATUS "compiling with tinydtls support")
       set(COAP_WITH_LIBTINYDTLS 1)
       set(DTLS_FOUND ON)
+      set(T_DTLS_LIBS ${TINYDTLS_LIBRARIES})
     endif()
   endif()
 
@@ -628,6 +638,7 @@ if(ENABLE_DTLS)
       message(STATUS "compiling with openHiTLS support")
       set(COAP_WITH_LIBOPENHITLS 1)
       set(DTLS_FOUND ON)
+      set(T_DTLS_LIBS ${OPENHITLS_LIBRARIES})
     endif()
   endif()
 
@@ -651,6 +662,7 @@ elseif(NOT ((OSCORE_BACKEND STREQUAL "none") OR (OSCORE_BACKEND STREQUAL "")))
       message(STATUS "compiling with mbedtls OSCORE support")
       set(COAP_WITH_LIBMBEDTLS_OSCORE 1)
       set(DTLS_FOUND ON)
+      set(T_DTLS_LIBS ${MBEDTLS_LIBRARIES})
     endif()
   endif()
 
@@ -662,6 +674,7 @@ elseif(NOT ((OSCORE_BACKEND STREQUAL "none") OR (OSCORE_BACKEND STREQUAL "")))
       message(STATUS "compiling with openHiTLS OSCORE support")
       set(COAP_WITH_LIBOPENHITLS_OSCORE 1)
       set(DTLS_FOUND ON)
+      set(T_DTLS_LIBS ${OPENHITLS_LIBRARIES})
     endif()
   endif()
 
@@ -791,6 +804,16 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_config.h.in
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake_coap_defines.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_defines.h)
+
+# Build the libcoap-3.pc file
+set(prefix ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix "\${prefix}")
+set(libdir "\${prefix}/lib")
+set(includedir "\${prefix}/include")
+string(REPLACE ";" " " DTLS_LIBS "${T_DTLS_LIBS}")
+
+configure_file(${CMAKE_CURRENT_LIST_DIR}/libcoap-3.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/libcoap-3.pc @ONLY)
 
 #
 # sources
@@ -1056,13 +1079,20 @@ configure_package_config_file(
   ${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION
   ${LIBCOAP_CONFIG_INSTALL_DIR})
+
 write_basic_package_version_file(
   ${PROJECT_NAME}ConfigVersion.cmake
   COMPATIBILITY SameMajorVersion)
+
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
   DESTINATION ${LIBCOAP_CONFIG_INSTALL_DIR}
+  COMPONENT dev)
+
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/libcoap-3.pc
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
   COMPONENT dev)
 
 install(
@@ -1073,17 +1103,20 @@ install(
   PATTERN "*.h"
   PATTERN "*_internal.h" EXCLUDE
   PATTERN "oscore*" EXCLUDE)
+
 install(
   DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   COMPONENT dev
   FILES_MATCHING
   PATTERN "*.h")
+
 if(ENABLE_EXAMPLES)
   install(
     TARGETS coap-server coap-client coap-rd
     DESTINATION ${CMAKE_INSTALL_BINDIR}
     COMPONENT dev)
+
   if(NOT WIN32 AND NOT MINGW)
     install(
       TARGETS etsi_iot_01 tiny oscore-interop-server
