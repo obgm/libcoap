@@ -2119,6 +2119,9 @@ setup_client_ssl_session(coap_session_t *session, WOLFSSL *ssl) {
 #endif /* !COAP_DISABLE_TCP */
       coap_log_debug("CoAP Client restricted to (D)TLS1.2 with Identity Hint callback\n");
     }
+    if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+      set_ciphersuites(ssl, COAP_ENC_PSK);
+    }
 
     /* Issue SNI if requested */
     if (setup_data->client_sni &&

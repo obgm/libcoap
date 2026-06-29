@@ -1583,6 +1583,34 @@ run_pki_cn_fallback () {
   fi
 }
 
+run_pki_bad_cn_or_san () {
+  case_name=pki_bad_cn_or_san
+  echo -n "PKI bad returned CN or SAN - "
+  pki_dir=$LOGDIR/pki
+
+  if ! generate_pki_files "$case_name"; then
+    fail_case "$case_name" "certificate generation failed"
+    return
+  fi
+  if ! start_pki_server "$case_name" "$pki_dir/alt_server.pem" \
+      "$pki_dir/alt_server.key"; then
+    fail_case "$case_name" "server did not start"
+    return
+  fi
+
+  run_pki_client "$case_name" "$pki_dir/ca.pem" "$CLIENT_TIMEOUT"
+
+  if assert_not_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
+     assert_not_contains "$LOGDIR/$case_name.client" "2\\.05" &&
+     assert_contains "$LOGDIR/$case_name.client" "CN 'default.invalid' presented by server" &&
+     assert_not_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then
+    pass_case
+  else
+    fail_case "$case_name" "PKI CN or SAN not rejected"
+  fi
+}
+
+
 run_pki_sni () {
   case_name=pki_sni
   echo -n "PKI SNI certificate selection - "
@@ -1671,6 +1699,7 @@ run_psk_pki_dual_mode
 run_pki_missing_client_cert
 run_pki_san_preferred_over_cn
 run_pki_cn_fallback
+run_pki_bad_cn_or_san
 run_pki_sni
 run_wrong_pki_ca
 
