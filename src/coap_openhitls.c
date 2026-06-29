@@ -49,6 +49,7 @@
 #include <hitls/pki/hitls_pki_cert.h>
 #include <hitls/pki/hitls_pki_errno.h>
 #include <hitls/pki/hitls_pki_types.h>
+#include <hitls/pki/hitls_pki_utils.h>
 #include <hitls/pki/hitls_pki_x509.h>
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
@@ -787,6 +788,76 @@ coap_hitls_verify_cb_self_signed_allowed(const coap_dtls_pki_t *setup_data,
          depth == 0 && coap_hitls_cert_is_self_signed(cert);
 }
 
+static char *
+coap_hitls_copy_name(const uint8_t *data, uint32_t data_len) {
+  char *copy;
+  size_t len = (size_t)data_len;
+
+  if (data_len && !data)
+    return NULL;
+  copy = (char *)coap_malloc_type(COAP_STRING, len + 1);
+  if (!copy)
+    return NULL;
+  if (len)
+    memcpy(copy, data, len);
+  copy[len] = '\000';
+  return copy;
+}
+
+static char *
+coap_hitls_get_san_from_cert(HITLS_X509_Cert *cert) {
+  HITLS_X509_ExtSan san = {0};
+  char *dns_name = NULL;
+
+  if (HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SAN, &san,
+                          sizeof(san)) == HITLS_PKI_SUCCESS &&
+      san.names) {
+    for (BslListNode *name_node = BSL_LIST_FirstNode(san.names);
+         name_node != NULL;
+         name_node = BSL_LIST_GetNextNode(san.names, name_node)) {
+      const HITLS_X509_GeneralName *name =
+          (const HITLS_X509_GeneralName *)BSL_LIST_GetData(name_node);
+
+      if (!name || name->type != HITLS_X509_GN_DNS)
+        continue;
+      if (name->value.dataLen &&
+          memchr(name->value.data, '\000', name->value.dataLen))
+        continue;
+      dns_name = coap_hitls_copy_name(name->value.data, name->value.dataLen);
+      break;
+    }
+  }
+
+  HITLS_X509_ClearSubjectAltName(&san);
+  return dns_name;
+}
+
+static char *
+coap_hitls_get_cn_from_cert(HITLS_X509_Cert *cert) {
+  BSL_Buffer cn = {0};
+  char *cn_name = NULL;
+
+  if (HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_CN_STR,
+                          &cn, sizeof(cn)) == HITLS_PKI_SUCCESS) {
+    cn_name = coap_hitls_copy_name(cn.data, cn.dataLen);
+  }
+  if (cn.data)
+    BSL_SAL_Free(cn.data);
+  return cn_name;
+}
+
+static char *
+coap_hitls_get_san_or_cn_from_cert(HITLS_X509_Cert *cert) {
+  char *name;
+
+  if (!cert)
+    return NULL;
+  name = coap_hitls_get_san_from_cert(cert);
+  if (name)
+    return name;
+  return coap_hitls_get_cn_from_cert(cert);
+}
+
 static int
 coap_hitls_validate_cn_cert(coap_session_t *session,
                             const coap_dtls_pki_t *setup_data,
@@ -795,32 +866,30 @@ coap_hitls_validate_cn_cert(coap_session_t *session,
                             int validated) {
   uint8_t *der = NULL;
   uint32_t der_len = 0;
-  BSL_Buffer cn;
+  char *san_or_cn;
   int ret = 1;
 
-  memset(&cn, 0, sizeof(cn));
   (void)HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODELEN,
                             &der_len, sizeof(der_len));
   if (der_len)
     (void)HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODE,
                               &der, sizeof(der));
-  (void)HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_CN_STR,
-                            &cn, sizeof(cn));
+  san_or_cn = coap_hitls_get_san_or_cn_from_cert(cert);
 
   if (setup_data->validate_cn_call_back) {
     coap_lock_callback_ret(ret,
                            setup_data->validate_cn_call_back(
-                               cn.data ? (const char *)cn.data : "",
+                               san_or_cn ? san_or_cn : "",
                                der, der_len, session, depth, validated,
                                setup_data->cn_call_back_arg));
   }
   if (depth == 0 && session->type == COAP_SESSION_TYPE_CLIENT &&
       setup_data->client_sni && !setup_data->allow_sni_cn_mismatch &&
-      cn.data && strcmp((const char *)cn.data, setup_data->client_sni)) {
+      san_or_cn && strcmp(san_or_cn, setup_data->client_sni)) {
     ret = 0;
   }
-  if (cn.data)
-    BSL_SAL_Free(cn.data);
+  if (san_or_cn)
+    coap_free_type(COAP_STRING, san_or_cn);
   return ret;
 }
 
