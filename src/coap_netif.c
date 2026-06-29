@@ -225,7 +225,7 @@ coap_netif_strm_read(coap_session_t *session, uint8_t *data, size_t datalen) {
   int keep_errno = errno;
 
   if (bytes_read >= 0) {
-    coap_log_debug("*  %s: netif: recv %4" PRIdS " bytes\n",
+    coap_log_debug("*  %s: netif: read %4" PRIdS " bytes\n",
                    coap_session_str(session), bytes_read);
   } else if (bytes_read == -1 && errno != EAGAIN) {
     coap_log_debug("*  %s: netif: failed to receive any bytes (%s) state %d\n",

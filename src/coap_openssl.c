@@ -1003,6 +1003,11 @@ coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
                           coap_session_str(session), ERR_reason_error_string(e),
                           ssl_function_definition(e));
         }
+      } else {
+        long e;
+
+        while ((e = ERR_get_error())) {
+        }
       }
     }
   }
@@ -1042,6 +1047,7 @@ coap_sock_read(BIO *a, char *out, int outl) {
     if (ret == 0) {
       BIO_set_retry_read(a);
       ret = -1;
+      errno = EAGAIN;
     } else {
       BIO_clear_retry_flags(a);
     }
@@ -1073,6 +1079,7 @@ coap_sock_write(BIO *a, const char *in, int inl) {
   if (ret == 0) {
     BIO_set_retry_read(a);
     ret = -1;
+    errno = EAGAIN;
   } else {
     BIO_clear_retry_flags(a);
     if (ret == -1) {
