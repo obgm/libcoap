@@ -29,6 +29,8 @@
 # - PKI invalid root CA directory negative path
 # - concurrent PSK and PKI server configuration
 # - PKI missing client certificate negative path
+# - PKI SAN preferred over CN
+# - PKI CN fallback without SAN
 # - PKI SNI certificate selection
 # - wrong PKI CA negative path
 #
@@ -322,6 +324,8 @@ generate_pki_files () {
   ca_conf=$pki_dir/ca.cnf
   server_conf=$pki_dir/server.cnf
   alt_server_conf=$pki_dir/alt_server.cnf
+  san_server_conf=$pki_dir/san_server.cnf
+  cn_server_conf=$pki_dir/cn_server.cnf
   sni_server_conf=$pki_dir/sni_server.cnf
   client_conf=$pki_dir/client.cnf
   inter_conf=$pki_dir/inter.cnf
@@ -331,6 +335,10 @@ generate_pki_files () {
   if [ -f "$pki_dir/server.pem" ] &&
      [ -f "$pki_dir/self_server.pem" ] &&
      [ -f "$pki_dir/alt_server.pem" ] &&
+     [ -f "$pki_dir/san_server.pem" ] &&
+     [ -f "$pki_dir/san_server.key" ] &&
+     [ -f "$pki_dir/cn_server.pem" ] &&
+     [ -f "$pki_dir/cn_server.key" ] &&
      [ -f "$pki_dir/sni_combined.pem" ] &&
      [ -f "$pki_dir/chain_server.pem" ] &&
      [ -f "$pki_dir/chain_depth_ok_server.pem" ] &&
@@ -394,6 +402,40 @@ subjectAltName = @alt_names
 DNS.1 = default.invalid
 EOF
 
+  cat > "$san_server_conf" <<EOF
+[req]
+distinguished_name = dn
+req_extensions = v3_req
+prompt = no
+
+[dn]
+CN = default.invalid
+
+[v3_req]
+basicConstraints = CA:false
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = $SNI_HOST
+EOF
+
+  cat > "$cn_server_conf" <<EOF
+[req]
+distinguished_name = dn
+req_extensions = v3_req
+prompt = no
+
+[dn]
+CN = $SNI_HOST
+
+[v3_req]
+basicConstraints = CA:false
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+EOF
+
   cat > "$sni_server_conf" <<EOF
 [req]
 distinguished_name = dn
@@ -453,6 +495,22 @@ EOF
     -CA "$pki_dir/ca.pem" -CAkey "$pki_dir/ca.key" -CAcreateserial \
     -out "$pki_dir/alt_server.pem" -days 1 -sha256 \
     -extensions v3_req -extfile "$alt_server_conf" \
+    >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl req -new -newkey rsa:2048 -nodes -sha256 \
+    -keyout "$pki_dir/san_server.key" -out "$pki_dir/san_server.csr" \
+    -config "$san_server_conf" >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl x509 -req -in "$pki_dir/san_server.csr" \
+    -CA "$pki_dir/ca.pem" -CAkey "$pki_dir/ca.key" -CAcreateserial \
+    -out "$pki_dir/san_server.pem" -days 1 -sha256 \
+    -extensions v3_req -extfile "$san_server_conf" \
+    >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl req -new -newkey rsa:2048 -nodes -sha256 \
+    -keyout "$pki_dir/cn_server.key" -out "$pki_dir/cn_server.csr" \
+    -config "$cn_server_conf" >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl x509 -req -in "$pki_dir/cn_server.csr" \
+    -CA "$pki_dir/ca.pem" -CAkey "$pki_dir/ca.key" -CAcreateserial \
+    -out "$pki_dir/cn_server.pem" -days 1 -sha256 \
+    -extensions v3_req -extfile "$cn_server_conf" \
     >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
   openssl req -new -newkey rsa:2048 -nodes -sha256 \
     -keyout "$pki_dir/sni_server.key" -out "$pki_dir/sni_server.csr" \
@@ -1471,6 +1529,60 @@ run_pki_missing_client_cert () {
   fi
 }
 
+run_pki_san_preferred_over_cn () {
+  case_name=pki_san_preferred_over_cn
+  echo -n "PKI SAN preferred over CN - "
+  pki_dir=$LOGDIR/pki
+
+  if ! generate_pki_files "$case_name"; then
+    fail_case "$case_name" "certificate generation failed"
+    return
+  fi
+  if ! start_pki_server "$case_name" "$pki_dir/san_server.pem" \
+      "$pki_dir/san_server.key"; then
+    fail_case "$case_name" "server did not start"
+    return
+  fi
+
+  run_pki_client "$case_name" "$pki_dir/ca.pem" "$CLIENT_TIMEOUT"
+
+  if assert_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
+     assert_contains "$LOGDIR/$case_name.client" "2\\.05" &&
+     assert_contains "$LOGDIR/$case_name.client" "CN '$SNI_HOST' presented by server" &&
+     assert_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then
+    pass_case
+  else
+    fail_case "$case_name" "PKI SAN did not override mismatching CN"
+  fi
+}
+
+run_pki_cn_fallback () {
+  case_name=pki_cn_fallback
+  echo -n "PKI CN fallback without SAN - "
+  pki_dir=$LOGDIR/pki
+
+  if ! generate_pki_files "$case_name"; then
+    fail_case "$case_name" "certificate generation failed"
+    return
+  fi
+  if ! start_pki_server "$case_name" "$pki_dir/cn_server.pem" \
+      "$pki_dir/cn_server.key"; then
+    fail_case "$case_name" "server did not start"
+    return
+  fi
+
+  run_pki_client "$case_name" "$pki_dir/ca.pem" "$CLIENT_TIMEOUT"
+
+  if assert_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
+     assert_contains "$LOGDIR/$case_name.client" "2\\.05" &&
+     assert_contains "$LOGDIR/$case_name.client" "CN '$SNI_HOST' presented by server" &&
+     assert_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then
+    pass_case
+  else
+    fail_case "$case_name" "PKI CN fallback without SAN did not complete"
+  fi
+}
+
 run_pki_sni () {
   case_name=pki_sni
   echo -n "PKI SNI certificate selection - "
@@ -1557,6 +1669,8 @@ run_pki_root_ca_file_invalid
 run_pki_root_ca_dir_invalid
 run_psk_pki_dual_mode
 run_pki_missing_client_cert
+run_pki_san_preferred_over_cn
+run_pki_cn_fallback
 run_pki_sni
 run_wrong_pki_ca
 

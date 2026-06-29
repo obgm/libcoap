@@ -18,7 +18,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   OPENHITLS_REPO: https://gitcode.com/openHiTLS/openhitls.git
   # Pinned until the next openHiTLS release
-  OPENHITLS_REF: 0a7d5a3748f94c594832a16a7a970cb19d8b4b12
+  OPENHITLS_REF: 2d524d8e0f9c392a4bc3c244f976a69f9f6bb64a
 
 jobs:
   pre-commit:
