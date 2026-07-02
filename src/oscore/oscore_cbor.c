@@ -256,10 +256,10 @@ oscore_cbor_get_next_element(const uint8_t **buffer, size_t *buf_len) {
  *   - value of unsigned integer
  */
 
-size_t
+uint64_t
 oscore_cbor_get_element_size(const uint8_t **buffer, size_t *buf_len) {
   uint8_t control = get_byte_inc(buffer, buf_len) & 0x1f;
-  size_t size;
+  uint64_t size;
 
   if (control < 0x18) {
     size = (uint64_t)control;
@@ -289,7 +289,7 @@ oscore_cbor_elem_contained(const uint8_t *data, size_t *buf_len, uint8_t *end) {
 
 int64_t
 oscore_cbor_get_negative_integer(const uint8_t **buffer, size_t *buf_len) {
-  return -(int64_t)(oscore_cbor_get_element_size(buffer, buf_len) + 1);
+  return (int64_t)((uint64_t)(-1) - oscore_cbor_get_element_size(buffer, buf_len));
 }
 
 uint64_t
