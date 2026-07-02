@@ -27,5 +27,7 @@ repos:
     rev: v4.3.0
     hooks:
     -   id: trailing-whitespace
+        exclude: 'tests/oss-fuzz/.*_seed_corpus/.*$'
     -   id: end-of-file-fixer
+        exclude: 'tests/oss-fuzz/.*_seed_corpus/.*$'
     -   id: check-merge-conflict
