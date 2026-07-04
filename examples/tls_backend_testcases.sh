@@ -9,11 +9,12 @@
 # - PSK client identity-hint callback
 # - PSK server identity callback
 # - wrong PSK negative path
-# - client first-flight loss
-# - server HelloVerifyRequest loss
-# - server ServerHello flight loss
-# - client flight loss timeout
-# - server flight loss timeout
+# - Client first-flight loss
+# - Server HelloVerifyRequest loss
+# - Server ServerHello flight loss
+# - Client flight loss timeout
+# - Server flight loss timeout
+# - PSK SNI key selection
 # - TLS-over-TCP PSK handshake success
 # - TLS-over-TCP peer close handling
 # - TLS-over-TCP PKI handshake success
@@ -21,6 +22,9 @@
 # - PKI intermediate CA chain loading
 # - PKI certificate chain depth limit success
 # - PKI certificate chain depth exceeded negative path
+# - PKI self-signed leaf allowed
+# - PKI self-signed with common CA required negative
+# - PKI non-self-signed with override open negative
 # - PKI server PEM buffer loading
 # - PKI mutual authentication success
 # - PKI root CA file mutual authentication
@@ -30,7 +34,11 @@
 # - concurrent PSK and PKI server configuration
 # - PKI missing client certificate negative path
 # - PKI SAN preferred over CN
+# - PKI second SAN preferred over CN
 # - PKI CN fallback without SAN
+# - PKI bad returned CN or SAN
+# - PKI Wildcard Certificate
+# - PKI wrong Wildcard Certificate
 # - PKI SNI certificate selection
 # - wrong PKI CA negative path
 #
@@ -160,6 +168,7 @@ SNI_URI=coaps://$SNI_URI_HOST:$SECURE_PORT/.well-known/core
 TLS_URI=coaps+tcp://$TARGET_URI_HOST:$SECURE_PORT/.well-known/core
 PKI_URI=coaps://$SNI_URI_HOST:$SECURE_PORT/.well-known/core
 TLS_PKI_URI=coaps+tcp://$SNI_URI_HOST:$SECURE_PORT/.well-known/core
+WILDCARD_URI=coaps://server.example:$SECURE_PORT/.well-known/core
 
 if command -v mktemp >/dev/null 2>&1; then
   LOGDIR=$(mktemp -d "${TMPDIR:-/tmp}"/libcoap-tls-backend.XXXXXX)
@@ -325,6 +334,9 @@ generate_pki_files () {
   server_conf=$pki_dir/server.cnf
   alt_server_conf=$pki_dir/alt_server.cnf
   san_server_conf=$pki_dir/san_server.cnf
+  second_san_server_conf=$pki_dir/second_san_server.cnf
+  wildcard_server_conf=$pki_dir/wildcard_server.cnf
+  wildcard_bad_conf=$pki_dir/wildcard_bad.cnf
   cn_server_conf=$pki_dir/cn_server.cnf
   sni_server_conf=$pki_dir/sni_server.cnf
   client_conf=$pki_dir/client.cnf
@@ -337,6 +349,12 @@ generate_pki_files () {
      [ -f "$pki_dir/alt_server.pem" ] &&
      [ -f "$pki_dir/san_server.pem" ] &&
      [ -f "$pki_dir/san_server.key" ] &&
+     [ -f "$pki_dir/second_san_server.pem" ] &&
+     [ -f "$pki_dir/second_san_server.key" ] &&
+     [ -f "$pki_dir/wildcard_server.pem" ] &&
+     [ -f "$pki_dir/wildcard_server.key" ] &&
+     [ -f "$pki_dir/wildcard_bad.pem" ] &&
+     [ -f "$pki_dir/wildcard_bad.key" ] &&
      [ -f "$pki_dir/cn_server.pem" ] &&
      [ -f "$pki_dir/cn_server.key" ] &&
      [ -f "$pki_dir/sni_combined.pem" ] &&
@@ -421,6 +439,56 @@ subjectAltName = @alt_names
 DNS.1 = $SNI_HOST
 EOF
 
+  cat > "$second_san_server_conf" <<EOF
+[req]
+distinguished_name = dn
+req_extensions = v3_req
+prompt = no
+
+[dn]
+CN = default.invalid
+
+[v3_req]
+basicConstraints = CA:false
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = default.invalid
+DNS.2 = $SNI_HOST
+EOF
+
+  cat > "$wildcard_server_conf" <<EOF
+[req]
+distinguished_name = dn
+req_extensions = v3_req
+prompt = no
+
+[dn]
+CN = *.example
+
+[v3_req]
+basicConstraints = CA:false
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+EOF
+
+  cat > "$wildcard_bad_conf" <<EOF
+[req]
+distinguished_name = dn
+req_extensions = v3_req
+prompt = no
+
+[dn]
+CN = *.bad
+
+[v3_req]
+basicConstraints = CA:false
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+EOF
+
   cat > "$cn_server_conf" <<EOF
 [req]
 distinguished_name = dn
@@ -503,6 +571,30 @@ EOF
     -CA "$pki_dir/ca.pem" -CAkey "$pki_dir/ca.key" -CAcreateserial \
     -out "$pki_dir/san_server.pem" -days 1 -sha256 \
     -extensions v3_req -extfile "$san_server_conf" \
+    >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl req -new -newkey rsa:2048 -nodes -sha256 \
+    -keyout "$pki_dir/second_san_server.key" -out "$pki_dir/second_san_server.csr" \
+    -config "$second_san_server_conf" >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl x509 -req -in "$pki_dir/second_san_server.csr" \
+    -CA "$pki_dir/ca.pem" -CAkey "$pki_dir/ca.key" -CAcreateserial \
+    -out "$pki_dir/second_san_server.pem" -days 1 -sha256 \
+    -extensions v3_req -extfile "$second_san_server_conf" \
+    >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl req -new -newkey rsa:2048 -nodes -sha256 \
+    -keyout "$pki_dir/wildcard_server.key" -out "$pki_dir/wildcard_server.csr" \
+    -config "$wildcard_server_conf" >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl x509 -req -in "$pki_dir/wildcard_server.csr" \
+    -CA "$pki_dir/ca.pem" -CAkey "$pki_dir/ca.key" -CAcreateserial \
+    -out "$pki_dir/wildcard_server.pem" -days 1 -sha256 \
+    -extensions v3_req -extfile "$wildcard_server_conf" \
+    >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl req -new -newkey rsa:2048 -nodes -sha256 \
+    -keyout "$pki_dir/wildcard_bad.key" -out "$pki_dir/wildcard_bad.csr" \
+    -config "$wildcard_bad_conf" >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl x509 -req -in "$pki_dir/wildcard_bad.csr" \
+    -CA "$pki_dir/ca.pem" -CAkey "$pki_dir/ca.key" -CAcreateserial \
+    -out "$pki_dir/wildcard_bad.pem" -days 1 -sha256 \
+    -extensions v3_req -extfile "$wildcard_bad_conf" \
     >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
   openssl req -new -newkey rsa:2048 -nodes -sha256 \
     -keyout "$pki_dir/cn_server.key" -out "$pki_dir/cn_server.csr" \
@@ -1556,6 +1648,33 @@ run_pki_san_preferred_over_cn () {
   fi
 }
 
+run_pki_second_san_preferred_over_cn () {
+  case_name=pki_second_san_preferred_over_cn
+  echo -n "PKI second SAN preferred over CN - "
+  pki_dir=$LOGDIR/pki
+
+  if ! generate_pki_files "$case_name"; then
+    fail_case "$case_name" "certificate generation failed"
+    return
+  fi
+  if ! start_pki_server "$case_name" "$pki_dir/second_san_server.pem" \
+      "$pki_dir/second_san_server.key"; then
+    fail_case "$case_name" "server did not start"
+    return
+  fi
+
+  run_pki_client "$case_name" "$pki_dir/ca.pem" "$CLIENT_TIMEOUT"
+
+  if assert_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
+     assert_contains "$LOGDIR/$case_name.client" "2\\.05" &&
+     assert_contains "$LOGDIR/$case_name.client" "CN 'default.invalid|localhost' presented by server" &&
+     assert_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then
+    pass_case
+  else
+    fail_case "$case_name" "PKI second SAN not chosen"
+  fi
+}
+
 run_pki_cn_fallback () {
   case_name=pki_cn_fallback
   echo -n "PKI CN fallback without SAN - "
@@ -1601,12 +1720,68 @@ run_pki_bad_cn_or_san () {
   run_pki_client "$case_name" "$pki_dir/ca.pem" "$CLIENT_TIMEOUT"
 
   if assert_not_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
-     assert_not_contains "$LOGDIR/$case_name.client" "2\\.05" &&
-     assert_contains "$LOGDIR/$case_name.client" "CN 'default.invalid' presented by server" &&
+     assert_contains "$LOGDIR/$case_name.client" "SNI 'localhost' not returned in certificate" &&
      assert_not_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then
     pass_case
   else
     fail_case "$case_name" "PKI CN or SAN not rejected"
+  fi
+}
+
+run_pki_wildcard () {
+  case_name=pki_wildcard
+  echo -n "PKI Wildcard Certificate - "
+  pki_dir=$LOGDIR/pki
+
+  if ! generate_pki_files "$case_name"; then
+    fail_case "$case_name" "certificate generation failed"
+    return
+  fi
+  if ! start_pki_server "$case_name" "$pki_dir/wildcard_server.pem" \
+      "$pki_dir/wildcard_server.key"; then
+    fail_case "$case_name" "server did not start"
+    return
+  fi
+
+  run_pki_client "$case_name" "$pki_dir/ca.pem" "$CLIENT_TIMEOUT" "" "" $WILDCARD_URI
+
+  if assert_not_contains "/etc/hosts" "127\\.0\\.0\\.1[[:space:]]+server\\.example"; then
+    skip_case "/etc/hosts does not contain '127.0.0.1 server.example'. Add it in."
+  elif assert_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
+     assert_contains "$LOGDIR/$case_name.client" "2\\.05" &&
+     assert_contains "$LOGDIR/$case_name.client" "CN '\\*.example' presented by server" &&
+     assert_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then
+    pass_case
+  else
+    fail_case "$case_name" "PKI Wildcard Certificate not accepted"
+  fi
+}
+
+run_pki_wildcard_bad () {
+  case_name=pki_wildcard_bad
+  echo -n "PKI wrong Wildcard Certificate - "
+  pki_dir=$LOGDIR/pki
+
+  if ! generate_pki_files "$case_name"; then
+    fail_case "$case_name" "certificate generation failed"
+    return
+  fi
+  if ! start_pki_server "$case_name" "$pki_dir/wildcard_bad.pem" \
+      "$pki_dir/wildcard_bad.key"; then
+    fail_case "$case_name" "server did not start"
+    return
+  fi
+
+  run_pki_client "$case_name" "$pki_dir/ca.pem" "$CLIENT_TIMEOUT" "" "" $WILDCARD_URI
+
+  if assert_not_contains "/etc/hosts" "127\\.0\\.0\\.1[[:space:]]+server\\.example"; then
+    skip_case "/etc/hosts does not contain '127.0.0.1 server.example'. Add it in."
+  elif assert_not_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
+     assert_contains "$LOGDIR/$case_name.client" "SNI 'server.example' not returned in certificate" &&
+     assert_not_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then
+    pass_case
+  else
+    fail_case "$case_name" "PKI bad Wildcard Certificate accepted"
   fi
 }
 
@@ -1698,8 +1873,11 @@ run_pki_root_ca_dir_invalid
 run_psk_pki_dual_mode
 run_pki_missing_client_cert
 run_pki_san_preferred_over_cn
+run_pki_second_san_preferred_over_cn
 run_pki_cn_fallback
 run_pki_bad_cn_or_san
+run_pki_wildcard
+run_pki_wildcard_bad
 run_pki_sni
 run_wrong_pki_ca
 

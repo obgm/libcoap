@@ -167,18 +167,6 @@ wolfssl_strdup(const char *str) {
   return ret;
 }
 
-static char *
-wolfssl_strndup(const char *str, size_t n) {
-  size_t len = strnlen(str, n);
-  char *ret = (char *)wolfssl_malloc(len + 1);
-
-  if (ret) {
-    strncpy(ret, str, len);
-    ret[len] = '\0';
-  }
-  return ret;
-}
-
 static coap_wolfssl_env_t *
 coap_dtls_new_wolfssl_env(coap_session_t *c_session, coap_dtls_role_t role) {
   coap_wolfssl_env_t *w_env = (coap_wolfssl_env_t *)c_session->tls;
@@ -1483,13 +1471,14 @@ setup_pki_ssl(WOLFSSL *ssl,
 }
 
 static char *
-get_san_or_cn_from_cert(WOLFSSL_X509 *x509) {
+get_san_or_cn_from_cert(coap_session_t *session, WOLFSSL_X509 *x509, const char *sni_match) {
   if (x509) {
     char *cn;
     int n;
     WOLF_STACK_OF(WOLFSSL_GENERAL_NAME) *san_list;
     char buffer[256];
 
+    (void)session;
     buffer[0] = '\000';
     san_list = wolfSSL_X509_get_ext_d2i(x509, NID_subject_alt_name, NULL, NULL);
     if (san_list) {
@@ -1504,6 +1493,11 @@ get_san_or_cn_from_cert(WOLFSSL_X509 *x509) {
           /* Make sure that there is not an embedded NUL in the dns_name */
           if (wolfSSL_ASN1_STRING_length(name->d.dNSName) != (int)strlen(dns_name))
             continue;
+          if (sni_match) {
+            if (strcmp(dns_name, sni_match)) {
+              continue;
+            }
+          }
           cn = wolfssl_strdup(dns_name);
           wolfSSL_sk_GENERAL_NAME_pop_free(san_list, wolfSSL_GENERAL_NAME_free);
           return cn;
@@ -1531,10 +1525,39 @@ get_san_or_cn_from_cert(WOLFSSL_X509 *x509) {
     if (n > 0) {
       char *ecn = strchr(cn, '/');
       if (ecn) {
-        return wolfssl_strndup(cn, ecn-cn);
-      } else {
-        return wolfssl_strdup(cn);
+        cn[ecn-cn] = '\000';
       }
+      if (sni_match) {
+        if (!coap_pki_name_match_sni(cn, strlen(cn), sni_match)) {
+          coap_log_debug("   %s: got CN '%s'\n",
+                         coap_session_str(session), cn);
+          goto no_match;
+        }
+      }
+      return wolfssl_strdup(cn);
+    }
+no_match:
+    if (!sni_match) {
+      return NULL;
+    }
+    san_list = X509_get_ext_d2i(x509, NID_subject_alt_name, NULL, NULL);
+    if (san_list) {
+      int san_count = sk_GENERAL_NAME_num(san_list);
+
+      for (n = 0; n < san_count; n++) {
+        const GENERAL_NAME *name = sk_GENERAL_NAME_value(san_list, n);
+
+        if (name && name->type == GEN_DNS) {
+          const char *dns_name = (const char *)ASN1_STRING_get0_data(name->d.dNSName);
+
+          /* Make sure that there is not an embedded NUL in the dns_name */
+          if (ASN1_STRING_length(name->d.dNSName) != (int)strlen(dns_name))
+            continue;
+          coap_log_debug("   %s: got DNS.%d '%s'\n",
+                         coap_session_str(session), n + 1, dns_name);
+        }
+      }
+      sk_GENERAL_NAME_pop_free(san_list, GENERAL_NAME_free);
     }
   }
   return NULL;
@@ -1553,7 +1576,7 @@ tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
   WOLFSSL_X509 *x509 = wolfSSL_X509_STORE_CTX_get_current_cert(ctx);
   char *cn = NULL;
 
-  if (!setup_data) {
+  if (!setup_data || !x509) {
     wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
     return 0;
   }
@@ -1561,15 +1584,53 @@ tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
   if (setup_data->is_rpk_not_cert) {
     cn = wolfssl_strdup("RPK");
   } else {
-    cn = x509 ? get_san_or_cn_from_cert(x509) : NULL;
+    if (depth == 0 && session->type == COAP_SESSION_TYPE_CLIENT && setup_data->client_sni &&
+        !setup_data->allow_sni_cn_mismatch) {
+      cn = get_san_or_cn_from_cert(session, x509, setup_data->client_sni);
+
+      if (!cn) {
+        coap_log_info("   %s: SNI '%s' not returned in certificate\n",
+                      coap_session_str(session), setup_data->client_sni);
+        preverify_ok = 0;
+        X509_STORE_CTX_set_error(ctx, X509_V_ERR_SUBJECT_ISSUER_MISMATCH);
+        err = X509_V_ERR_SUBJECT_ISSUER_MISMATCH;
+      }
+    }
+    if (!cn)
+      cn = get_san_or_cn_from_cert(session, x509, NULL);
   }
   coap_dtls_log(COAP_LOG_DEBUG, "depth %d error %x preverify %d cert '%s'\n",
                 depth, err, preverify_ok, cn ? cn : "");
-  if (depth == 0 && session->type == COAP_SESSION_TYPE_CLIENT && setup_data->client_sni && cn &&
-      strcmp(cn, setup_data->client_sni)) {
-    preverify_ok = 0;
-    X509_STORE_CTX_set_error(ctx, X509_V_ERR_SUBJECT_ISSUER_MISMATCH);
-    err = X509_V_ERR_SUBJECT_ISSUER_MISMATCH;
+  /* Certificate - depth == 0 is the Client Cert */
+  if (setup_data->validate_cn_call_back) {
+    int length = wolfSSL_i2d_X509(x509, NULL);
+
+    if (length > 0) {
+      uint8_t *base_buf;
+      uint8_t *base_buf2 = base_buf = wolfssl_malloc(length);
+      int ret;
+
+      if (base_buf) {
+        /* base_buf2 gets moved to the end */
+        wolfSSL_i2d_X509(x509, &base_buf2);
+        coap_lock_callback_ret(ret,
+                               setup_data->validate_cn_call_back(cn, base_buf, length, session,
+                                                                 depth, preverify_ok,
+                                                                 setup_data->cn_call_back_arg));
+        if (!ret) {
+          if (depth == 0) {
+            wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
+          } else {
+            wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_CA);
+          }
+          preverify_ok = 0;
+        }
+        wolfssl_free(base_buf);
+      } else {
+        wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
+        preverify_ok = 0;
+      }
+    }
   }
   if (!preverify_ok) {
     switch (err) {
@@ -1630,37 +1691,6 @@ tls_verify_call_back(int preverify_ok, WOLFSSL_X509_STORE_CTX *ctx) {
       coap_log_info("   %s: %s: overridden: '%s' depth=%d\n",
                     coap_session_str(session),
                     wolfSSL_X509_verify_cert_error_string(err), cn ? cn : "?", depth);
-    }
-  }
-  /* Certificate - depth == 0 is the Client Cert */
-  if (setup_data->validate_cn_call_back) {
-    int length = wolfSSL_i2d_X509(x509, NULL);
-
-    if (length > 0) {
-      uint8_t *base_buf;
-      uint8_t *base_buf2 = base_buf = wolfssl_malloc(length);
-      int ret;
-
-      if (base_buf) {
-        /* base_buf2 gets moved to the end */
-        wolfSSL_i2d_X509(x509, &base_buf2);
-        coap_lock_callback_ret(ret,
-                               setup_data->validate_cn_call_back(cn, base_buf, length, session,
-                                                                 depth, preverify_ok,
-                                                                 setup_data->cn_call_back_arg));
-        if (!ret) {
-          if (depth == 0) {
-            wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
-          } else {
-            wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_CA);
-          }
-          preverify_ok = 0;
-        }
-        wolfssl_free(base_buf);
-      } else {
-        wolfSSL_X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
-        preverify_ok = 0;
-      }
     }
   }
   wolfssl_free(cn);
@@ -2118,8 +2148,8 @@ setup_client_ssl_session(coap_session_t *session, WOLFSSL *ssl) {
       }
 #endif /* !COAP_DISABLE_TCP */
       coap_log_debug("CoAP Client restricted to (D)TLS1.2 with Identity Hint callback\n");
-    }
-    if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
+      set_ciphersuites(ssl, COAP_ENC_PSK);
+    } else if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
       set_ciphersuites(ssl, COAP_ENC_PSK);
     }
 

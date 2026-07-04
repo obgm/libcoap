@@ -610,19 +610,29 @@ psk_server_callback(void *p_info, mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED && MBEDTLS_SSL_SRV_C */
 
 static char *
-get_san_or_cn_from_cert(mbedtls_x509_crt *crt) {
+get_san_or_cn_from_cert(coap_session_t *session, mbedtls_x509_crt *crt, const char *sni_match) {
   if (crt) {
     const mbedtls_asn1_named_data *cn_data;
 
+    (void)session;
     if (crt->ext_types & MBEDTLS_X509_EXT_SUBJECT_ALT_NAME) {
       mbedtls_asn1_sequence *seq = &crt->subject_alt_names;
-      while (seq && seq->buf.p == NULL) {
-        seq = seq->next;
-      }
-      if (seq) {
-        /* Return the Subject Alt Name */
-        return mbedtls_strndup((const char *)seq->buf.p,
-                               seq->buf.len);
+      while (seq) {
+        while (seq->buf.p == NULL) {
+          seq = seq->next;
+        }
+        if (seq) {
+          if (sni_match) {
+            if (strlen(sni_match) != seq->buf.len ||
+                memcmp(seq->buf.p, sni_match, seq->buf.len)) {
+              seq = seq->next;
+              continue;
+            }
+          }
+          /* Return the Subject Alt Name */
+          return mbedtls_strndup((const char *)seq->buf.p,
+                                 seq->buf.len);
+        }
       }
     }
 
@@ -630,9 +640,39 @@ get_san_or_cn_from_cert(mbedtls_x509_crt *crt) {
                                            MBEDTLS_OID_AT_CN,
                                            MBEDTLS_OID_SIZE(MBEDTLS_OID_AT_CN));
     if (cn_data) {
+      if (sni_match) {
+        if (!coap_pki_name_match_sni((char *)cn_data->val.p, cn_data->val.len, sni_match)) {
+          coap_log_debug("   %s: got CN '%*.*s'\n",
+                         coap_session_str(session), (int)cn_data->val.len,
+                         (int)cn_data->val.len, cn_data->val.p);
+          goto no_match;
+        }
+      }
       /* Return the Common Name */
       return mbedtls_strndup((const char *)cn_data->val.p,
                              cn_data->val.len);
+    }
+no_match:
+    if (!sni_match) {
+      return NULL;
+    }
+    if (crt->ext_types & MBEDTLS_X509_EXT_SUBJECT_ALT_NAME) {
+      mbedtls_asn1_sequence *seq = &crt->subject_alt_names;
+      int n = 0;
+
+      while (seq) {
+        while (seq->buf.p == NULL) {
+          seq = seq->next;
+        }
+        if (seq) {
+          coap_log_debug("   %s: got DNS.%d '%*.*s'\n",
+                         coap_session_str(session), n + 1, (int)seq->buf.len,
+                         (int)seq->buf.len, seq->buf.p);
+          seq = seq->next;
+          n++;
+          continue;
+        }
+      }
     }
   }
   return NULL;
@@ -678,13 +718,21 @@ cert_verify_callback_mbedtls(void *data, mbedtls_x509_crt *crt,
   coap_dtls_pki_t *setup_data = &m_context->setup_data;
   char *cn = NULL;
 
-  cn = get_san_or_cn_from_cert(crt);
+  if (!setup_data->allow_sni_cn_mismatch && depth == 0 &&
+      c_session->type == COAP_SESSION_TYPE_CLIENT && setup_data->client_sni) {
+
+    cn = get_san_or_cn_from_cert(c_session, crt, setup_data->client_sni);
+    if (!cn) {
+      coap_log_info("   %s: SNI '%s' not returned in certificate\n",
+                    coap_session_str(c_session), setup_data->client_sni);
+      *flags |= MBEDTLS_X509_BADCERT_CN_MISMATCH;
+    }
+  }
+  if (!cn) {
+    cn = get_san_or_cn_from_cert(c_session, crt, NULL);
+  }
   coap_dtls_log(COAP_LOG_DEBUG, "depth %d flags %x cert '%s'\n",
                 depth, *flags, cn);
-  if (depth == 0 && c_session->type == COAP_SESSION_TYPE_CLIENT && setup_data->client_sni && cn &&
-      strcmp(cn, setup_data->client_sni)) {
-    *flags |= MBEDTLS_X509_BADCERT_CN_MISMATCH;
-  }
   if (setup_data->validate_cn_call_back) {
     int ret;
 
