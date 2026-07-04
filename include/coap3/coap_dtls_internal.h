@@ -512,6 +512,17 @@ int coap_dtls_define_issue(coap_define_issue_key_t type,
  */
 int coap_dtls_set_cid_tuple_change(coap_context_t *context, uint8_t every);
 
+/**
+ * Check if the PKI name entry is a (wildcard) match for the requested SNI.
+ *
+ * @param name_entry     The current name entry from the Certificate.
+ * @param name_length    The length of the current name entry from the Certificate.
+ * @param sni_match      The requested host name in the SNI request.
+ *
+ * @return @c 1 if a match, else @c 0.
+ */
+int coap_pki_name_match_sni(const char *name_entry, size_t name_length, const char *sni_match);
+
 /** @} */
 
 #ifdef __cplusplus

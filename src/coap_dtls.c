@@ -290,6 +290,28 @@ coap_dtls_close(coap_session_t *session) {
   session->sock.lfunc[COAP_LAYER_TLS].l_close(session);
 }
 
+int
+coap_pki_name_match_sni(const char *name_entry, size_t name_length, const char *sni_match) {
+  if (!sni_match)
+    return 1;
+
+  if (name_length >= 2 && name_entry[0] == '*' && name_entry[1] == '.') {
+    /* Check for wildcard match */
+    const char *cp = strchr(sni_match, '.');
+
+    if (!cp || strlen(cp) != name_length -1 || memcmp(&name_entry[1], cp, name_length -1)) {
+      /* Not an wildcard match */
+      return 0;
+    }
+  } else {
+    if (strlen(sni_match) != name_length || memcmp(name_entry, sni_match, name_length)) {
+      /* Not an absolute match */
+      return 0;
+    }
+  }
+  return 1;
+}
+
 #if !COAP_DISABLE_TCP
 void
 coap_tls_establish(coap_session_t *session) {

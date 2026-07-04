@@ -805,13 +805,16 @@ coap_hitls_copy_name(const uint8_t *data, uint32_t data_len) {
 }
 
 static char *
-coap_hitls_get_san_from_cert(HITLS_X509_Cert *cert) {
+coap_hitls_get_san_from_cert(coap_session_t *session, HITLS_X509_Cert *cert,
+                             const char *sni_match, int report_san) {
   HITLS_X509_ExtSan san = {0};
   char *dns_name = NULL;
 
   if (HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SAN, &san,
                           sizeof(san)) == HITLS_PKI_SUCCESS &&
       san.names) {
+    int n = 0;
+
     for (BslListNode *name_node = BSL_LIST_FirstNode(san.names);
          name_node != NULL;
          name_node = BSL_LIST_GetNextNode(san.names, name_node)) {
@@ -823,6 +826,19 @@ coap_hitls_get_san_from_cert(HITLS_X509_Cert *cert) {
       if (name->value.dataLen &&
           memchr(name->value.data, '\000', name->value.dataLen))
         continue;
+      if (report_san) {
+        coap_log_debug("   %s: got DNS.%d '%*.*s'\n",
+                       coap_session_str(session), n + 1, (int)name->value.dataLen, (int)name->value.dataLen,
+                       name->value.data);
+        n++;
+        continue;
+      }
+      if (sni_match) {
+        if (strlen(sni_match) != name->value.dataLen ||
+            memcmp(name->value.data, sni_match, name->value.dataLen)) {
+          continue;
+        }
+      }
       dns_name = coap_hitls_copy_name(name->value.data, name->value.dataLen);
       break;
     }
@@ -833,13 +849,19 @@ coap_hitls_get_san_from_cert(HITLS_X509_Cert *cert) {
 }
 
 static char *
-coap_hitls_get_cn_from_cert(HITLS_X509_Cert *cert) {
+coap_hitls_get_cn_from_cert(coap_session_t *session, HITLS_X509_Cert *cert, const char *sni_match) {
   BSL_Buffer cn = {0};
   char *cn_name = NULL;
 
   if (HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_CN_STR,
                           &cn, sizeof(cn)) == HITLS_PKI_SUCCESS) {
-    cn_name = coap_hitls_copy_name(cn.data, cn.dataLen);
+    if (cn.data && coap_pki_name_match_sni((char *)cn.data, cn.dataLen, sni_match)) {
+      cn_name = coap_hitls_copy_name(cn.data, cn.dataLen);
+    }
+  }
+  if (cn.data && !cn_name) {
+    coap_log_debug("   %s: got CN '%*.*s'\n",
+                   coap_session_str(session), (int)cn.dataLen, (int)cn.dataLen, cn.data);
   }
   if (cn.data)
     BSL_SAL_Free(cn.data);
@@ -847,15 +869,20 @@ coap_hitls_get_cn_from_cert(HITLS_X509_Cert *cert) {
 }
 
 static char *
-coap_hitls_get_san_or_cn_from_cert(HITLS_X509_Cert *cert) {
+coap_hitls_get_san_or_cn_from_cert(coap_session_t *session, HITLS_X509_Cert *cert,
+                                   const char *sni_match) {
   char *name;
 
   if (!cert)
     return NULL;
-  name = coap_hitls_get_san_from_cert(cert);
+  name = coap_hitls_get_san_from_cert(session, cert, sni_match, 0);
   if (name)
     return name;
-  return coap_hitls_get_cn_from_cert(cert);
+  name = coap_hitls_get_cn_from_cert(session, cert, sni_match);
+  if (!name) {
+    name = coap_hitls_get_san_from_cert(session, cert, sni_match, 1);
+  }
+  return name;
 }
 
 static int
@@ -863,10 +890,10 @@ coap_hitls_validate_cn_cert(coap_session_t *session,
                             const coap_dtls_pki_t *setup_data,
                             HITLS_X509_Cert *cert,
                             unsigned depth,
-                            int validated) {
+                            int validated,
+                            char **san_or_cn) {
   uint8_t *der = NULL;
   uint32_t der_len = 0;
-  char *san_or_cn;
   int ret = 1;
 
   (void)HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODELEN,
@@ -874,22 +901,16 @@ coap_hitls_validate_cn_cert(coap_session_t *session,
   if (der_len)
     (void)HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODE,
                               &der, sizeof(der));
-  san_or_cn = coap_hitls_get_san_or_cn_from_cert(cert);
+  if (!*san_or_cn)
+    *san_or_cn = coap_hitls_get_san_or_cn_from_cert(session, cert, NULL);
 
   if (setup_data->validate_cn_call_back) {
     coap_lock_callback_ret(ret,
                            setup_data->validate_cn_call_back(
-                               san_or_cn ? san_or_cn : "",
+                               *san_or_cn ? *san_or_cn : "",
                                der, der_len, session, depth, validated,
                                setup_data->cn_call_back_arg));
   }
-  if (depth == 0 && session->type == COAP_SESSION_TYPE_CLIENT &&
-      setup_data->client_sni && !setup_data->allow_sni_cn_mismatch &&
-      san_or_cn && strcmp(san_or_cn, setup_data->client_sni)) {
-    ret = 0;
-  }
-  if (san_or_cn)
-    coap_free_type(COAP_STRING, san_or_cn);
   return ret;
 }
 
@@ -901,6 +922,7 @@ coap_hitls_verify_cb(int32_t err_code, HITLS_CERT_StoreCtx *store_ctx) {
   HITLS_X509_Cert *cert;
   int32_t depth;
   int allowed;
+  char *san_or_cn = NULL;
 
   if (!coap_hitls_get_verify_session(store_ctx, &session) ||
       !session->context || !session->context->dtls_context)
@@ -908,6 +930,37 @@ coap_hitls_verify_cb(int32_t err_code, HITLS_CERT_StoreCtx *store_ctx) {
 
   context = (coap_hitls_context_t *)session->context->dtls_context;
   setup_data = &context->setup_data;
+
+  if (!coap_hitls_get_verify_cert(store_ctx, &cert, &depth)) {
+    return err_code;
+  }
+  if (!setup_data->allow_sni_cn_mismatch && depth <= 0 &&
+      session->type == COAP_SESSION_TYPE_CLIENT && setup_data->client_sni) {
+
+    san_or_cn = coap_hitls_get_san_or_cn_from_cert(session, cert, setup_data->client_sni);
+    if (!san_or_cn) {
+      /* No match on returned Cert for requested host */
+      coap_log_warn("*  %s: SNI '%s' not returned in certificate\n",
+                    coap_session_str(session),
+                    setup_data->client_sni);
+      return HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
+    }
+  }
+  if (setup_data->validate_cn_call_back) {
+    if (!coap_hitls_validate_cn_cert(session, setup_data, cert,
+                                     depth < 0 ? 0 : (unsigned)depth,
+                                     err_code == HITLS_PKI_SUCCESS, &san_or_cn)) {
+      coap_log_warn("*  %s: certificate verification failed: %s\n",
+                    coap_session_str(session),
+                    coap_hitls_verify_err_str(HITLS_X509_ERR_VFY_HOSTNAME_FAIL));
+      if (san_or_cn)
+        coap_free_type(COAP_STRING, san_or_cn);
+      return HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
+    }
+  }
+  if (san_or_cn)
+    coap_free_type(COAP_STRING, san_or_cn);
+
   if (err_code == HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND ||
       err_code == HITLS_X509_ERR_ROOT_CERT_NOT_FOUND) {
     allowed = coap_hitls_verify_cb_self_signed_allowed(setup_data,
@@ -920,18 +973,6 @@ coap_hitls_verify_cb(int32_t err_code, HITLS_CERT_StoreCtx *store_ctx) {
                   coap_session_str(session),
                   coap_hitls_verify_err_str(err_code), (unsigned int)err_code);
     return err_code;
-  }
-
-  if (setup_data->validate_cn_call_back &&
-      coap_hitls_get_verify_cert(store_ctx, &cert, &depth)) {
-    if (!coap_hitls_validate_cn_cert(session, setup_data, cert,
-                                     depth < 0 ? 0 : (unsigned)depth,
-                                     err_code == HITLS_PKI_SUCCESS)) {
-      coap_log_warn("*  %s: certificate verification failed: %s\n",
-                    coap_session_str(session),
-                    coap_hitls_verify_err_str(HITLS_X509_ERR_VFY_HOSTNAME_FAIL));
-      return HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
-    }
   }
 
   return HITLS_PKI_SUCCESS;
@@ -968,6 +1009,7 @@ coap_hitls_app_verify_cb(HITLS_CERT_StoreCtx *store_ctx,
        ret == HITLS_X509_ERR_ROOT_CERT_NOT_FOUND) &&
       coap_hitls_self_signed_leaf_allowed(setup_data, store_ctx,
                                           &leaf_cert)) {
+    char *san_or_cn = NULL;
     if (!setup_data->allow_expired_certs) {
       int32_t time_ret = coap_hitls_cert_time_valid(leaf_cert);
 
@@ -981,8 +1023,13 @@ coap_hitls_app_verify_cb(HITLS_CERT_StoreCtx *store_ctx,
     coap_log_info("   %s: %s: overridden: 'self-signed' depth=0\n",
                   coap_session_str(session),
                   coap_hitls_verify_err_str(ret));
-    if (!coap_hitls_validate_cn_cert(session, setup_data, leaf_cert, 0, 0))
+    if (!coap_hitls_validate_cn_cert(session, setup_data, leaf_cert, 0, 0, &san_or_cn)) {
+      if (san_or_cn)
+        coap_free_type(COAP_STRING, san_or_cn);
       return HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
+    }
+    if (san_or_cn)
+      coap_free_type(COAP_STRING, san_or_cn);
     return HITLS_APP_VERIFY_CALLBACK_SUCCESS;
   }
 

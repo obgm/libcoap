@@ -2409,13 +2409,14 @@ fail_ns_ca:
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L || COAP_CLIENT_SUPPORT */
 
 static char *
-get_san_or_cn_from_cert(X509 *x509) {
+get_san_or_cn_from_cert(coap_session_t *session, X509 *x509, const char *sni_match) {
   if (x509) {
     char *cn;
     int n;
     STACK_OF(GENERAL_NAME) *san_list;
     char buffer[256];
 
+    (void)session;
     san_list = X509_get_ext_d2i(x509, NID_subject_alt_name, NULL, NULL);
     if (san_list) {
       int san_count = sk_GENERAL_NAME_num(san_list);
@@ -2429,6 +2430,11 @@ get_san_or_cn_from_cert(X509 *x509) {
           /* Make sure that there is not an embedded NUL in the dns_name */
           if (ASN1_STRING_length(name->d.dNSName) != (int)strlen(dns_name))
             continue;
+          if (sni_match) {
+            if (strcmp(dns_name, sni_match)) {
+              continue;
+            }
+          }
           cn = OPENSSL_strdup(dns_name);
           sk_GENERAL_NAME_pop_free(san_list, GENERAL_NAME_free);
           return cn;
@@ -2455,10 +2461,39 @@ get_san_or_cn_from_cert(X509 *x509) {
     if (n > 0) {
       char *ecn = strchr(cn, '/');
       if (ecn) {
-        return OPENSSL_strndup(cn, ecn-cn);
-      } else {
-        return OPENSSL_strdup(cn);
+        cn[ecn-cn] = '\000';
       }
+      if (sni_match) {
+        if (!coap_pki_name_match_sni(cn, strlen(cn), sni_match)) {
+          coap_log_debug("   %s: got CN '%s'\n",
+                         coap_session_str(session), cn);
+          goto no_match;
+        }
+      }
+      return OPENSSL_strdup(cn);
+    }
+no_match:
+    if (!sni_match) {
+      return NULL;
+    }
+    san_list = X509_get_ext_d2i(x509, NID_subject_alt_name, NULL, NULL);
+    if (san_list) {
+      int san_count = sk_GENERAL_NAME_num(san_list);
+
+      for (n = 0; n < san_count; n++) {
+        const GENERAL_NAME *name = sk_GENERAL_NAME_value(san_list, n);
+
+        if (name && name->type == GEN_DNS) {
+          const char *dns_name = (const char *)ASN1_STRING_get0_data(name->d.dNSName);
+
+          /* Make sure that there is not an embedded NUL in the dns_name */
+          if (ASN1_STRING_length(name->d.dNSName) != (int)strlen(dns_name))
+            continue;
+          coap_log_debug("   %s: got DNS.%d '%s'\n",
+                         coap_session_str(session), n + 1, dns_name);
+        }
+      }
+      sk_GENERAL_NAME_pop_free(san_list, GENERAL_NAME_free);
     }
   }
   return NULL;
@@ -2475,20 +2510,57 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
   int depth = X509_STORE_CTX_get_error_depth(ctx);
   int err = X509_STORE_CTX_get_error(ctx);
   X509 *x509 = X509_STORE_CTX_get_current_cert(ctx);
-  char *cn = x509 ? get_san_or_cn_from_cert(x509) : NULL;
+  char *cn = NULL;
 
-  coap_dtls_log(COAP_LOG_DEBUG, "depth %d error %x preverify %d cert '%s'\n",
-                depth, err, preverify_ok, cn);
-  if (!setup_data) {
+  if (!setup_data || !x509) {
     X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
-    OPENSSL_free(cn);
     return 0;
   }
   if (depth == 0 && session->type == COAP_SESSION_TYPE_CLIENT && setup_data->client_sni &&
-      !setup_data->allow_sni_cn_mismatch && cn && strcmp(cn, setup_data->client_sni)) {
-    preverify_ok = 0;
-    X509_STORE_CTX_set_error(ctx, X509_V_ERR_SUBJECT_ISSUER_MISMATCH);
-    err = X509_V_ERR_SUBJECT_ISSUER_MISMATCH;
+      !setup_data->allow_sni_cn_mismatch) {
+    cn = get_san_or_cn_from_cert(session, x509, setup_data->client_sni);
+    if (!cn) {
+      coap_log_info("   %s: SNI '%s' not returned in certificate\n",
+                    coap_session_str(session), setup_data->client_sni);
+      preverify_ok = 0;
+      X509_STORE_CTX_set_error(ctx, X509_V_ERR_SUBJECT_ISSUER_MISMATCH);
+      err = X509_V_ERR_SUBJECT_ISSUER_MISMATCH;
+    }
+  }
+  if (!cn)
+    cn = get_san_or_cn_from_cert(session, x509, NULL);
+
+  coap_dtls_log(COAP_LOG_DEBUG, "depth %d error %x preverify %d cert '%s'\n",
+                depth, err, preverify_ok, cn);
+
+  /* Certificate - depth == 0 is the Client Cert */
+  if (setup_data->validate_cn_call_back) {
+    int length = i2d_X509(x509, NULL);
+    uint8_t *base_buf;
+    uint8_t *base_buf2 = base_buf = length > 0 ? OPENSSL_malloc(length) : NULL;
+    int ret;
+
+    if (base_buf) {
+      /* base_buf2 gets moved to the end */
+      assert(i2d_X509(x509, &base_buf2) > 0);
+      (void)base_buf2;
+      coap_lock_callback_ret(ret,
+                             setup_data->validate_cn_call_back(cn, base_buf, length, session,
+                                                               depth, preverify_ok,
+                                                               setup_data->cn_call_back_arg));
+      if (!ret) {
+        if (depth == 0) {
+          X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
+        } else {
+          X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_CA);
+        }
+        preverify_ok = 0;
+      }
+      OPENSSL_free(base_buf);
+    } else {
+      X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
+      preverify_ok = 0;
+    }
   }
   if (!preverify_ok) {
     switch (err) {
@@ -2547,35 +2619,6 @@ tls_verify_call_back(int preverify_ok, X509_STORE_CTX *ctx) {
       coap_log_info("   %s: %s: overridden: '%s' depth=%d\n",
                     coap_session_str(session),
                     X509_verify_cert_error_string(err), cn ? cn : "?", depth);
-    }
-  }
-  /* Certificate - depth == 0 is the Client Cert */
-  if (setup_data->validate_cn_call_back) {
-    int length = i2d_X509(x509, NULL);
-    uint8_t *base_buf;
-    uint8_t *base_buf2 = base_buf = length > 0 ? OPENSSL_malloc(length) : NULL;
-    int ret;
-
-    if (base_buf) {
-      /* base_buf2 gets moved to the end */
-      assert(i2d_X509(x509, &base_buf2) > 0);
-      (void)base_buf2;
-      coap_lock_callback_ret(ret,
-                             setup_data->validate_cn_call_back(cn, base_buf, length, session,
-                                                               depth, preverify_ok,
-                                                               setup_data->cn_call_back_arg));
-      if (!ret) {
-        if (depth == 0) {
-          X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
-        } else {
-          X509_STORE_CTX_set_error(ctx, X509_V_ERR_INVALID_CA);
-        }
-        preverify_ok = 0;
-      }
-      OPENSSL_free(base_buf);
-    } else {
-      X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNSPECIFIED);
-      preverify_ok = 0;
     }
   }
   OPENSSL_free(cn);

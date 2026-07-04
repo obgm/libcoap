@@ -705,14 +705,15 @@ typedef struct {
  *        certificate. GNUTLS_CRT_UNKNOWN if failure.
  */
 static gnutls_certificate_type_t
-get_san_or_cn(gnutls_session_t g_session,
-              coap_gnutls_certificate_info_t *cert_info) {
+get_san_or_cn(coap_session_t *session, gnutls_session_t g_session,
+              coap_gnutls_certificate_info_t *cert_info, const char *sni_match) {
   gnutls_x509_crt_t cert;
   char dn[256];
   size_t size;
   int n;
   char *cn;
   int ret;
+  unsigned int seq;
 
 #if (GNUTLS_VERSION_NUMBER >= 0x030606)
   cert_info->certificate_type = gnutls_certificate_type_get2(g_session,
@@ -740,20 +741,30 @@ get_san_or_cn(gnutls_session_t g_session,
 
   cert_info->self_signed = gnutls_x509_crt_check_issuer(cert, cert);
 
-  size = sizeof(dn) -1;
   /* See if there is a Subject Alt Name first */
-  ret = gnutls_x509_crt_get_subject_alt_name(cert, 0, dn, &size, NULL);
-  if (ret >= 0) {
-    dn[size] = '\000';
-    gnutls_x509_crt_deinit(cert);
-    cert_info->san_or_cn = gnutls_strdup(dn);
-    return cert_info->certificate_type;
+  for (seq = 0; seq < 100; seq++) {
+    size = sizeof(dn) -1;
+    ret = gnutls_x509_crt_get_subject_alt_name(cert, seq, dn, &size, NULL);
+    if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
+      /* Reached the end of the SAN list */
+      break;
+    }
+    if (ret >= 0) {
+      dn[size] = '\000';
+      if (sni_match) {
+        if (strlen(sni_match) != size ||
+            memcmp(dn, sni_match, size)) {
+          continue;
+        }
+      }
+      gnutls_x509_crt_deinit(cert);
+      cert_info->san_or_cn = gnutls_strdup(dn);
+      return cert_info->certificate_type;
+    }
   }
 
   size = sizeof(dn);
   G_CHECK(gnutls_x509_crt_get_dn(cert, dn, &size), "gnutls_x509_crt_get_dn");
-
-  gnutls_x509_crt_deinit(cert);
 
   /* Need to emulate strcasestr() here.  Looking for CN= */
   n = strlen(dn) - 3;
@@ -773,9 +784,37 @@ get_san_or_cn(gnutls_session_t g_session,
     if (ecn) {
       cn[ecn-cn] = '\000';
     }
+    if (sni_match) {
+      if (!coap_pki_name_match_sni(cn, strlen(cn), sni_match)) {
+        coap_log_debug("   %s: got CN '%s'\n",
+                       coap_session_str(session), cn);
+        goto no_match;
+      }
+    }
+
+    gnutls_x509_crt_deinit(cert);
     cert_info->san_or_cn = gnutls_strdup(cn);
     return cert_info->certificate_type;
   }
+no_match:
+  n = 0;
+  for (seq = 0; seq < 100; seq++) {
+    size = sizeof(dn) -1;
+    ret = gnutls_x509_crt_get_subject_alt_name(cert, seq, dn, &size, NULL);
+    if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
+      /* Reached the end of the SAN list */
+      break;
+    }
+    if (ret >= 0) {
+      dn[size] = '\000';
+      coap_log_debug("   %s: got DNS.%d '%s'\n",
+                     coap_session_str(session), n + 1, dn);
+
+    }
+    n++;
+    continue;
+  }
+  gnutls_x509_crt_deinit(cert);
   return GNUTLS_CRT_UNKNOWN;
 
 fail:
@@ -849,7 +888,20 @@ cert_verify_gnutls(gnutls_session_t g_session) {
   gnutls_certificate_type_t cert_type;
 
   memset(&cert_info, 0, sizeof(cert_info));
-  cert_type = get_san_or_cn(g_session, &cert_info);
+  if (!g_context->setup_data.allow_sni_cn_mismatch &&
+      c_session->type == COAP_SESSION_TYPE_CLIENT &&
+      g_context->setup_data.client_sni) {
+    cert_type = get_san_or_cn(c_session, g_session, &cert_info, g_context->setup_data.client_sni);
+    if (cert_type == GNUTLS_CRT_UNKNOWN) {
+      coap_log_info("   %s: SNI '%s' not returned in certificate\n",
+                    coap_session_str(c_session), g_context->setup_data.client_sni);
+      alert = GNUTLS_A_ACCESS_DENIED;
+      goto fail;
+    }
+  }
+
+  if (!cert_info.san_or_cn)
+    cert_type = get_san_or_cn(c_session, g_session, &cert_info, NULL);
 #if (GNUTLS_VERSION_NUMBER >= 0x030606)
   if (cert_type == GNUTLS_CRT_RAW) {
     if (!check_rpk_cert(g_context, &cert_info, c_session)) {
@@ -867,18 +919,8 @@ cert_verify_gnutls(gnutls_session_t g_session) {
       goto fail;
   }
 
-  if (c_session->type == COAP_SESSION_TYPE_CLIENT && g_context->setup_data.client_sni) {
-    gnutls_typed_vdata_st host;
-
-    host.type = GNUTLS_DT_DNS_HOSTNAME;
-    host.data = (uint8_t *)g_context->setup_data.client_sni;
-    host.size = strlen(g_context->setup_data.client_sni);
-    G_CHECK(gnutls_certificate_verify_peers(g_session, &host, 1, &status),
-            "gnutls_certificate_verify_peers");
-  } else {
-    G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
-            "gnutls_certificate_verify_peers");
-  }
+  G_CHECK(gnutls_certificate_verify_peers(g_session, NULL, 0, &status),
+          "gnutls_certificate_verify_peers");
 
   coap_dtls_log(COAP_LOG_DEBUG, "error %x cert '%s'\n",
                 status, cert_info.san_or_cn);
