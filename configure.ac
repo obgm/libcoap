@@ -697,7 +697,7 @@ if test "x$build_dtls" = "xyes"; then
                fi
                have_submodule_tinydtls="yes"
 
-               auto_TinyDTLS_CFLAGS="-I \$(top_srcdir)/ext -I \$(top_srcdir)/ext/tinydtls"
+               auto_TinyDTLS_CFLAGS="-I\$(top_srcdir)/ext -I\$(top_srcdir)/ext/tinydtls"
 
                if test "x$tinydtls_cflags_overridden" != "xyes";  then
                    TinyDTLS_CFLAGS="$auto_TinyDTLS_CFLAGS"
