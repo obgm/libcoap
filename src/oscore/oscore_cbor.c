@@ -279,8 +279,9 @@ oscore_cbor_get_element_size(const uint8_t **buffer, size_t *buf_len) {
 uint8_t
 oscore_cbor_elem_contained(const uint8_t *data, size_t *buf_len, uint8_t *end) {
   const uint8_t *buf = data;
-  const uint8_t *last = data + oscore_cbor_get_element_size(&buf, buf_len);
-  if (last > end) {
+  uint64_t size = oscore_cbor_get_element_size(&buf, buf_len);
+
+  if (size > 0xffffffff || data + size > end) {
     coap_log_err("oscore_cbor_elem_contained returns 1 \n");
     return 1;
   } else
