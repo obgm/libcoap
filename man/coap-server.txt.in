@@ -242,7 +242,8 @@ OPTIONS - PSK
 (If supported by underlying (D)TLS library)
 
 *-h* hint::
-   Identity Hint to send. Default is *CoAP*. Zero length is no hint.
+   Identity Hint to send. There is no default. Zero length is no hint. +
+   Note: Setting this disables (D)TLS1.3 negotiation.
 
 *-i* match_identiity_file::
    This is a file that contains one or more lines of Identity Hints and (user)
@@ -252,7 +253,9 @@ OPTIONS - PSK
    A line that starts with # is treated as a comment. +
    Note: *-k* still needs to be defined for the default case. +
    Note: A match using the *-s* option may mean that the current Identity Hint
-   is different to that defined by *-h*.
+   is different to that defined by *-h*. +
+   Note: If *-h* is not defined, the hint from the first line is used. +
+   Note: Using this option disables (D)TLS1.3 negotiation.
 
 *-k* key::
    Pre-shared key to use for inbound connections. This cannot be empty if
@@ -272,6 +275,9 @@ OPTIONS - PSK
    not a match. +
    Note: The associated Pre-Shared Key will get updated if there is also a *-i*
    match. The update checking order is *-s* followed by *-i*.
+   Note: If the hint is not defined (by *-h* or *-i*), the hint from the first
+   line is used. +
+   Note: Using this option disables (D)TLS1.3 negotiation.
 
 *-u* user ::
    User identity for pre-shared key mode (only used if option *-P* is set).

@@ -66,7 +66,7 @@ static int verify_peer_cert = 1; /* PKI granularity - by default set */
 static uint8_t key[MAX_KEY];
 static ssize_t key_length = 0;
 static int key_defined = 0;
-static const char *hint = "CoAP";
+static const char *hint = NULL;
 static size_t extended_token_size = COAP_TOKEN_DEFAULT_MAX;
 static int enable_ws = 0;
 static int ws_port = 80;
@@ -605,7 +605,9 @@ usage(const char *program, const char *version) {
           "\t-V num \t\tVerbosity level (default 3, maximum is 7) for (D)TLS\n"
           "\t       \t\tlibrary logging\n"
           "PSK Options (if supported by underlying (D)TLS library)\n"
-          "\t-h hint\t\tIdentity Hint. Default is CoAP. Zero length is no hint\n"
+          "\t-h hint\t\tIdentity Hint to send. There is no default. Zero length\n"
+          "\t       \t\tis no hint.\n"
+          "\t       \t\tNote: Setting this disables (D)TLS1.3 negotiation\n"
           "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
           "\t       \t\tto be available. This cannot be empty if defined.\n"
           "\t       \t\tNote that both -c and -k need to be defined\n"
