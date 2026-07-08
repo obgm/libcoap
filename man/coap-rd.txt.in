@@ -75,7 +75,8 @@ OPTIONS - PSK
 (If supported by underlying (D)TLS library)
 
 *-h* hint::
-   Identity Hint to send. Default is *CoAP*. Zero length is no hint.
+   Identity Hint to send. There is no default. Zero length is no hint. +
+   Note: Setting this disables (D)TLS1.3 negotiation.
 
 *-k* key::
    Pre-shared key to use for inbound connections. This cannot be empty if

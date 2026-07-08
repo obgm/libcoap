@@ -131,7 +131,7 @@ static int no_trust_store = 0; /* Trust store not to be installed. */
 static uint8_t *key = NULL;
 static ssize_t key_length = 0;
 int key_defined = 0;
-static const char *hint = "CoAP";
+static const char *hint = NULL;
 static int support_dynamic = 0;
 static uint32_t block_mode = COAP_BLOCK_USE_LIBCOAP;
 static int echo_back = 0;
@@ -1924,8 +1924,9 @@ usage(const char *program, const char *version) {
           "\t-3     \t\tIntercept all received data sent to /example_data with\n"
           "\t       \t\tsingle body enabled and write it out (test environment)\n"
           "PSK Options (if supported by underlying (D)TLS library)\n"
-          "\t-h hint\t\tIdentity Hint to send. Default is CoAP. Zero length is\n"
-          "\t       \t\tno hint\n"
+          "\t-h hint\t\tIdentity Hint to send. There is no default. Zero length\n"
+          "\t       \t\tis no hint.\n"
+          "\t       \t\tNote: Setting this disables (D)TLS1.3 negotiation\n"
          );
   fprintf(stderr,
           "\t-i match_identity_file\n"
@@ -1936,7 +1937,10 @@ usage(const char *program, const char *version) {
           "\t       \t\t hint_to_match,identity_to_match,use_key\n"
           "\t       \t\tNote: -k still needs to be defined for the default case\n"
           "\t       \t\tNote: A match using the -s option may mean that the\n"
-          "\t       \t\tcurrent Identity Hint is different to that defined by -h\n"
+          "\t       \t\tcurrent Identity Hint is different to that defined by -h.\n"
+          "\t       \t\tNote: If -h is not defined, the hint from the first line\n"
+          "\t       \t\tis used.\n"
+          "\t       \t\tNote: Using this option disables (D)TLS1.3 negotiation\n"
           "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
           "\t       \t\tto be available. This cannot be empty if defined.\n"
           "\t       \t\tNote that both -c and -k need to be defined for both\n"
@@ -1957,6 +1961,9 @@ usage(const char *program, const char *version) {
           "\t       \t\tNote: The associated Pre-Shared Key will get updated if\n"
           "\t       \t\tthere is also a -i match.  The update checking order is\n"
           "\t       \t\t-s followed by -i\n"
+          "\t       \t\tNote: If -h or -i is not defined, the hint from the first\n"
+          "\t       \t\tline is used.\n"
+          "\t       \t\tNote: Using this option disables (D)TLS1.3 negotiation\n"
           "\t-u user\t\tUser identity for pre-shared key mode (only used if\n"
           "\t       \t\toption -P is set)\n"
           "\t-2     \t\tUse EC-JPAKE negotiation (if supported)\n"
@@ -3084,6 +3091,16 @@ main(int argc, char **argv) {
 #endif /* ! _WIN32 */
   coap_set_log_level(log_level);
   coap_dtls_set_log_level(dtls_log_level);
+
+  if (valid_ids.count > 0 && hint == NULL) {
+    /* We need to give a hint, so take the first one */
+    hint = valid_ids.id_list[0].hint_match;
+  }
+
+  if (valid_psk_snis.count > 0 && hint == NULL) {
+    /* We need to give a hint, so take the first one (which is NUL terminated */
+    hint = (const char *)valid_psk_snis.psk_sni_list[0].new_hint->s;
+  }
 
   global_context = ctx = get_context(addr_str, port_str);
   if (!ctx)
