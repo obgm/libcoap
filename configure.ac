@@ -13,11 +13,22 @@
 
 # Define the libcoap software version here. Note! The libtool versions are
 # defined later.
+#
+# Versioning follows semver.org where there is further documentation on how to
+# change version numbers.
+#
+#  MAJOR version when you make incompatible API changes
+#  MINOR version when you add functionality in a backward compatible manner
+#  PATCH version when you make backward compatible bug fixes
+#
+# Additional labels (e.g. rc1) are available, but any tagged release must now
+# only be Major.Minor.Patch.
+#
 m4_define([libcoap_major_version], [4])
 m4_define([libcoap_minor_version], [3])
 m4_define([libcoap_micro_version], [5])
 
-# define an appending release state if needed, for example for pre-releases
+# define an appending release candidate state if needed, for example for pre-releases
 # like 'alpha' or 'rc1', for a full release keep the value empty!
 # Note: When this is reverted to [] for a full release, then LT_LIBCOAP_CURRENT,
 # LT_LIBCOAP_REVISION and LT_LIBCOAP_AGE need updating to update the SO version.
