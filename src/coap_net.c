@@ -1332,7 +1332,8 @@ coap_send_message_type_lkd(coap_session_t *session, const coap_pdu_t *request,
   coap_mid_t result = COAP_INVALID_MID;
 
   coap_lock_check_locked();
-  if (request && COAP_PROTO_NOT_RELIABLE(session->proto)) {
+  if (request && COAP_PROTO_NOT_RELIABLE(session->proto) &&
+      !(type == COAP_MESSAGE_RST && coap_is_mcast(&session->addr_info.local))) {
     response = coap_pdu_init(type, 0, request->mid, 0);
     if (response)
       result = coap_send_internal(session, response, NULL);
@@ -3770,12 +3771,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_async_t *async;
 #endif /* COAP_ASYNC_SUPPORT */
 
-  if (coap_is_mcast(&session->addr_info.local)) {
-    if (COAP_PROTO_RELIABLE(session->proto) || pdu->type != COAP_MESSAGE_NON) {
-      coap_log_info("Invalid multicast packet received RFC7252 8.1\n");
-      return;
-    }
-  }
 #if COAP_ASYNC_SUPPORT
   async = coap_find_async_lkd(session, pdu->actual_token);
   if (async) {
@@ -4647,12 +4642,14 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
 #endif /* !COAP_DISABLE_TCP */
 
 static int
-check_token_size(coap_session_t *session, const coap_pdu_t *pdu) {
+check_token_size(coap_session_t *session, const coap_pdu_t *pdu, int is_local_mcast) {
   if (COAP_PDU_IS_REQUEST(pdu) &&
       pdu->actual_token.length >
       (session->type == COAP_SESSION_TYPE_CLIENT ?
        session->max_token_size : session->context->max_token_size)) {
     /* https://rfc-editor.org/rfc/rfc8974#section-2.2.2 */
+    if (is_local_mcast)
+      return 0;
     if (session->max_token_size > COAP_TOKEN_DEFAULT_MAX) {
       coap_opt_filter_t opt_filter;
       coap_pdu_t *response;
@@ -4694,10 +4691,20 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 #endif /* COAP_OSCORE_SUPPORT */
   int is_ext_token_rst = 0;
   int oscore_invalid = 0;
+  int is_local_mcast = 0;
 
   coap_pdu_reference_lkd(pdu);
   pdu->session = session;
   coap_show_pdu(COAP_LOG_DEBUG, pdu);
+
+  if (COAP_PDU_IS_REQUEST(pdu) && coap_is_mcast(&session->addr_info.local)) {
+    /* Need to be careful with responses to multicast requests */
+    is_local_mcast = 1;
+    if (COAP_PROTO_RELIABLE(session->proto) || pdu->type != COAP_MESSAGE_NON) {
+      coap_log_info("Invalid multicast packet received RFC7252 8.1\n");
+      return;
+    }
+  }
 
   /* Check validity of received code */
   if (!coap_check_code_class(session, pdu)) {
@@ -4745,14 +4752,14 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   }
 #endif /* COAP_SERVER_SUPPORT */
   if (pdu->type == COAP_MESSAGE_NON || pdu->type == COAP_MESSAGE_CON) {
-    if (!check_token_size(session, pdu)) {
+    if (!check_token_size(session, pdu, is_local_mcast)) {
       goto cleanup;
     }
   }
 #if COAP_OSCORE_SUPPORT
   if (!COAP_PDU_IS_SIGNALING(pdu) &&
       coap_option_check_critical(session, pdu, &opt_filter, COAP_CRIT_UNKNOWN) == 0) {
-    if (pdu->type == COAP_MESSAGE_CON || pdu->type == COAP_MESSAGE_NON) {
+    if (!is_local_mcast && (pdu->type == COAP_MESSAGE_CON || pdu->type == COAP_MESSAGE_NON)) {
       if (COAP_PDU_IS_REQUEST(pdu)) {
         response =
             coap_new_error_response(pdu, COAP_RESPONSE_CODE(402), &opt_filter);
