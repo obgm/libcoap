@@ -105,10 +105,6 @@
 
 static int send_recv_terminate = 0;
 
-#if COAP_SERVER_SUPPORT
-static int check_token_size(coap_session_t *session, const coap_pdu_t *pdu, coap_pdu_t **response);
-#endif /* COAP_SERVER_SUPPORT */
-
 COAP_STATIC_INLINE coap_queue_t *
 coap_malloc_node(void) {
   return (coap_queue_t *)coap_malloc_type(COAP_NODE, sizeof(coap_queue_t));
@@ -1336,8 +1332,7 @@ coap_send_message_type_lkd(coap_session_t *session, const coap_pdu_t *request,
   coap_mid_t result = COAP_INVALID_MID;
 
   coap_lock_check_locked();
-  if (request && COAP_PROTO_NOT_RELIABLE(session->proto) &&
-      !(type == COAP_MESSAGE_RST && coap_is_mcast(&session->addr_info.local))) {
+  if (request && COAP_PROTO_NOT_RELIABLE(session->proto)) {
     response = coap_pdu_init(type, 0, request->mid, 0);
     if (response)
       result = coap_send_internal(session, response, NULL);
@@ -3640,8 +3635,6 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
  *                 This parameter must not be NULL.
  * @param session  The session this request/response are associated with.
  *                 This parameter must not be NULL.
- * @param resource The resource the request is associated with.
- *                 This parameter can be NULL.
  * @return RESPONSE_DEFAULT when no special treatment is requested,
  *         RESPONSE_DROP    when the response must be discarded, or
  *         RESPONSE_SEND    when the response must be sent.
@@ -3783,15 +3776,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       return;
     }
   }
-
-  if (pdu->type == COAP_MESSAGE_NON || pdu->type == COAP_MESSAGE_CON) {
-    if (!check_token_size(session, pdu, &response)) {
-      if (!response)
-        goto finish;
-      goto skip_handler;
-    }
-  }
-
 #if COAP_ASYNC_SUPPORT
   async = coap_find_async_lkd(session, pdu->actual_token);
   if (async) {
@@ -4662,44 +4646,38 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
 }
 #endif /* !COAP_DISABLE_TCP */
 
-#if COAP_SERVER_SUPPORT
 static int
-check_token_size(coap_session_t *session, const coap_pdu_t *pdu, coap_pdu_t **response) {
-  *response = NULL;
-
+check_token_size(coap_session_t *session, const coap_pdu_t *pdu) {
   if (COAP_PDU_IS_REQUEST(pdu) &&
       pdu->actual_token.length >
       (session->type == COAP_SESSION_TYPE_CLIENT ?
        session->max_token_size : session->context->max_token_size)) {
-
     /* https://rfc-editor.org/rfc/rfc8974#section-2.2.2 */
     if (session->max_token_size > COAP_TOKEN_DEFAULT_MAX) {
       coap_opt_filter_t opt_filter;
+      coap_pdu_t *response;
 
-      /*
-       * Note - have to leave in oversize token as per
-       * https://rfc-editor.org/rfc/rfc7252#section-5.3.1
-       */
       memset(&opt_filter, 0, sizeof(coap_opt_filter_t));
-      *response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(400),
-                                          &opt_filter);
-      if (!*response) {
+      response = coap_new_error_response(pdu, COAP_RESPONSE_CODE(400),
+                                         &opt_filter);
+      if (!response) {
         coap_log_warn("coap_dispatch: cannot create error response\n");
+      } else {
+        /*
+         * Note - have to leave in oversize token as per
+         * https://rfc-editor.org/rfc/rfc7252#section-5.3.1
+         */
+        if (coap_send_internal(session, response, NULL) == COAP_INVALID_MID)
+          coap_log_warn("coap_dispatch: error sending response\n");
       }
     } else {
       /* Indicate no extended token support */
-      if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
-        *response = coap_pdu_init(COAP_MESSAGE_RST, 0, pdu->mid, 0);
-        if (!*response) {
-          coap_log_warn("coap_dispatch: cannot create error response\n");
-        }
-      }
+      coap_send_rst_lkd(session, pdu);
     }
     return 0;
   }
   return 1;
 }
-#endif /* COAP_SERVER_SUPPORT */
 
 void
 coap_dispatch(coap_context_t *context, coap_session_t *session,
@@ -4766,11 +4744,15 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     }
   }
 #endif /* COAP_SERVER_SUPPORT */
+  if (pdu->type == COAP_MESSAGE_NON || pdu->type == COAP_MESSAGE_CON) {
+    if (!check_token_size(session, pdu)) {
+      goto cleanup;
+    }
+  }
 #if COAP_OSCORE_SUPPORT
   if (!COAP_PDU_IS_SIGNALING(pdu) &&
       coap_option_check_critical(session, pdu, &opt_filter, COAP_CRIT_UNKNOWN) == 0) {
-    if (!coap_is_mcast(&session->addr_info.local) && (pdu->type == COAP_MESSAGE_CON ||
-                                                      pdu->type == COAP_MESSAGE_NON)) {
+    if (pdu->type == COAP_MESSAGE_CON || pdu->type == COAP_MESSAGE_NON) {
       if (COAP_PDU_IS_REQUEST(pdu)) {
         response =
             coap_new_error_response(pdu, COAP_RESPONSE_CODE(402), &opt_filter);
