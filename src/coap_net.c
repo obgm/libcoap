@@ -1983,39 +1983,6 @@ error:
   return COAP_INVALID_MID;
 }
 
-#if COAP_SERVER_SUPPORT
-static int
-coap_pdu_cksum(const coap_pdu_t *pdu, coap_digest_t *digest_buffer) {
-  coap_digest_ctx_t *digest_ctx = coap_digest_setup();
-
-  if (!digest_ctx || !pdu) {
-    goto fail;
-  }
-  if (pdu->used_size && pdu->token) {
-    if (!coap_digest_update(digest_ctx, pdu->token, pdu->used_size)) {
-      goto fail;
-    }
-  }
-  if (!coap_digest_update(digest_ctx, (const uint8_t *)&pdu->type, sizeof(pdu->type))) {
-    goto fail;
-  }
-  if (!coap_digest_update(digest_ctx, (const uint8_t *)&pdu->code, sizeof(pdu->code))) {
-    goto fail;
-  }
-  if (!coap_digest_update(digest_ctx, (const uint8_t *)&pdu->mid, sizeof(pdu->mid))) {
-    goto fail;
-  }
-  if (!coap_digest_final(digest_ctx, digest_buffer))
-    return 0;
-
-  return 1;
-
-fail:
-  coap_digest_free(digest_ctx);
-  return 0;
-}
-#endif /* COAP_SERVER_SUPPORT */
-
 static int
 prepend_508_ip(coap_session_t *session, coap_pdu_t *pdu) {
   char addr_str[INET6_ADDRSTRLEN + 8 + 1];
@@ -2273,15 +2240,13 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
     bytes_written = coap_send_pdu(session, pdu, NULL);
 
 #if COAP_SERVER_SUPPORT
-  if ((session->block_mode & COAP_BLOCK_CACHE_RESPONSE) &&
-      session->cached_pdu != pdu &&
+  if (session->last_resp_pdu != pdu &&
       request_pdu && COAP_PROTO_NOT_RELIABLE(session->proto) &&
       COAP_PDU_IS_REQUEST(request_pdu) &&
       COAP_PDU_IS_RESPONSE(pdu) && pdu->type == COAP_MESSAGE_ACK) {
-    coap_delete_pdu_lkd(session->cached_pdu);
-    session->cached_pdu = pdu;
-    coap_pdu_reference_lkd(session->cached_pdu);
-    coap_pdu_cksum(request_pdu, &session->cached_pdu_cksum);
+    coap_delete_pdu_lkd(session->last_resp_pdu);
+    session->last_resp_pdu = pdu;
+    coap_pdu_reference_lkd(session->last_resp_pdu);
   }
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -3756,7 +3721,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   int is_proxy_scheme = 0;
   int skip_hop_limit_check = 0;
   int resp = 0;
-  int send_early_empty_ack = 0;
   coap_string_t *query = NULL;
   coap_opt_t *observe = NULL;
   coap_string_t *uri_path = NULL;
@@ -4153,25 +4117,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     }
   }
 
-  if ((resource == context->proxy_uri_resource ||
-       (resource == context->unknown_resource &&
-        context->unknown_resource->is_reverse_proxy)) &&
-      COAP_PROTO_NOT_RELIABLE(session->proto) &&
-      pdu->type == COAP_MESSAGE_CON &&
-      !(session->block_mode & COAP_BLOCK_CACHE_RESPONSE)) {
-    /* Make the proxy response separate and fix response later */
-    send_early_empty_ack = 1;
-  }
-  if (send_early_empty_ack) {
-    coap_send_ack_lkd(session, pdu);
-    if (pdu->mid == session->last_con_mid) {
-      /* request has already been processed - do not process it again */
-      coap_log_debug("Duplicate request with mid=0x%04x - not processed\n",
-                     pdu->mid);
-      goto drop_it_no_debug;
-    }
-    session->last_con_mid = pdu->mid;
-  }
 #if COAP_WITH_OBSERVE_PERSIST
   /* If we are maintaining Observe persist */
   if (resource == context->unknown_resource) {
@@ -4260,15 +4205,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   }
 
 skip_handler:
-  if (send_early_empty_ack &&
-      response->type == COAP_MESSAGE_ACK) {
-    /* Response is now separate - convert to CON as needed */
-    response->type = COAP_MESSAGE_CON;
-    /* Check for empty ACK - need to drop as already sent */
-    if (response->code == 0) {
-      goto drop_it_no_debug;
-    }
-  }
   respond = no_response(pdu, response, session, resource);
   if (respond != RESPONSE_DROP) {
 #if (COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG)
@@ -4464,7 +4400,7 @@ handle_response(coap_context_t *context, coap_session_t *session,
   /* Check for message duplication */
   if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
     if (rcvd->type == COAP_MESSAGE_CON) {
-      if (rcvd->mid == session->last_con_mid) {
+      if (rcvd->mid == session->last_resp_mid) {
         /* Duplicate response: send ACK/RST, but don't process */
         if (session->last_con_handler_res == COAP_RESPONSE_OK)
           coap_send_ack_lkd(session, rcvd);
@@ -4472,14 +4408,13 @@ handle_response(coap_context_t *context, coap_session_t *session,
           coap_send_rst_lkd(session, rcvd);
         return;
       }
-      session->last_con_mid = rcvd->mid;
     } else if (rcvd->type == COAP_MESSAGE_ACK) {
-      if (rcvd->mid == session->last_ack_mid) {
+      if (rcvd->mid == session->last_resp_mid) {
         /* Duplicate response */
         return;
       }
-      session->last_ack_mid = rcvd->mid;
     }
+    session->last_resp_mid = rcvd->mid;
   }
   /* Check to see if checking out extended token support */
   if (session->max_token_checked == COAP_EXT_T_CHECKING &&
@@ -4724,31 +4659,26 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
 
 #if COAP_SERVER_SUPPORT
   /* See if this a repeat request */
-  if (COAP_PDU_IS_REQUEST(pdu) && session->cached_pdu &&
-      (session->block_mode & COAP_BLOCK_CACHE_RESPONSE)) {
-    coap_digest_t digest;
-
-    coap_pdu_cksum(pdu, &digest);
-    if (memcmp(&digest, &session->cached_pdu_cksum, sizeof(digest)) == 0) {
+  if (COAP_PDU_IS_REQUEST(pdu) && session->last_resp_pdu &&
+      pdu->mid == session->last_resp_pdu->mid) {
 #if COAP_OSCORE_SUPPORT
-      uint8_t oscore_encryption = session->oscore_encryption;
+    uint8_t oscore_encryption = session->oscore_encryption;
 
-      session->oscore_encryption = 0;
+    session->oscore_encryption = 0;
 #endif /* COAP_OSCORE_SUPPORT */
-      /* Account for coap_send_internal() doing a coap_delete_pdu() and
-         cached_pdu must not be removed */
-      coap_pdu_reference_lkd(session->cached_pdu);
-      coap_log_debug("Retransmit response to duplicate request\n");
-      if (coap_send_internal(session, session->cached_pdu, NULL) != COAP_INVALID_MID) {
-#if COAP_OSCORE_SUPPORT
-        session->oscore_encryption = oscore_encryption;
-#endif /* COAP_OSCORE_SUPPORT */
-        goto finish;
-      }
+    /* Account for coap_send_internal() doing a coap_delete_pdu() and
+       last_resp_pdu must not be removed */
+    coap_pdu_reference_lkd(session->last_resp_pdu);
+    coap_log_debug("Retransmit response to duplicate request\n");
+    if (coap_send_internal(session, session->last_resp_pdu, NULL) != COAP_INVALID_MID) {
 #if COAP_OSCORE_SUPPORT
       session->oscore_encryption = oscore_encryption;
 #endif /* COAP_OSCORE_SUPPORT */
+      goto finish;
     }
+#if COAP_OSCORE_SUPPORT
+    session->oscore_encryption = oscore_encryption;
+#endif /* COAP_OSCORE_SUPPORT */
   }
 #endif /* COAP_SERVER_SUPPORT */
   if (pdu->type == COAP_MESSAGE_NON || pdu->type == COAP_MESSAGE_CON) {

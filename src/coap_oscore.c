@@ -753,28 +753,6 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
     oscore_delete_association(session, association);
   association = NULL;
 
-  if (!(session->block_mode & COAP_BLOCK_CACHE_RESPONSE)) {
-    /*
-     * If this is a response ACK with data, make it a separate response
-     * by sending an Empty ACK and changing osc_pdu's MID and type.  This
-     * then allows lost response ACK (now CON) with data to be recovered.
-     */
-    if (coap_request == 0 && osc_pdu->type == COAP_MESSAGE_ACK &&
-        COAP_RESPONSE_CLASS(pdu->code) == 2 &&
-        COAP_PROTO_NOT_RELIABLE(session->proto)) {
-      coap_pdu_t *empty = coap_pdu_init(COAP_MESSAGE_ACK,
-                                        0,
-                                        osc_pdu->mid,
-                                        0);
-      if (empty) {
-        if (coap_send_internal(session, empty, NULL) != COAP_INVALID_MID) {
-          osc_pdu->mid = coap_new_message_id_lkd(session);
-          osc_pdu->type = COAP_MESSAGE_CON;
-        }
-      }
-    }
-  }
-
   if (!coap_pdu_encode_header(osc_pdu, session->proto)) {
     goto error;
   }
@@ -2750,6 +2728,10 @@ coap_oscore_overhead(coap_session_t *session, coap_pdu_t *pdu) {
 
   /* AAD overhead */
   overhead += AES_CCM_TAG;
+
+  /* Extended Token Overhead */
+  if (session->max_token_size)
+    overhead += session->max_token_size - pdu->actual_token.length;
 
   /* End of options marker */
   overhead += 1;

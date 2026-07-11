@@ -71,7 +71,6 @@ typedef struct {
 #define COAP_BLOCK_STLESS_BLOCK2 0x40 /* (svr)Server is stateless for handling Block2 */
 #define COAP_BLOCK_NOT_RANDOM_BLOCK1 0x80 /* (svr)Disable server handling random order
                                              block1 */
-#define COAP_BLOCK_CACHE_RESPONSE 0x100 /* (svr)Cache CON request's response */
 #define COAP_BLOCK_FORCE_Q_BLOCK  0x200 /* force Q-Block method without support check */
 /* WARNING: Added defined values must not encroach into 0xff000000 which are defined elsewhere */
 

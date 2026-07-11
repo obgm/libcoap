@@ -835,9 +835,8 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
 
   proxy_req->mid =  resp_pdu->mid;
 
-  /* If sent early ACK, and this is an ACK, need to convert it to CON */
-  if (COAP_PROTO_NOT_RELIABLE(session->proto) && resp_pdu->type == COAP_MESSAGE_ACK &&
-      !(session->block_mode & COAP_BLOCK_CACHE_RESPONSE)) {
+  /* We sent early ACK, and this is an ACK, need to convert it to CON */
+  if (COAP_PROTO_NOT_RELIABLE(session->proto) && resp_pdu->type == COAP_MESSAGE_ACK) {
     resp_pdu->type = COAP_MESSAGE_CON;
   }
 

@@ -511,8 +511,7 @@ coap_make_session(coap_proto_t proto, coap_session_type_t type,
 #endif /* COAP_Q_BLOCK_SUPPORT */
   session->dtls_event = -1;
   session->last_ping_mid = COAP_INVALID_MID;
-  session->last_ack_mid = COAP_INVALID_MID;
-  session->last_con_mid = COAP_INVALID_MID;
+  session->last_resp_mid = COAP_INVALID_MID;
   session->last_con_handler_res = COAP_RESPONSE_OK;
   session->max_token_size = context->max_token_size; /* RFC8974 */
   if (session->type != COAP_SESSION_TYPE_CLIENT)
@@ -659,7 +658,7 @@ coap_session_free(coap_session_t *session) {
   coap_delete_bin_const(session->last_token);
   coap_delete_bin_const(session->echo);
 #if COAP_SERVER_SUPPORT
-  coap_delete_pdu_lkd(session->cached_pdu);
+  coap_delete_pdu_lkd(session->last_resp_pdu);
 #endif /* COAP_SERVER_SUPPORT */
 
   if (session->app_cb) {
