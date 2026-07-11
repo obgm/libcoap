@@ -224,7 +224,7 @@ if [ "$SUPPRESS" = no ] ; then
 fi
 echo -n "Test 11 - "
 timeout 10 $CLIENT -w -v8 -E $INDIR/interop/a_client.conf,/tmp/client_a -m delete coap://$TARGET_IP:$S_PORT_B/oscore/test > /tmp/client_out 2>&1
-passfail 1 "^v:1 t:CON c:2.02 i:"
+passfail 1 "^v:1 t:ACK c:2.02 i:"
 
 # Test 12
 if [ "$SUPPRESS" = no ] ; then

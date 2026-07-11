@@ -51,7 +51,6 @@ extern "C" {
                              COAP_BLOCK_STLESS_FETCH | \
                              COAP_BLOCK_STLESS_BLOCK2 | \
                              COAP_BLOCK_NOT_RANDOM_BLOCK1 | \
-                             COAP_BLOCK_CACHE_RESPONSE | \
                              COAP_BLOCK_FORCE_Q_BLOCK)
 #else /* ! COAP_Q_BLOCK_SUPPORT */
 #define COAP_BLOCK_SET_MASK (COAP_BLOCK_USE_LIBCOAP | \
@@ -59,8 +58,7 @@ extern "C" {
                              COAP_BLOCK_NO_PREEMPTIVE_RTAG | \
                              COAP_BLOCK_STLESS_FETCH | \
                              COAP_BLOCK_STLESS_BLOCK2 | \
-                             COAP_BLOCK_NOT_RANDOM_BLOCK1 | \
-                             COAP_BLOCK_CACHE_RESPONSE)
+                             COAP_BLOCK_NOT_RANDOM_BLOCK1)
 #endif /* ! COAP_Q_BLOCK_SUPPORT */
 
 #define COAP_BLOCK_MAX_SIZE_MASK 0x7000000 /* (svr)Mask to get the max supported block size */
@@ -250,7 +248,6 @@ struct coap_lg_srcv_t {
   uint8_t szx;           /**< size of individual blocks */
   uint16_t block_option; /**< Block option in use */
   uint8_t dont_timeout;  /**< Set if app handler in use */
-  coap_mid_t last_mid;   /**< Last received mid for this set of packets */
   coap_tick_t last_used; /**< Last time data sent or 0 */
   size_t total_len;      /**< Length as indicated by SIZE1 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */

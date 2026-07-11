@@ -240,16 +240,13 @@ struct coap_session_t {
   uint64_t tx_token;              /**< Next token number to use */
   coap_bin_const_t *last_token;   /** last token used to make a request */
   coap_bin_const_t *echo;         /**< Echo value to send with next request */
-  coap_mid_t last_ack_mid;        /**< The last ACK mid that has been
-                                       been processed */
-  coap_mid_t last_con_mid;        /**< The last CON mid that has been
+  coap_mid_t last_resp_mid;       /**< The last response mid that has been
                                        been processed */
   coap_response_t last_con_handler_res; /**< The result of calling the response handler
                                        of the last CON */
 #if COAP_SERVER_SUPPORT
   coap_bin_const_t *client_cid;   /**< Contains client CID or NULL */
-  coap_pdu_t *cached_pdu;         /**< Cached copy of last ACK response PDU */
-  coap_digest_t cached_pdu_cksum; /**< Checksum of last CON request PDU */
+  coap_pdu_t *last_resp_pdu;      /**< Cached copy of last ACK response PDU */
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_CLIENT_SUPPORT
   coap_pdu_t *resp_pdu;           /**< PDU returned in coap_send_recv() call */

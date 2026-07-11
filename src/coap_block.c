@@ -3528,7 +3528,6 @@ coap_handle_request_put_block(coap_context_t *context,
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
-  lg_srcv->last_mid = pdu->mid;
   lg_srcv->last_type = pdu->type;
 
   update_data = 0;
