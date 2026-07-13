@@ -17,6 +17,7 @@ coap_new_endpoint,
 coap_free_endpoint,
 coap_endpoint_set_default_mtu,
 coap_join_mcast_group_intf,
+coap_endpoint_join_mcast_group_intf,
 coap_mcast_per_resource
 - Work with CoAP server endpoints
 
@@ -39,6 +40,9 @@ const coap_address_t *_listen_addr_, coap_proto_t _proto_);*
 unsigned _mtu_);*
 
 *int coap_join_mcast_group_intf(coap_context_t *_context_,
+const char *_groupname_, const char *_ifname_);*
+
+*int coap_endpoint_join_mcast_group_intf(coap_endpoint_t *_endpoint_,
 const char *_groupname_, const char *_ifname_);*
 
 *void coap_mcast_per_resource(coap_context_t *_context_);*
@@ -178,6 +182,14 @@ ff05::fd (Site-Local).
 
 *NOTE:* multicast is not supported for address family type AF_UNIX.
 
+*Function: coap_endpoint_join_mcast_group_intf()*
+
+The *coap_endpoint_join_mcast_group_intf*() function is used to join the
+specified UDP _endpoint_ to the defined multicast group _groupname_. If
+_ifname_ is not NULL, then the multicast group is associated with this
+interface, otherwise the endpoint's bound interface is used where possible.
+When the endpoint is freed off, the associated multicast group will be removed.
+
 *Function: coap_mcast_per_resource()*
 
 The *coap_mcast_per_resource*() function enables mcast to be controlled on a
@@ -193,7 +205,8 @@ RETURN VALUES
 *coap_new_endpoint*() returns a newly created endpoint or
 NULL if there is a creation failure.
 
-*coap_join_mcast_group_intf*() returns 0 on success, -1 on failure.
+*coap_join_mcast_group_intf*() and
+*coap_endpoint_join_mcast_group_intf*() return 0 on success, -1 on failure.
 
 EXAMPLES
 --------

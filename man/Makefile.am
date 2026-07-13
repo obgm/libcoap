@@ -118,6 +118,7 @@ install-man: install-man3 install-man5 install-man7
 	@echo ".so man3/coap_address.3" > coap_is_bcast.3
 	@echo ".so man3/coap_address.3" > coap_is_mcast.3
 	@echo ".so man3/coap_address.3" > coap_is_af_unix.3
+	@echo ".so man3/coap_endpoint_server.3" > coap_endpoint_join_mcast_group_intf.3
 	@echo ".so man3/coap_block.3" > coap_q_block_is_supported.3
 	@echo ".so man3/coap_block.3" > coap_register_block_data_handler.3
 	@echo ".so man3/coap_cache.3" > coap_cache_get_pdu.3
