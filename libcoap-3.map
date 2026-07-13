@@ -110,6 +110,7 @@ global:
   coap_encode_var_safe8;
   coap_encode_var_safe;
   coap_endpoint_get_app_data;
+  coap_endpoint_join_mcast_group_intf;
   coap_endpoint_set_app_data;
   coap_endpoint_set_default_mtu;
   coap_endpoint_str;

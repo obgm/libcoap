@@ -5518,13 +5518,15 @@ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
   int ret;
 
   coap_lock_lock(return -1);
-  ret = coap_join_mcast_group_intf_lkd(ctx, group_name, ifname);
+  ret = coap_join_mcast_group_intf_lkd(ctx, NULL, group_name, ifname);
   coap_lock_unlock();
   return ret;
 }
 
 int
-coap_join_mcast_group_intf_lkd(coap_context_t *ctx, const char *group_name,
+coap_join_mcast_group_intf_lkd(coap_context_t *ctx,
+                               coap_endpoint_t *single_endpoint,
+                               const char *group_name,
                                const char *ifname) {
 #if COAP_IPV4_SUPPORT
   struct ip_mreq mreq4;
@@ -5535,12 +5537,26 @@ coap_join_mcast_group_intf_lkd(coap_context_t *ctx, const char *group_name,
   struct addrinfo *resmulti = NULL, hints, *ainfo;
   int result = -1;
   coap_endpoint_t *endpoint;
+#if !defined(ESPIDF_VERSION) && COAP_IPV6_SUPPORT && !defined(HAVE_IF_NAMETOINDEX) && !defined(__QNXNTO__)
+  coap_endpoint_t *lookup_endpoint;
+#endif /* !ESPIDF_VERSION && COAP_IPV6_SUPPORT && !HAVE_IF_NAMETOINDEX && !__QNXNTO__ */
   int mgroup_setup = 0;
 
-  /* Need to have at least one endpoint! */
-  assert(ctx->endpoint);
-  if (!ctx->endpoint)
-    return -1;
+  if (single_endpoint) {
+    if (single_endpoint->proto != COAP_PROTO_UDP)
+      return -1;
+#if !defined(ESPIDF_VERSION) && COAP_IPV6_SUPPORT && !defined(HAVE_IF_NAMETOINDEX) && !defined(__QNXNTO__)
+    lookup_endpoint = single_endpoint;
+#endif /* !ESPIDF_VERSION && COAP_IPV6_SUPPORT && !HAVE_IF_NAMETOINDEX && !__QNXNTO__ */
+  } else {
+    /* Need to have at least one endpoint! */
+    assert(ctx->endpoint);
+    if (!ctx->endpoint)
+      return -1;
+#if !defined(ESPIDF_VERSION) && COAP_IPV6_SUPPORT && !defined(HAVE_IF_NAMETOINDEX) && !defined(__QNXNTO__)
+    lookup_endpoint = ctx->endpoint;
+#endif /* !ESPIDF_VERSION && COAP_IPV6_SUPPORT && !HAVE_IF_NAMETOINDEX && !__QNXNTO__ */
+  }
 
   /* Default is let the kernel choose */
 #if COAP_IPV6_SUPPORT
@@ -5609,7 +5625,7 @@ coap_join_mcast_group_intf_lkd(coap_context_t *ctx, const char *group_name,
         }
 #elif defined(__QNXNTO__)
 #else /* !HAVE_IF_NAMETOINDEX */
-        result = ioctl(ctx->endpoint->sock.fd, SIOCGIFINDEX, &ifr);
+        result = ioctl(lookup_endpoint->sock.fd, SIOCGIFINDEX, &ifr);
         if (result != 0) {
           coap_log_warn("coap_join_mcast_group_intf: "
                         "cannot get interface index for '%s': %s\n",
@@ -5678,7 +5694,9 @@ coap_join_mcast_group_intf_lkd(coap_context_t *ctx, const char *group_name,
 
   /* Add in mcast address(es) to appropriate interface */
   for (ainfo = resmulti; ainfo != NULL; ainfo = ainfo->ai_next) {
-    LL_FOREACH(ctx->endpoint, endpoint) {
+    for (endpoint = single_endpoint ? single_endpoint : ctx->endpoint;
+         endpoint != NULL;
+         endpoint = single_endpoint ? NULL : endpoint->next) {
       /* Only UDP currently supported */
       if (endpoint->proto == COAP_PROTO_UDP) {
         coap_address_t gaddr;
@@ -5764,6 +5782,21 @@ finish:
   return result;
 }
 
+COAP_API int
+coap_endpoint_join_mcast_group_intf(coap_endpoint_t *endpoint,
+                                    const char *group_name,
+                                    const char *ifname) {
+  int ret;
+
+  if (!endpoint || !endpoint->context)
+    return -1;
+
+  coap_lock_lock(return -1);
+  ret = coap_join_mcast_group_intf_lkd(endpoint->context, endpoint, group_name, ifname);
+  coap_lock_unlock();
+  return ret;
+}
+
 void
 coap_mcast_per_resource(coap_context_t *context) {
   context->mcast_per_resource = 1;
@@ -5809,6 +5842,13 @@ COAP_API int
 coap_join_mcast_group_intf(coap_context_t *ctx COAP_UNUSED,
                            const char *group_name COAP_UNUSED,
                            const char *ifname COAP_UNUSED) {
+  return -1;
+}
+
+COAP_API int
+coap_endpoint_join_mcast_group_intf(coap_endpoint_t *endpoint COAP_UNUSED,
+                                    const char *group_name COAP_UNUSED,
+                                    const char *ifname COAP_UNUSED) {
   return -1;
 }
 

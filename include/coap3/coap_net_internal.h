@@ -598,13 +598,17 @@ int coap_can_exit_lkd(coap_context_t *context);
  * Note: This function must be called in the locked state.
  *
  * @param ctx       The current context.
+ * @param endpoint  The specific endpoint to join on, or NULL to consider
+ *                  all UDP endpoints in @p ctx.
  * @param groupname The name of the group that is to be joined for listening.
  * @param ifname    Network interface to join the group on, or NULL if first
  *                  appropriate interface is to be chosen by the O/S.
  *
  * @return       0 on success, -1 on error
  */
-int coap_join_mcast_group_intf_lkd(coap_context_t *ctx, const char *groupname,
+int coap_join_mcast_group_intf_lkd(coap_context_t *ctx,
+                                   coap_endpoint_t *endpoint,
+                                   const char *groupname,
                                    const char *ifname);
 
 /**

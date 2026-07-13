@@ -765,6 +765,22 @@ COAP_API int coap_join_mcast_group_intf(coap_context_t *ctx, const char *groupna
   (coap_join_mcast_group_intf(ctx, groupname, NULL))
 
 /**
+ * Function interface for joining a multicast group for listening on a single
+ * UDP endpoint.
+ *
+ * @param endpoint  The endpoint to join the multicast group on.
+ * @param groupname The name of the group that is to be joined for listening.
+ * @param ifname    Network interface to join the group on, or NULL if the
+ *                  endpoint's bound interface should be used where possible,
+ *                  otherwise the O/S will choose an appropriate interface.
+ *
+ * @return       0 on success, -1 on error
+ */
+COAP_API int coap_endpoint_join_mcast_group_intf(coap_endpoint_t *endpoint,
+                                                 const char *groupname,
+                                                 const char *ifname);
+
+/**
  * Function interface for defining the hop count (ttl) for sending
  * multicast traffic.  The default is 1 so that the ttl expires after
  * decrementing if the packet is trying to pass out of the local network.
