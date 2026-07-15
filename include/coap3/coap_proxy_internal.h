@@ -63,6 +63,9 @@ struct coap_proxy_entry_t {
   int track_client_session;   /**< If 1, track individual connections to upstream
                                    server, else 0 for all clients to be multiplexed
                                    over the same upstream session */
+  coap_mid_t mid;             /** Mid of last transmitted ongoing PDU */
+  coap_tick_t req_start_ticks; /**< Set to request time if upstream CON request sent
+                                    and response not received */
   coap_tick_t idle_timeout_ticks; /**< Idle timeout (0 == no timeout). Timeout
                                        is ignored if there are any active
                                        upstream Observe requests */
@@ -98,12 +101,13 @@ int coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
 /**
  * Remove the upstream proxy connection from list for session.
  *
- * @param session Either incoming or ongoiing session.
- * @param send_failure Indicate to incoming session proxy issues.
+ * @param session Either incoming or ongoing session.
+ * @param failure_code If not 0, if ongoing session, send code to
+ *                     incoming sessions.
  *
  * @return Return 1 if proxy_entry deleted.
  */
-int coap_proxy_remove_association(coap_session_t *session, int send_failure);
+int coap_proxy_remove_association(coap_session_t *session, coap_pdu_code_t failure_code);
 
 /**
  * Forward incoming request upstream to the next proxy/server.

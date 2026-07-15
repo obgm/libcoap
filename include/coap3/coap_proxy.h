@@ -70,8 +70,8 @@ typedef enum {
   /* Start of additional optional bit mask mapping */
   COAP_PROXY_BIT_STRIP = (1 << 6),
   /**<
-   * If COAP_PROXY_BIT_STRIP set, then remove any Proxy-Uri or Proxy-Scheme,
-   * else leave them.
+   * If COAP_PROXY_BIT_STRIP set, then remove any Proxy-Uri or Proxy-Scheme
+   * as the PDU is forwarded, else leave them.
    */
   COAP_PROXY_BIT_MCAST = (1 << 7),
   /**<
@@ -110,7 +110,8 @@ typedef struct coap_proxy_server_list_t {
   unsigned int idle_timeout_secs; /**< Proxy upstream session idle timeout
                                        (0 is no timeout). Timeout is ignored
                                        if there are any active upstream Observe
-                                       requests */
+                                       requests or a CON upstream request has
+                                       been sent with no response so far */
 } coap_proxy_server_list_t;
 
 /**
