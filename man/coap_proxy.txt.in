@@ -163,8 +163,8 @@ typedef enum {
   /* Start of additional optional bit mask mapping */
   COAP_PROXY_BIT_STRIP = (1 << 6),
   /**<
-   * If COAP_PROXY_BIT_STRIP set, then remove any Proxy-Uri or Proxy-Scheme,
-   * else leave them.
+   * If COAP_PROXY_BIT_STRIP set, then remove any Proxy-Uri or Proxy-Scheme
+   * as the PDU is forwarded else leave them.
    */
   COAP_PROXY_BIT_MCAST = (1 << 7),
   /**<
@@ -200,7 +200,8 @@ typedef struct coap_proxy_server_list_t {
   unsigned int idle_timeout_secs; /* Proxy upstream session idle timeout
                                      (0 is no timeout). Timeout is ignored
                                      if there are any active upstream Observe
-                                     requests */
+                                     requests or a CON upstream request has
+                                     been sent with no response so far */
 } coap_proxy_server_list_t;
 ----
 
@@ -212,17 +213,21 @@ generated from the _request_ PDU or (usually) NULL.  This _cache_key_ will get
 passed into *coap_proxy_forward_response*() or the response handler set up
 using *coap_register_proxy_response_handler*() when handling the response.
 _server_list_ defines the characteristics of zero or more of the upstream
-servers to connect to. The definitions can cover the following
+servers to connect to.
 
 *NOTE:* _cache_key_ is associated with the D-Client _req_session_ and gets
 deleted when _req_session_ is disconnected.
+
+The _server_list_ type definition can be one of the following
 
 [source, c]
 ----
 Acting as a reverse proxy - connect to defined internal server
  (possibly round robin load balancing over multiple servers).
+
 Acting as a forward-dynamic proxy - connect to host defined in Proxy-Uri
  or Proxy-Scheme with Uri-Host (and maybe Uri-Port).
+
 Acting as a forward-static proxy - connect to defined upstream server
  (possibly round robin load balancing over multiple servers).
 ----

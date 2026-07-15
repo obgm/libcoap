@@ -711,9 +711,12 @@ release_1:
           p = q;
         }
         coap_remove_from_queue(&ctx->sendqueue, s, s->remote_test_mid, s->last_token, &sent);
-        if (sent && sent->pdu && sent->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(s->proto)) {
-          if (s->con_active)
-            s->con_active--;
+        if (sent) {
+          if (sent->pdu && sent->pdu->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(s->proto)) {
+            if (s->con_active)
+              s->con_active--;
+          }
+          coap_delete_node_lkd(sent);
         }
         coap_reset_doing_first(s);
         if (s->state == COAP_SESSION_STATE_ESTABLISHED) {

@@ -116,19 +116,19 @@ coap_proxy_del_req(coap_proxy_entry_t *proxy_entry, coap_proxy_req_t *proxy_req)
 }
 
 static void
-coap_proxy_cleanup_entry(coap_proxy_entry_t *proxy_entry, int send_failure) {
+coap_proxy_cleanup_entry(coap_proxy_entry_t *proxy_entry, coap_pdu_code_t failure_code) {
   coap_proxy_req_t *proxy_req, *treq;
 
   LL_FOREACH_SAFE(proxy_entry->proxy_req, proxy_req, treq) {
-    if (send_failure) {
+    if (failure_code) {
       coap_pdu_t *response;
       coap_bin_const_t l_token;
 
-      /* Need to send back a gateway failure */
+      /* Need to send back a gateway failure as per failure_code */
       response = coap_pdu_init(proxy_req->pdu->type,
-                               COAP_RESPONSE_CODE(502),
-                               coap_new_message_id_lkd(proxy_entry->incoming),
-                               coap_session_max_pdu_size_lkd(proxy_entry->incoming));
+                               failure_code,
+                               coap_new_message_id_lkd(proxy_req->incoming),
+                               coap_session_max_pdu_size_lkd(proxy_req->incoming));
       if (!response) {
         coap_log_info("PDU creation issue\n");
         goto cleanup;
@@ -140,8 +140,9 @@ coap_proxy_cleanup_entry(coap_proxy_entry_t *proxy_entry, int send_failure) {
         coap_log_debug("Cannot add token to incoming proxy response PDU\n");
       }
 
-      if (coap_send_lkd(proxy_entry->incoming, response) == COAP_INVALID_MID) {
-        coap_log_info("Failed to send PDU with 5.02 gateway issue\n");
+      if (coap_send_lkd(proxy_req->incoming, response) == COAP_INVALID_MID) {
+        coap_log_info("Failed to send PDU with %u.%02u proxy issue\n",
+                      COAP_RESPONSE_CLASS(failure_code), failure_code & 0x1f);
       }
     }
 cleanup:
@@ -195,15 +196,40 @@ coap_proxy_check_timeouts(coap_context_t *context, coap_tick_t now,
     if (coap_proxy_check_observe(proxy_entry))
       continue;
 
-    if (proxy_entry->ongoing && proxy_entry->idle_timeout_ticks) {
-      if (proxy_entry->last_used + proxy_entry->idle_timeout_ticks <= now) {
-        /* Drop session to upstream server (which may remove proxy entry) */
-        if (coap_proxy_remove_association(proxy_entry->ongoing, 0))
-          i--;
-      } else {
-        if (*tim_rem > proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now) {
-          *tim_rem = proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now;
-          ret = 1;
+    if (proxy_entry->ongoing) {
+      if (proxy_entry->req_start_ticks) {
+        coap_tick_t timeout_time;
+
+        timeout_time = proxy_entry->req_start_ticks + COAP_MAX_TRANSMIT_WAIT_TICKS(proxy_entry->ongoing);
+        if (timeout_time <= now) {
+          /* Forward request has timed out */
+          coap_queue_t *sent = NULL;
+
+          coap_remove_from_queue(&context->sendqueue, proxy_entry->ongoing,
+                                 proxy_entry->mid, NULL, &sent);
+          if (sent) {
+            coap_delete_node_lkd(sent);
+          }
+          if (coap_proxy_remove_association(proxy_entry->ongoing, COAP_RESPONSE_CODE(504))) {
+            i--;
+          }
+        } else {
+          if (*tim_rem > timeout_time - now) {
+            *tim_rem = timeout_time - now;
+            ret = 1;
+          }
+        }
+      } else if (proxy_entry->idle_timeout_ticks) {
+        if (proxy_entry->last_used + proxy_entry->idle_timeout_ticks <= now) {
+          /* Drop session to upstream server (which may remove proxy entry) */
+          if (coap_proxy_remove_association(proxy_entry->ongoing, 0)) {
+            i--;
+          }
+        } else {
+          if (*tim_rem > proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now) {
+            *tim_rem = proxy_entry->last_used + proxy_entry->idle_timeout_ticks - now;
+            ret = 1;
+          }
         }
       }
     }
@@ -525,7 +551,7 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
 }
 
 int
-coap_proxy_remove_association(coap_session_t *session, int send_failure) {
+coap_proxy_remove_association(coap_session_t *session, coap_pdu_code_t failure_code) {
 
   size_t i;
   coap_proxy_entry_t *proxy_list = session->context->proxy_list;
@@ -556,7 +582,7 @@ retry:
     if (proxy_entry->ongoing == session) {
       coap_session_t *ongoing;
 
-      coap_proxy_cleanup_entry(proxy_entry, send_failure);
+      coap_proxy_cleanup_entry(proxy_entry, failure_code);
       ongoing = proxy_entry->ongoing;
       coap_log_debug("*  %s: proxy_entry %p released (rem count = % " PRIdS ")\n",
                      coap_session_str(ongoing),
@@ -1192,10 +1218,14 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
   }
 
   coap_proxy_log_entry(proxy_req->incoming, proxy_req->pdu, proxy_req->token_used,  "fwd");
-  if (coap_send_lkd(proxy_entry->ongoing, pdu) == COAP_INVALID_MID) {
+  proxy_entry->mid = coap_send_lkd(proxy_entry->ongoing, pdu);
+  if (proxy_entry->mid == COAP_INVALID_MID) {
     pdu = NULL;
     coap_log_debug("proxy: upstream PDU send error\n");
     goto failed;
+  }
+  if (request->type == COAP_MESSAGE_CON && COAP_PROTO_NOT_RELIABLE(proxy_entry->ongoing->proto)) {
+    proxy_entry->req_start_ticks = now;
   }
 
   /*
@@ -1333,6 +1363,7 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
     return COAP_RESPONSE_OK;
   }
 
+  proxy_entry->req_start_ticks = 0;
   req_pdu = proxy_req->pdu;
   req_token = coap_pdu_get_token(req_pdu);
   resource = proxy_req->resource;
@@ -1785,6 +1816,7 @@ coap_proxy_fwd_add_client_session_lkd(coap_session_t *session, const char *use_i
                    (void *)proxy_entry,
                    session->context->proxy_list_count);
     proxy_entry->idle_timeout_ticks = 0;
+    proxy_entry->req_start_ticks = 0;
     proxy_entry->track_client_session = 0;
     coap_session_set_type_client_lkd(session, 1);
     return proxy_entry;
