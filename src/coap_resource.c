@@ -213,7 +213,8 @@ coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
         if (!attr || !attr->value)
           continue;
         unquoted_val = *attr->value;
-        if (attr->value->s[0] == '"') {          /* if attribute has a quoted value, remove double quotes */
+        /* if attribute has a quoted value, remove double quotes */
+        if (attr->value->length >= 2 && attr->value->s[0] == '"') {
           unquoted_val.length -= 2;
           unquoted_val.s += 1;
         }
