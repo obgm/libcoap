@@ -149,10 +149,10 @@ static int resolve_address(const char *host, const char *service,
     return ret;
 }
 
-static coap_response_t message_handler(coap_session_t *session,
-                                       const coap_pdu_t *sent,
-                                       const coap_pdu_t *received,
-                                       const coap_mid_t id)
+static coap_response_t response_handler(coap_session_t *session,
+                                        const coap_pdu_t *sent,
+                                        const coap_pdu_t *received,
+                                        const coap_mid_t id)
 {
     const uint8_t *data;
     size_t len;
@@ -249,7 +249,7 @@ static int coap_client_init(coap_context_t *ctx)
         goto fail;
     }
 
-    coap_register_response_handler(ctx, message_handler);
+    coap_register_response_handler(ctx, response_handler);
 
     /* construct CoAP message */
     pdu = coap_pdu_init(COAP_MESSAGE_CON,

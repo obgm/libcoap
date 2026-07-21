@@ -20,6 +20,7 @@ SRC := coap_address.c \
   coap_net.c \
   coap_netif.c \
   coap_notls.c \
+  coap_openhitls.c\
   coap_openssl.c\
   coap_option.c \
   coap_oscore.c \
@@ -33,8 +34,10 @@ SRC := coap_address.c \
   coap_strm_riot.c \
   coap_subscribe.c \
   coap_threadsafe.c \
+  coap_time.c \
   coap_tinydtls.c \
   coap_uri.c \
+  coap_wolfssl.c \
   coap_ws.c
 
 ifneq (,$(filter libcoap_tinydtls,$(USEMODULE)))

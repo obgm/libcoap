@@ -50,18 +50,20 @@ pkg:
 	fi
 
 examples:
-	rm -rf RIOT/examples/networking/libcoap/libcoap_client && mkdir -p RIOT/examples/networking/libcoap/libcoap_client
-	cd examples_libcoap_client && cp -r * ../RIOT/examples/networking/libcoap/libcoap_client
-	rm -rf RIOT/examples/networking/libcoap/libcoap_server && mkdir -p RIOT/examples/networking/libcoap/libcoap_server
-	cd examples_libcoap_server && cp -r * ../RIOT/examples/networking/libcoap/libcoap_server
+	rm -rf RIOT/examples/networking/libcoap/libcoap_client && \
+	rm -rf RIOT/examples/networking/coap/libcoap_client && mkdir -p RIOT/examples/networking/coap/libcoap_client
+	cd examples_libcoap_client && cp -r * ../RIOT/examples/networking/coap/libcoap_client
+	rm -rf RIOT/examples/networking/libcoap/libcoap_server && \
+	rm -rf RIOT/examples/networking/coap/libcoap_server && mkdir -p RIOT/examples/networking/coap/libcoap_server
+	cd examples_libcoap_server && cp -r * ../RIOT/examples/networking/coap/libcoap_server
 	rm -rf RIOT/tests/pkg/libcoap && mkdir -p RIOT/tests/pkg/libcoap
 	cd tests_pkg_libcoap && cp -r * ../RIOT/tests/pkg/libcoap
 
 client:	RIOT pkg examples
-	$(MAKE) -C RIOT/examples/networking/libcoap/libcoap_client/ RIOT_CI_BUILD=1
+	$(MAKE) -C RIOT/examples/networking/coap/libcoap_client/ RIOT_CI_BUILD=1
 
 server:	RIOT pkg examples
-	$(MAKE) -C RIOT/examples/networking/libcoap/libcoap_server/ RIOT_CI_BUILD=1
+	$(MAKE) -C RIOT/examples/networking/coap/libcoap_server/ RIOT_CI_BUILD=1
 
 tests:	RIOT pkg examples
 	$(MAKE) -C RIOT/tests/pkg/libcoap/ RIOT_CI_BUILD=1
@@ -71,6 +73,6 @@ run_tests:
 
 clean:
 	rm -rf RIOT/pkg/libcoap
-	rm -rf RIOT/examples/libcoap-client
-	rm -rf RIOT/examples/libcoap-server
+	rm -rf RIOT/examples/networking/coap/libcoap-client
+	rm -rf RIOT/examples/networking/coap/libcoap-server
 	rm -rf RIOT/tests/pkg/libcoap

@@ -6,17 +6,23 @@ This example shows how to configure a server to use libcoap
 
 Preparing the logical interfaces:
 
-    sudo ./../../dist/tools/tapsetup/tapsetup --create 2
+```shell
+sudo ./../../dist/tools/tapsetup/tapsetup --create 2
+```
 
 ## Server invocation
 For the server:
 
-    PORT=tap0 make term
-    coaps {stop|start}
+```shell
+PORT=tap0 make term
+coaps {stop|start}
+```
 
 The server supports requests for
- coap://[ip]/time?ticks
- coap://[ip]/.well-known/core
+```shell
+coap://[ip]/time?ticks
+coap://[ip]/.well-known/core
+```
 
 ## Handling the static memory allocation
 

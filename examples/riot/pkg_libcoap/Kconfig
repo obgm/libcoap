@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText:  2019 HAW Hamburg
+# SPDX-FileCopyrightText: 2019 HAW Hamburg
 # SPDX-License-Identifier: BSD-2-Clause
 
 menu "libcoap"

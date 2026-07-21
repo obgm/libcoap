@@ -6,13 +6,17 @@ This example shows how to configure a client to use libcoap
 
 Preparing the logical interfaces:
 
-    sudo ./../../dist/tools/tapsetup/tapsetup --create 2
+```shell
+sudo ./../../dist/tools/tapsetup/tapsetup --create 2
+```
 
 ## Client invocation
 For the client:
 
-    PORT=tap0 make term
-    coapc coap://[ip6-address]/some/path
+```shell
+PORT=tap0 make term
+coapc coap://[ip6-address]/some/path
+```
 
 The IP address to connect to needs to be that as returned by libcoap_server,
 or that of the tap0 interface, etc.

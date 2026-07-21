@@ -53,10 +53,10 @@ static int is_mcast = 0;
 
 unsigned int wait_seconds = DEFAULT_WAIT_TIME; /* default timeout in seconds */
 
-static coap_response_t message_handler(coap_session_t *session,
-                                       const coap_pdu_t *sent,
-                                       const coap_pdu_t *received,
-                                       const coap_mid_t id)
+static coap_response_t response_handler(coap_session_t *session,
+                                        const coap_pdu_t *sent,
+                                        const coap_pdu_t *received,
+                                        const coap_mid_t id)
 {
     const uint8_t *data;
     size_t len;
@@ -204,7 +204,8 @@ void client_coap_init(int argc, char **argv)
 
         memset(&dtls_psk, 0, sizeof(dtls_psk));
         dtls_psk.version = COAP_DTLS_CPSK_SETUP_VERSION;
-        snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)uri.host.length, (int)uri.host.length, uri.host.s);
+        snprintf(client_sni, sizeof(client_sni), "%*.*s", (int)uri.host.length,
+                 (int)uri.host.length, uri.host.s);
         dtls_psk.client_sni = client_sni;
         dtls_psk.psk_info.identity.s = (const uint8_t *)COAP_USE_PSK_ID;
         dtls_psk.psk_info.identity.length = strlen(COAP_USE_PSK_ID);
@@ -224,7 +225,7 @@ void client_coap_init(int argc, char **argv)
         goto fail;
     }
 
-    coap_register_response_handler(main_coap_context, message_handler);
+    coap_register_response_handler(main_coap_context, response_handler);
     coap_register_nack_handler(main_coap_context, nack_handler);
 
     /* construct CoAP message */
