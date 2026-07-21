@@ -98,26 +98,13 @@ static void init_coap_resources(coap_context_t *ctx)
     coap_resource_set_get_observable(r, 1);
     time_resource = r;
     coap_register_handler(r, COAP_REQUEST_GET, hnd_get_time);
-#if 0
-    coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_time);
-    coap_register_handler(r, COAP_REQUEST_DELETE, hnd_delete_time);
-#endif
     coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-    /* coap_add_attr(r, coap_make_str_const("title"),
-                     coap_make_str_const("\"Internal Clock\""), 0); */
+    coap_add_attr(r, coap_make_str_const("title"),
+                  coap_make_str_const("\"Internal Clock\""), 0);
     coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"ticks\""), 0);
     coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"clock\""), 0);
 
     coap_add_resource(ctx, r);
-#if 0
-    if (coap_async_is_supported()) {
-        r = coap_resource_init(coap_make_str_const("async"), 0);
-        coap_register_handler(r, COAP_REQUEST_GET, hnd_get_async);
-
-        coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-        coap_add_resource(ctx, r);
-    }
-#endif
 
     return;
 error:
