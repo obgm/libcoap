@@ -546,6 +546,75 @@ coap_free_type(coap_memory_tag_t type, void *p) {
 }
 /* End __ZEPHYR__ */
 
+#elif defined(ESPIDF_VERSION)
+
+#include "esp_heap_caps_init.h"
+
+#if ((CONFIG_SPIRAM || CONFIG_SPIRAM_SUPPORT) && \
+        (CONFIG_SPIRAM_USE_CAPS_ALLOC || CONFIG_SPIRAM_USE_MALLOC))
+#define MEM_ALLOC_SPIRAM(size)         heap_caps_malloc_prefer(size, 2, MALLOC_CAP_DEFAULT | MALLOC_CAP_SPIRAM, MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL)
+#define MEM_REALLOC_SPIRAM(ptr, size)  heap_caps_realloc_prefer(ptr, size, 2, MALLOC_CAP_DEFAULT | MALLOC_CAP_SPIRAM, MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL)
+#define MEM_FREE_SPIRAM(ptr)           heap_caps_free(ptr)
+#else
+#define MEM_ALLOC_SPIRAM(size)         malloc(size)
+#define MEM_REALLOC_SPIRAM(ptr, size)  realloc(ptr, size)
+#define MEM_FREE_SPIRAM(ptr)           free(ptr)
+#endif
+
+void
+coap_memory_init(void) {
+}
+
+void *
+coap_malloc_type(coap_memory_tag_t type, size_t size) {
+  void *ptr;
+
+  (void)type;
+  ptr = MEM_ALLOC_SPIRAM(size);
+#if COAP_MEMORY_TYPE_TRACK
+  assert(type < COAP_MEM_TAG_LAST);
+  if (ptr) {
+    track_counts[type]++;
+    if (track_counts[type] > peak_counts[type])
+      peak_counts[type] = track_counts[type];
+  } else {
+    fail_counts[type]++;
+  }
+#endif /* COAP_MEMORY_TYPE_TRACK */
+  return ptr;
+}
+
+void *
+coap_realloc_type(coap_memory_tag_t type, void *p, size_t size) {
+  void *ptr;
+
+  (void)type;
+  ptr = MEM_REALLOC_SPIRAM(p, size);
+#if COAP_MEMORY_TYPE_TRACK
+  if (ptr) {
+    assert(type < COAP_MEM_TAG_LAST);
+    if (!p)
+      track_counts[type]++;
+    if (track_counts[type] > peak_counts[type])
+      peak_counts[type] = track_counts[type];
+  } else {
+    fail_counts[type]++;
+  }
+#endif /* COAP_MEMORY_TYPE_TRACK */
+  return ptr;
+}
+
+void
+coap_free_type(coap_memory_tag_t type, void *p) {
+  (void)type;
+#if COAP_MEMORY_TYPE_TRACK
+  assert(type < COAP_MEM_TAG_LAST);
+  if (p)
+    track_counts[type]--;
+#endif /* COAP_MEMORY_TYPE_TRACK */
+  MEM_FREE_SPIRAM(p);
+}
+
 #elif defined(HAVE_MALLOC) || defined(__MINGW32__)
 
 #include <stdlib.h>
