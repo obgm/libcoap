@@ -80,6 +80,21 @@ coap_netif_dgrm_read(coap_session_t *session, coap_packet_t *packet) {
                    coap_session_str(session), packet->length,
                    coap_socket_strerror(), keep_errno, session->state);
     errno = keep_errno;
+  } else if (bytes_read == -2) {
+#ifdef HAVE_LINUX_ERRQUEUE_H
+    coap_icmp_info_t *info = (coap_icmp_info_t *)packet->payload;
+
+    if (session->last_data_write && session->last_data_write->length >= info->length) {
+      if (memcmp(session->last_data_write->s, &info[1], info->length) == 0) {
+        /* There is a match - need to handle failure */
+        coap_log_debug("*  %s: netif: failed to read % " PRIdS " bytes (%s (%d)) state %d\n",
+                       coap_session_str(session), packet->length,
+                       coap_socket_strerror(), keep_errno, session->state);
+        return -2;
+      }
+    }
+#endif /* HAVE_LINUX_ERRQUEUE_H */
+    bytes_read = -1;
   } else if (bytes_read > 0) {
     coap_ticks(&session->last_rx_tx);
     memcpy(&session->addr_info, &packet->addr_info,
@@ -153,6 +168,12 @@ coap_netif_dgrm_write(coap_session_t *session, const uint8_t *data,
       coap_log_debug("*  %s: netif: sent %4" PRIdS " of %4" PRIdS " bytes\n",
                      coap_session_str(session), bytes_written, datalen);
   }
+#ifdef HAVE_LINUX_ERRQUEUE_H
+  if (session->type == COAP_SESSION_TYPE_CLIENT) {
+    coap_delete_str_const(session->last_data_write);
+    session->last_data_write = coap_new_str_const(data, datalen);
+  }
+#endif /* HAVE_LINUX_ERRQUEUE_H */
   return bytes_written;
 }
 

@@ -32,7 +32,7 @@
 #cmakedefine HAVE_DLFCN_H @HAVE_DLFCN_H@
 
 /* Define to 1 if you have the <sys/epoll.h> header file. */
-#cmakedefine HAVE_EPOLL_H @HAVE_EPOLL_H@
+#cmakedefine HAVE_SYS_EPOLL_H @HAVE_SYS_EPOLL_H@
 
 /* Define to 1 if you have the <errno.h> header file. */
 #cmakedefine HAVE_ERRNO_H @HAVE_ERRNO_H@
@@ -78,6 +78,15 @@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #cmakedefine HAVE_NETINET_IN_H @HAVE_NETINET_IN_H@
+
+/* Define to 1 if you have the <netinet/ip_icmp.h> header file. */
+#cmakedefine HAVE_NETINET_IP_ICMP_H @HAVE_NETINET_IP_ICMP_H@
+
+/* Define to 1 if you have the <netinet/icmp6.h> header file. */
+#cmakedefine HAVE_NETINET_ICMP6_H @HAVE_NETINET_ICMP6_H@
+
+/* Define to 1 if you have the <linux/errqueue.h> header file. */
+#cmakedefine HAVE_LINUX_ERRQUEUE_H @HAVE_LINUX_ERRQUEUE_H@
 
 /* Define to 1 if you have the <pthread.h> header file. */
 #cmakedefine HAVE_PTHREAD_H @HAVE_PTHREAD_H@
@@ -155,7 +164,7 @@
 #cmakedefine HAVE_TIME_H @HAVE_TIME_H@
 
 /* Define to 1 if you have the <sys/timerfd.h> header file. */
-#cmakedefine HAVE_TIMERFD_H @HAVE_TIMERFD_H@
+#cmakedefine HAVE_SYS_TIMERFD_H @HAVE_SYS_TIMERFD_H@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H @HAVE_UNISTD_H@

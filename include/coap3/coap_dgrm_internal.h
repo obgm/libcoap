@@ -21,6 +21,14 @@
 extern "C" {
 #endif
 
+typedef struct coap_icmp_info_t {
+  uint32_t length;
+  uint8_t cmsg_level;
+  uint8_t ee_origin;
+  uint8_t ee_type;
+  uint8_t ee_code;
+} coap_icmp_info_t;
+
 /**
  * @ingroup internal_api
  * @defgroup dgrm Datagram (UDP) Support

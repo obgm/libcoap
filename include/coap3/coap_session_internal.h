@@ -260,6 +260,10 @@ struct coap_session_t {
   coap_tick_t last_tx;            /**< Last time a ratelimited packet is sent */
   uint8_t is_rate_limiting;       /**< Currently NON rate limiting */
   uint32_t ping_failed;           /**< Ping failure count */
+#ifdef HAVE_LINUX_ERRQUEUE_H
+  coap_str_const_t *last_data_write; /**< Last sent data to check against ICMP
+                                          responses */
+#endif /* HAVE_LINUX_ERRQUEUE_H */
 };
 
 #if COAP_SERVER_SUPPORT

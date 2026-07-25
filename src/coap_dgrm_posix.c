@@ -40,6 +40,18 @@
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
 #endif
+#ifdef HAVE_NETINET_IP_ICMP_H
+# include <netinet/ip_icmp.h>
+#endif
+#ifdef HAVE_NETINET_ICMP6_H
+# include <netinet/icmp6.h>
+#endif
+#ifdef HAVE_LINUX_ERRQUEUE_H
+# include <linux/errqueue.h>
+#endif
+#ifdef HAVE_SYS_SELECT_H
+# include <sys/select.h>
+#endif
 #ifdef HAVE_WS2TCPIP_H
 #include <ws2tcpip.h>
 # define OPTVAL_T(t)         (const char*)(t)
@@ -243,6 +255,12 @@ coap_socket_connect_udp(coap_socket_t *sock,
   case AF_INET:
     if (connect_addr.addr.sin.sin_port == 0)
       connect_addr.addr.sin.sin_port = htons(default_port);
+#if IP_RECVERR && defined(HAVE_STRUCT_CMSGHDR) && defined(HAVE_LINUX_ERRQUEUE_H)
+    if (setsockopt(sock->fd, IPPROTO_IP, IP_RECVERR, OPTVAL_T(&on),
+                   sizeof(on)) == COAP_SOCKET_ERROR)
+      coap_log_alert("coap_socket_connect_udp: setsockopt IP_RECVERR: %s\n",
+                     coap_socket_strerror());
+#endif /* IP_RECVERR && HAVE_STRUCT_CMSGHDR && HAVE_LINUX_ERRQUEUE_H */
     break;
 #endif /* COAP_IPV4_SUPPORT */
 #if COAP_IPV6_SUPPORT
@@ -256,6 +274,12 @@ coap_socket_connect_udp(coap_socket_t *sock,
         coap_log_warn("coap_socket_connect_udp: setsockopt IPV6_V6ONLY: %s\n",
                       coap_socket_strerror());
       }
+#if IPV6_RECVERR && defined(HAVE_STRUCT_CMSGHDR) && defined(HAVE_LINUX_ERRQUEUE_H)
+    if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_RECVERR, OPTVAL_T(&on),
+                   sizeof(on)) == COAP_SOCKET_ERROR)
+      coap_log_alert("coap_socket_connect_udp: setsockopt IPV6_RECVERR: %s\n",
+                     coap_socket_strerror());
+#endif /* IPV6_RECVERR && HAVE_STRUCT_CMSGHDR && HAVE_LINUX_ERRQUEUE_H */
 #endif /* COAP_IPV6_SUPPORT */
     break;
 #if COAP_AF_UNIX_SUPPORT
@@ -495,6 +519,98 @@ coap_test_cid_tuple_change(coap_session_t *session) {
 }
 #endif /* COAP_CLIENT_SUPPORT */
 
+#if defined(HAVE_LINUX_ERRQUEUE_H) && defined(HAVE_STRUCT_CMSGHDR)
+static ssize_t
+coap_get_icmp_data(coap_socket_t *sock, uint8_t *data, size_t length) {
+  coap_fd_t fd = sock->fd;
+  char control_buf[1024];
+  struct iovec iov;
+  struct msghdr msg;
+  struct cmsghdr *cmsg;
+  int kerrno = errno;
+  int ret;
+
+  if (length < sizeof(coap_icmp_info_t)) {
+    return -1;
+  }
+  iov.iov_base = data + sizeof(coap_icmp_info_t);
+  iov.iov_len = length - sizeof(coap_icmp_info_t);;
+
+  memset(&msg, 0, sizeof(msg));
+  msg.msg_name = NULL;
+  msg.msg_namelen = 0;
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = control_buf;
+  msg.msg_controllen = sizeof(control_buf);
+
+  /* Poll for errors using MSG_ERRQUEUE */
+  ret = recvmsg(fd, &msg, MSG_ERRQUEUE);
+  errno = kerrno;
+  if (ret < 0) {
+    return -1;
+  }
+
+  /* Parse control messages, looking for ICMP error messages */
+  for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+#if COAP_IPV4_SUPPORT && IP_RECVERR
+    if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVERR) {
+      struct sock_extended_err *err = (struct sock_extended_err *)CMSG_DATA(cmsg);
+      coap_icmp_info_t *info = (coap_icmp_info_t *)data;
+
+      if (err->ee_origin == SO_EE_ORIGIN_ICMP) {
+        info->length = (uint32_t)ret;
+        info->cmsg_level = cmsg->cmsg_level;
+        info->ee_origin = err->ee_origin;
+        info->ee_type = err->ee_type;
+        info->ee_code = err->ee_code;
+#if COAP_SERVER_SUPPORT
+        coap_log_debug("*  %s: ICMP Error Type: %d, Code: %d\n",
+                       sock->endpoint ? coap_endpoint_str(sock->endpoint) :
+                       coap_session_str(sock->session),
+                       err->ee_type, err->ee_code);
+#else /* ! COAP_SERVER_SUPPORT */
+        coap_log_debug("*  %s: ICMP Error Type: %d, Code: %d\n",
+                       coap_session_str(sock->session),
+                       err->ee_type, err->ee_code);
+#endif /* ! COAP_SERVER_SUPPORT */
+        return ret;
+      }
+    }
+#endif /* COAP_IPV4_SUPPORT && IP_RECVERR */
+#if COAP_IPV6_SUPPORT && IPV6_RECVERR
+    if (cmsg->cmsg_level == SOL_IPV6 && cmsg->cmsg_type == IPV6_RECVERR) {
+      struct sock_extended_err *err = (struct sock_extended_err *)CMSG_DATA(cmsg);
+      coap_icmp_info_t *info = (coap_icmp_info_t *)data;
+
+      if (err->ee_origin == SO_EE_ORIGIN_ICMP6 || err->ee_origin == SO_EE_ORIGIN_ICMP) {
+        info->length = (uint32_t)ret;
+        info->cmsg_level = cmsg->cmsg_level;
+        info->ee_origin = err->ee_origin;
+        info->ee_type = err->ee_type;
+        info->ee_code = err->ee_code;
+#if COAP_SERVER_SUPPORT
+        coap_log_debug("*  %s: ICMP%s Error Type: %d, Code: %d\n",
+                       sock->endpoint ? coap_endpoint_str(sock->endpoint) :
+                       coap_session_str(sock->session),
+                       err->ee_origin == SO_EE_ORIGIN_ICMP6 ? "6" : "",
+                       err->ee_type, err->ee_code);
+#else /* ! COAP_SERVER_SUPPORT */
+        coap_log_debug("*  %s: ICMP%s Error Type: %d, Code: %d\n",
+                       coap_session_str(sock->session),
+                       err->ee_origin == SO_EE_ORIGIN_ICMP6 ? "6" : "",
+                       err->ee_type, err->ee_code);
+#endif /* ! COAP_SERVER_SUPPORT */
+        return ret;
+      }
+    }
+#endif /* COAP_IPV6_SUPPORT && IPV6_RECVERR */
+    coap_log_debug("MSG_ERRQUEUE: Level %d, Type: %d\n", cmsg->cmsg_level, cmsg->cmsg_type);
+  }
+  return -1;
+}
+#endif /* HAVE_LINUX_ERRQUEUE_H && HAVE_STRUCT_CMSGHDR */
+
 /*
  * dgram
  * return +ve Number of bytes written.
@@ -704,6 +820,9 @@ coap_socket_send(coap_socket_t *sock, coap_session_t *session,
 ssize_t
 coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
   ssize_t len = -1;
+#if defined(HAVE_LINUX_ERRQUEUE_H) && defined(HAVE_STRUCT_CMSGHDR)
+  ssize_t ret;
+#endif /* HAVE_LINUX_ERRQUEUE_H && HAVE_STRUCT_CMSGHDR */
 
   assert(sock);
   assert(packet);
@@ -725,13 +844,21 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
 #ifdef _WIN32
       coap_win_error_to_errno();
 #endif /* _WIN32 */
+
+#if defined(HAVE_LINUX_ERRQUEUE_H) && defined(HAVE_STRUCT_CMSGHDR)
+      ret = coap_get_icmp_data(sock, packet->payload, COAP_RXBUFFER_SIZE);
+      if (ret >= 4) {
+        /* Information about the ICMP diagnostic packet is in packet->payload */
+        return -2;
+      }
+#endif /* HAVE_LINUX_ERRQUEUE_H && HAVE_STRUCT_CMSGHDR */
       if (errno == ECONNREFUSED || errno == EHOSTUNREACH || errno == ECONNRESET) {
         /* client-side ICMP destination unreachable, ignore it */
         coap_log_warn("** %s: coap_socket_recv: ICMP: %s\n",
                       sock->session ?
                       coap_session_str(sock->session) : "",
                       coap_socket_strerror());
-        return -2;
+        goto error;
       }
       if (errno != EAGAIN) {
         coap_log_warn("** %s: coap_socket_recv: %s\n",
@@ -928,9 +1055,9 @@ coap_socket_dgrm_close(coap_socket_t *sock) {
 #if COAP_SERVER_SUPPORT
     coap_context_t *context = sock->session ? sock->session->context :
                               sock->endpoint ? sock->endpoint->context : NULL;
-#else /* COAP_SERVER_SUPPORT */
+#else /* ! COAP_SERVER_SUPPORT */
     coap_context_t *context = sock->session ? sock->session->context : NULL;
-#endif /* COAP_SERVER_SUPPORT */
+#endif /* ! COAP_SERVER_SUPPORT */
     if (context != NULL) {
       int ret;
       struct epoll_event event;
