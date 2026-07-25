@@ -70,7 +70,7 @@ jobs:
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
         id: cache_openhitls
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ runner.temp }}/openhitls-prefix
           key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
@@ -128,7 +128,7 @@ jobs:
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
         id: cache_openhitls
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ runner.temp }}/openhitls-prefix
           key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
@@ -205,7 +205,7 @@ jobs:
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
         id: cache_openhitls
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ runner.temp }}/openhitls-prefix
           key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
@@ -262,7 +262,7 @@ jobs:
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
         id: cache_openhitls
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ runner.temp }}/openhitls-prefix
           key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
@@ -325,6 +325,7 @@ jobs:
     - uses: actions/checkout@v6
     - name: install macOS software
       run: |
+        brew trust aws/tap
         brew install make automake libtool
     - name: compile
       run: |
