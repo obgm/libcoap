@@ -77,15 +77,17 @@ coap_prng(void *buf, size_t len) {
 
 #if defined(WITH_LWIP) && defined(LWIP_RAND)
 
+static unsigned int random_seed;
+
 void
 coap_prng_init_lkd(unsigned int seed) {
-  (void)seed;
+  random_seed = seed;
 }
 
 int
 coap_prng_lkd(void *bufp, size_t len) {
   unsigned char *buf = (unsigned char *)bufp;
-  u32_t v = LWIP_RAND();
+  u32_t v = LWIP_RAND() + random_seed;
 
   while (len > sizeof(v)) {
     memcpy(buf, &v, sizeof(v));
