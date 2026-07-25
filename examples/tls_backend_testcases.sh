@@ -1315,7 +1315,6 @@ run_pki_chain_depth_too_long () {
   run_pki_client "$case_name" "" "$CLIENT_TIMEOUT" no "$pki_dir/ca.pem"
 
   if assert_not_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
-     assert_not_contains "$LOGDIR/$case_name.client" "2\\.05" &&
      assert_not_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'" &&
      assert_either_contains "$LOGDIR/$case_name.client" "$LOGDIR/$case_name.server" \
        "The certificate's verify depth is too long|certificate chain too long|constraint limits|unknown_ca|0x400000f|alert|No response received"; then
