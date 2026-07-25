@@ -4017,9 +4017,13 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     goto fail_response;
   }
 
-  response = coap_pdu_init(pdu->type == COAP_MESSAGE_CON ?
-                           COAP_MESSAGE_ACK : COAP_MESSAGE_NON,
-                           0, pdu->mid, coap_session_max_pdu_size_lkd(session));
+  if (pdu->type == COAP_MESSAGE_CON) {
+    response = coap_pdu_init(COAP_MESSAGE_ACK, 0, pdu->mid,
+                             coap_session_max_pdu_size_lkd(session));
+  } else {
+    response = coap_pdu_init(COAP_MESSAGE_NON, 0, coap_new_message_id_lkd(session),
+                             coap_session_max_pdu_size_lkd(session));
+  }
   if (!response) {
     coap_log_err("could not create response PDU\n");
     resp = 500;
