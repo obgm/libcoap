@@ -67,7 +67,6 @@ coap_socket_send(coap_socket_t *sock,
  * dgram
  * return +ve Number of bytes written.
  *         -1 Error error in errno).
- *         -2 ICMP error response
  */
 ssize_t
 coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
@@ -94,7 +93,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
                       sock->session ?
                       coap_session_str(sock->session) : "",
                       coap_socket_strerror());
-        return -2;
+        goto error;
       }
       if (errno != EAGAIN) {
         coap_log_warn("** %s: coap_socket_recv: %s\n",

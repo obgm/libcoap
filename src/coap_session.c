@@ -598,6 +598,10 @@ coap_session_mfree(coap_session_t *session) {
   if (session->psk_hint)
     coap_delete_bin_const(session->psk_hint);
 
+#ifdef HAVE_LINUX_ERRQUEUE_H
+  coap_delete_str_const(session->last_data_write);
+#endif /* HAVE_LINUX_ERRQUEUE_H */
+
 #if COAP_SERVER_SUPPORT
   coap_cache_entry_t *cp, *ctmp;
   HASH_ITER(hh, session->context->cache, cp, ctmp) {
@@ -1109,28 +1113,22 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
     q = q->next;
   }
 
-  if (reason != COAP_NACK_ICMP_ISSUE
-#if COAP_CLIENT_SUPPORT
-      || session->session_failed
-#endif /* COAP_CLIENT_SUPPORT */
-     ) {
-    while (session->delayqueue) {
-      q = session->delayqueue;
-      session->delayqueue = q->next;
-      q->next = NULL;
-      coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
-                     coap_session_str(session), q->id);
-      if (q->pdu->type == COAP_MESSAGE_CON) {
-        coap_handle_nack(session, q->pdu, reason, q->id);
-        sent_nack = 1;
-      }
-
-#if COAP_CLIENT_SUPPORT
-      session->doing_send_recv = 0;
-#endif /* COAP_CLIENT_SUPPORT */
-      coap_delete_node_lkd(q);
+  while (session->delayqueue) {
+    q = session->delayqueue;
+    session->delayqueue = q->next;
+    q->next = NULL;
+    coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
+                   coap_session_str(session), q->id);
+    if (q->pdu->type == COAP_MESSAGE_CON) {
+      coap_handle_nack(session, q->pdu, reason, q->id);
+      sent_nack = 1;
     }
+
+    coap_delete_node_lkd(q);
   }
+#if COAP_CLIENT_SUPPORT
+  session->doing_send_recv = 0;
+#endif /* COAP_CLIENT_SUPPORT */
 #if COAP_CLIENT_SUPPORT
   if (!sent_nack && session->lg_crcv) {
     /* Take the first one */
@@ -1142,11 +1140,6 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
   if (!sent_nack) {
     /* Unable to determine which request disconnection was for */
     coap_handle_nack(session, NULL, reason, 0);
-  }
-  if (reason == COAP_NACK_ICMP_ISSUE) {
-    coap_log_debug("***%s: session ICMP issue (%s)\n",
-                   coap_session_str(session), coap_nack_name(reason));
-    return;
   }
   coap_log_debug("***%s: session disconnected (%s)\n",
                  coap_session_str(session), coap_nack_name(reason));

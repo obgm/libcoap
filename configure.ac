@@ -1090,7 +1090,7 @@ AC_ARG_ENABLE([af_llc],
 AS_IF([test "x$build_af_llc" = "xyes"],
       [AC_DEFINE(COAP_AF_LLC_SUPPORT, [1], [Define to build support for LLC sockets.])])
 
-if test "x$with_epoll" = "xyes"; then
+if test "x$build_af_llc" = "xyes"; then
     AC_CHECK_HEADER([netinet/ether.h])
     AC_CHECK_HEADER([linux/llc.h])
 fi
@@ -1220,6 +1220,7 @@ fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
+                  netinet/ip_icmp.h netinet/icmp6.h linux/errqueue.h \
                   pthread.h errno.h winsock2.h ws2tcpip.h signal.h \
                   stdlib.h string.h strings.h sys/socket.h sys/select.h sys/time.h \
                   time.h unistd.h sys/unistd.h sys/ioctl.h net/if.h ifaddrs.h \
