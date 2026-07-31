@@ -4171,6 +4171,30 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     goto drop_it_no_debug;
   }
 
+  /* Check correct content type returned by application */
+  if (response->code != 0 && (opt = coap_check_option(pdu, COAP_OPTION_ACCEPT, &opt_iter)) &&
+      !(COAP_RESPONSE_CLASS(response->code) == 4 || COAP_RESPONSE_CLASS(response->code) == 5)) {
+    coap_opt_t *ropt = coap_check_option(response, COAP_OPTION_CONTENT_FORMAT, &opt_iter);
+
+    if (!ropt) {
+      coap_add_option_internal(response, COAP_OPTION_CONTENT_FORMAT,
+                               coap_opt_length(opt), coap_opt_value(opt));
+    } else if (coap_opt_length(opt) != coap_opt_length(ropt) ||
+               memcmp(coap_opt_value(opt), coap_opt_value(ropt), coap_opt_length(opt)) != 0) {
+      coap_show_pdu(COAP_LOG_DEBUG, response);
+      coap_log_debug("handle_request: response: Invalid Content-Format\n");
+      /* Need to convert response to 4.06 as incorrect content type */
+      response->code = COAP_RESPONSE_CODE(406);
+      response->used_size = response->e_token_length;
+      response->data = NULL;
+      response->max_opt = 0;
+      coap_add_option_internal(response, COAP_OPTION_ACCEPT,
+                               coap_opt_length(opt),
+                               coap_opt_value(opt));
+      coap_add_data(response, sizeof("Not Acceptable")-1, (const uint8_t *)"Not Acceptable");
+    }
+  }
+
   /* Check if lg_xmit generated and update PDU code if so */
   coap_check_code_lg_xmit(session, pdu, response, resource, query);
 
