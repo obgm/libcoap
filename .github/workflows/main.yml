@@ -19,8 +19,95 @@ env:
   OPENHITLS_REPO: https://gitcode.com/openHiTLS/openhitls.git
   # Pinned until the next openHiTLS release
   OPENHITLS_REF: 2d524d8e0f9c392a4bc3c244f976a69f9f6bb64a
+  # Keep in sync with examples/contiki/Makefile
+  WITH_CONTIKI_NG_BRANCH: release/v4.9
+  # Keep in sync with examples/lwip/Makefile
+  WITH_LWIP_BRANCH: STABLE-2_2_1_RELEASE
+  # Keep in sync with examples/zephyr/Makefile
+  WITH_ZEPHYR_BRANCH: v4.3.0
 
 jobs:
+  do-caches:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: cache openHiTLS
+        id: cache_openhitls
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/openhitls-prefix
+          key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
+          lookup-only: true
+      - name: build openHiTLS
+        if: steps.cache_openhitls.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "$RUNNER_TEMP/openhitls-src" "$RUNNER_TEMP/openhitls-prefix"
+          git init "$RUNNER_TEMP/openhitls-src"
+          cd "$RUNNER_TEMP/openhitls-src"
+          git remote add origin "$OPENHITLS_REPO"
+          git fetch --depth 1 origin "$OPENHITLS_REF"
+          git checkout FETCH_HEAD
+          cmake -S . -B build -DHITLS_BUILD_PROFILE=full -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel "$(nproc)"
+          cmake --install build --prefix "$RUNNER_TEMP/openhitls-prefix"
+      - name: cache Contiki
+        id: cache_contiki_ng
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/download/contiki-ng
+          key: contiki-${{ runner.os }}-${{ runner.arch }}-${{ env.WITH_CONTIKI_NG_BRANCH }}-full
+          lookup-only: true
+      - name: download Contiki
+        if: steps.cache_contiki_ng.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "$RUNNER_TEMP/download/contiki-ng"
+          mkdir -p "$RUNNER_TEMP/download"
+          cd "$RUNNER_TEMP/download"
+          git clone --depth 1 https://github.com/contiki-ng/contiki-ng.git -b $WITH_CONTIKI_NG_BRANCH
+          cd contiki-ng
+          git checkout "$WITH_CONTIKI_NG_BRANCH"
+      - name: cache LwIP
+        id: cache_lwip
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/download/lwip
+          key: lwip-${{ runner.os }}-${{ runner.arch }}-${{ env.WITH_LWIP_BRANCH }}-full
+          lookup-only: true
+      - name: download LwIP
+        if: steps.cache_lwip.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "$RUNNER_TEMP/download/lwip"
+          mkdir -p "$RUNNER_TEMP/download"
+          cd "$RUNNER_TEMP/download"
+          git clone --depth 1 https://git.savannah.nongnu.org/git/lwip.git -b $WITH_LWIP_BRANCH
+          cd lwip
+          git checkout "$WITH_LWIP_BRANCH"
+      - name: cache Zephyr
+        id: cache_zephyr
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/download/zephyrproject
+          key: zephyr-${{ runner.os }}-${{ runner.arch }}-${{ env.WITH_ZEPHYR_BRANCH }}-full
+          lookup-only: true
+      - name: download Zephyr
+        if: steps.cache_zephyr.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "$RUNNER_TEMP/download//download/zephyrproject"
+          mkdir -p "$RUNNER_TEMP/download"
+          cd "$RUNNER_TEMP/download"
+          python3 -m venv zephyrproject/.venv
+          ls -l zephyrproject/.venv/bin/activate
+          . zephyrproject/.venv/bin/activate
+          pip install west
+          west init --mr ${WITH_ZEPHYR_BRANCH} zephyrproject
+          cd zephyrproject
+          west update -n
+          west zephyr-export
+          west packages pip --install
+          cd zephyr
+          west sdk install --install-base=zephyrproject/../ -t x86_64-zephyr-elf
+          cd ../../
+          deactivate
   pre-commit:
     runs-on: ubuntu-latest
     steps:
@@ -56,6 +143,7 @@ jobs:
         run: |
           scripts/check-missing-updates.sh
   build-linux:
+    needs: do-caches
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -70,22 +158,10 @@ jobs:
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
         id: cache_openhitls
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/openhitls-prefix
           key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
-      - name: build openHiTLS
-        if: matrix.TLS == 'openhitls' && steps.cache_openhitls.outputs.cache-hit != 'true'
-        run: |
-          rm -rf "$RUNNER_TEMP/openhitls-src" "$RUNNER_TEMP/openhitls-prefix"
-          git init "$RUNNER_TEMP/openhitls-src"
-          cd "$RUNNER_TEMP/openhitls-src"
-          git remote add origin "$OPENHITLS_REPO"
-          git fetch --depth 1 origin "$OPENHITLS_REF"
-          git checkout FETCH_HEAD
-          cmake -S . -B build -DHITLS_BUILD_PROFILE=full -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --parallel "$(nproc)"
-          cmake --install build --prefix "$RUNNER_TEMP/openhitls-prefix"
       - name: install openHiTLS
         if: matrix.TLS == 'openhitls'
         run: |
@@ -113,6 +189,7 @@ jobs:
           libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
           examples/coap-server -? 2>&1 | head -10
   build-linux2:
+    needs: do-caches
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -128,22 +205,10 @@ jobs:
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
         id: cache_openhitls
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/openhitls-prefix
           key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
-      - name: build openHiTLS
-        if: matrix.TLS == 'openhitls' && steps.cache_openhitls.outputs.cache-hit != 'true'
-        run: |
-          rm -rf "$RUNNER_TEMP/openhitls-src" "$RUNNER_TEMP/openhitls-prefix"
-          git init "$RUNNER_TEMP/openhitls-src"
-          cd "$RUNNER_TEMP/openhitls-src"
-          git remote add origin "$OPENHITLS_REPO"
-          git fetch --depth 1 origin "$OPENHITLS_REF"
-          git checkout FETCH_HEAD
-          cmake -S . -B build -DHITLS_BUILD_PROFILE=full -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --parallel "$(nproc)"
-          cmake --install build --prefix "$RUNNER_TEMP/openhitls-prefix"
       - name: install openHiTLS
         if: matrix.TLS == 'openhitls'
         run: |
@@ -190,6 +255,7 @@ jobs:
         run: |
           LD_LIBRARY_PATH=ext/tinydtls libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
   cmake-build:
+    needs: do-caches
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -205,22 +271,10 @@ jobs:
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
         id: cache_openhitls
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/openhitls-prefix
           key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
-      - name: build openHiTLS
-        if: matrix.TLS == 'openhitls' && steps.cache_openhitls.outputs.cache-hit != 'true'
-        run: |
-          rm -rf "$RUNNER_TEMP/openhitls-src" "$RUNNER_TEMP/openhitls-prefix"
-          git init "$RUNNER_TEMP/openhitls-src"
-          cd "$RUNNER_TEMP/openhitls-src"
-          git remote add origin "$OPENHITLS_REPO"
-          git fetch --depth 1 origin "$OPENHITLS_REF"
-          git checkout FETCH_HEAD
-          cmake -S . -B build -DHITLS_BUILD_PROFILE=full -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --parallel "$(nproc)"
-          cmake --install build --prefix "$RUNNER_TEMP/openhitls-prefix"
       - name: install openHiTLS
         if: matrix.TLS == 'openhitls'
         run: |
@@ -246,6 +300,7 @@ jobs:
           valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression ./testdriver
           ./coap-server -? 2>&1 | head -10
   cmake-build2:
+    needs: do-caches
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -262,22 +317,10 @@ jobs:
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
         id: cache_openhitls
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/openhitls-prefix
           key: openhitls-${{ runner.os }}-${{ runner.arch }}-${{ env.OPENHITLS_REF }}-full
-      - name: build openHiTLS
-        if: matrix.TLS == 'openhitls' && steps.cache_openhitls.outputs.cache-hit != 'true'
-        run: |
-          rm -rf "$RUNNER_TEMP/openhitls-src" "$RUNNER_TEMP/openhitls-prefix"
-          git init "$RUNNER_TEMP/openhitls-src"
-          cd "$RUNNER_TEMP/openhitls-src"
-          git remote add origin "$OPENHITLS_REPO"
-          git fetch --depth 1 origin "$OPENHITLS_REF"
-          git checkout FETCH_HEAD
-          cmake -S . -B build -DHITLS_BUILD_PROFILE=full -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --parallel "$(nproc)"
-          cmake --install build --prefix "$RUNNER_TEMP/openhitls-prefix"
       - name: install openHiTLS
         if: matrix.TLS == 'openhitls'
         run: |
@@ -331,6 +374,7 @@ jobs:
       run: |
         gmake -C examples/contiki
   other-build:
+    needs: do-caches
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -340,6 +384,49 @@ jobs:
       - name: setup
         run: |
           sudo apt-get update && sudo apt-get install -y libc6-dev-i386 lib32stdc++-13-dev
+      - name: cache Contiki
+        if: matrix.OS == 'contiki'
+        id: cache_contiki_ng
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/download/contiki-ng
+          key: contiki-${{ runner.os }}-${{ runner.arch }}-${{ env.WITH_CONTIKI_NG_BRANCH }}-full
+      - name: install Contiki
+        if: matrix.OS == 'contiki'
+        run: |
+          (cd "$RUNNER_TEMP/download/contiki-ng" ; git describe --tags --all)
+          rm -f examples/contiki/contiki-ng
+          mkdir -p examples/contiki
+          cp -a $RUNNER_TEMP/download/contiki-ng examples/contiki
+          cd examples/contiki/contiki-ng/os/net/app-layer && rm -rf libcoap && ln -s ../../../../../.. libcoap
+      - name: cache LwIP
+        if: matrix.OS == 'lwip'
+        id: cache_lwip
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/download/lwip
+          key: lwip-${{ runner.os }}-${{ runner.arch }}-${{ env.WITH_LWIP_BRANCH }}-full
+      - name: install LwIP
+        if: matrix.OS == 'lwip'
+        run: |
+          (cd "$RUNNER_TEMP/download/lwip" ; git describe --tags --all)
+          rm -f examples/lwip/lwip
+          mkdir -p examples/lwip
+          cp -a $RUNNER_TEMP/download/lwip examples/lwip
+      - name: cache Zephyr
+        if: matrix.OS == 'zephyr'
+        id: cache_zephyr
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/download/zephyrproject
+          key: zephyr-${{ runner.os }}-${{ runner.arch }}-${{ env.WITH_ZEPHYR_BRANCH }}-full
+      - name: install Zephyr
+        if: matrix.OS == 'zephyr'
+        run: |
+          rm -f examples/zephyr/zephyrproject
+          mkdir -p examples/zephyr/zephyrproject
+          cp -a $RUNNER_TEMP/download/zephyrproject examples/zephyr
+          (cd examples/zephyr/zephyrproject/zephyr/zephyr-sdk* ; cmake -P cmake/zephyr_sdk_export.cmake)
       - name: compile
         run: |
           make -C examples/${{matrix.OS}} EXTRA_CFLAGS=-Werror
@@ -434,6 +521,7 @@ jobs:
 
   documentation:
     runs-on: ubuntu-latest
+    needs: pre-commit
     steps:
       - uses: actions/checkout@v6
         with:
@@ -456,7 +544,8 @@ jobs:
       - name: installation check
         run: |
           make install && ls -lR $GITHUB_WORKSPACE/test-install
-  distribution:
+  distribution-tarball:
+    needs: do-caches
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -464,19 +553,79 @@ jobs:
           submodules: recursive
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags graphviz doxygen libxml2-utils xsltproc docbook-xml docbook-xsl asciidoc libc6-dev-i386
+          sudo apt-get install -y exuberant-ctags
           ./autogen.sh
       - name: configure
         run: |
           mkdir build-dist
           cd build-dist
-          $GITHUB_WORKSPACE/configure --enable-silent-rules --enable-documentation --enable-examples --disable-dtls
+          $GITHUB_WORKSPACE/configure --enable-silent-rules --disable-documentation --enable-examples --disable-dtls
+      - name: cache tarball
+        id: cache_tarball
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/libcoap-*.tar.bz2
+          key: cache-${{ github.run_id }}
       - name: build distribution
         run: |
           cd build-dist
           make dist
+          cp -f libcoap-*.tar.bz2 ${{ runner.temp }}
+  distribution-builds:
+    needs: distribution-tarball
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        BUILD: ["contiki", "lwip", "riot", "zephyr", "autogen", "cmake"]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: actions/checkout@v6
+      - name: setup other
+        if: matrix.BUILD == 'contiki' || matrix.BUILD == 'lwip' || matrix.BUILD == 'riot' || matrix.BUILD == 'zephyr'
+        run: |
+          sudo apt-get update && sudo apt-get install -y libc6-dev-i386 lib32stdc++-13-dev
+      - name: setup autogen
+        if: matrix.BUILD == 'autogen'
+        run: |
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags graphviz doxygen libxml2-utils xsltproc docbook-xml docbook-xsl asciidoc libc6-dev-i386
+      - name: setup cmake
+        if: matrix.BUILD == 'cmake'
+        run: |
+          sudo apt-get update && sudo apt-get install -y libc6-dev-i386 lib32stdc++-13-dev libcunit1-dev
+      - name: restore tarball
+        id: cache_tarball
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/libcoap-*.tar.bz2
+          key: cache-${{ github.run_id }}
+      - name: cache Contiki
+        if: matrix.BUILD == 'contiki'
+        id: cache_contiki_ng
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/download/contiki-ng
+          key: contiki-${{ runner.os }}-${{ runner.arch }}-${{ env.WITH_CONTIKI_NG_BRANCH }}-full
+      - name: cache LwIP
+        if: matrix.BUILD == 'lwip'
+        id: cache_lwip
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/download/lwip
+          key: lwip-${{ runner.os }}-${{ runner.arch }}-${{ env.WITH_LWIP_BRANCH }}-full
+      - name: cache Zephyr
+        if: matrix.BUILD == 'zephyr'
+        id: cache_zephyr
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/download/zephyrproject
+          key: zephyr-${{ runner.os }}-${{ runner.arch }}-${{ env.WITH_ZEPHYR_BRANCH }}-full
       - name: check distribution build
         run: |
+          ./autogen.sh
+          mkdir -p build-dist
           cd build-dist
-          $GITHUB_WORKSPACE/scripts/github_dist.sh
+          cp -f ${{ runner.temp }}/libcoap-*.tar.bz2 .
+          $GITHUB_WORKSPACE/scripts/github_dist.sh ${{matrix.BUILD}}
         shell: bash

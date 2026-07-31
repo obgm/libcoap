@@ -95,6 +95,17 @@ EXTRA_DIST = \
   examples/riot/tests_pkg_libcoap/README.md \
   examples/riot/tests_pkg_libcoap/tests/01-run.py \
   examples/riot/README \
+  examples/zephyr/Makefile \
+  examples/zephyr/client-src/CMakeLists.txt \
+  examples/zephyr/client-src/Kconfig \
+  examples/zephyr/client-src/libcoap-mbedtls.conf \
+  examples/zephyr/client-src/prj.conf \
+  examples/zephyr/client-src/src/main.c \
+  examples/zephyr/test-cpp-src/CMakeLists.txt \
+  examples/zephyr/test-cpp-src/Kconfig \
+  examples/zephyr/test-cpp-src/prj.conf \
+  examples/zephyr/test-cpp-src/src/test.cpp \
+  examples/zephyr/README \
   Makefile.libcoap \
   include/coap$(LIBCOAP_API_VERSION)/coap_libcoap_build.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_internal.h \
@@ -164,7 +175,10 @@ EXTRA_DIST = \
   win32/libcoap.vcxproj.filters \
   win32/testdriver/testdriver.vcxproj \
   win32/testdriver/testdriver.vcxproj.filters \
-  win32/testdriver/testdriver.vcxproj.user
+  win32/testdriver/testdriver.vcxproj.user \
+  zephyr/CMakeLists.txt \
+  zephyr/Kconfig \
+  zephyr/module.yml
 
 # This is a mirror of files depending on COAP_OSCORE_SUPPORT included in src as per
 # libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES
