@@ -15,6 +15,7 @@ LIBCOAP_API_VERSION = $(shell if [ -f $(libcoap_dir)/configure.ac ];  then \
 
 coap_include_dir = $(libcoap_dir)/include/coap$(LIBCOAP_API_VERSION)
 
+# Keep in sync with .github/workflows/main.yml
 WITH_LWIP_BRANCH?=STABLE-2_2_1_RELEASE
 
 USE_LWIP_CONTRIB := $(shell if [ $(WITH_LWIP_BRANCH) = "STABLE-2_1_3_RELEASE" ] ; then \

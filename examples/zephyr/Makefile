@@ -1,5 +1,6 @@
 ZEPHYR_PROJECT?=zephyrproject
 
+# Keep in sync with .github/workflows/main.yml
 WITH_ZEPHYR_BRANCH?=v4.3.0
 
 export LCWD := $(shell pwd)

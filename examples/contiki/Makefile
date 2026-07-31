@@ -1,6 +1,7 @@
 CONTIKI=contiki-ng
 TARGET?=native
 
+# Keep in sync with .github/workflows/main.yml
 WITH_CONTIKI_NG_BRANCH=release/v4.9
 
 all: $(CONTIKI) check-version server
