@@ -2133,8 +2133,8 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
         if (now - session->last_tx >= session->rl_ticks_per_packet) {
           break;
         }
-        timeout_ms = (uint32_t)((session->rl_ticks_per_packet - (now - session->last_tx)) /
-                                (COAP_TICKS_PER_SECOND / 1000));
+        timeout_ms = (uint32_t)(((session->rl_ticks_per_packet - (now - session->last_tx)) *
+                                 1000) / COAP_TICKS_PER_SECOND);
 
         if (timeout_ms == 0) {
           timeout_ms = COAP_IO_NO_WAIT;
