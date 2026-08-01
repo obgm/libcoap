@@ -2118,7 +2118,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
       if (now - session->last_tx < session->rl_ticks_per_packet) {
         uint32_t rem = (uint32_t)(session->rl_ticks_per_packet -
                                   (now - session->last_tx)) * 1000 / COAP_TICKS_PER_SECOND;
-        coap_log_debug("** %s: mid 0x%04x: delaying transmission (%d.%03ds)\n",
+        coap_log_debug("** %s: mid 0x%04x: delaying transmission (%" PRIu32 ".%03" PRIu32 "s)\n",
                        coap_session_str(session), pdu->mid, rem / 1000, rem %1000);
         coap_show_pdu(COAP_LOG_DEBUG, pdu);
       }
