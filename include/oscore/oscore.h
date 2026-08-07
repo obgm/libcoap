@@ -77,14 +77,22 @@ uint8_t *oscore_cs_params(int8_t param, int8_t param_type, size_t *len);
  */
 uint8_t *oscore_cs_key_params(cose_curve_t param, int8_t param_type, size_t *len);
 
-/*
- * oscore_encode_option_value
+/**
+ * Encode the OSCORE option.
+ *
+ * @param option_buffer  Buffer to put the option into.
+ & @param option_buf_len Size of @p option_buffer.
+ * @param cose           COSE information.
+ * @param group_flag     (Unused).
+ * @param appendix_b_2   1 if doing Appendix B.2 negotiaton.
+ *
+ * @return               @c -1 if error, else the length of the OSCORE option.
  */
-size_t oscore_encode_option_value(uint8_t *option_buffer,
-                                  size_t option_buf_len,
-                                  cose_encrypt0_t *cose,
-                                  uint8_t group,
-                                  uint8_t appendix_b_2);
+ssize_t oscore_encode_option_value(uint8_t *option_buffer,
+                                   size_t option_buf_len,
+                                   cose_encrypt0_t *cose,
+                                   uint8_t group_flag,
+                                   uint8_t appendix_b_2);
 
 /*
  * Decodes the OSCORE option value and places decoded values into the provided

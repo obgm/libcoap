@@ -163,29 +163,34 @@ oscore_prepare_e_aad(oscore_ctx_t *ctx,
 /*
  * oscore_encode_option_value
  */
-size_t
+ssize_t
 oscore_encode_option_value(uint8_t *option_buffer,
                            size_t option_buf_len,
                            cose_encrypt0_t *cose,
                            uint8_t group_flag,
                            uint8_t appendix_b_2) {
-  size_t offset = 1;
-  size_t rem_space = option_buf_len;
+  size_t offset;
+  size_t rem_space;
 
   (void)group_flag;
-  if (cose->partial_iv.length > 5) {
-    return 0;
+  if (cose->partial_iv.length > 5 || option_buf_len == 0) {
+    return -1;
   }
+  if (option_buf_len > 255)
+    option_buf_len = 255;
   option_buffer[0] = 0;
+  offset = 1;
+  rem_space = option_buf_len - 1;
 
   if (cose->partial_iv.length > 0 && cose->partial_iv.length <= 5 &&
       cose->partial_iv.s != NULL) {
+    if (rem_space < cose->partial_iv.length)
+      return -1;
     option_buffer[0] |= (0x07 & cose->partial_iv.length);
     memcpy(&(option_buffer[offset]),
            cose->partial_iv.s,
            cose->partial_iv.length);
     offset += cose->partial_iv.length;
-    assert(rem_space > cose->partial_iv.length);
     rem_space -= cose->partial_iv.length;
   }
 
@@ -194,30 +199,37 @@ oscore_encode_option_value(uint8_t *option_buffer,
       /* Need to CBOR wrap kid_context - yuk! */
       uint8_t *ptr = &option_buffer[offset+1];
 
+      if (rem_space < 1)
+        return -1;
       option_buffer[0] |= 0x10;
       option_buffer[offset] = (uint8_t)oscore_cbor_put_bytes(&ptr, &rem_space,
                                                              cose->kid_context.s,
                                                              cose->kid_context.length);
       offset += option_buffer[offset] + 1;
+      /* rem_space updated by oscore_cbor_put_bytes() */
+      rem_space -= 1;
     } else {
+      if (rem_space < 1 + cose->kid_context.length)
+        return -1;
       option_buffer[0] |= 0x10;
       option_buffer[offset] = (uint8_t)cose->kid_context.length;
       offset++;
+      rem_space--;
       memcpy(&(option_buffer[offset]),
              cose->kid_context.s,
              (uint8_t)cose->kid_context.length);
       offset += cose->kid_context.length;
-      assert(rem_space > cose->kid_context.length);
       rem_space -= cose->kid_context.length;
     }
   }
 
   if (cose->key_id.s != NULL) {
     option_buffer[0] |= 0x08;
+    if (rem_space < cose->key_id.length)
+      return -1;
     if (cose->key_id.length) {
       memcpy(&(option_buffer[offset]), cose->key_id.s, cose->key_id.length);
       offset += cose->key_id.length;
-      assert(rem_space > cose->key_id.length);
       rem_space -= cose->key_id.length;
     }
   }
@@ -226,7 +238,6 @@ oscore_encode_option_value(uint8_t *option_buffer,
     /* If option_value is 0x00 it should be empty. */
     offset = 0;
   }
-  assert(offset <= option_buf_len);
   cose->oscore_option.s = option_buffer;
   cose->oscore_option.length = offset;
   return offset;
