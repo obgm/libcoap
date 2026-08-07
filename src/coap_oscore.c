@@ -415,8 +415,8 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
   oscore_sender_ctx_t *snd_ctx;
   uint8_t external_aad_buffer[200];
   coap_bin_const_t external_aad;
-  uint8_t oscore_option[48];
-  size_t oscore_option_len;
+  uint8_t oscore_option[255];
+  ssize_t oscore_option_len;
 
   /* Check that OSCORE has not already been done */
   if (coap_check_option(pdu, COAP_OPTION_OSCORE, &opt_iter))
@@ -541,6 +541,10 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
       oscore_encode_option_value(oscore_option, sizeof(oscore_option), cose,
                                  group_flag,
                                  session->b_2_step != COAP_OSCORE_B_2_NONE);
+  if (oscore_option_len < 0) {
+    coap_log_oscore("Invalid parameters for creating OSCORE option\n");
+    goto error;
+  }
   if (!coap_request) {
     /* Reset what was just unset as appropriate for AAD */
     cose_encrypt0_set_key_id(cose, rcp_ctx->recipient_id);
