@@ -1804,6 +1804,68 @@ fail:
   oscore_free_contexts(ctx);
 }
 
+static void
+t_cbor_large_container_count(void) {
+  static const uint8_t large_array[] = {
+    0x9a, 0x00, 0x01, 0x00, 0x00
+  };
+  static const uint8_t large_map[] = {
+    0xba, 0x00, 0x01, 0x00, 0x00
+  };
+  const uint8_t *data = large_array;
+  size_t buf_len = sizeof(large_array);
+  uint8_t *result = NULL;
+  size_t len = 0;
+
+  CU_ASSERT(oscore_cbor_strip_value(&data, &buf_len, &result, &len) == 1);
+  CU_ASSERT_PTR_NULL(result);
+  CU_ASSERT(len == 0);
+  CU_ASSERT(data == large_array);
+  CU_ASSERT(buf_len == sizeof(large_array));
+
+  data = large_map;
+  buf_len = sizeof(large_map);
+  CU_ASSERT(oscore_cbor_strip_value(&data, &buf_len, &result, &len) == 1);
+  CU_ASSERT_PTR_NULL(result);
+  CU_ASSERT(len == 0);
+  CU_ASSERT(data == large_map);
+  CU_ASSERT(buf_len == sizeof(large_map));
+}
+
+static void
+t_cbor_large_value(void) {
+  const size_t payload_len = 0x10000;
+  const size_t cbor_len = payload_len + 5;
+  uint8_t *cbor = malloc(cbor_len);
+  const uint8_t *data;
+  size_t buf_len;
+  uint8_t *result = NULL;
+  size_t len = 0;
+
+  CU_ASSERT_PTR_NOT_NULL(cbor);
+  if (cbor == NULL)
+    return;
+  cbor[0] = 0x5a;
+  cbor[1] = 0x00;
+  cbor[2] = 0x01;
+  cbor[3] = 0x00;
+  cbor[4] = 0x00;
+  memset(&cbor[5], 0xa5, payload_len);
+  data = cbor;
+  buf_len = cbor_len;
+
+  CU_ASSERT(oscore_cbor_strip_value(&data, &buf_len, &result, &len) == 0);
+  CU_ASSERT_PTR_NOT_NULL(result);
+  CU_ASSERT(len == cbor_len);
+  CU_ASSERT(data == cbor + cbor_len);
+  CU_ASSERT(buf_len == 0);
+  if (result != NULL) {
+    CU_ASSERT(memcmp(result, cbor, cbor_len) == 0);
+    coap_free_type(COAP_STRING, result);
+  }
+  free(cbor);
+}
+
 /************************************************************************
  ** initialization
  ************************************************************************/
@@ -1879,6 +1941,9 @@ t_init_oscore_tests(void) {
     OSCORE_TEST(t_propagate_flat);
     OSCORE_TEST(t_propagate_complex);
     OSCORE_TEST(t_propagate_no_state);
+
+    OSCORE_TEST(t_cbor_large_container_count);
+    OSCORE_TEST(t_cbor_large_value);
   }
 
   return suite[0];
