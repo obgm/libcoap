@@ -182,7 +182,7 @@ typedef int (*coap_resource_deleted_t)(coap_context_t *context,
  * @param observe_deleted Called when a observe subscription is de-registered.
  * @param track_observe_value Called every @p save_freq so current observe
  *                            value can be tracked.
- * @param dyn_resource_added Called whan a dynamic resource is created from the
+ * @param dyn_resource_added Called when a dynamic resource is created from the
  *                           'unknown' resource for tracking.
  * @param resource_deleted Called when a resource is removed.
  * @param save_freq Frequency of change of observe value for calling
@@ -201,7 +201,7 @@ void coap_persist_track_funcs(coap_context_t *context,
 
 /**
  * Set up an active subscription for an observe that was previously active
- * over a coap-server inadvertant restart.
+ * over a coap-server inadvertent restart.
  *
  * Only UDP sessions currently supported.
  *

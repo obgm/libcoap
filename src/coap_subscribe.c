@@ -148,7 +148,7 @@ coap_persist_observe_add_lkd(coap_context_t *context,
   session = coap_endpoint_get_session(ep, packet, now);
   if (session == NULL)
     goto fail;
-  /* Need max space incase PDU is updated with updated token, huge size etc. */
+  /* Need max space in case PDU is updated with updated token, huge size etc. */
   pdu = coap_pdu_init(0, 0, 0, 0);
   if (!pdu)
     goto fail;
@@ -972,7 +972,7 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
 
       coap_log_debug("persist: dynamic resource '%s' being re-created\n", name->s);
       /*
-       * Need max space incase PDU is updated with updated token,
+       * Need max space in case PDU is updated with updated token,
        * huge size etc.
        * */
       request = coap_pdu_init(0, 0, 0, 0);

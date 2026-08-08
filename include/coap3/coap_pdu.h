@@ -407,7 +407,7 @@ int coap_add_token(coap_pdu_t *pdu,
  *
  * Note: Where possible, the option data needs to be stripped of leading zeros
  * (big endian) to reduce the amount of data needed in the PDU, as well as in
- * some cases the maximum data size of an opton can be exceeded if not stripped
+ * some cases the maximum data size of an option can be exceeded if not stripped
  * and hence be illegal.  This is done by using coap_encode_var_safe() or
  * coap_encode_var_safe8().
  *

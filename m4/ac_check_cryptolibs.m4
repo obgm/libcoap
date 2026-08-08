@@ -9,7 +9,7 @@
 #   respective cryptographic library version of GnuTLS, OpenSSL, Mbed TLS,
 #   WolfSSL and TinyDTLS on the host. The variables '$gnutls_version_required',
 #   '$mbedtls_version_required' and '$openssl_version_required' etc. hold the
-#   minimum required version and are set up externaly in configure.ac.
+#   minimum required version and are set up externally in configure.ac.
 #
 #   Example:
 #

@@ -76,7 +76,7 @@ void coap_replace_percents(coap_optlist_t *optlist);
 const char *coap_map_abbrev_uri_path(coap_upa_chain_t *chain, uint32_t value);
 
 /*
- * See if the specifiec path with length is on the UPA chain.
+ * See if the specific path with length is on the UPA chain.
  *
  * @param chain The UPA chain to check against.
  * @param path  The URI path to match (without the leading /).

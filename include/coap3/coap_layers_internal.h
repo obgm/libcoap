@@ -49,7 +49,7 @@ typedef enum {
  *
  * @return         >=0 Number of bytes read.
  *                 -1  Error error in errno).
- *                 -2  Recieved ICMP unreachable.
+ *                 -2  Received ICMP unreachable.
  */
 typedef ssize_t (*coap_layer_read_t)(coap_session_t *session,
                                      uint8_t *data, size_t datalen);

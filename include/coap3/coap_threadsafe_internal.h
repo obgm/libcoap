@@ -69,7 +69,7 @@ extern "C" {
  *
  * Note:
  * libcoap may call a handler, which may in turn call into libcoap, which may
- * then call a handler. global_lock will remain locked thoughout this process
+ * then call a handler. global_lock will remain locked throughout this process
  * by the same thread.
  *
  * Alternatively, coap_lock_callback_release() (or
@@ -131,7 +131,7 @@ typedef struct coap_lock_t {
 void coap_lock_unlock_func(coap_lock_t *lock, const char *file, int line);
 
 /**
- * Lock the specfic lock.
+ * Lock the specific lock.
  *
  * If this is a nested lock (Public API - libcoap - app call-back - Public API),
  * then increment the lock->in_callback.
@@ -190,7 +190,7 @@ int coap_lock_lock_func(coap_lock_t *lock, const char *file, int line);
  *   global_lock not locked if libcoap not started and @p failed is executed. @p failed must
  *   be code that skips doing the lock protected code.
  *
- * @param lock The specifc lock to lock.
+ * @param lock The specific lock to lock.
  * @param failed Code to execute on lock failure.
  *
  */
@@ -207,7 +207,7 @@ int coap_lock_lock_func(coap_lock_t *lock, const char *file, int line);
  *   Same thread locked context
  *   Not when called from app call-back
  *
- * @param lock The specifc lock to unlock.
+ * @param lock The specific lock to unlock.
  *
  */
 #define coap_lock_specific_unlock(lock) do { \
@@ -388,7 +388,7 @@ int coap_lock_lock_func(coap_lock_t *lock);
  *   global not locked if libcoap not started and @p failed is executed. @p failed must
  *   be code that skips doing the lock protected code.
  *
- * @param lock The specifc lock to lock.
+ * @param lock The specific lock to lock.
  * @param failed Code to execute on lock failure
  *
  */
@@ -416,7 +416,7 @@ int coap_lock_lock_func(coap_lock_t *lock);
  *   Same thread locked context.
  *   Not when called from app call-back.
  *
- * @param lock The specifc lock to unlock.
+ * @param lock The specific lock to unlock.
  *
  */
 #define coap_lock_specific_unlock(lock) do { \
@@ -595,7 +595,7 @@ typedef coap_mutex_t coap_lock_t;
  *   global_lock not locked if libcoap not started and @p failed is executed. @p failed must
  *   be code that skips doing the lock protected code.
  *
- * @param lock The specifc lock to lock.
+ * @param lock The specific lock to lock.
  * @param failed Code to execute on lock failure.
  *
  */
@@ -619,7 +619,7 @@ typedef coap_mutex_t coap_lock_t;
  * Unlocked when
  *   Same thread locked context
  *
- * @param lock The specifc lock to unlock.
+ * @param lock The specific lock to unlock.
  */
 #define coap_lock_specific_unlock(lock)
 

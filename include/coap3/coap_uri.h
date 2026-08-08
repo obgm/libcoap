@@ -383,7 +383,7 @@ coap_string_t *coap_get_uri_path(const coap_pdu_t *request);
 
 /**
  * Define a Path to use if an Uri-Path-Abbrev option fails and the client
- * is to retry the request using Uri-Path instread of Uri-Path-Abbrev.
+ * is to retry the request using Uri-Path instead of Uri-Path-Abbrev.
  *
  * @param mapping A path mapping to value for Uri-Path-Abbrev table or NULL
                   if the previous mapping is to be cleared.

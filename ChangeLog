@@ -90,7 +90,7 @@
         * Add in more support for async delayed requests.
         * Add in support for not closing down Observe when closing session.
         * Support for RFC7390, RFC8516 and RFC9175.
-        * Warn when Tokens are re-used.
+        * Warn when Tokens are reused.
         * Warn when Options are repeated that are not defined as being
           repeatable.
         * Support for TLS when using Mbed TLS library.
@@ -355,7 +355,7 @@
 2012-11-01  Olaf Bergmann  <bergmann@tzi.org>
 
 	* option.c (coap_opt_size, coap_opt_value, coap_opt_length):
-	several functions to access fields of options (possibly preceeded
+	several functions to access fields of options (possibly preceded
 	by option jump)
 
 2012-10-25  Olaf Bergmann  <bergmann@tzi.org>

@@ -32,7 +32,7 @@ extern "C" {
 
 /*
  * Use the top 20 bits of a 64 bit token for tracking current block in large transfer.
- * However, if smaller tokens are required. this vould be set up to 48, leaving 16 bits
+ * However, if smaller tokens are required. this would be set up to 48, leaving 16 bits
  * for unique tokens.
  */
 #ifndef STATE_MAX_BLK_CNT_BITS
@@ -164,7 +164,7 @@ typedef struct coap_lg_xmit_data_t {
   size_t length;         /**< large data length */
   coap_get_large_data_t get_func; /**< Where to get data id needed */
   coap_release_large_data_t release_func; /**< large data de-alloc function */
-  void *app_ptr;         /**< applicaton provided ptr for de-alloc function */
+  void *app_ptr;         /**< application provided ptr for de-alloc function */
   uint32_t ref;          /**< Reference count */
 } coap_lg_xmit_data_t;
 
@@ -174,7 +174,7 @@ typedef struct coap_lg_xmit_data_t {
 struct coap_lg_xmit_t {
   struct coap_lg_xmit_t *next;
   uint8_t blk_size;      /**< large block transmission size */
-  uint16_t option;       /**< large block transmisson CoAP option */
+  uint16_t option;       /**< large block transmission CoAP option */
   int last_block;        /**< last acknowledged block number Block1
                               last transmitted Q-Block2 */
   coap_lg_xmit_data_t *data_info; /**< Pointer to large data information */
@@ -495,7 +495,7 @@ coap_lg_xmit_t *coap_find_lg_xmit_response(const coap_session_t *session,
  * @param response   The response pdu.
  * @param query      The query taken from the (original) requesting pdu.
  * @param media_type The content format of the data.
- * @param maxage     The maxmimum life of the data. If @c -1, then there
+ * @param maxage     The maximum life of the data. If @c -1, then there
  *                   is no maxage.
  * @param etag       ETag to use if not 0.
  * @param length     The total length of the data.

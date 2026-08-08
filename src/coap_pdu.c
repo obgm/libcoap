@@ -682,7 +682,7 @@ coap_option_check_repeatable(coap_pdu_t *pdu, coap_option_num_t number) {
   default:
     coap_log_info("Option number %d is not defined as repeatable\n",
                   number);
-    /* Accepting it after warning as there may be user defineable options */
+    /* Accepting it after warning as there may be user definable options */
     break;
   }
   return 1;

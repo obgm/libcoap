@@ -10,8 +10,8 @@
  */
 
 /**
- * @file coap_dgrm_lwip.c
- * @brief LwIP Datagram (UDP) specific functions
+ * @file coap_mem_lwip.c
+ * @brief Memory handling functions - LwIP specific
  */
 
 #include "coap3/coap_libcoap_build.h"

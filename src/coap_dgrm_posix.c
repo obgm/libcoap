@@ -899,7 +899,7 @@ coap_socket_recv(coap_socket_t *sock, coap_packet_t *packet) {
 
     mhdr.msg_control = buf;
     mhdr.msg_controllen = sizeof(buf);
-    /* set a big first length incase recvmsg() does not implement updating
+    /* set a big first length in case recvmsg() does not implement updating
        msg_control as well as preset the first cmsg with bad data */
     cmsg = (struct cmsghdr *)buf;
     cmsg->cmsg_len = CMSG_LEN(sizeof(buf));

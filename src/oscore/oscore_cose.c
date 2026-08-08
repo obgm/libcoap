@@ -399,7 +399,7 @@ cose_encrypt0_set_aad(cose_encrypt0_t *ptr, coap_bin_const_t *aad) {
   }
 }
 
-/* Returns 1 if successfull, 0 if key is of incorrect length. */
+/* Returns 1 if successful, 0 if key is of incorrect length. */
 int
 cose_encrypt0_set_key(cose_encrypt0_t *ptr, coap_bin_const_t *key) {
   if (key == NULL || key->length != 16) {

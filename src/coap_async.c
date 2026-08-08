@@ -151,7 +151,7 @@ coap_async_set_delay_lkd(coap_async_t *async, coap_tick_t delay) {
                                   1000 / COAP_TICKS_PER_SECOND));
   } else {
     async->delay = 0;
-    coap_log_debug("   %s: Async request indefinately delayed\n",
+    coap_log_debug("   %s: Async request indefinitely delayed\n",
                    coap_session_str(async->session));
   }
 }

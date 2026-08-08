@@ -98,7 +98,7 @@ It is possible to define multiple upstream servers for *reverse* and
 *forward-static* proxy types.  Each of these multiple servers needs a different
 address.  These will then be allocated to each new client request in a
 round-robin fashion. An existing client session will always get directed to the
-same upsteam server unless that upstream session has idle timed out.
+same upstream server unless that upstream session has idle timed out.
 
 For the *forward-dynamic* proxy type, a dummy server needs to be defined if any
 specific PKI/PSK or OSCORE is required for creating the ongoing session to the
@@ -113,11 +113,11 @@ Support for doing a multicast request can be enabled or disabled for an upstream
 server when using *forward-dynamic*, providing the ongoing session is UDP and the
 scheme is only coap.
 
-The proxy logic will convert between supported protocals - e.g. coap <> coaps+tcp
+The proxy logic will convert between supported protocols - e.g. coap <> coaps+tcp
 for the incoming and upstream session. Conversions to/from http(s) are not
 currently supported.
 
-The resourse handler to handle *forward* proxy requests is defined using
+The resource handler to handle *forward* proxy requests is defined using
 *coap_resource_proxy_uri_init2*(3).
 
 The resource handler to handle *reverse* proxy requests is defined using
@@ -138,7 +138,7 @@ FUNCTIONS
 ----
 /*
  * coap_proxy_t Proxy definitions.
- *  0x00000007  Old 4.3.5 mappings for backward compatability.
+ *  0x00000007  Old 4.3.5 mappings for backward compatibility.
  *  0x00000038  New type mappings.
  *  0xffffffc0  Bitwise optional actions.
  *
@@ -326,7 +326,7 @@ client endpoint.
  *
  * @param session CoAP session.
  * @param sent The PDU that was transmitted.
- * @param received The respose PDU that was received, or returned from cache.
+ * @param received The response PDU that was received, or returned from cache.
  * @param cache_key Updated with the cache key pointer provided to
  *                  coap_proxy_forward_request().  The caller should
  *                  delete this cache key (unless the client request set up an

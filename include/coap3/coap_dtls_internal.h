@@ -275,7 +275,7 @@ int coap_dtls_receive(coap_session_t *coap_session,
 
 #if COAP_SERVER_SUPPORT
 /**
- * Handling client HELLO messages from a new candiate peer.
+ * Handling client HELLO messages from a new candidate peer.
  * Note that session->tls is empty.
  *
  * @param coap_session The CoAP session.

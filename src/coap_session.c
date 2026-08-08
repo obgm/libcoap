@@ -834,7 +834,7 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
   } else {
     if (COAP_PROTO_NOT_RELIABLE(session->proto)) {
       coap_queue_t *q = NULL;
-      /* Check same mid is not getting re-used in violation of RFC7252 */
+      /* Check same mid is not getting reused in violation of RFC7252 */
       LL_FOREACH(session->delayqueue, q) {
         if (q->id == pdu->mid) {
           coap_log_err("** %s: mid=0x%04x: already in-use - dropped\n",
@@ -1342,7 +1342,7 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
                 endpoint->context->max_handshake_sessions :
                 COAP_DEFAULT_MAX_HANDSHAKE_SESSIONS)) {
     /* Maxed out on number of sessions in (D)TLS negotiation state */
-    coap_log_debug("Oustanding sessions in COAP_SESSION_STATE_HANDSHAKE too "
+    coap_log_debug("Outstanding sessions in COAP_SESSION_STATE_HANDSHAKE too "
                    "large.  New request ignored\n");
     return NULL;
   }
@@ -2452,7 +2452,7 @@ coap_session_set_type_server_lkd(coap_session_t *session) {
     }
     /*
      * (D)TLS will initiate traffic with handshake.
-     * Reliable protocols will be sending a CSM, so no nead for Ping.
+     * Reliable protocols will be sending a CSM, so no need for Ping.
      */
     if (session->context) {
       if (session->context->sessions) {

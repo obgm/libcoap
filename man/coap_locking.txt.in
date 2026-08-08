@@ -112,7 +112,7 @@ call a Public API when in the locked state.
 *coap_lock_callback_release*() (or *coap_lock_callback_ret_release*()) unlocks
 *global_lock* when calling app call-back. The allows the app call-back to go off
 and do other slow/blocking activity.  Any app call-back calls to a Public API then
-locks up *global_lock* before proceding.
+locks up *global_lock* before proceeding.
 
 *coap_lock_specific_callback_release*() acts as *coap_lock_callback_release*(),
 but allows additional locks to be set before doing the call-back, and then
@@ -190,14 +190,14 @@ will get executed.
 *Function: coap_lock_specific_lock()*
 
 The *coap_lock_specific_lock*() function is used to lock the specified _lock_ in the
-appropriate structue from multiple thread access. If the locking fails for any reason,
+appropriate structure from multiple thread access. If the locking fails for any reason,
 then _failed_statement_ will get
 executed.
 
 *Function: coap_lock_specific_unlock()*
 
 The *coap_lock_specific_unlock*() function is used to unlock the specified _lock_
-so that another thread can access the apprpriate structure.
+so that another thread can access the appropriate structure.
 
 *Function: coap_lock_specific_callback_release()*
 

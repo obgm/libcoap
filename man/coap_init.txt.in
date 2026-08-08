@@ -44,12 +44,12 @@ FUNCTIONS
 
 The *coap_startup*() function must be called before any other *coap_**()
 functions are called. It is used to initialize things like mutexes,
-random number gererators, clocks, TLS libraries etc.
+random number generators, clocks, TLS libraries etc.
 
 *NOTE:* This should be called after any other lower layer is initialized.
 For example, for LwIP, lwip_init() must be called before *coap_startup*().
 
-*NOTE:* After the inital call to *coap_startup*(), subsequent calls are ignored
+*NOTE:* After the initial call to *coap_startup*(), subsequent calls are ignored
 until *coap_cleanup*() is called.
 
 *Function: coap_cleanup()*

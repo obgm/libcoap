@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 /*
- * Define the forward declations for the structures (even non-opaque)
+ * Define the forward declarations for the structures (even non-opaque)
  * so that applications (using coap.h) as well as libcoap builds
  * can reference them (and makes .h file dependencies a lot simpler).
  */

@@ -137,20 +137,20 @@ _flags_ can be zero or more of the following definitions or'ed together.
 
 [horizontal]
 *COAP_RESOURCE_FLAGS_NOTIFY_NON*::
-Set the notification message type to non-confirmable for any trigggered
+Set the notification message type to non-confirmable for any triggered
 "observe" responses with type set to confirmable every 5 packets as required by
 "https://rfc-editor.org/rfc/rfc7641#section-4.5[RFC7641 4.5. Transmission]".
 See *coap_observe*(3). +
 *NOTE:* This flag is ignored if COAP_RESOURCE_FLAGS_NOTIFY_CON is set.
 
 *COAP_RESOURCE_FLAGS_NOTIFY_NON_ALWAYS*::
-Set the notification message type to always non-confirmable for any trigggered
+Set the notification message type to always non-confirmable for any triggered
 "observe" responses. This should only be used if a upper layer protocol
 requires it. See *coap_observe*(3). +
 *NOTE:* This flag is ignored if COAP_RESOURCE_FLAGS_NOTIFY_CON is set.
 
 *COAP_RESOURCE_FLAGS_NOTIFY_CON*::
-Set the notification message type to confirmable for any trigggered
+Set the notification message type to confirmable for any triggered
 "observe" responses. See *coap_observe*(3). +
 *NOTE:* COAP_RESOURCE_FLAGS_NOTIFY_NON is assumed if
 COAP_RESOURCE_FLAGS_NOTIFY_CON is not set.
@@ -247,7 +247,7 @@ more of the COAP_RESOURCE_FLAGS MCAST definitions.
 *NOTE:* There can only be one reverse-proxy or unknown resource handler per
 context - attaching a new one overrides the previous definition.
 
-*NOTE:* If resources are created in the request handlers accociated with this
+*NOTE:* If resources are created in the request handlers associated with this
 resource, as multiple threads can be running in the same handler either lock
 protection needs to be provided in the handler, or consider using
 *coap_register_dynamic_resource_handler*(3) instead for multi-thread environments.

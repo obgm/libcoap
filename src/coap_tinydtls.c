@@ -1266,7 +1266,7 @@ asn1_derive_keys(coap_tiny_context_t *t_context,
   }
 
   if (!is_pkcs8) {
-    /* pkcs8 abstraction tested for valid eliptic curve */
+    /* pkcs8 abstraction tested for valid elliptic curve */
     test = get_asn1_tag(COAP_ASN1_IDENTIFIER, priv_data, priv_len,
                         asn1_verify_curve);
     if (!test) {

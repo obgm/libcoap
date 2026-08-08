@@ -61,7 +61,7 @@
 #endif /* ! HAVE_INTTYPES_H */
 /*
  * To handle compilers / libraries that cannot handle %zu/%zd formats.
- * Define these separately to whatver the complier / library can work with.
+ * Define these separately to whatver the compiler / library can work with.
  */
 #ifndef PRIuS
 #define PRIuS "zu"

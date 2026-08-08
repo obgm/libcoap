@@ -31,3 +31,8 @@ repos:
     -   id: end-of-file-fixer
         exclude: 'tests/oss-fuzz/.*_seed_corpus/.*$'
     -   id: check-merge-conflict
+-   repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+    -   id: codespell
+        exclude: 'tests/oss-fuzz/.*_seed_corpus/.*$|examples/etsi_iot_01_largedata.txt|AUTHORS|examples/riot/Makefile'

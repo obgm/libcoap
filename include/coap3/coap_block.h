@@ -66,7 +66,7 @@ typedef struct {
 #define COAP_BLOCK_SINGLE_BODY  0x02 /* Deliver the data as a single body */
 #define COAP_BLOCK_TRY_Q_BLOCK   0x04 /* Try Q-Block method */
 #define COAP_BLOCK_USE_M_Q_BLOCK 0x08 /* Use M bit when recovering Q-Block2 */
-#define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* (cl) Don't use pre-emptive Request-Tags */
+#define COAP_BLOCK_NO_PREEMPTIVE_RTAG 0x10 /* (cl) Don't use preemptive Request-Tags */
 #define COAP_BLOCK_STLESS_FETCH  0x20 /* (cl) Assume server supports stateless FETCH */
 #define COAP_BLOCK_STLESS_BLOCK2 0x40 /* (svr)Server is stateless for handling Block2 */
 #define COAP_BLOCK_NOT_RANDOM_BLOCK1 0x80 /* (svr)Disable server handling random order
@@ -267,7 +267,7 @@ COAP_API coap_binary_t *coap_block_build_body(coap_binary_t *body_data, size_t l
  * @param request    The requesting pdu.
  * @param response   The response pdu.
  * @param media_type The format of the data.
- * @param maxage     The maxmimum life of the data. If @c -1, then there
+ * @param maxage     The maximum life of the data. If @c -1, then there
  *                   is no maxage.
  * @param length     The total length of the data.
  * @param data       The entire data block to transmit.
@@ -444,7 +444,7 @@ COAP_API int coap_add_data_large_request_app(coap_session_t *session,
  * @param response   The response pdu.
  * @param query      The query taken from the (original) requesting pdu.
  * @param media_type The content format of the data.
- * @param maxage     The maxmimum life of the data. If @c -1, then there
+ * @param maxage     The maximum life of the data. If @c -1, then there
  *                   is no maxage.
  * @param etag       ETag to use if not 0.
  * @param length     The total length of the data.

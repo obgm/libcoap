@@ -2061,7 +2061,7 @@ expire:
       if (lg_srcv->no_more_seen && lg_srcv->block_option == COAP_OPTION_BLOCK1) {
         /*
          * Need to send a separate 4.08 to indicate missing blocks
-         * Using NON is permissable as per
+         * Using NON is permissible as per
          * https://datatracker.ietf.org/doc/html/rfc7252#section-5.2.3
          */
         coap_pdu_t *pdu;
@@ -2816,7 +2816,7 @@ add_block_send(uint32_t num, int is_continue, send_track *out_blocks,
  * transfer.  If so, need to initiate the response with the next blocks
  * and not trouble the application.
  *
- * If additional responses needed, then these are expicitly sent out and
+ * If additional responses needed, then these are explicitly sent out and
  * 'response' is updated to be the last response to be sent.  There can be
  * multiple Q-Block2 in the request, as well as  the 'Continue' Q-Block2
  * request.
@@ -3132,7 +3132,7 @@ internal_issue:
   error_phrase = coap_response_phrase(response->code);
   coap_add_data(response, strlen(error_phrase),
                 (const uint8_t *)error_phrase);
-  /* Keep in cache for 4 * ACK_TIMOUT incase of retry */
+  /* Keep in cache for 4 * ACK_TIMOUT in case of retry */
   if (lg_xmit)
     coap_ticks(&lg_xmit->last_all_sent);
 
@@ -4450,7 +4450,7 @@ reinit:
             max_body_size = max_body;
           }
           coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", size2, max_body_size);
-          /* Try to hint to the server thare is an issue */
+          /* Try to hint to the server there is an issue */
           coap_send_rst_lkd(session, rcvd);
           coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
           return 1;
@@ -4754,7 +4754,7 @@ give_to_app:
         if (context->max_body_size && length > context->max_body_size) {
           coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", length,
                         context->max_body_size);
-          /* Try to hint to the server thare is an issue */
+          /* Try to hint to the server there is an issue */
           coap_send_rst_lkd(session, rcvd);
           coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
           return 1;
@@ -4912,7 +4912,7 @@ fail_resp:
       if (context->max_body_size && length > context->max_body_size) {
         coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", length,
                       context->max_body_size);
-        /* Try to hint to the server thare is an issue */
+        /* Try to hint to the server there is an issue */
         coap_send_rst_lkd(session, rcvd);
         coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
         return 1;

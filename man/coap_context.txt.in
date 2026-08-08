@@ -263,7 +263,7 @@ to 0.
 
 The *coap_context_rate_limit_ppm.3*() is used to rate limit the transmission
 of NON packets to _rate_limit_ppm_ packets per minute. The rate limiting
-is done by enforcing a minumum time gap between packet transmission unless
+is done by enforcing a minimum time gap between packet transmission unless
 a response is received.
 
 *Function: coap_register_option()*

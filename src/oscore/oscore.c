@@ -33,7 +33,7 @@
 /**
  * @file oscore.c
  * @brief An implementation of the Object Security for Constrained RESTful
- * Enviornments (RFC 8613).
+ * Environments (RFC 8613).
  *
  * \author Martin Gunnarsson  <martin.gunnarsson@ri.se>
  * adapted to libcoap and major rewrite
@@ -137,7 +137,7 @@ oscore_prepare_e_aad(oscore_ctx_t *ctx,
   /* oscore_version, always "1" */
   external_aad_len += oscore_cbor_put_unsigned(&external_aad_ptr, &rem_size, 1);
 
-  /* Algoritms array with one item*/
+  /* Algorithms array with one item*/
   external_aad_len += oscore_cbor_put_array(&external_aad_ptr, &rem_size, 1);
   /* Encryption Algorithm   */
   external_aad_len +=
@@ -237,7 +237,7 @@ oscore_encode_option_value(uint8_t *option_buffer,
  * error: return 0
  * OK: return 1
  *
- * Basic assupmption is that all is preset to 0 or NULL on entry
+ * Basic assumption is that all is preset to 0 or NULL on entry
  */
 int
 oscore_decode_option_value(const uint8_t *opt_value,

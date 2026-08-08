@@ -132,7 +132,7 @@ typedef enum coap_sig_abort_opt_t {
   COAP_SIG_OPT_BAD_CSM_OPTION        = 2, /* ____E_U, uint,     0-2 B, none, RFC8323 */
 } coap_sig_abort_opt_t;
 
-/* Backward Application compatability */
+/* Backward Application compatibility */
 #define COAP_SIGNALING_OPTION_MAX_MESSAGE_SIZE      COAP_SIG_OPT_MAX_MESSAGE_SIZE
 #define COAP_SIGNALING_OPTION_BLOCK_WISE_TRANSFER   COAP_SIG_OPT_BLOCK_WISE_TRANSFER
 #define COAP_SIGNALING_OPTION_EXTENDED_TOKEN_LENGTH COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH
@@ -303,7 +303,7 @@ typedef struct {
  * option list must be performed before coap_option_iterator_init() is called.
  *
  * @param pdu    The PDU the options of which should be walked through.
- * @param oi     An iterator object that will be initilized.
+ * @param oi     An iterator object that will be initialized.
  * @param filter An optional option number filter.
  *               With @p number != @c COAP_OPT_ALL, coap_option_next()
  *               will return only options matching this bitmask.
@@ -456,7 +456,7 @@ typedef struct coap_optlist_t {
  *
  * Note: Where possible, the option data needs to be stripped of leading zeros
  * (big endian) to reduce the amount of data needed in the PDU, as well as in
- * some cases the maximum data size of an opton can be exceeded if not stripped
+ * some cases the maximum data size of an option can be exceeded if not stripped
  * and hence be illegal.  This is done by using coap_encode_var_safe() or
  * coap_encode_var_safe8().
  *
@@ -477,7 +477,7 @@ coap_optlist_t *coap_new_optlist(coap_option_num_t number,
  * @param pdu  The pdu to add the options to from the chain list
  * @param optlist_chain The chained list of optlist to add to the pdu
  *
- * @return     @c 1 if succesful or @c 0 if failure;
+ * @return     @c 1 if successful or @c 0 if failure;
  */
 int coap_add_optlist_pdu(coap_pdu_t *pdu, coap_optlist_t **optlist_chain);
 

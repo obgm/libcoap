@@ -150,7 +150,7 @@ int coap_proxy_forward_request_lkd(coap_session_t *session,
  * @param received The received PDU.
  * @param cache_key Updated with the cache key pointer provided to
  *                  coap_proxy_forward_request_lkd().  The caller should
- *                  delete this cach key (unless the client request set up an
+ *                  delete this cache key (unless the client request set up an
  *                  Observe and there will be unsolicited responses).
  *
  * @return One of COAP_RESPONSE_FAIL or COAP_RESPONSE_OK.
@@ -196,7 +196,7 @@ coap_session_t *coap_new_client_session_proxy_lkd(coap_context_t *context,
  * respectively). type must contain at least COAP_PROXY_FWD_DYNAMIC, and @p server_list
  * must be the same as used in coap_proxy_forward_request().
  *
- * @param session The CoAP upstream proxy session previosly set up (e.g. via call-home).
+ * @param session The CoAP upstream proxy session previously set up (e.g. via call-home).
  * @param use_ip    The IP address to match on incoming proxy requests. If NULL, then
  *                  the IP address is determined from @p session.
  * @param use_port  The port number to match on incoming proxy requests. If 0, default
@@ -212,7 +212,7 @@ coap_proxy_entry_t *coap_proxy_fwd_add_client_session_lkd(coap_session_t *sessio
                                                           coap_proxy_server_list_t *server_list);
 /**
  * coap_proxy_local_write() is used to send the PDU for a session created by
- * coap_new_client_session_proxy() into the proxy logic for onward transmittion.
+ * coap_new_client_session_proxy() into the proxy logic for onward transmission.
  *
  * @param session The coap_new_client_session_proxy() generated session.
  * @param pdu The PDU presented to libcoap by coap_send().

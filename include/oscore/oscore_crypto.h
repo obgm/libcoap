@@ -69,7 +69,7 @@ extern "C" {
 /**
  * Derive the hmac hash using HMAC-HASH() function.
  *
- * @param hmac_alg     The HMAC algorith to use (e.g. sha256).
+ * @param hmac_alg     The HMAC algorithm to use (e.g. sha256).
  * @param key          The key to use.
  * @param data         The data to hash.
  * @param hmac         The result of the hash.
@@ -85,7 +85,7 @@ int oscore_hmac_hash(cose_hmac_alg_t hmac_alg,
  * Derive the pseudorandom key using HKDF-Extract() function.
  * Uses HMAC-HASH() function.
  *
- * @param hkdf_alg     The HKDF algorith to use (e.g. ed25519).
+ * @param hkdf_alg     The HKDF algorithm to use (e.g. ed25519).
  * @param salt         The optional salt value to use.
  * @param ikm          The Input Keying material.
  * @param hkdf_extract The output pseudorandom key
@@ -102,8 +102,8 @@ int oscore_hkdf_extract(cose_hkdf_alg_t hkdf_alg,
  * Derive the key using HKDF-Expand() function.
  * Uses HMAC-HASH() function.
  *
- * @param hkdf_alg The HKDF algorith to use (e.g. ed25519).
- * @param prk      Usually ouptut from HKDF-Extract().
+ * @param hkdf_alg The HKDF algorithm to use (e.g. ed25519).
+ * @param prk      Usually output from HKDF-Extract().
  * @param info     Optional context / application specific information.
  * @param info_len Length of info (can be 0).
  * @param okm      Output key material.
@@ -122,7 +122,7 @@ int oscore_hkdf_expand(cose_hkdf_alg_t hkdf_alg,
  * Derive the key using HKDF() function.
  * Invokes the HKDF-Extract() and HKDF-Expand() functions.
  *
- * @param hkdf_alg The HKDF algorith to use (e.g. ed25519).
+ * @param hkdf_alg The HKDF algorithm to use (e.g. ed25519).
  * @param salt     The optional salt value to use.
  * @param ikm      The Input Keying material.
  * @param info     Optional context / application specific information.

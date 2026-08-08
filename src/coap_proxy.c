@@ -369,7 +369,7 @@ coap_proxy_map_type(coap_proxy_t proxy_type) {
       proxy_type = COAP_PROXY_FWD_DYNAMIC | COAP_PROXY_BIT_MCAST | COAP_PROXY_BIT_STRIP;
       break;
     default:
-      coap_log_warn("Proxy old proxy_type 0x%u unknow\n", proxy_type);
+      coap_log_warn("Proxy old proxy_type 0x%u unknown\n", proxy_type);
       proxy_type = COAP_PROXY_FWD_DYNAMIC;
       break;
     }
@@ -849,7 +849,7 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
     return COAP_RESPONSE_FAIL;
 
   assert(proxy_req);
-  /* Incase change in type of request over the proxy */
+  /* In case change in type of request over the proxy */
   if (proxy_req->pdu)
     resp_pdu->type = proxy_req->pdu->type;
 

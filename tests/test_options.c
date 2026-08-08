@@ -1002,7 +1002,7 @@ t_init_option_tests(void) {
     OPTION_ACCESSOR_TEST(7, "access option #7");
 
   } else {
-    fprintf(stderr, "W: cannot add option acessor function test suite (%s)\n",
+    fprintf(stderr, "W: cannot add option accessor function test suite (%s)\n",
             CU_get_error_msg());
   }
 

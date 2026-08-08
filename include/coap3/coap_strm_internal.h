@@ -44,7 +44,7 @@ extern "C" {
  * @param remote_addr Filled in after connection initiation with
  *                    the remote address.
  *
- * @return @c 1 if succesful, @c 0 if failure of some sort.
+ * @return @c 1 if successful, @c 0 if failure of some sort.
 */
 int coap_socket_connect_tcp1(coap_socket_t *sock,
                              const coap_address_t *local_if,
@@ -62,7 +62,7 @@ int coap_socket_connect_tcp1(coap_socket_t *sock,
  * @param local_addr Filled in with the final local address.
  * @param remote_addr Filled in with the final remote address.
  *
- * @return @c 1 if succesful, @c 0 if failure of some sort.
+ * @return @c 1 if successful, @c 0 if failure of some sort.
 */
 int coap_socket_connect_tcp2(coap_socket_t *sock,
                              coap_address_t *local_addr,
@@ -78,7 +78,7 @@ int coap_socket_connect_tcp2(coap_socket_t *sock,
  * @param bound_addr Filled in with the address that the TCP layer
  *                   is listening on for new incoming TCP sessions.
  *
- * @return @c 1 if succesful, @c 0 if failure of some sort.
+ * @return @c 1 if successful, @c 0 if failure of some sort.
 */
 int coap_socket_bind_tcp(coap_socket_t *sock,
                          const coap_address_t *listen_addr,
@@ -96,7 +96,7 @@ int coap_socket_bind_tcp(coap_socket_t *sock,
  * @param remote_addr Filled in with the remote address.
  * @param extra Available for use by any underlying network stack.
  *
- * @return @c 1 if succesful, @c 0 if failure of some sort.
+ * @return @c 1 if successful, @c 0 if failure of some sort.
 */
 int coap_socket_accept_tcp(coap_socket_t *server,
                            coap_socket_t *new_client,

@@ -125,7 +125,7 @@ receive queue and send queue. *NOTE:*  All client sessions start off with a
 reference count of 1.
 
 If type Server, then the _session_ is added to an idle pool ready for subsequent
-re-use. If the Server _session_ is not used for 5 minutes, then it will get
+reuse. If the Server _session_ is not used for 5 minutes, then it will get
 completely freed off.  *NOTE:* Unless the application increments the
 reference count, this is the case for all type server sessions as they start
 with a reference count of 0.

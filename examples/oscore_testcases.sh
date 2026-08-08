@@ -42,10 +42,10 @@
 #  Start up the servers only for the different profiles
 #
 # -s executable-for-interop-server
-#  Exectuable to use for the interop server if not the default of ./oscore-interop-server.
+#  Executable to use for the interop server if not the default of ./oscore-interop-server.
 #
 # -c executable-for-client
-#  Exectuable to use for the coap client if not the default of ./coap-client.
+#  Executable to use for the coap client if not the default of ./coap-client.
 #
 # -P
 #  Output partial client logs

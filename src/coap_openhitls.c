@@ -1210,7 +1210,7 @@ coap_hitls_uio_read(BSL_UIO *uio, void *buf, uint32_t len,
 }
 
 static int32_t
-coap_hitls_uio_ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg) {
+coap_hitls_uio_ctrl(BSL_UIO *uio, int32_t cmd, int32_t l_arg, void *parg) {
   coap_hitls_env_t *env = (coap_hitls_env_t *)BSL_UIO_GetUserData(uio);
 
   if (!env)
@@ -1241,7 +1241,7 @@ coap_hitls_uio_ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg) {
   case BSL_UIO_GET_PEER_IP_ADDR:
     if (!parg || !env->session)
       return BSL_NULL_INPUT;
-    if (larg == (int32_t)sizeof(BSL_UIO_CtrlGetPeerIpAddrParam)) {
+    if (l_arg == (int32_t)sizeof(BSL_UIO_CtrlGetPeerIpAddrParam)) {
       BSL_UIO_CtrlGetPeerIpAddrParam *param =
           (BSL_UIO_CtrlGetPeerIpAddrParam *)parg;
       uint32_t addr_len = (uint32_t)env->session->addr_info.remote.size;
@@ -1252,7 +1252,7 @@ coap_hitls_uio_ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg) {
       param->size = addr_len;
       return BSL_SUCCESS;
     }
-    if (env->session->addr_info.remote.size > (socklen_t)larg)
+    if (env->session->addr_info.remote.size > (socklen_t)l_arg)
       return BSL_INVALID_ARG;
     memcpy(parg, &env->session->addr_info.remote.addr.sa,
            env->session->addr_info.remote.size);
@@ -1265,14 +1265,14 @@ coap_hitls_uio_ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg) {
   case BSL_UIO_UDP_GET_MTU_OVERHEAD:
     if (!parg)
       return BSL_NULL_INPUT;
-    if (larg != (int32_t)sizeof(uint8_t))
+    if (l_arg != (int32_t)sizeof(uint8_t))
       return BSL_INVALID_ARG;
     *(uint8_t *)parg = coap_hitls_udp_overhead(env);
     return BSL_SUCCESS;
   case BSL_UIO_UDP_QUERY_MTU:
     if (!parg)
       return BSL_NULL_INPUT;
-    if (larg != (int32_t)sizeof(uint32_t))
+    if (l_arg != (int32_t)sizeof(uint32_t))
       return BSL_INVALID_ARG;
     *(uint32_t *)parg = env->session->mtu > UINT32_MAX ?
                         UINT32_MAX : (uint32_t)env->session->mtu;
@@ -1280,7 +1280,7 @@ coap_hitls_uio_ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg) {
   case BSL_UIO_UDP_MTU_EXCEEDED:
     if (!parg)
       return BSL_NULL_INPUT;
-    if (larg != (int32_t)sizeof(bool))
+    if (l_arg != (int32_t)sizeof(bool))
       return BSL_INVALID_ARG;
     *(bool *)parg = env->mtu_exceeded != 0;
     env->mtu_exceeded = 0;

@@ -230,7 +230,7 @@ supported by suitably compiled Mbed TLS library.
 *SECTION: PSK Client: coap_dtls_cpsk_t: use_cid*
 
 *use_cid* Set to 1 if the DTLS Client is to try to used Connection-ID.
-Server is alwys enabled if support available.
+Server is always enabled if support available.
 
 *SECTION: PSK Client: coap_dtls_cpsk_t: Reserved*
 
@@ -515,7 +515,7 @@ typedef struct coap_dtls_pki_t {
   uint8_t use_cid;                  /* 1 if DTLS Connection ID is to be
                                      *   used (Client only, server always enabled)
                                      *   if supported */
-  uint8_t allow_sni_cn_mismatch:1;  /* 1 if SNI and returnd CN allowed to mismatch
+  uint8_t allow_sni_cn_mismatch:1;  /* 1 if SNI and returned CN allowed to mismatch
                                      * (Client only). Not normally set */
   uint8_t reserved[2];              /* Reserved - must be set to 0 for
                                        future compatibility */
@@ -979,7 +979,7 @@ typedef enum coap_pki_define_t {
 
 *key.define.ca.[su]_char* and possibly *key.define.ca_len* points to the CA
 location as defined by *key.define.ca_def*. *key.define.ca.[su]_char* can be
-NULL if there is no CA explicitely defined.  This definition should only
+NULL if there is no CA explicitly defined.  This definition should only
 contain one CA (that has signed the public certificate) as this is passed
 from the server to the client when requesting the client's certificate. This
 certificate is also added into the valid root CAs list if not already present.

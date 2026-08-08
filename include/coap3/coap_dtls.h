@@ -338,7 +338,7 @@ struct coap_dtls_pki_t {
   uint8_t use_cid;                 /**< 1 if DTLS Connection ID is to be
                                     *     used (Client only, server always enabled)
                                     *     if supported */
-  uint8_t allow_sni_cn_mismatch:1; /**< 1 if SNI and returnd CN allowed to mismatch
+  uint8_t allow_sni_cn_mismatch:1; /**< 1 if SNI and returned CN allowed to mismatch
                                     *     (Client only). Not normally set */
   uint8_t reserved[1];             /**< Reserved - must be set to 0 for
                                         future compatibility */
@@ -427,7 +427,7 @@ typedef struct coap_dtls_cpsk_t {
                                 future compatibility */
   /* Size of 5 chosen to align to next
    * parameter, so if newly defined option
-   * it can use one of the reserverd slot so
+   * it can use one of the reserved slot so
    * no need to change
    * COAP_DTLS_CPSK_SETUP_VERSION and just
    * decrement the reserved[] count.
@@ -517,7 +517,7 @@ typedef struct coap_dtls_spsk_t {
                                 future compatibility */
   /* Size of 6 chosen to align to next
    * parameter, so if newly defined option
-   * it can use one of the reserverd slot so
+   * it can use one of the reserved slot so
    * no need to change
    * COAP_DTLS_SPSK_SETUP_VERSION and just
    * decrement the reserved[] count.

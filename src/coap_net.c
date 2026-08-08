@@ -1,4 +1,4 @@
-/* coap_net.c -- CoAP context inteface
+/* coap_net.c -- CoAP context interface
  *
  * Copyright (C) 2010--2026 Olaf Bergmann <bergmann@tzi.org> and others
  *
@@ -1025,7 +1025,7 @@ coap_option_check_critical(coap_session_t *session,
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
   while (coap_option_next(&opt_iter)) {
-    /* Check for explicitely reserved option RFC 5272 12.2 Table 7 */
+    /* Check for explicitly reserved option RFC 5272 12.2 Table 7 */
     /* Need to check reserved options */
     switch (opt_iter.number) {
     case 0:
@@ -1457,7 +1457,7 @@ coap_send_test_extended_token(coap_session_t *session) {
 
   session->max_token_checked = COAP_EXT_T_CHECKING; /* Checking out this one */
 
-  /* Need to track incase OSCORE / Echo etc. comes back after non-piggy-backed ACK */
+  /* Need to track in case OSCORE / Echo etc. comes back after non-piggy-backed ACK */
   lg_crcv = coap_block_new_lg_crcv(session, pdu, NULL);
   if (lg_crcv) {
     LL_PREPEND(session->lg_crcv, lg_crcv);
@@ -1787,7 +1787,7 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
     }
 #endif /* COAP_Q_BLOCK_SUPPORT */
     if (observe_action != COAP_OBSERVE_CANCEL) {
-      /* Warn about re-use of tokens */
+      /* Warn about reuse of tokens */
       if (session->last_token &&
           coap_binary_equal(&pdu->actual_token, session->last_token)) {
         if (coap_get_log_level() >= COAP_LOG_DEBUG) {
@@ -2709,7 +2709,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
       coap_pdu_t *pdu;
 
       session->last_rx_tx = now;
-      /* Need max space incase PDU is updated with updated token etc. */
+      /* Need max space in case PDU is updated with updated token etc. */
       pdu = coap_pdu_init(0, 0, 0, coap_session_max_pdu_rcv_size(session));
       if (!pdu) {
         return;
@@ -2798,7 +2798,7 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
               bytes_read = -1;
               break;
             }
-            /* Need max space incase PDU is updated with updated token etc. */
+            /* Need max space in case PDU is updated with updated token etc. */
             session->partial_pdu = coap_pdu_init(0, 0, 0,
                                                  coap_session_max_pdu_rcv_size(session));
             if (session->partial_pdu == NULL) {
@@ -3114,7 +3114,7 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
     return -1;
   }
 
-  /* Need max space incase PDU is updated with updated token etc. */
+  /* Need max space in case PDU is updated with updated token etc. */
   pdu = coap_pdu_init(0, 0, 0, coap_session_max_pdu_rcv_size(session));
   if (!pdu)
     goto error;
@@ -3179,7 +3179,7 @@ coap_remove_from_queue(coap_queue_t **queue, coap_session_t *session, coap_mid_t
     return 1;
   }
 
-  /* search message id in queue to remove (only first occurence will be removed) */
+  /* search message id in queue to remove (only first occurrence will be removed) */
   q = *queue;
   do {
     p = q;
@@ -3233,7 +3233,7 @@ coap_remove_from_queue_token(coap_queue_t **queue, coap_session_t *session,
     return 1;
   }
 
-  /* search token in queue to remove (only first occurence will be removed) */
+  /* search token in queue to remove (only first occurrence will be removed) */
   q = *queue;
   do {
     p = q;
@@ -3947,7 +3947,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
       resource = context->unknown_resource;
     } else if (pdu->code == COAP_REQUEST_CODE_DELETE) {
       /*
-       * Request for DELETE on non-existant resource (RFC7252: 5.8.4.  DELETE)
+       * Request for DELETE on non-existent resource (RFC7252: 5.8.4.  DELETE)
        */
       coap_log_debug("request for unknown resource '%*.*s',"
                      " return 2.02\n",

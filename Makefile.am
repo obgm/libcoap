@@ -262,7 +262,7 @@ libcoap_includedir = $(includedir)/coap$(LIBCOAP_API_VERSION)/
 
 # If there is a API change to something $(LIBCOAP_API_VERSION) > 1 the install
 # prefix for the header files has to change to not conflict the older version
-# if the user want's to install both versions. There will be something used like
+# if the user wants to install both versions. There will be something used like
 # libcoap_include_HEADERS = \
 #  $(top_srcdir)/include/coap-$(LIBCOAP_API_VERSION)/*
 
@@ -401,6 +401,6 @@ distclean-local:
 ## Ensure we have actual *.{map,sym} files if we create a release tarball.
 dist-local: update-map-file
 
-## Finaly some phony targets, just to ensure those targets are always buildable
+## Finally some phony targets, just to ensure those targets are always buildable
 ## no matter if the user has created same called files.
 .PHONY: update-map-file check_ctags

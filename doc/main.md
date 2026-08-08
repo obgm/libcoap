@@ -69,7 +69,7 @@ There is (D)TLS support for the following libraries
 Documentation
 =============
 
-This set of pages contains the current set of documention for the libcoap APIs.
+This set of pages contains the current set of documentation for the libcoap APIs.
 
 License Information
 ===================

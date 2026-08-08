@@ -37,7 +37,7 @@ typedef enum {
   /*
    * (D)TLS events for COAP_PROTO_DTLS and COAP_PROTO_TLS
    */
-  /** Triggerred when (D)TLS session closed */
+  /** Triggerrd when (D)TLS session closed */
   COAP_EVENT_DTLS_CLOSED       = 0x0000,
   /** Triggered when (D)TLS session connected */
   COAP_EVENT_DTLS_CONNECTED    = 0x01DE,

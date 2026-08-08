@@ -40,7 +40,7 @@ coap_upa_chain_t *coap_upa_server_mapping_chain = NULL;
  * @param len The length of @p s.
  * @param c   The character to search.
  *
- * @return A pointer to the first occurence of @p c, or @c NULL
+ * @return A pointer to the first occurrence of @p c, or @c NULL
  * if not found.
  */
 COAP_STATIC_INLINE const uint8_t *

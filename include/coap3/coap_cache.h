@@ -214,7 +214,7 @@ const coap_pdu_t *coap_cache_get_pdu(const coap_cache_entry_t *cache_entry);
  * @deprecated Use coap_cache_set_app_data2() instead.
  *
  * @param cache_entry The CoAP cache entry.
- * @param data The data pointer to store with wih the cache entry. Note that
+ * @param data The data pointer to store with with the cache entry. Note that
  *             this data must be valid during the lifetime of @p cache_entry.
  * @param callback The callback to call to free off this data when the
  *                 cache-entry is deleted, or @c NULL if not required.

@@ -85,7 +85,7 @@ that the CoAP-Server will exit even all Call-Homes have completed and it is
 not listening on any endpoint.
 
 *NOTE:* If *coap_context_set_session_reconnect_time2*(3) has been used, then the
-Call-Home session will get re-used for trying a new connection and so will not
+Call-Home session will get reused for trying a new connection and so will not
 time out like a normal server session until the retry count is reached (or
 for ever if retry count is 0)..
 
