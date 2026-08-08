@@ -65,7 +65,7 @@ The possible encodings are:
 
 *config* ::
     A set of configuration lines comprising of keyword,encoding,value starting and ending with a single quote '.
-    Multiple configuraiton lines are supported.
+    Multiple configuration lines are supported.
 
 The valid keywords are:
 

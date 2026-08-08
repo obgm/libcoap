@@ -4,7 +4,7 @@ libcoap. Please append (and remove) any issue you think its worthy.
 Classification of issues:
  Critical -> Break the library in some kind or a missing feature, maybe not
              directly but later
- Serious  -> No regression on the user side, more likly on the libcoap
+ Serious  -> No regression on the user side, more likely on the libcoap
              development
  Minor    -> Things that are nice to have, but they are not time critical
 

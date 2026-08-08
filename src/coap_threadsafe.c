@@ -212,7 +212,7 @@ coap_io_process_configure_threads(coap_context_t *context, uint32_t thread_count
     return 0;
 
   coap_mutex_lock(&m_io_threads);
-  /* Need to make sure it is non zero incase coap_log*() is called */
+  /* Need to make sure it is non zero in case coap_log*() is called */
   if (thread_no == 0) {
     thread_no = ++max_thread_no;
   }
@@ -290,7 +290,7 @@ void
 coap_io_process_remove_threads_lkd(coap_context_t *context) {
   coap_lock_unlock();
   coap_mutex_lock(&m_io_threads);
-  /* Need to make sure it is non zero incase coap_log*() is called */
+  /* Need to make sure it is non zero in case coap_log*() is called */
   if (thread_no == 0) {
     thread_no = ++max_thread_no;
   }

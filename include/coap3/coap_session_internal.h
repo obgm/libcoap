@@ -171,7 +171,7 @@ struct coap_session_t {
   coap_fixed_point_t default_leisure; /**< Mcast leisure time
                                            (default 5.0 secs) */
   uint32_t probing_rate;            /**< Max transfer wait when remote is not
-                                         respoding (default 1 byte/sec) */
+                                         responding (default 1 byte/sec) */
 #if COAP_Q_BLOCK_SUPPORT
   uint16_t max_payloads;            /**< maximum Q-BlockX payloads before delay
                                          (default 10) */

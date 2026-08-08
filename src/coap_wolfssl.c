@@ -935,7 +935,7 @@ coap_set_user_prefs(WOLFSSL_CTX *ctx) {
 #endif
 }
 
-/* Set up DTLS context if not alread done */
+/* Set up DTLS context if not already done */
 static int
 setup_dtls_context(coap_wolfssl_context_t *w_context) {
   if (!w_context->dtls.ctx) {
@@ -1006,7 +1006,7 @@ error:
 
 #if !COAP_DISABLE_TCP
 
-/* Set up TLS context if not alread done */
+/* Set up TLS context if not already done */
 static int
 setup_tls_context(coap_wolfssl_context_t *w_context) {
   if (!w_context->tls.ctx) {
@@ -3073,7 +3073,7 @@ static struct hash_algs {
   cose_alg_t alg;
   const WOLFSSL_EVP_MD *(*get_hash)(void);
   size_t length; /* in bytes */
-} hashs[] = {
+} hashes[] = {
   {COSE_ALGORITHM_SHA_1, wolfSSL_EVP_sha1, 20},
   {COSE_ALGORITHM_SHA_256_64, wolfSSL_EVP_sha256, 8},
   {COSE_ALGORITHM_SHA_256_256, wolfSSL_EVP_sha256, 32},
@@ -3084,10 +3084,10 @@ static const WOLFSSL_EVP_MD *
 get_hash_alg(cose_alg_t alg, size_t *length) {
   size_t idx;
 
-  for (idx = 0; idx < sizeof(hashs) / sizeof(struct hash_algs); idx++) {
-    if (hashs[idx].alg == alg) {
-      *length = hashs[idx].length;
-      return hashs[idx].get_hash();
+  for (idx = 0; idx < sizeof(hashes) / sizeof(struct hash_algs); idx++) {
+    if (hashes[idx].alg == alg) {
+      *length = hashes[idx].length;
+      return hashes[idx].get_hash();
     }
   }
   coap_log_debug("get_hash_alg: COSE hash %d not supported\n", alg);

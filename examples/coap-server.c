@@ -1868,7 +1868,7 @@ usage(const char *program, const char *version) {
           "\t-I rate_limit_ppm\n"
           "\t       \t\tRate limit NON transmissions to packets per minute unless\n"
           "\t       \t\ta response is received\n"
-          "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
+          "\t-L value\tSum of one or more COAP_BLOCK_* flag values for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
           "\t       \t\t(Sum of one or more of 1,2,4 64, 128 and 512)\n"
           "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"

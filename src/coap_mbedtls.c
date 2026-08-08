@@ -1194,7 +1194,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     }
   }
 
-  /* Add in any root CA definitons */
+  /* Add in any root CA definitions */
 
 #if defined(MBEDTLS_FS_IO)
   if (m_context->root_ca_file) {
@@ -2921,7 +2921,7 @@ coap_dtls_receive(coap_session_t *c_session,
       coap_session_connected(c_session);
     } else {
       if (ssl_data->pdu_len) {
-        /* Do the handshake again incase of internal timeout */
+        /* Do the handshake again in case of internal timeout */
         ret = do_mbedtls_handshake(c_session, m_env);
         if (ret == 1) {
           /* Just connected, so send the data */

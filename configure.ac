@@ -119,7 +119,7 @@ LT_INIT([shared static])
 #    If any interfaces have been added since the last public release and non of the
 #    existing interfaces were removed and existing interfaces have not changed internal
 #    functionality then the new library is backward compatible. Existing binaries can
-#    use the new library the same than as the existing old library without loosing
+#    use the new library the same than as the existing old library without losing
 #    existing functionality or breakage.
 #    Increase age by 1 (c:r:a becomes c:r:a+1).
 #

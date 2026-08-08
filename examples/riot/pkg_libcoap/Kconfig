@@ -115,7 +115,7 @@ config LIBCOAP_ASYNC_SUPPORT
     help
         Enable async separate responses functionality for CoAP.
 
-        If this option is disabled, redundent CoAP async separate responses code is removed.
+        If this option is disabled, redundant CoAP async separate responses code is removed.
 
 config LIBCOAP_THREAD_SAFE
     bool "Enable thread safe support within CoAP"
@@ -146,7 +146,7 @@ config LIBCOAP_CLIENT_SUPPORT
         If this option is disabled, redundant CoAP client only code is
         removed.
         If both this option and LIBCOAP_SERVER_SUPPORT are disabled, then
-        both are automatically enabled for backwards compatability.
+        both are automatically enabled for backwards compatibility.
 
 if LIBCOAP_CLIENT_SUPPORT
 
@@ -168,7 +168,7 @@ config LIBCOAP_SERVER_SUPPORT
         If this option is disabled, redundant CoAP server only code is
         removed.
         If both this option and LIBCOAP_CLIENT_SUPPORT are disabled, then
-        both are automatically enabled for backwards compatability.
+        both are automatically enabled for backwards compatibility.
 
 if LIBCOAP_SERVER_SUPPORT
 

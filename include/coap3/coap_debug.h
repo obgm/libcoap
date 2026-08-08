@@ -64,7 +64,7 @@ typedef enum {
   COAP_LOG_DEBUG,      /* 7 */
   COAP_LOG_OSCORE,     /* 8 */
   COAP_LOG_DTLS_BASE,
-#define COAP_LOG_CIPHERS COAP_LOG_DTLS_BASE /* For backward compatability */
+#define COAP_LOG_CIPHERS COAP_LOG_DTLS_BASE /* For backward compatibility */
 } coap_log_t;
 
 /*
@@ -135,7 +135,7 @@ coap_no_log(void) { }
 #endif
 
 /*
- * These entries are left here for backward compatability in applications
+ * These entries are left here for backward compatibility in applications
  * (which should really "#include <syslog.h>").
  * and MUST NOT be used anywhere within the libcoap code.
  *

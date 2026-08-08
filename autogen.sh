@@ -119,7 +119,7 @@ echo
 echo "  --->  Found all needed tools! That's fine."
 echo
 
-# countinue otherwise
+# continue otherwise
 test -n "$srcdir" || srcdir=`dirname "$0"`
 test -n "$srcdir" || srcdir=.
 

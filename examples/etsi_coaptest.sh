@@ -42,7 +42,7 @@ function usage {
 echo "Usage:  `basename $0` [-n testnumber] [-g groupname] [-t timeout] [-P server_port] [-p client port] [-d logdir] [-v] -i interface server_address" 1>&2
 echo "-n test case to be accomplished" 1>&2
 echo "-g group to be tested" 1>&2
-echo "-t time in seconds until timout for single test" 1>&2
+echo "-t time in seconds until timeout for single test" 1>&2
 echo "-i interface to use for tcpdump" 1>&2
 echo "-P port of server" 1>&2
 echo "-p port client listens on" 1>&2

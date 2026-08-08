@@ -2652,7 +2652,7 @@ coap_dtls_receive(coap_session_t *c_session, const uint8_t *data,
     } else {
       ret = -1;
       if (ssl_data->pdu_len && !g_env->sent_alert) {
-        /* Do the handshake again incase of internal timeout */
+        /* Do the handshake again in case of internal timeout */
         ret = do_gnutls_handshake(c_session, g_env);
         if (ret == 1) {
           /* Just connected, so send the data */
@@ -3108,7 +3108,7 @@ static struct hash_algs {
   cose_alg_t alg;
   gnutls_digest_algorithm_t dig_type;
   size_t dig_size;
-} hashs[] = {
+} hashes[] = {
   {COSE_ALGORITHM_SHA_1,       GNUTLS_DIG_SHA1,   20},
   {COSE_ALGORITHM_SHA_256_256, GNUTLS_DIG_SHA256, 32},
   {COSE_ALGORITHM_SHA_512,     GNUTLS_DIG_SHA512, 64},
@@ -3118,10 +3118,10 @@ static gnutls_digest_algorithm_t
 get_hash_alg(cose_alg_t alg, size_t *hash_len) {
   size_t idx;
 
-  for (idx = 0; idx < sizeof(hashs) / sizeof(struct hash_algs); idx++) {
-    if (hashs[idx].alg == alg) {
-      *hash_len = hashs[idx].dig_size;
-      return hashs[idx].dig_type;
+  for (idx = 0; idx < sizeof(hashes) / sizeof(struct hash_algs); idx++) {
+    if (hashes[idx].alg == alg) {
+      *hash_len = hashes[idx].dig_size;
+      return hashes[idx].dig_type;
     }
   }
   coap_log_debug("get_hash_alg: COSE hash %d not supported\n", alg);

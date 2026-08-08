@@ -40,7 +40,7 @@ struct coap_async_t {
   coap_session_t *session;         /**< transaction session */
   coap_pdu_t *pdu;                 /**< copy of request pdu */
   void *app_data;                   /**< User definable data pointer */
-  coap_app_data_free_callback_t app_cb; /**< callcack to call when async is
+  coap_app_data_free_callback_t app_cb; /**< callback to call when async is
                                              being released (or NULL) */
 };
 
@@ -70,7 +70,7 @@ coap_async_t *coap_register_async_lkd(coap_session_t *session,
 
 /**
  * Checks if there are any pending Async requests - if so, send them off.
- * Otherewise return the time remaining for the next Async to be triggered
+ * Otherwise return the time remaining for the next Async to be triggered
  * or 0 if nothing to do.
  *
  * @param context The current context.

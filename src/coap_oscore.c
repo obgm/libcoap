@@ -379,7 +379,7 @@ coap_oscore_new_pdu_encrypted(coap_session_t *session,
 }
 
 /*
- * Take current PDU, create a new one approriately separated as per RFC8613
+ * Take current PDU, create a new one appropriately separated as per RFC8613
  * and then encrypt / integrity check the OSCORE data
  */
 coap_pdu_t *

@@ -214,7 +214,7 @@ void coap_persist_cleanup(coap_context_t *context);
 
 /**
  * Set up an active subscription for an observe that was previously active
- * over a coap-server inadvertant restart.
+ * over a coap-server inadvertent restart.
  *
  * Only UDP sessions currently supported.
  *

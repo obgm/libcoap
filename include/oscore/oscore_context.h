@@ -33,7 +33,7 @@
 /**
  * @file oscore_context.h
  * @brief An implementation of the Object Security for Constrained RESTful
- * Enviornments (RFC 8613).
+ * Environments (RFC 8613).
  *
  * \author
  *      Martin Gunnarsson  <martin.gunnarsson@ri.se>

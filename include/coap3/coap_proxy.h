@@ -31,7 +31,7 @@ extern "C" {
 /**
  * coap_proxy_t Proxy definitions.
  *
- *  0x00000007  Old 4.3.5 mappings for backward compatability.
+ *  0x00000007  Old 4.3.5 mappings for backward compatibility.
  *  0x00000038  New type mappings.
  *  0xffffffc0  Bitwise optional actions.
  *
@@ -238,7 +238,7 @@ COAP_API coap_session_t *coap_new_client_session_proxy(coap_context_t *context,
  * respectively). type must contain at least COAP_PROXY_FWD_DYNAMIC, and @p server_list
  * must be the same as used in coap_proxy_forward_request().
  *
- * @param session The CoAP upstream proxy session previosly set up (e.g. via call-home).
+ * @param session The CoAP upstream proxy session previously set up (e.g. via call-home).
  * @param use_ip    The IP address to match on incoming proxy requests. If NULL, then
  *                  the IP address is determined from @p session.
  * @param use_port  The port number to match on incoming proxy requests. If 0, default

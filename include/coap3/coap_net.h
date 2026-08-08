@@ -70,7 +70,7 @@ typedef coap_response_t (*coap_response_handler_t)(coap_session_t *session,
                                                    const coap_mid_t mid);
 
 /**
- * Negative Acknowedge handler that is used as callback in coap_context_t.
+ * Negative Acknowledge handler that is used as callback in coap_context_t.
  *
  * @param session CoAP session.
  * @param sent The PDU that was transmitted.
@@ -537,7 +537,7 @@ void coap_context_set_max_handshake_sessions(coap_context_t *context,
  *
  * @param context The coap_context_t object.
  *
- * @return The maximim number of sessions in (D)TLS handshake value.
+ * @return The maximum number of sessions in (D)TLS handshake value.
  */
 unsigned int coap_context_get_max_handshake_sessions(const coap_context_t *context);
 
@@ -570,7 +570,7 @@ COAP_API void coap_free_context(coap_context_t *context);
  * context.
  *
  * @param context The CoAP context.
- * @param data The data to store with wih the context. Note that this data
+ * @param data The data to store with with the context. Note that this data
  *             must be valid during the lifetime of @p context.
  */
 COAP_DEPRECATED void coap_set_app_data(coap_context_t *context, void *data);
@@ -962,7 +962,7 @@ COAP_API int coap_io_pending(coap_context_t *context);
 *                    arrays on output.
 * @param now Current time.
 *
-* @return timeout Maxmimum number of milliseconds that can be used by a
+* @return timeout Maximum number of milliseconds that can be used by a
 *                 select() to wait for network events or 0 if wait should be
 *                 forever.
 */
@@ -1003,7 +1003,7 @@ COAP_API void coap_io_do_io(coap_context_t *ctx, coap_tick_t now);
  * @param ctx The CoAP context
  * @param now Current time.
  *
- * @return timeout Maxmimum number of milliseconds that can be used by a
+ * @return timeout Maximum number of milliseconds that can be used by a
  *                 epoll_wait() to wait for network events or 0 if wait should be
  *                 forever.
  */
@@ -1111,10 +1111,10 @@ COAP_API coap_fd_t coap_socket_get_fd(coap_socket_t *socket);
  *
  * @param context The current CoAP context.
  * @param read_fds Array to populate with file descriptors in the read pending state.
- * @param have_read_fds Updated wth the number of fds found in read pending state.
+ * @param have_read_fds Updated with the number of fds found in read pending state.
  * @param max_read_fds Maximum size of read_fds[] array.
  * @param write_fds Array to populate with file descriptors in the write pending state.
- * @param have_write_fds Updated wth the number of fds found in write pending state.
+ * @param have_write_fds Updated with the number of fds found in write pending state.
  * @param max_write_fds Maximum size of write_fds[] array.
  * @param rem_timeout_ms Remaining timeout time to next libcoap activity in milli-secs.
  *
@@ -1234,7 +1234,7 @@ void coap_lwip_set_input_wait_handler(coap_context_t *context,
 *                    arrays on output.
 * @param now Current time.
 *
-* @return timeout Maxmimum number of milliseconds that can be used by a
+* @return timeout Maximum number of milliseconds that can be used by a
 *                 select() to wait for network events or 0 if wait should be
 *                 forever.
 */

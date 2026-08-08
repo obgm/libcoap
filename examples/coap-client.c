@@ -667,7 +667,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tRate limit NON transmissions to packets per minute unless\n"
           "\t       \t\ta response is received\n"
           "\t-K interval\tSend a ping after interval seconds of inactivity\n"
-          "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
+          "\t-L value\tSum of one or more COAP_BLOCK_* flag values for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
           "\t       \t\t(Sum of one or more of 1,2,4,8,16,32 and 512)\n"
           "\t-N     \t\tSend NON-confirmable message\n"

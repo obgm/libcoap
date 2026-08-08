@@ -49,7 +49,7 @@ application cannot set up and manage its own threading model.
 Each thread calling *coap_io_process*(3) can receive a packet (a different packet
 for each thread), call the appropriate application call-back handler and
 potentially be spending time of consequence in that handler without blocking the
-reciept of other input traffic.
+receipt of other input traffic.
 
 These above listed functions should be called from the main thread.  It is
 assumed that thread-safe code has been enabled.
@@ -71,9 +71,9 @@ and so changes can safely be made to any structure that libcoap is using includi
 invoking any libcoap Public API calls.
 
 The second type of call-back is executing without the libcoap lock protections and
-so no modications must take place other than by using the libcoap Public API that
+so no modifications must take place other than by using the libcoap Public API that
 is not modifying a determined reference. The second type is used when there is a
-likelyhood that the call-back may block on an external event and libcoap in general
+likelihood that the call-back may block on an external event and libcoap in general
 should not be blocked.
 
 The list of the second type of call-backs are set up by the following functions:

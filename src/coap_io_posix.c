@@ -495,7 +495,7 @@ coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
 
     /*
      * reset to COAP_IO_NO_WAIT (which causes etimeout to become 0)
-     * incase we have to do another iteration
+     * in case we have to do another iteration
      * (COAP_MAX_EPOLL_EVENTS insufficient)
      */
     timeout_ms = COAP_IO_NO_WAIT;

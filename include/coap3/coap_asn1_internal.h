@@ -101,7 +101,7 @@ coap_binary_t *get_asn1_tag(coap_asn1_tag_t ltag, const uint8_t *ptr,
  * @param data Pointer to ASN1 object containing EC Private Key
  * @param size Length of ASN1 object
  *
- * @return The publick key (to be freed off by caller)
+ * @return The public key (to be freed off by caller)
  *         or @c NULL if not found
  */
 coap_binary_t *get_asn1_spki(const uint8_t *data, size_t size);

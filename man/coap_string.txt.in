@@ -151,7 +151,7 @@ to _size_.
 
 The *coap_resize_binary*() function is used resize the size of _s_ to the new
 size of _new_size_.  The data between the old _length_ and the _new_size_ is
-unitialized.  _length_ is set to _new_size_.
+uninitialized.  _length_ is set to _new_size_.
 
 *Function: coap_delete_binary()*
 

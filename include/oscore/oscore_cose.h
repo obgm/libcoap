@@ -254,7 +254,7 @@ size_t cose_encrypt0_get_kid_context(cose_encrypt0_t *ptr,
 void cose_encrypt0_set_kid_context(cose_encrypt0_t *ptr,
                                    coap_bin_const_t *kid_context);
 
-/* Returns 1 if successfull, 0 if key is of incorrect length. */
+/* Returns 1 if successful, 0 if key is of incorrect length. */
 int cose_encrypt0_set_key(cose_encrypt0_t *ptr, coap_bin_const_t *key);
 
 void cose_encrypt0_set_nonce(cose_encrypt0_t *ptr, coap_bin_const_t *nonce);

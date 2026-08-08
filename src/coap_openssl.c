@@ -395,7 +395,7 @@ retry:
   /* parameter 1 is mandatory */
   if ((end - begin) == 0)
     goto bad_entry;
-  /* Get in paramater #1 */
+  /* Get in parameter #1 */
   split = memchr(begin, ':', end - begin);
   if (split == NULL) {
     /* Single entry - no parameter #2 */
@@ -425,7 +425,7 @@ bad_entry:
 }
 
 /*
- * Formating of OpenSSL Engine configuration is:-
+ * Formatting of OpenSSL Engine configuration is:-
  * (Must be in this order)
  *
  * engine:XXX
@@ -4377,7 +4377,7 @@ static struct hash_algs {
   cose_alg_t alg;
   const EVP_MD *(*get_hash)(void);
   size_t length; /* in bytes */
-} hashs[] = {
+} hashes[] = {
   {COSE_ALGORITHM_SHA_1, EVP_sha1, 20},
   {COSE_ALGORITHM_SHA_256_64, EVP_sha256, 8},
   {COSE_ALGORITHM_SHA_256_256, EVP_sha256, 32},
@@ -4388,10 +4388,10 @@ static const EVP_MD *
 get_hash_alg(cose_alg_t alg, size_t *length) {
   size_t idx;
 
-  for (idx = 0; idx < sizeof(hashs) / sizeof(struct hash_algs); idx++) {
-    if (hashs[idx].alg == alg) {
-      *length = hashs[idx].length;
-      return hashs[idx].get_hash();
+  for (idx = 0; idx < sizeof(hashes) / sizeof(struct hash_algs); idx++) {
+    if (hashes[idx].alg == alg) {
+      *length = hashes[idx].length;
+      return hashes[idx].get_hash();
     }
   }
   coap_log_debug("get_hash_alg: COSE hash %d not supported\n", alg);

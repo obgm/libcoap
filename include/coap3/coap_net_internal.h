@@ -70,7 +70,7 @@ struct coap_context_t {
   /**
    * list of asynchronous message ids */
   coap_async_t *async_state;
-  int async_state_traversing; /**< If hte async state list is being ttaversed */
+  int async_state_traversing; /**< If hhe async state list is being traversed */
 #endif /* COAP_ASYNC_SUPPORT */
 
   /**
@@ -116,7 +116,7 @@ struct coap_context_t {
                                             received */
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_PROXY_SUPPORT
-  coap_proxy_response_handler_t proxy_response_cb; /**< Called when a reponse
+  coap_proxy_response_handler_t proxy_response_cb; /**< Called when a response
                                                         to proxy logic received */
 #endif /* COAP_PROXY_SUPPORT */
   coap_nack_handler_t nack_cb; /**< Called when a response issue has occurred */
@@ -171,7 +171,7 @@ struct coap_context_t {
                                         sessions per endpoint. 0 means no
                                         maximum. */
   unsigned int max_handshake_sessions; /**< Maximum number of simultaneous
-                                            negotating sessions per endpoint. 0
+                                            negotiating sessions per endpoint. 0
                                             means use default. */
   unsigned int ping_timeout;           /**< Minimum inactivity time before
                                             sending a ping message. 0 means
@@ -232,7 +232,7 @@ struct coap_context_t {
   uint8_t context_going_away;      /**< Set if coap_free_context() has been called */
 #endif /* COAP_SERVER_SUPPORT */
   uint32_t block_mode;             /**< Zero or more COAP_BLOCK_ or'd options */
-  coap_resource_dynamic_create_t dyn_create_handler; /**< Dynamc resource create handler */
+  coap_resource_dynamic_create_t dyn_create_handler; /**< Dynamic resource create handler */
   uint32_t dynamic_cur;            /**< Current number of dynamic resources */
   uint32_t dynamic_max;            /**< Max number of dynamic resources or 0 is unlimited */
   uint32_t max_body_size;          /**< Max supported body size or 0 is unlimited */
@@ -772,7 +772,7 @@ int coap_io_pending_lkd(coap_context_t *context);
  * @param ctx The CoAP context
  * @param now Current time.
  *
- * @return timeout Maxmimum number of milliseconds that can be used by a
+ * @return timeout Maximum number of milliseconds that can be used by a
  *                 epoll_wait() to wait for network events or 0 if wait should be
  *                 forever.
  */
@@ -807,7 +807,7 @@ unsigned int coap_io_prepare_epoll_lkd(coap_context_t *ctx, coap_tick_t now);
  *                    arrays on output.
  * @param now Current time.
  *
- * @return timeout Maxmimum number of milliseconds that can be used by a
+ * @return timeout Maximum number of milliseconds that can be used by a
  *                 select() to wait for network events or 0 if wait should be
  *                 forever.
  */
@@ -932,10 +932,10 @@ int coap_io_process_with_fds_lkd(coap_context_t *ctx, uint32_t timeout_ms,
  *
  * @param context The current CoAP context.
  * @param read_fds Array to populate with file descriptors in the read pending state.
- * @param have_read_fds Updated wth the number of fds found in read pending state.
+ * @param have_read_fds Updated with the number of fds found in read pending state.
  * @param max_read_fds Maximum size of read_fds[] array.
  * @param write_fds Array to populate with file descriptors in the write pending state.
- * @param have_write_fds Updated wth the number of fds found in write pending state.
+ * @param have_write_fds Updated with the number of fds found in write pending state.
  * @param max_write_fds Maximum size of write_fds[] array.
  * @param rem_timeout_ms Remaining timeout time to next libcoap activity in milli-secs.
  *

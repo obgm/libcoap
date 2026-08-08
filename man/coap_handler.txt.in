@@ -170,13 +170,13 @@ abstracted as described in *coap_pdu_access*(3) for analysis.
 
 *NOTE:* _sent_ will only be non NULL when the request PDU is Confirmable and
 this is an ACK or RST response to the request.  In general, matching of
-Requests and Responses whould be done by generating unique Tokens for each
+Requests and Responses would be done by generating unique Tokens for each
 Request and then matching up based on the Token in _received_ Response.
 
 *NOTE:* _sent_ (if not NULL) may not contain all or any of the data used for the
 initial request if block transfers are being used. For Block1 requests, the
 complete data will be lost once the data has been successfully transmitted as
-acknowledged by the first response. For Block2 responses, _sent_ gets re-used
+acknowledged by the first response. For Block2 responses, _sent_ gets reused
 to request the next Block2 and so data information is lost.
 
 *NOTE:* If the returned value is COAP_RESPONSE_FAIL, then a CoAP RST packet
@@ -193,7 +193,7 @@ The nack handler function prototype is defined as:
 [source, c]
 ----
 /**
- * Negative Acknowedge handler that is used as callback in coap_context_t.
+ * Negative Acknowledge handler that is used as callback in coap_context_t.
  *
  * @param session CoAP session.
  * @param sent The PDU that was transmitted.
@@ -301,7 +301,7 @@ typedef enum {
   /*
    * (D)TLS events for COAP_PROTO_DTLS and COAP_PROTO_TLS
    */
-  /** Triggerred when (D)TLS session closed */
+  /** Triggered when (D)TLS session closed */
   COAP_EVENT_DTLS_CLOSED       = 0x0000,
   /** Triggered when (D)TLS session connected */
   COAP_EVENT_DTLS_CONNECTED    = 0x01DE,

@@ -421,7 +421,7 @@ usage(const char *program, const char *version) {
           "\t-G group_if\tUse this interface for listening for the multicast\n"
           "\t       \t\tgroup. This can be different from the implied interface\n"
           "\t       \t\tif the -A option is used\n"
-          "\t-L value\tSum of one or more COAP_BLOCK_* flag valuess for block\n"
+          "\t-L value\tSum of one or more COAP_BLOCK_* flag values for block\n"
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
           "\t       \t\t(Sum of one or more of 1,2 and 4)\n"
           "\t-N     \t\tMake \"observe\" responses NON-confirmable. Even if set\n"

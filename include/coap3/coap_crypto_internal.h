@@ -61,7 +61,7 @@ typedef struct coap_crypto_aes_ccm_t {
  * The common structure that holds the Crypto information
  */
 typedef struct coap_crypto_param_t {
-  cose_alg_t alg; /**< The COSE algorith to use */
+  cose_alg_t alg; /**< The COSE algorithm to use */
   union {
     coap_crypto_aes_ccm_t aes; /**< Used if AES type encryption */
     coap_crypto_key_t key;     /**< The key to use */
@@ -91,7 +91,7 @@ int coap_crypto_check_hkdf_alg(cose_hkdf_alg_t hkdf_alg);
 /**
  * Encrypt the provided plaintext data
  *
- * @param params The Encrypt/Decrypt/Hash paramaters.
+ * @param params The Encrypt/Decrypt/Hash parameters.
  * @param data The data to encrypt.
  * @param aad The additional AAD information.
  * @param result Where to put the encrypted data.
@@ -109,7 +109,7 @@ int coap_crypto_aead_encrypt(const coap_crypto_param_t *params,
 /**
  * Decrypt the provided encrypted data into plaintext.
  *
- * @param params The Encrypt/Decrypt/Hash paramaters.
+ * @param params The Encrypt/Decrypt/Hash parameters.
  * @param data The data to decrypt.
  * @param aad The additional AAD information.
  * @param result Where to put the decrypted data.

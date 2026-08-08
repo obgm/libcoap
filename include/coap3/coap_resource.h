@@ -28,7 +28,7 @@ extern "C" {
 
 /**
  * @ingroup application_api
- * @defgroup coap_resource Resource Configuraton
+ * @defgroup coap_resource Resource Configuration
  * API for setting up resources
  * @{
  */
@@ -532,7 +532,7 @@ typedef uint32_t coap_print_status_t;
  *                 with the Block2 option. @p offset is updated during
  *                 output as it is consumed.
  *
- * @return If COAP_PRINT_STATUS_ERROR is set, an error occured. Otherwise,
+ * @return If COAP_PRINT_STATUS_ERROR is set, an error occurred. Otherwise,
  *         the lower 28 bits will indicate the number of characters that
  *         have actually been output into @p buffer. The flag
  *         COAP_PRINT_STATUS_TRUNC indicates that the output has been

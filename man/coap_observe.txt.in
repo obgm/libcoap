@@ -104,7 +104,7 @@ _resource_ is no longer observable.
 when libcoap creates a "fake GET/FETCH request".  The Unknown Resource PUT
 handler must create a new resource and mark the resource as "observable" if
 a specific resource needs to be observable.  The application must then
-manage the deletion of the resource at the appropriate time. Similarily,
+manage the deletion of the resource at the appropriate time. Similarly,
 it is not possible to observe the resource set up by
 *coap_resource_proxy_uri_init2*() or *coap_resource_reverse_proxy_init*().
 

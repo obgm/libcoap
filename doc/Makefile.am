@@ -9,7 +9,7 @@
 # COPYING for terms of use.
 
 
-# We can only perfom the targets in this directory if doxygen is present.
+# We can only perform the targets in this directory if doxygen is present.
 
 CLEANFILES = \
   doxygen_sqlite3.db

@@ -27,7 +27,7 @@ typedef unsigned char coap_key_t[4];
 /**
  * Calculates a fast hash over the given string @p s of length @p len and stores
  * the result into @p h. Depending on the exact implementation, this function
- * cannot be used as one-way function to check message integrity or simlar.
+ * cannot be used as one-way function to check message integrity or similar.
  *
  * @param s   The string used for hash calculation.
  * @param len The length of @p s.

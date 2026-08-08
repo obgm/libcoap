@@ -115,7 +115,7 @@ COAP_DEPRECATED void coap_async_set_app_data(coap_async_t *async, void *app_data
  *
  * @param async The async state object.
  *
- * @return The applicaton data pointer.
+ * @return The application data pointer.
  */
 void *coap_async_get_app_data(const coap_async_t *async);
 

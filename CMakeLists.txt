@@ -102,7 +102,7 @@ if(NOT ZEPHYR_BASE)
 endif() # ! ZEPHYR_BASE
 if(${CMAKE_VERSION} VERSION_GREATER "3.20.0")
   if(${CMAKE_VERSION} VERSION_LESS "3.28.0")
-    cmake_policy(SET CMP0115 OLD) # Supresses libcoap configuration warning
+    cmake_policy(SET CMP0115 OLD) # Suppresses libcoap configuration warning
   endif()
 endif()
 
@@ -646,10 +646,10 @@ if(ENABLE_DTLS)
   endif()
 
   if(((DTLS_BACKEND STREQUAL "default") OR (DTLS_BACKEND STREQUAL "ignore")) AND (NOT DTLS_FOUND))
-    # no cryto lib found
+    # no crypto lib found
     message(
       FATAL_ERROR
-      "cannot find any defined cryto lib, either install one or compile without DTLS support"
+      "cannot find any defined crypto lib, either install one or compile without DTLS support"
     )
   endif()
 
@@ -689,10 +689,10 @@ elseif(NOT ((OSCORE_BACKEND STREQUAL "none") OR (OSCORE_BACKEND STREQUAL "")))
   endif()
 
   if((NOT ZEPHYR_BASE) AND (NOT DTLS_FOUND))
-    # no defined cryto lib found
+    # no defined crypto lib found
     message(
       FATAL_ERROR
-      "cannot find any defined cryto lib for OSCORE backend, either install one or compile without OSCORE support"
+      "cannot find any defined crypto lib for OSCORE backend, either install one or compile without OSCORE support"
     )
   endif()
 
@@ -1045,7 +1045,7 @@ if(ENABLE_DOCS)
       COMMENT "Generating API documentation with Doxygen"
       VERBATIM)
 
-    message(STATUS "Setup up the Doxygen documention build")
+    message(STATUS "Setup up the Doxygen documentation build")
 
   else(Doxygen_FOUND)
     message(

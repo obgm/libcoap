@@ -62,7 +62,7 @@ extern "C" {
 #endif
 /*
  * If you do not have the ISO standard stdint.h header file, then you
- * must typdef the following:
+ * must typedef the following:
  *    name              meaning
  *  uint32_t         unsigned 32 bit integer
  *  uint8_t          unsigned 8 bit integer (i.e., unsigned char)
