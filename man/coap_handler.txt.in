@@ -460,7 +460,6 @@ In _create_handler_, data from _request_ can be abstracted as described in
 
 *NOTE:* If the returned value is NULL, then a 4.06 packet will get sent back to the
 client by libcoap.
->>>>>>> 10fc1b89 (coap_resource.c: Make dynamic resource handling thread safe)
 
 EXAMPLES
 --------
