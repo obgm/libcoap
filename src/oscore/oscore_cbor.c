@@ -384,6 +384,7 @@ static size_t
 oscore_cbor_skip_value(const uint8_t **data, size_t *buf_len) {
   uint8_t elem = oscore_cbor_get_next_element(data, buf_len);
   uint8_t control = get_byte(data, buf_len) & 0x1f;
+  uint64_t count = 0; /* number of elements in array or map */
   size_t nb = 0;   /* number of elements in array or map */
   size_t num = 0;  /* number of bytes of length or number */
   size_t size = 0; /* size of value to be skipped */
@@ -414,17 +415,38 @@ oscore_cbor_skip_value(const uint8_t **data, size_t *buf_len) {
     (*data) = (*data) + size - num;
     break;
   case CBOR_ARRAY:
-    nb = oscore_cbor_get_element_size(data, buf_len);
+    count = oscore_cbor_get_element_size(data, buf_len);
     size = num;
-    for (uint16_t qq = 0; qq < nb; qq++)
-      size += oscore_cbor_skip_value(data, buf_len);
+    /* Every CBOR array element consumes at least one byte. */
+    if (count > *buf_len)
+      return 0;
+    nb = (size_t)count;
+    for (size_t qq = 0; qq < nb; qq++) {
+      size_t value_size = oscore_cbor_skip_value(data, buf_len);
+
+      if (value_size == 0)
+        return 0;
+      size += value_size;
+    }
     break;
   case CBOR_MAP:
-    nb = oscore_cbor_get_element_size(data, buf_len);
+    count = oscore_cbor_get_element_size(data, buf_len);
     size = num;
-    for (uint16_t qq = 0; qq < nb; qq++) {
-      size += oscore_cbor_skip_value(data, buf_len);
-      size += oscore_cbor_skip_value(data, buf_len);
+    /* Every CBOR map pair consumes at least two bytes. */
+    if (count > *buf_len / 2)
+      return 0;
+    nb = (size_t)count;
+    for (size_t qq = 0; qq < nb; qq++) {
+      size_t key_size = oscore_cbor_skip_value(data, buf_len);
+      size_t value_size;
+
+      if (key_size == 0)
+        return 0;
+      size += key_size;
+      value_size = oscore_cbor_skip_value(data, buf_len);
+      if (value_size == 0)
+        return 0;
+      size += value_size;
     }
     break;
   case CBOR_TAG:
@@ -449,9 +471,23 @@ oscore_cbor_skip_value(const uint8_t **data, size_t *buf_len) {
 uint8_t
 oscore_cbor_strip_value(const uint8_t **data, size_t *buf_len, uint8_t **result, size_t *len) {
   const uint8_t *st_data = *data;
+  size_t st_buf_len = *buf_len;
   size_t size = oscore_cbor_skip_value(data, buf_len);
+
+  *result = NULL;
+  *len = 0;
+  if (size == 0) {
+    *data = st_data;
+    *buf_len = st_buf_len;
+    return 1;
+  }
   *result = coap_malloc_type(COAP_STRING, size);
-  for (uint16_t qq = 0; qq < size; qq++)
+  if (*result == NULL) {
+    *data = st_data;
+    *buf_len = st_buf_len;
+    return 1;
+  }
+  for (size_t qq = 0; qq < size; qq++)
     (*result)[qq] = st_data[qq];
   *len = size;
   return 0;
