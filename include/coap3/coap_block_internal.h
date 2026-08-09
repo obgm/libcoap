@@ -117,6 +117,16 @@ struct coap_lg_range {
 #error COAP_RBLOCK_CNT too small
 #endif
 
+#if COAP_Q_BLOCK_SUPPORT
+/*
+ * Maximum bytes used by exact Q-Block1 receive tracking per transfer.
+ * Set to 0 at build time to disable bitmap tracking on constrained devices.
+ */
+#ifndef COAP_Q_BLOCK1_BITMAP_MAX_BYTES
+#define COAP_Q_BLOCK1_BITMAP_MAX_BYTES (128U * 1024U)
+#endif
+#endif /* COAP_Q_BLOCK_SUPPORT */
+
 /**
  * Structure to keep track of received blocks
  */
@@ -255,6 +265,15 @@ struct coap_lg_srcv_t {
   coap_resource_t *resource; /**< associated resource */
   coap_str_const_t *uri_path; /** set to uri_path if unknown resource */
   coap_rblock_t rec_blocks; /** < list of received blocks */
+#if COAP_Q_BLOCK_SUPPORT
+  uint32_t recovery_blocks[COAP_DEFAULT_MAX_PAYLOADS];
+  uint8_t recovery_blocks_used; /**< outstanding Q-Block1 recovery blocks */
+#endif /* COAP_Q_BLOCK_SUPPORT */
+#if COAP_Q_BLOCK_SUPPORT && COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0
+  uint8_t *q_block1_bitmap; /**< exact Q-Block1 received-block tracking */
+  uint32_t q_block1_bitmap_blocks; /**< number of blocks in bitmap */
+  uint32_t q_block1_bitmap_received; /**< number of received blocks */
+#endif /* COAP_Q_BLOCK_SUPPORT && COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0 */
   coap_bin_const_t *last_token; /**< last used token */
   uint32_t ref;          /**< Reference count */
 };
