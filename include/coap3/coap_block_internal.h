@@ -136,6 +136,7 @@ typedef struct coap_rblock_t {
 #if COAP_Q_BLOCK_SUPPORT
   uint32_t processing_payload_set;
   uint32_t latest_payload_set;
+  uint32_t highest_seen;
 #endif /* COAP_Q_BLOCK_SUPPORT */
   struct coap_lg_range range[COAP_RBLOCK_CNT];
   coap_tick_t last_seen;

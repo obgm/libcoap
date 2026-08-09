@@ -2027,77 +2027,146 @@ check_any_blocks_next_payload_set(coap_session_t *session,
 static int
 request_missing_blocks(coap_session_t *session, coap_lg_srcv_t *lg_srcv, size_t final_block) {
   uint32_t i;
-  int block = -1; /* Last one seen */
-  size_t block_size = (size_t)1 << (lg_srcv->szx + 4);
-  size_t cur_payload;
-  size_t last_payload_block;
+  size_t block = 0;
+  size_t first_missing;
+  size_t last_received;
+  size_t final_body_block;
+  size_t gap_end;
   coap_pdu_t *pdu = NULL;
-  size_t no_blocks = 0;
+  size_t missing_blocks = 0;
 
-  /* Need to count the number of missing blocks */
-  for (i = 0; i < lg_srcv->rec_blocks.used; i++) {
-    if (block < (int)lg_srcv->rec_blocks.range[i].begin &&
-        lg_srcv->rec_blocks.range[i].begin != 0) {
-      block++;
-      no_blocks += lg_srcv->rec_blocks.range[i].begin - block;
-    }
-    if (block < (int)lg_srcv->rec_blocks.range[i].end) {
-      block = lg_srcv->rec_blocks.range[i].end;
-    }
-  }
-  if (no_blocks == 0 && block == (int)final_block)
-    return 0;
+  if (lg_srcv->recovery_blocks_used) {
+    coap_tick_t now;
+    size_t recovery_timeout = COAP_NON_RECEIVE_TIMEOUT_TICKS(session) *
+                              ((size_t)1 << lg_srcv->rec_blocks.retry);
 
-  /* Include missing up to end of current payload or total amount */
-  cur_payload = block / COAP_MAX_PAYLOADS(session);
-  last_payload_block = (cur_payload + 1) * COAP_MAX_PAYLOADS(session) - 1;
-  if (final_block > last_payload_block) {
-    final_block = last_payload_block;
+    coap_ticks(&now);
+    if (lg_srcv->rec_blocks.last_seen + recovery_timeout > now)
+      return 1;
+    lg_srcv->recovery_blocks_used = 0;
   }
-  no_blocks += final_block - block;
-  if (no_blocks == 0) {
-    /* Add in the blocks out of the next payload */
-    final_block = (lg_srcv->total_len + block_size - 1)/block_size - 1;
-    last_payload_block += COAP_MAX_PAYLOADS(session);
-    if (final_block > last_payload_block) {
-      final_block = last_payload_block;
+
+#if COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0
+  if (lg_srcv->q_block1_bitmap) {
+    last_received = lg_srcv->rec_blocks.highest_seen;
+    first_missing = lg_srcv->rec_blocks.used &&
+                    lg_srcv->rec_blocks.range[0].begin == 0 ?
+                    (size_t)lg_srcv->rec_blocks.range[0].end + 1 : 0;
+    for (;
+         first_missing <= last_received &&
+         q_block1_bitmap_has_block(lg_srcv, (uint32_t)first_missing);
+         first_missing++) {
     }
-  }
-  /* Ask for the missing blocks */
-  block = -1;
-  for (i = 0; i < lg_srcv->rec_blocks.used; i++) {
-    if (block < (int)lg_srcv->rec_blocks.range[i].begin &&
-        lg_srcv->rec_blocks.range[i].begin != 0) {
-      /* Report on missing blocks */
+    if (first_missing > last_received && lg_srcv->total_len) {
+      size_t block_size = (size_t)1 << (lg_srcv->szx + 4);
+
+      final_body_block = (lg_srcv->total_len - 1) / block_size;
+      if (first_missing <= final_body_block)
+        last_received = final_body_block;
+    }
+    if (first_missing > last_received) {
+      coap_ticks(&lg_srcv->rec_blocks.last_seen);
+      return 1;
+    }
+
+    for (block = first_missing;
+         block <= last_received &&
+         missing_blocks < COAP_MAX_PAYLOADS(session);
+         block++) {
+      if (q_block1_bitmap_has_block(lg_srcv, (uint32_t)block))
+        continue;
       if (pdu == NULL) {
         pdu = pdu_408_build(session, lg_srcv);
         if (!pdu)
-          continue;
-      }
-      block++;
-      for (; block < (int)lg_srcv->rec_blocks.range[i].begin; block++) {
-        if (!add_408_block(pdu, block)) {
           break;
-        }
       }
+      if (!add_408_block(pdu, block))
+        break;
+      q_block1_recovery_add(lg_srcv, (uint32_t)block);
+      missing_blocks++;
     }
-    if (block < (int)lg_srcv->rec_blocks.range[i].end) {
-      block = lg_srcv->rec_blocks.range[i].end;
+    if (missing_blocks) {
+      coap_send_internal(session, pdu, NULL);
+    } else if (pdu) {
+      coap_delete_pdu_lkd(pdu);
     }
+    lg_srcv->rec_blocks.retry++;
+    coap_ticks(&lg_srcv->rec_blocks.last_seen);
+    return 1;
   }
-  block++;
-  for (; block <= (int)final_block; block++) {
-    if (pdu == NULL) {
-      pdu = pdu_408_build(session, lg_srcv);
-      if (!pdu)
-        continue;
-    }
-    if (!add_408_block(pdu, block)) {
+#endif /* COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0 */
+
+  /* Start recovery at the earliest missing block. */
+  for (i = 0; i < lg_srcv->rec_blocks.used; i++) {
+    if (block < lg_srcv->rec_blocks.range[i].begin)
       break;
-    }
+    block = (size_t)lg_srcv->rec_blocks.range[i].end + 1;
   }
-  if (pdu)
+  first_missing = block;
+  last_received = lg_srcv->rec_blocks.range[lg_srcv->rec_blocks.used - 1].end;
+  if (last_received < lg_srcv->rec_blocks.highest_seen)
+    last_received = lg_srcv->rec_blocks.highest_seen;
+  if (first_missing > last_received && lg_srcv->total_len) {
+    size_t block_size = (size_t)1 << (lg_srcv->szx + 4);
+
+    final_body_block = (lg_srcv->total_len - 1) / block_size;
+    if (first_missing <= final_body_block)
+      final_block = final_body_block;
+    else
+      final_block = last_received;
+  } else {
+    final_block = last_received;
+  }
+  if (first_missing > final_block) {
+    /*
+     * The received payload set is complete.  M indicates that more data is
+     * expected, but it does not make the next, unsent payload set missing.
+     */
+    coap_ticks(&lg_srcv->rec_blocks.last_seen);
+    return 1;
+  }
+
+  i = 0;
+  for (block = first_missing;
+       block <= final_block &&
+       missing_blocks < COAP_MAX_PAYLOADS(session);
+      ) {
+    while (i < lg_srcv->rec_blocks.used &&
+           lg_srcv->rec_blocks.range[i].end < block)
+      i++;
+    if (i < lg_srcv->rec_blocks.used &&
+        lg_srcv->rec_blocks.range[i].begin <= block) {
+      block = (size_t)lg_srcv->rec_blocks.range[i].end + 1;
+      continue;
+    }
+
+    gap_end = final_block;
+    if (i < lg_srcv->rec_blocks.used &&
+        lg_srcv->rec_blocks.range[i].begin <= final_block)
+      gap_end = lg_srcv->rec_blocks.range[i].begin - 1;
+
+    for (; block <= gap_end &&
+         missing_blocks < COAP_MAX_PAYLOADS(session);
+         block++) {
+      if (pdu == NULL) {
+        pdu = pdu_408_build(session, lg_srcv);
+        if (!pdu)
+          break;
+      }
+      if (!add_408_block(pdu, block)) {
+        break;
+      }
+      q_block1_recovery_add(lg_srcv, (uint32_t)block);
+      missing_blocks++;
+    }
+    if (pdu == NULL || block <= gap_end)
+      break;
+  }
+  if (missing_blocks) {
     coap_send_internal(session, pdu, NULL);
+  } else if (pdu) {
+    coap_delete_pdu_lkd(pdu);
+  }
   lg_srcv->rec_blocks.retry++;
   coap_ticks(&lg_srcv->rec_blocks.last_seen);
   return 1;
@@ -2894,6 +2963,9 @@ coap_block_delete_lg_srcv(coap_session_t *session,
 
   coap_delete_str_const(lg_srcv->uri_path);
   coap_delete_bin_const(lg_srcv->last_token);
+#if COAP_Q_BLOCK_SUPPORT && COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0
+  coap_free_type(COAP_STRING, lg_srcv->q_block1_bitmap);
+#endif /* COAP_Q_BLOCK_SUPPORT && COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0 */
   coap_free_type(COAP_STRING, lg_srcv->body_data);
   coap_log_debug("** %s: lg_srcv %p released\n",
                  coap_session_str(session), (void *)lg_srcv);
@@ -3438,6 +3510,9 @@ coap_handle_request_put_block(coap_context_t *context,
   const uint8_t *rtag;
   uint32_t max_block_szx;
   int update_data;
+#if COAP_Q_BLOCK_SUPPORT
+  int q_block1_recovery_progress = 0;
+#endif /* COAP_Q_BLOCK_SUPPORT */
   unsigned int saved_num;
   size_t saved_offset;
   int lg_srcv_is_refed = 0;
@@ -3699,20 +3774,80 @@ coap_handle_request_put_block(coap_context_t *context,
   saved_offset = offset;
 
   while (offset < saved_offset + length) {
-    if (!check_if_received_block(&lg_srcv->rec_blocks, block.num)) {
-      /* Update list of blocks received */
-      if (blocks_add_entry(&lg_srcv->rec_blocks, block.num, block.m)) {
+#if COAP_Q_BLOCK_SUPPORT
+    if (block_option == COAP_OPTION_Q_BLOCK1 &&
+        block.num > lg_srcv->rec_blocks.highest_seen)
+      lg_srcv->rec_blocks.highest_seen = block.num;
+#endif /* COAP_Q_BLOCK_SUPPORT */
+#if COAP_Q_BLOCK_SUPPORT && COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0
+    if (block_option == COAP_OPTION_Q_BLOCK1 &&
+        lg_srcv->q_block1_bitmap) {
+      if (block.num >= lg_srcv->q_block1_bitmap_blocks) {
+        coap_log_info("Q-Block1 block nr %u exceeds Size1\n", block.num);
+        response->code = COAP_RESPONSE_CODE(408);
+        goto skip_app_handler;
+      } else if (q_block1_bitmap_set_block(lg_srcv, block.num)) {
+        /*
+         * Keep range state for Q-Block scheduling, but preserve this payload
+         * in the bitmap even when the bounded range table is full.
+         */
+        blocks_add_entry(&lg_srcv->rec_blocks, block.num, block.m);
         update_data = 1;
+        if (!lg_srcv->recovery_blocks_used ||
+            q_block1_recovery_remove(lg_srcv, block.num)) {
+          lg_srcv->rec_blocks.retry = 0;
+          q_block1_recovery_progress = 1;
+        }
       } else {
-        coap_log_debug("Block nr %u ignored (too many missing blocks)\n", block.num);
+        coap_log_debug("Duplicate block nr %u\n", block.num);
+        coap_ticks(&lg_srcv->rec_blocks.last_seen);
       }
-    } else {
-      coap_log_debug("Duplicate block nr %u\n", block.num);
-    }
+    } else
+#endif /* COAP_Q_BLOCK_SUPPORT && COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0 */
+      if (!check_if_received_block(&lg_srcv->rec_blocks, block.num)) {
+        /* Update list of blocks received */
+        if (blocks_add_entry(&lg_srcv->rec_blocks, block.num, block.m)) {
+          update_data = 1;
+#if COAP_Q_BLOCK_SUPPORT
+          if (block_option == COAP_OPTION_Q_BLOCK1) {
+            lg_srcv->rec_blocks.retry = 0;
+            if (q_block1_recovery_remove(lg_srcv, block.num))
+              q_block1_recovery_progress = 1;
+          }
+#endif /* COAP_Q_BLOCK_SUPPORT */
+#if COAP_Q_BLOCK_SUPPORT
+        } else if (block_option == COAP_OPTION_Q_BLOCK1) {
+          /*
+           * Do not silently lose Q-Block1 state when the bounded range table
+           * is full. Ask the sender to fill the tracked gaps before accepting
+           * another disjoint range.
+           */
+          request_missing_blocks(session, lg_srcv, block.num);
+          goto skip_app_handler;
+#endif /* COAP_Q_BLOCK_SUPPORT */
+        } else {
+          coap_log_debug("Block nr %u ignored (too many missing blocks)\n", block.num);
+        }
+      } else {
+        coap_log_debug("Duplicate block nr %u\n", block.num);
+#if COAP_Q_BLOCK_SUPPORT
+        if (block_option == COAP_OPTION_Q_BLOCK1)
+          coap_ticks(&lg_srcv->rec_blocks.last_seen);
+#endif /* COAP_Q_BLOCK_SUPPORT */
+      }
     block.num++;
     offset = block.num << (block.szx + 4);
   }
   block.num--;
+
+#if COAP_Q_BLOCK_SUPPORT
+  if (block_option == COAP_OPTION_Q_BLOCK1 && update_data) {
+#if COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0
+    if (!lg_srcv->q_block1_bitmap || q_block1_recovery_progress)
+#endif /* COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0 */
+      coap_ticks(&lg_srcv->rec_blocks.last_seen);
+  }
+#endif /* COAP_Q_BLOCK_SUPPORT */
 
   if (update_data) {
     /* Update saved data */
@@ -3765,7 +3900,7 @@ coap_handle_request_put_block(coap_context_t *context,
 #if COAP_Q_BLOCK_SUPPORT
       )
 #endif /* COAP_Q_BLOCK_SUPPORT */
-      ) {
+     ) {
     /* Not all the payloads of the body have arrived */
     if (block.m) {
       uint8_t buf[4];
@@ -3778,7 +3913,7 @@ coap_handle_request_put_block(coap_context_t *context,
 #if COAP_Q_BLOCK1_BITMAP_MAX_BYTES > 0
         if (lg_srcv->q_block1_bitmap &&
             q_block1_bitmap_missing_previous_payload_set(session, lg_srcv,
-                                                          block.num)) {
+                                                         block.num)) {
           request_missing_blocks(session, lg_srcv, block.num);
           goto skip_app_handler;
         }
