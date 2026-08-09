@@ -3993,7 +3993,7 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
       }
       track_echo(session, rcvd);
 #if COAP_Q_BLOCK_SUPPORT
-      if (rcvd->code == COAP_RESPONSE_CLASS(231) &&
+      if (rcvd->code == COAP_RESPONSE_CODE(231) &&
           lg_xmit->option == COAP_OPTION_Q_BLOCK1) {
         coap_send_q_blocks(session, lg_xmit, block, lg_xmit->sent_pdu, COAP_SEND_SKIP_PDU);
         goto skip_app_handler;
