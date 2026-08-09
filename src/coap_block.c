@@ -2143,6 +2143,7 @@ coap_send_q_blocks(coap_session_t *session,
         mid = coap_send_internal(session, pdu, NULL);
         if (mid != COAP_INVALID_MID) {
           blocks_delete_entry(&lg_xmit->send_blocks, l_block.num);
+          coap_ticks(&lg_xmit->last_sent);
         }
       } else {
         return coap_send_internal(session, pdu, NULL);
@@ -2203,6 +2204,7 @@ coap_send_q_blocks(coap_session_t *session,
       mid = coap_send_internal(session, pdu, NULL);
       if (mid != COAP_INVALID_MID) {
         blocks_delete_entry(&lg_xmit->send_blocks, l_block.num);
+        coap_ticks(&lg_xmit->last_sent);
       }
     } else {
       mid = coap_send_internal(session, pdu, NULL);
@@ -2212,6 +2214,7 @@ coap_send_q_blocks(coap_session_t *session,
       coap_delete_pdu_lkd(block_pdu);
       return COAP_INVALID_MID;
     }
+    coap_ticks(&lg_xmit->last_sent);
   }
   /* Unsafe to use pdu in later code */
 
@@ -2306,6 +2309,7 @@ coap_send_q_blocks(coap_session_t *session,
       coap_delete_pdu_lkd(t_pdu);
       return COAP_INVALID_MID;
     }
+    coap_ticks(&lg_xmit->last_sent);
     /* This block has now been transmitted */
     blocks_delete_entry(&lg_xmit->send_blocks, block.num);
     block_pdu = t_pdu;
