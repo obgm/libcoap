@@ -189,7 +189,8 @@ struct coap_lg_xmit_t {
   coap_tick_t last_obs; /**< Last time used (Observe tracking) or 0 */
 #if COAP_Q_BLOCK_SUPPORT
   coap_tick_t non_timeout_random_ticks; /** Used for Q-Block */
-  coap_rblock_t send_blocks; /**< list of blocks still to send */
+  coap_rblock_t send_blocks; /**< forward blocks still to send */
+  coap_rblock_t recovery_blocks; /**< Q-Block1 blocks requested by 4.08 */
 #endif /* COAP_Q_BLOCK_SUPPORT */
   uint32_t ref;          /**< Reference count */
 };

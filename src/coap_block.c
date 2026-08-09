@@ -2164,7 +2164,8 @@ coap_send_q_blocks(coap_session_t *session,
   pdu->lg_xmit = lg_xmit;
   if ((block.m || lg_xmit->send_blocks.used) &&
       COAP_MAX_PAYLOADS(session) &&
-      ((pdu->type == COAP_MESSAGE_NON &&
+      (send_pdu == COAP_SEND_SKIP_PDU ||
+       (pdu->type == COAP_MESSAGE_NON &&
         (lg_xmit->send_blocks.used > 1 ||
          ((block.num + 1) % COAP_MAX_PAYLOADS(session)) + 1 !=
          COAP_MAX_PAYLOADS(session))) ||
@@ -2321,6 +2322,29 @@ coap_send_q_blocks(coap_session_t *session,
   } else
     coap_ticks(&lg_xmit->last_payload);
   coap_lg_xmit_release_lkd(session, lg_xmit);
+  return mid;
+}
+
+/*
+ * Send a 4.08 recovery batch without letting it reorder the forward queue.
+ * coap_send_q_blocks() consumes lg_xmit->send_blocks synchronously.
+ */
+static coap_mid_t
+coap_send_q_recovery_blocks(coap_session_t *session,
+                            coap_lg_xmit_t *lg_xmit,
+                            coap_block_b_t block) {
+  coap_rblock_t forward_blocks = lg_xmit->send_blocks;
+  coap_tick_t forward_last_payload = lg_xmit->last_payload;
+  coap_tick_t forward_last_all_sent = lg_xmit->last_all_sent;
+  coap_mid_t mid;
+
+  lg_xmit->send_blocks = lg_xmit->recovery_blocks;
+  mid = coap_send_q_blocks(session, lg_xmit, block, lg_xmit->sent_pdu,
+                           COAP_SEND_SKIP_PDU);
+  lg_xmit->recovery_blocks = lg_xmit->send_blocks;
+  lg_xmit->send_blocks = forward_blocks;
+  lg_xmit->last_payload = forward_last_payload;
+  lg_xmit->last_all_sent = forward_last_all_sent;
   return mid;
 }
 
@@ -4190,13 +4214,13 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
           block.m = (block.num + 1) * chunk < lg_xmit->data_info->length;
           block.szx = lg_xmit->blk_size;
 
-          blocks_add_entry(&lg_xmit->send_blocks, block.num, block.m);
+          blocks_add_entry(&lg_xmit->recovery_blocks, block.num, block.m);
         }
-        if (lg_xmit->send_blocks.used) {
+        if (lg_xmit->recovery_blocks.used) {
           /* Flush out the first one */
-          block.num = lg_xmit->send_blocks.range[0].begin;
+          block.num = lg_xmit->recovery_blocks.range[0].begin;
           block.m = (block.num + 1) * chunk < lg_xmit->data_info->length;
-          coap_send_q_blocks(session, lg_xmit, block, lg_xmit->sent_pdu, COAP_SEND_SKIP_PDU);
+          coap_send_q_recovery_blocks(session, lg_xmit, block);
         }
         goto skip_app_handler;
       }
