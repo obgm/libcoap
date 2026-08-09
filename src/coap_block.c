@@ -29,10 +29,25 @@
 #error COAP_ETAG_MAX_BYTES byte size invalid
 #endif
 
-#define COAP_LG_XMIT_TXT_SCALAR (8)
-
 #if COAP_Q_BLOCK_SUPPORT
 static int blocks_delete_entry(coap_rblock_t *rec_blocks, uint32_t block_num);
+
+static coap_tick_t
+q_block_feedback_timeout(const coap_session_t *session) {
+  coap_tick_t timeout = 0;
+  coap_tick_t retry_timeout = COAP_NON_RECEIVE_TIMEOUT_TICKS(session);
+  uint16_t retry;
+
+  for (retry = 0; retry < COAP_NON_MAX_RETRANSMIT(session); retry++) {
+    if (timeout > COAP_MAX_DELAY_TICKS - retry_timeout)
+      return COAP_MAX_DELAY_TICKS;
+    timeout += retry_timeout;
+    if (retry_timeout > COAP_MAX_DELAY_TICKS / 2)
+      return COAP_MAX_DELAY_TICKS;
+    retry_timeout *= 2;
+  }
+  return timeout;
+}
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
 #if COAP_Q_BLOCK_SUPPORT
@@ -1535,18 +1550,25 @@ coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now,
                                   coap_tick_t *tim_rem) {
   coap_lg_xmit_t *lg_xmit;
   coap_lg_xmit_t *q;
-#if COAP_Q_BLOCK_SUPPORT
-  coap_tick_t idle_timeout = COAP_LG_XMIT_TXT_SCALAR * COAP_NON_TIMEOUT_TICKS(session);
-#else /* ! COAP_Q_BLOCK_SUPPORT */
   coap_tick_t idle_timeout = 8 * COAP_TICKS_PER_SECOND;
-#endif /* ! COAP_Q_BLOCK_SUPPORT */
   coap_tick_t partial_timeout = COAP_MAX_TRANSMIT_WAIT_TICKS(session);
   int ret = 0;
 
   *tim_rem = COAP_MAX_DELAY_TICKS;
 
   LL_FOREACH_SAFE(session->lg_xmit, lg_xmit, q) {
-    if (lg_xmit->last_all_sent) {
+#if COAP_Q_BLOCK_SUPPORT
+    if (lg_xmit->option == COAP_OPTION_Q_BLOCK1)
+      idle_timeout = q_block_feedback_timeout(session);
+    else
+#endif /* COAP_Q_BLOCK_SUPPORT */
+      idle_timeout = 8 * COAP_TICKS_PER_SECOND;
+    if (lg_xmit->last_all_sent
+#if COAP_Q_BLOCK_SUPPORT
+        && (lg_xmit->option != COAP_OPTION_Q_BLOCK1 ||
+            lg_xmit->last_payload == 0)
+#endif /* COAP_Q_BLOCK_SUPPORT */
+       ) {
       if (lg_xmit->last_all_sent + idle_timeout <= now) {
         /* Expire this entry */
         LL_DELETE(session->lg_xmit, lg_xmit);
@@ -2345,16 +2367,16 @@ coap_block_check_q_block1_xmit(coap_session_t *session, coap_tick_t now, coap_ti
           ret = 1;
         }
       }
-    } else if (lg_xmit->last_all_sent) {
-      non_timeout = COAP_NON_TIMEOUT_TICKS(session);
-      if (lg_xmit->last_all_sent + COAP_LG_XMIT_TXT_SCALAR * non_timeout <= now) {
+    } else if (lg_xmit->last_all_sent && lg_xmit->last_payload == 0) {
+      non_timeout = q_block_feedback_timeout(session);
+      if (lg_xmit->last_all_sent + non_timeout <= now) {
         /* Expire this entry */
         LL_DELETE(session->lg_xmit, lg_xmit);
         coap_block_delete_lg_xmit(session, lg_xmit);
       } else {
         /* Delay until the lg_xmit needs to expire */
-        if (*tim_rem > lg_xmit->last_all_sent + COAP_LG_XMIT_TXT_SCALAR * non_timeout - now) {
-          *tim_rem = lg_xmit->last_all_sent + COAP_LG_XMIT_TXT_SCALAR * non_timeout - now;
+        if (*tim_rem > lg_xmit->last_all_sent + non_timeout - now) {
+          *tim_rem = lg_xmit->last_all_sent + non_timeout - now;
           ret = 1;
         }
       }
