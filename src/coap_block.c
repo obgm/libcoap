@@ -1799,32 +1799,33 @@ pdu_408_build(coap_session_t *session, coap_lg_srcv_t *lg_srcv) {
 }
 
 static int
-add_408_block(coap_pdu_t *pdu, int block) {
+add_408_block(coap_pdu_t *pdu, size_t block) {
   size_t len;
   uint8_t val[8];
 
-  assert(block >= 0 && block < (1 << 20));
+  assert(block < (1U << 20));
 
-  if (block < 0 || block >= (1 << 20)) {
+  if (block >= (1U << 20)) {
     return 0;
   } else if (block < 24) {
     len = 1;
-    val[0] = block;
+    val[0] = (uint8_t)block;
   } else if (block < 0x100) {
     len = 2;
     val[0] = 24;
-    val[1] = block;
+    val[1] = (uint8_t)block;
   } else if (block < 0x10000) {
     len = 3;
     val[0] = 25;
-    val[1] = block >> 8;
-    val[2] = block & 0xff;
+    val[1] = (uint8_t)(block >> 8);
+    val[2] = (uint8_t)(block & 0xff);
   } else { /* Largest block number is 2^^20 - 1 */
-    len = 4;
+    len = 5;
     val[0] = 26;
-    val[1] = block >> 16;
-    val[2] = (block >> 8) & 0xff;
-    val[3] = block & 0xff;
+    val[1] = (uint8_t)(block >> 24);
+    val[2] = (uint8_t)((block >> 16) & 0xff);
+    val[3] = (uint8_t)((block >> 8) & 0xff);
+    val[4] = (uint8_t)(block & 0xff);
   }
   if (coap_pdu_check_resize(pdu, pdu->used_size + len)) {
     memcpy(&pdu->token[pdu->used_size], val, len);
