@@ -4045,6 +4045,33 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
     goto fail_response;
   }
 
+  /*
+   * RFC7959 2.2: the SZX value 7 "is reserved, i.e., MUST NOT be sent and
+   * MUST lead to a 4.00 Bad Request response code upon reception in a
+   * request".  SZX 7 is only meaningful as the BERT escape (RFC8323 6),
+   * which needs a reliable transport with BERT negotiated in both CSMs.
+   * Anywhere else it must be rejected here: coap_get_block_b() reports a
+   * reserved SZX as "no Block option present", which is indistinguishable
+   * further down from a request that never carried one.
+   */
+  if (COAP_PROTO_NOT_RELIABLE(session->proto) ||
+      !(session->csm_bert_rem_support && session->csm_bert_loc_support)) {
+    static const coap_option_num_t block_nums[] = {
+      COAP_OPTION_BLOCK1, COAP_OPTION_BLOCK2, COAP_OPTION_Q_BLOCK1, COAP_OPTION_Q_BLOCK2
+    };
+    size_t bn;
+
+    for (bn = 0; bn < sizeof(block_nums)/sizeof(block_nums[0]); bn++) {
+      coap_opt_t *block_opt = coap_check_option(pdu, block_nums[bn], &opt_iter);
+
+      if (block_opt && COAP_OPT_BLOCK_SZX(block_opt) == 7) {
+        coap_log_debug("request: reserved Block SZX 7 (RFC7959 2.2)\n");
+        resp = 400;
+        goto fail_response;
+      }
+    }
+  }
+
   query = coap_get_query(pdu);
 
   /* check for Observe option RFC7641 and RFC8132 */
