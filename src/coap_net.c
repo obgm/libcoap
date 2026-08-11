@@ -4139,6 +4139,10 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
                    (int)resource->uri_path->length, (int)resource->uri_path->length,
                    resource->uri_path->s);
     h(resource, session, pdu, query, response);
+    if (COAP_RESPONSE_CLASS(response->code) == 2 && response->data == NULL &&
+        coap_is_mcast(&session->addr_info.local)) {
+      goto drop_it_debug;
+    }
   } else {
     coap_log_debug("call custom handler for resource '%*.*s' (3)\n",
                    (int)resource->uri_path->length, (int)resource->uri_path->length,
@@ -4296,6 +4300,7 @@ skip_handler:
               COAP_PROTO_RELIABLE(session->proto))) {
     coap_delete_pdu_lkd(response);
   } else {
+drop_it_debug:
     coap_log_debug("   %s: mid=0x%04x: response dropped\n",
                    coap_session_str(session),
                    response->mid);

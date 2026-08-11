@@ -64,42 +64,40 @@
     }                                                                        \
   }
 
+#ifndef WITHOUT_QUERY_FILTER
 static int
 match(const coap_str_const_t *text, const coap_str_const_t *pattern,
-      int match_prefix, int match_substring) {
+      int match_prefix) {
+  const uint8_t *next_token = text->s;
+  size_t remaining_length = text->length;
   assert(text);
   assert(pattern);
 
   if (text->length < pattern->length || !pattern->s)
     return 0;
 
-  if (match_substring) {
-    const uint8_t *next_token = text->s;
-    size_t remaining_length = text->length;
-    while (remaining_length) {
-      size_t token_length;
-      const uint8_t *token = next_token;
-      next_token = (unsigned char *)memchr(token, ' ', remaining_length);
+  while (remaining_length) {
+    size_t token_length;
+    const uint8_t *token = next_token;
+    next_token = (unsigned char *)memchr(token, ' ', remaining_length);
 
-      if (next_token) {
-        token_length = next_token - token;
-        remaining_length -= (token_length + 1);
-        next_token++;
-      } else {
-        token_length = remaining_length;
-        remaining_length = 0;
-      }
-
-      if ((match_prefix || pattern->length == token_length) &&
-          memcmp(token, pattern->s, pattern->length) == 0)
-        return 1;
+    if (next_token) {
+      token_length = next_token - token;
+      remaining_length -= (token_length + 1);
+      next_token++;
+    } else {
+      token_length = remaining_length;
+      remaining_length = 0;
     }
-    return 0;
-  }
 
-  return (match_prefix || pattern->length == text->length) &&
-         memcmp(text->s, pattern->s, pattern->length) == 0;
+    if (token_length >= pattern->length &&
+        (match_prefix || pattern->length == token_length) &&
+        memcmp(token, pattern->s, pattern->length) == 0)
+      return 1;
+  }
+  return 0;
 }
+#endif /* WITHOUT_QUERY_FILTER */
 
 COAP_API coap_print_status_t
 coap_print_wellknown(coap_context_t *context, unsigned char *buf,
@@ -120,7 +118,7 @@ static coap_str_const_t coap_default_uri_wellknown = {
 coap_print_status_t
 coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
                          size_t *buflen, size_t offset,
-                         const coap_string_t *query_filter) {
+                         const coap_string_t *query_filterm) {
   coap_print_status_t output_length = 0;
   unsigned char *p = buf;
   const uint8_t *bufend = buf + *buflen;
@@ -129,121 +127,168 @@ coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
   const size_t old_offset = offset;
   int subsequent_resource = 0;
 #ifdef WITHOUT_QUERY_FILTER
-  (void)query_filter;
-#else
-  coap_str_const_t resource_param = { 0, NULL }, query_pattern = { 0, NULL };
-  int flags = 0; /* MATCH_SUBSTRING, MATCH_PREFIX, MATCH_URI */
-#define MATCH_URI       0x01
-#define MATCH_PREFIX    0x02
-#define MATCH_SUBSTRING 0x04
-  static const coap_str_const_t _rt_attributes[] = {
-    {2, (const uint8_t *)"rt"},
-    {2, (const uint8_t *)"if"},
-    {3, (const uint8_t *)"rel"},
-    {0, NULL}
-  };
+  (void)query_filterm;
 #endif /* WITHOUT_QUERY_FILTER */
 
   coap_lock_check_locked();
 #ifndef WITHOUT_QUERY_FILTER
   /* split query filter, if any */
-  if (query_filter) {
-    resource_param.s = query_filter->s;
-    while (resource_param.length < query_filter->length &&
-           resource_param.s[resource_param.length] != '=')
-      resource_param.length++;
+  if (query_filterm) {
+    unsigned char *next_query = (unsigned char *)memchr(query_filterm->s, '&', query_filterm->length);
+    size_t query_filterm_rem;
+    coap_string_t query_filter;
 
-    if (resource_param.length < query_filter->length) {
-      const coap_str_const_t *rt_attributes;
-      if (resource_param.length == 4 &&
-          memcmp(resource_param.s, "href", 4) == 0)
-        flags |= MATCH_URI;
+    /* There could be multiple queries */
+    query_filter.s = query_filterm->s;
+    if (next_query) {
+      query_filter.length = next_query - query_filter.s;
+      next_query++;
+      query_filterm_rem = query_filterm->length - query_filter.length - 1;
+    } else {
+      query_filter.length = query_filterm->length;
+      query_filterm_rem = 0;
+    }
 
-      for (rt_attributes = _rt_attributes; rt_attributes->s; rt_attributes++) {
-        if (resource_param.length == rt_attributes->length &&
-            memcmp(resource_param.s, rt_attributes->s, rt_attributes->length) == 0) {
-          flags |= MATCH_SUBSTRING;
+    while (query_filter.length) {
+      coap_str_const_t resource_param = { 0, NULL }, query_pattern = { 0, NULL };
+      /*
+       * If query starts with href=, then MATCH_URI is set in flags.
+       * If query value contains a '*', then MATCH_PREFIX is set in flags to
+       * match up to the *.
+       */
+      int flags = 0; /* MATCH_PREFIX, MATCH_URI */
+#define MATCH_URI       0x01
+#define MATCH_PREFIX    0x02
+
+      resource_param.s = query_filter.s;
+      while (resource_param.length < query_filter.length &&
+             resource_param.s[resource_param.length] != '=')
+        resource_param.length++;
+
+      if (resource_param.length < query_filter.length) {
+        if (resource_param.length == 4 &&
+            memcmp(resource_param.s, "href", 4) == 0)
+          flags |= MATCH_URI;
+
+        /* rest is query-pattern (resource may have multiple values to match */
+        query_pattern.s =
+            query_filter.s + resource_param.length + 1;
+
+        assert((resource_param.length + 1) <= query_filter.length);
+        query_pattern.length =
+            query_filter.length - (resource_param.length + 1);
+
+        if (query_pattern.length &&
+            (query_pattern.s[0] == '/') && ((flags & MATCH_URI) == MATCH_URI)) {
+          query_pattern.s++;
+          query_pattern.length--;
+        }
+
+        if (query_pattern.length &&
+            query_pattern.s[query_pattern.length-1] == '*') {
+          query_pattern.length--;
+          flags |= MATCH_PREFIX;
+        }
+      }
+
+      RESOURCES_ITER(context->resources, r) {
+
+        if (coap_string_equal(r->uri_path, &coap_default_uri_wellknown)) {
+          /* server app has defined a resource for .well-known/core - ignore */
+          continue;
+        }
+        if (r->flags & COAP_RESOURCE_HIDE_WELLKNOWN_CORE) {
+          continue;
+        }
+        if (resource_param.length) { /* there is a query filter */
+
+          if (flags & MATCH_URI) {        /* match resource URI */
+            if (!match(r->uri_path, &query_pattern, (flags & MATCH_PREFIX) != 0))
+              continue;
+          } else {                        /* match attribute */
+            coap_attr_t *attr;
+            coap_str_const_t unquoted_val;
+            attr = coap_find_attr(r, &resource_param);
+            if (!attr || !attr->value)
+              continue;
+            unquoted_val = *attr->value;
+            /* if attribute has a quoted value, remove double quotes */
+            if (attr->value->length >= 2 && attr->value->s[0] == '"') {
+              unquoted_val.length -= 2;
+              unquoted_val.s += 1;
+            }
+            if (!match(&unquoted_val, &query_pattern, (flags & MATCH_PREFIX) != 0))
+              continue;
+          }
+        }
+
+        if (!subsequent_resource) {        /* this is the first resource  */
+          subsequent_resource = 1;
+        } else {
+          PRINT_COND_WITH_OFFSET(p, bufend, offset, ',', written);
+        }
+
+        left = bufend - p; /* calculate available space */
+        result = coap_print_link(r, p, &left, &offset);
+
+        if (result & COAP_PRINT_STATUS_ERROR) {
           break;
         }
+
+        /* coap_print_link() returns the number of characters that
+         * where actually written to p. Now advance to its end. */
+        p += COAP_PRINT_OUTPUT_LENGTH(result);
+        written += left;
       }
-
-      /* rest is query-pattern */
-      query_pattern.s =
-          query_filter->s + resource_param.length + 1;
-
-      assert((resource_param.length + 1) <= query_filter->length);
-      query_pattern.length =
-          query_filter->length - (resource_param.length + 1);
-
-      if (query_pattern.length &&
-          (query_pattern.s[0] == '/') && ((flags & MATCH_URI) == MATCH_URI)) {
-        query_pattern.s++;
-        query_pattern.length--;
-      }
-
-      if (query_pattern.length &&
-          query_pattern.s[query_pattern.length-1] == '*') {
-        query_pattern.length--;
-        flags |= MATCH_PREFIX;
+      query_filter.s = next_query;
+      if (next_query) {
+        next_query = (unsigned char *)memchr(next_query, '&', query_filterm_rem);
+        if (next_query) {
+          query_filter.length = next_query - query_filter.s;
+          next_query++;
+          query_filterm_rem = query_filterm_rem - query_filter.length - 1;
+        } else {
+          query_filter.length = query_filterm_rem;
+          query_filterm_rem = 0;
+        }
+      } else {
+        query_filter.length = query_filterm_rem;
+        query_filterm_rem = 0;
       }
     }
-  }
+  } else {
 #endif /* WITHOUT_QUERY_FILTER */
+    RESOURCES_ITER(context->resources, r) {
 
-  RESOURCES_ITER(context->resources, r) {
+      if (coap_string_equal(r->uri_path, &coap_default_uri_wellknown)) {
+        /* server app has defined a resource for .well-known/core - ignore */
+        continue;
+      }
+      if (r->flags & COAP_RESOURCE_HIDE_WELLKNOWN_CORE) {
+        continue;
+      }
 
-    if (coap_string_equal(r->uri_path, &coap_default_uri_wellknown)) {
-      /* server app has defined a resource for .well-known/core - ignore */
-      continue;
-    }
-    if (r->flags & COAP_RESOURCE_HIDE_WELLKNOWN_CORE) {
-      continue;
+      if (!subsequent_resource) {        /* this is the first resource  */
+        subsequent_resource = 1;
+      } else {
+        PRINT_COND_WITH_OFFSET(p, bufend, offset, ',', written);
+      }
+
+      left = bufend - p; /* calculate available space */
+      result = coap_print_link(r, p, &left, &offset);
+
+      if (result & COAP_PRINT_STATUS_ERROR) {
+        break;
+      }
+
+      /* coap_print_link() returns the number of characters that
+       * where actually written to p. Now advance to its end. */
+      p += COAP_PRINT_OUTPUT_LENGTH(result);
+      written += left;
     }
 #ifndef WITHOUT_QUERY_FILTER
-    if (resource_param.length) { /* there is a query filter */
-
-      if (flags & MATCH_URI) {        /* match resource URI */
-        if (!match(r->uri_path, &query_pattern, (flags & MATCH_PREFIX) != 0,
-                   (flags & MATCH_SUBSTRING) != 0))
-          continue;
-      } else {                        /* match attribute */
-        coap_attr_t *attr;
-        coap_str_const_t unquoted_val;
-        attr = coap_find_attr(r, &resource_param);
-        if (!attr || !attr->value)
-          continue;
-        unquoted_val = *attr->value;
-        /* if attribute has a quoted value, remove double quotes */
-        if (attr->value->length >= 2 && attr->value->s[0] == '"') {
-          unquoted_val.length -= 2;
-          unquoted_val.s += 1;
-        }
-        if (!(match(&unquoted_val, &query_pattern,
-                    (flags & MATCH_PREFIX) != 0,
-                    (flags & MATCH_SUBSTRING) != 0)))
-          continue;
-      }
-    }
-#endif /* WITHOUT_QUERY_FILTER */
-
-    if (!subsequent_resource) {        /* this is the first resource  */
-      subsequent_resource = 1;
-    } else {
-      PRINT_COND_WITH_OFFSET(p, bufend, offset, ',', written);
-    }
-
-    left = bufend - p; /* calculate available space */
-    result = coap_print_link(r, p, &left, &offset);
-
-    if (result & COAP_PRINT_STATUS_ERROR) {
-      break;
-    }
-
-    /* coap_print_link() returns the number of characters that
-     * where actually written to p. Now advance to its end. */
-    p += COAP_PRINT_OUTPUT_LENGTH(result);
-    written += left;
   }
+#endif /* WITHOUT_QUERY_FILTER */
 
   *buflen = written;
   output_length = (coap_print_status_t)(p - buf);

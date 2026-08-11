@@ -191,6 +191,88 @@ t_wellknown4(void) {
   coap_delete_string(query);
 }
 
+static void
+t_wellknown5(void) {
+  coap_resource_t *r;
+  coap_print_status_t result;
+  coap_string_t *query;
+  unsigned char buf[80];
+  size_t buflen = sizeof(buf);
+  char teststr[] = {  /* ,</abcd>;rt="bbbbbb a";obs (27 chars) */
+    '<', '/', 'a', 'b', 'c', 'd', 'e', '>', ';',
+    'r', 't', '=', '"', 'b', 'b', 'b', 'b', 'b', 'b', ' ', 'a', '"',
+    ';', 'o', 'b', 's'
+  };
+
+  /* Need to release all the built up resources */
+  coap_free_context(ctx);
+  ctx = coap_new_context(NULL);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx);
+
+  r = coap_resource_init(coap_make_str_const("abcde"), 0);
+  coap_add_attr(r, coap_make_str_const("rt"), coap_make_str_const("\"bbbbbb a\""), 0);
+  coap_resource_set_get_observable(r, 1);
+
+  coap_add_resource(ctx, r);
+
+  query = coap_new_string(sizeof("rt=cccc*")-1);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(query);
+  memcpy(query->s, "rt=cccc*", sizeof("rt=cccc*")-1);
+  result = coap_print_wellknown(ctx, buf, &buflen, 0, query);
+  CU_ASSERT(result == 0);
+  coap_delete_string(query);
+
+  query = coap_new_string(sizeof("rt=aa*")-1);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(query);
+  memcpy(query->s, "rt=aa*", sizeof("rt=aa*")-1);
+  result = coap_print_wellknown(ctx, buf, &buflen, 0, query);
+  CU_ASSERT(result == 0);
+  coap_delete_string(query);
+
+  query = coap_new_string(sizeof("rt=bbb*")-1);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(query);
+  memcpy(query->s, "rt=bbb*", sizeof("rt=bbb*")-1);
+  buflen = sizeof(buf);
+  result = coap_print_wellknown(ctx, buf, &buflen, 0, query);
+  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0);
+  CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) == sizeof(teststr));
+  CU_ASSERT(buflen == sizeof(teststr));
+  CU_ASSERT(memcmp(buf, teststr, buflen) == 0);
+  coap_delete_string(query);
+
+  query = coap_new_string(sizeof("rt=bbbbbb")-1);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(query);
+  memcpy(query->s, "rt=bbbbbb", sizeof("rt=bbbbbb")-1);
+  buflen = sizeof(buf);
+  result = coap_print_wellknown(ctx, buf, &buflen, 0, query);
+  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0);
+  CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) == sizeof(teststr));
+  CU_ASSERT(buflen == sizeof(teststr));
+  CU_ASSERT(memcmp(buf, teststr, buflen) == 0);
+  coap_delete_string(query);
+
+  query = coap_new_string(sizeof("rt=a*")-1);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(query);
+  memcpy(query->s, "rt=a*", sizeof("rt=a*")-1);
+  buflen = sizeof(buf);
+  result = coap_print_wellknown(ctx, buf, &buflen, 0, query);
+  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0);
+  CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) == sizeof(teststr));
+  CU_ASSERT(buflen == sizeof(teststr));
+  CU_ASSERT(memcmp(buf, teststr, buflen) == 0);
+  coap_delete_string(query);
+
+  query = coap_new_string(sizeof("rt=a")-1);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(query);
+  memcpy(query->s, "rt=a", sizeof("rt=a")-1);
+  buflen = sizeof(buf);
+  result = coap_print_wellknown(ctx, buf, &buflen, 0, query);
+  CU_ASSERT((result & COAP_PRINT_STATUS_ERROR) == 0);
+  CU_ASSERT(COAP_PRINT_OUTPUT_LENGTH(result) == sizeof(teststr));
+  CU_ASSERT(buflen == sizeof(teststr));
+  CU_ASSERT(memcmp(buf, teststr, buflen) == 0);
+  coap_delete_string(query);
+}
 
 static int
 t_wkc_tests_create(void) {
@@ -209,39 +291,6 @@ t_wkc_tests_create(void) {
   session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
 
   pdu = coap_pdu_init(0, 0, 0, TEST_PDU_SIZE);
-#if 0
-  /* add resources to coap context */
-  if (ctx && pdu) {
-    coap_resource_t *r;
-    static char _buf[2 * 1024];
-    unsigned char *buf = (unsigned char *)_buf;
-    int i;
-
-    /* </>;title="some attribute";ct=0 (31 chars) */
-    r = coap_resource_init(NULL, 0, 0);
-
-    coap_add_attr(r, coap_make_str_const("ct"), coap_make_str_const("0"), 0);
-    coap_add_attr(r, coap_make_str_const("title"), coap_make_str_const("\"some attribute\""), 0);
-    coap_add_resource(ctx, r);
-
-    /* ,</abcd>;if="one";obs (21 chars) */
-    r = coap_resource_init((const uint8_t *)"abcd", 4, 0);
-    r->observable = 1;
-    coap_add_attr(r, coap_make_str_const("if"), coap_make_str_const("\"one\""), 0);
-
-    coap_add_resource(ctx, r);
-
-    /* ,</0000> (TEST_URI_LEN + 4 chars) */
-    for (i = 0; i < sizeof(_buf) / (TEST_URI_LEN + 4); i++) {
-      int len = snprintf((char *)buf, TEST_URI_LEN + 1,
-                         "%0*d", TEST_URI_LEN, i);
-      r = coap_resource_init(buf, len, 0);
-      coap_add_resource(ctx, r);
-      buf += TEST_URI_LEN + 1;
-    }
-
-  }
-#endif
   return ctx == NULL || pdu == NULL;
 }
 
@@ -274,6 +323,7 @@ t_init_wellknown_tests(void) {
   WKC_TEST(suite, t_wellknown2);
   WKC_TEST(suite, t_wellknown3);
   WKC_TEST(suite, t_wellknown4);
+  WKC_TEST(suite, t_wellknown5);
 
   return suite;
 }
