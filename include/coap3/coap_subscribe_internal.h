@@ -153,13 +153,15 @@ int coap_delete_observer(coap_resource_t *resource,
  * @param token    The token that identifies this subscription or @c NULL for
  *                 the first subscription.
  * @param request  The requesting PDU.
+ * @large_fetch    @c 1 if large fetch cancellation, else @c 0.
  *
  * @return         @c 1 if the observer has been deleted, @c 0 otherwise.
  */
 int coap_delete_observer_request(coap_resource_t *resource,
                                  coap_session_t *session,
                                  const coap_bin_const_t *token,
-                                 coap_pdu_t *request);
+                                 coap_pdu_t *request,
+                                 int large_fetch);
 
 /**
  * Removes any subscription for @p session and releases the allocated storage.

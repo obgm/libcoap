@@ -1127,12 +1127,12 @@ coap_delete_observer(coap_resource_t *resource, coap_session_t *session,
 
 int
 coap_delete_observer_request(coap_resource_t *resource, coap_session_t *session,
-                             const coap_bin_const_t *token, coap_pdu_t *request) {
+                             const coap_bin_const_t *token, coap_pdu_t *request, int large_fetch) {
   coap_subscription_t *s;
   int ret = 0;
 
   s = coap_find_observer(resource, session, token);
-  if (!s) {
+  if (!s && large_fetch) {
     /*
      * It is possible that the client is using the wrong token.
      * An example being a large FETCH spanning multiple blocks.
