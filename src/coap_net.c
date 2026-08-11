@@ -4115,7 +4115,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
                            buf);
       }
     } else if (observe_action == COAP_OBSERVE_CANCEL) {
-      coap_delete_observer_request(resource, session, &pdu->actual_token, pdu);
+      coap_delete_observer_request(resource, session, &pdu->actual_token, pdu, free_lg_srcv != NULL);
     } else {
       coap_log_info("observe: unexpected action %d\n", observe_action);
     }
