@@ -3589,6 +3589,25 @@ coap_handle_request_put_block(coap_context_t *context,
       }
     }
   } else {
+    /*
+     * Every block carried by this request had already been received, so there
+     * is no new data and the application must not see the request twice
+     * (RFC7252 4.5).  The request still has to be answered: falling straight
+     * through to skip_app_handler leaves response->code at 0, which goes out
+     * as an Empty ACK.
+     * Re-issue the 2.31 Continue this block was given the first time.
+     */
+    if (block.m) {
+      uint8_t buf[4];
+
+      coap_insert_option(response, block_option,
+                         coap_encode_var_safe(buf, sizeof(buf),
+                                              (saved_num << 4) |
+                                              (1 << 3) |
+                                              lg_srcv->szx),
+                         buf);
+      response->code = COAP_RESPONSE_CODE(231);
+    }
     goto skip_app_handler;
   }
 
