@@ -157,7 +157,6 @@ COAP_SRC = coap_address.c \
 	   coap_dgrm_lwip.c \
 	   coap_dtls.c \
 	   coap_encode.c \
-	   coap_hashkey.c \
 	   coap_io.c \
 	   coap_io_lwip.c \
 	   coap_layers.c \

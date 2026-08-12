@@ -205,17 +205,12 @@ coap_crypto_hmac(cose_hmac_alg_t hmac_alg,
 #endif /* COAP_OSCORE_SUPPORT */
 
 #if COAP_SERVER_SUPPORT
-typedef struct coap_local_hash_t {
-  size_t ofs;
-  coap_key_t key[8];   /* 32 bytes in total */
-} coap_local_hash_t;
-
 coap_digest_ctx_t *
 coap_digest_setup(void) {
-  coap_key_t *digest_ctx = coap_malloc_type(COAP_DIGEST_CTX, sizeof(coap_local_hash_t));
+  SHA1Context *digest_ctx = coap_malloc_type(COAP_DIGEST_CTX, sizeof(SHA1Context));
 
   if (digest_ctx) {
-    memset(digest_ctx, 0, sizeof(coap_local_hash_t));
+    SHA1Reset(digest_ctx);
   }
 
   return digest_ctx;
@@ -230,23 +225,22 @@ int
 coap_digest_update(coap_digest_ctx_t *digest_ctx,
                    const uint8_t *data,
                    size_t data_len) {
-  coap_local_hash_t *local = (coap_local_hash_t *)digest_ctx;
-
-  coap_hash(data, data_len, local->key[local->ofs]);
-
-  local->ofs = (local->ofs + 1) % 7;
+  if (SHA1Input(digest_ctx, data, data_len) != shaSuccess)
+    return 0;
   return 1;
 }
 
 int
 coap_digest_final(coap_digest_ctx_t *digest_ctx,
                   coap_digest_t *digest_buffer) {
-  coap_local_hash_t *local = (coap_local_hash_t *)digest_ctx;
+  int ret = 1;
 
-  memcpy(digest_buffer, local->key, sizeof(coap_digest_t));
-
+  memset(digest_buffer, 0, sizeof(coap_digest_t));
+  if (SHA1Result(digest_ctx, (uint8_t *)digest_buffer) != shaSuccess) {
+    ret = 0;
+  }
   coap_digest_free(digest_ctx);
-  return 1;
+  return ret;
 }
 #endif /* COAP_SERVER_SUPPORT */
 

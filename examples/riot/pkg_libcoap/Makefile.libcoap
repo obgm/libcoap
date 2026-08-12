@@ -11,7 +11,6 @@ SRC := coap_address.c \
   coap_encode.c \
   coap_event.c \
   coap_gnutls.c\
-  coap_hashkey.c \
   coap_io.c \
   coap_io_riot.c\
   coap_layers.c\
