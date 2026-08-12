@@ -31,7 +31,7 @@ extern "C" {
  * @{
  */
 
-/* Holds a digest in binary typically sha256 except for notls */
+/* Holds a digest in binary typically sha256 except for notls (sha1) */
 typedef struct coap_digest_t {
   uint8_t key[32];
 } coap_digest_t;

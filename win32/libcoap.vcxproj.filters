@@ -42,9 +42,6 @@
     <ClCompile Include="..\src\coap_event.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\coap_hashkey.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\coap_gnutls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -198,9 +195,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_forward_decls.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_hashkey_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\$(LibCoAPIncludeDir)\coap_internal.h">

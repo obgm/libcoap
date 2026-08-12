@@ -84,7 +84,7 @@ and
 "https://rfc-editor.org/rfc/rfc8132#section-2[RFC8132 2. Fetch Method]".
 
 The Cache Key is a SHA256 digest if libcoap was built with TLS support,
-otherwise it uses the internal coap_hash() function, using the information
+otherwise it uses a SHA1 digest, using the information
 abstracted from the PDU and (optionally) the CoAP session.
 
 This Cache Key can then be used to match against incoming PDUs and then

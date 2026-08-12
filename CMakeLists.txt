@@ -834,7 +834,6 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_dtls.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_encode.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_event.c
-          ${CMAKE_CURRENT_LIST_DIR}/src/coap_hashkey.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_io.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_io_posix.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_layers.c
