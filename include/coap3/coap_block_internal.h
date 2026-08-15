@@ -108,7 +108,7 @@ struct coap_lg_range {
 };
 
 #ifndef COAP_RBLOCK_CNT
-#define COAP_RBLOCK_CNT 4
+#define COAP_RBLOCK_CNT 6
 #endif
 #if COAP_RBLOCK_CNT > COAP_DEFAULT_MAX_PAYLOADS -1
 #error COAP_RBLOCK_CNT too large
@@ -256,13 +256,17 @@ struct coap_lg_srcv_t {
   coap_rblock_t rec_blocks; /** < list of received blocks */
   coap_bin_const_t *last_token; /**< last used token */
   uint32_t ref;          /**< Reference count */
+#if COAP_Q_BLOCK_SUPPORT
+  int32_t r_m_payload_set; /**< Last payload set when requested missing blocks */
+#endif /* COAP_Q_BLOCK_SUPPORT */
 };
 #endif /* COAP_SERVER_SUPPORT */
 
 #if COAP_Q_BLOCK_SUPPORT
 typedef enum {
   COAP_SEND_SKIP_PDU,
-  COAP_SEND_INC_PDU
+  COAP_SEND_INC_PDU,
+  COAP_SEND_MISSING,
 } coap_send_pdu_t;
 #endif /* COAP_Q_BLOCK_SUPPORT */
 

@@ -631,11 +631,13 @@ release_1:
           tls_timeout = coap_dtls_get_timeout(s, now);
         else {
           tls_timeout = 0;
-          timeout = 1;
+          s_timeout = 1;
         }
       }
       if (tls_timeout > 0 && tls_timeout - now < timeout)
-        timeout = tls_timeout - now;
+        s_timeout = tls_timeout - now;
+      if (s_timeout < timeout)
+        timeout = s_timeout;
     }
 
     /* Check if any client large receives are missing blocks */
