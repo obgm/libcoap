@@ -748,7 +748,7 @@ hnd_put_example_data(coap_resource_t *resource,
   } else {
     /* single body of data received */
     data_so_far = coap_new_binary(size);
-    if (data_so_far) {
+    if (data_so_far && size) {
       memcpy(data_so_far->s, data, size);
     }
   }
