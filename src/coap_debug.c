@@ -1425,41 +1425,54 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
 #endif /* COAP_THREAD_SAFE */
 }
 
+#ifndef COAP_DEBUG_INTERVAL_COUNT
+#define COAP_DEBUG_INTERVAL_COUNT 10
+#endif
+
 static struct packet_num_interval {
-  int start;
-  int end;
-} packet_loss_intervals[10];
+  size_t start;
+  size_t end;
+} packet_loss_intervals[COAP_DEBUG_INTERVAL_COUNT];
 static int num_packet_loss_intervals = 0;
 static uint16_t packet_loss_level = 0;
-static int send_packet_count = 0;
-struct packet_num_interval packet_fail_intervals[10];
+static size_t send_packet_count = 0;
+struct packet_num_interval packet_fail_intervals[COAP_DEBUG_INTERVAL_COUNT];
 static int num_packet_fail_intervals = 0;
 static uint16_t packet_fail_level = 0;
+static size_t recv_packet_count = 0;
+struct packet_num_interval packet_drop_intervals[COAP_DEBUG_INTERVAL_COUNT];
+static int num_packet_drop_intervals = 0;
+static uint16_t packet_drop_level = 0;
 
-int
-coap_debug_set_packet_loss(const char *loss_level) {
+static int
+coap_debug_set_packet_common(const char *loss_level, struct packet_num_interval *intervals,
+                             int *num_intervals, uint16_t *level, size_t *count) {
   const char *p = loss_level;
   char *end = NULL;
   int n = (int)strtol(p, &end, 10), i = 0;
+
+  *level = 0;
+  *num_intervals = 0;
+
   if (end == p || n < 0)
     return 0;
   if (*end == '%') {
     if (n > 100)
       n = 100;
-    packet_loss_level = n * 0xffff / 100;
+    *level = n * 0xffff / 100;
     coap_log_debug("packet loss level set to %d%%\n", n);
   } else {
     if (n <= 0)
       return 0;
-    while (i < 10) {
-      packet_loss_intervals[i].start = n;
+    while (i < COAP_DEBUG_INTERVAL_COUNT) {
+      intervals[i].start = n;
       if (*end == '-') {
         p = end + 1;
         n = (int)strtol(p, &end, 10);
         if (end == p || n <= 0)
           return 0;
       }
-      packet_loss_intervals[i++].end = n;
+      intervals[i++].end = n;
       if (*end == 0)
         break;
       if (*end != ',')
@@ -1469,12 +1482,18 @@ coap_debug_set_packet_loss(const char *loss_level) {
       if (end == p || n <= 0)
         return 0;
     }
-    if (i == 10)
+    if (i == COAP_DEBUG_INTERVAL_COUNT)
       return 0;
-    num_packet_loss_intervals = i;
+    *num_intervals = i;
   }
-  send_packet_count = 0;
+  *count = 0;
   return 1;
+}
+
+int
+coap_debug_set_packet_loss(const char *loss_level) {
+  return coap_debug_set_packet_common(loss_level, packet_loss_intervals,
+                                      &num_packet_loss_intervals, &packet_loss_level, &send_packet_count);
 }
 
 int
@@ -1485,7 +1504,7 @@ coap_debug_send_packet(void) {
     for (i = 0; i < num_packet_loss_intervals; i++) {
       if (send_packet_count >= packet_loss_intervals[i].start &&
           send_packet_count <= packet_loss_intervals[i].end) {
-        coap_log_debug("Following packet no %u dropped\n", send_packet_count);
+        coap_log_debug("Following packet no %" PRIuS " dropped\n", send_packet_count);
         return 0;
       }
     }
@@ -1494,7 +1513,7 @@ coap_debug_send_packet(void) {
     uint16_t r = 0;
     coap_prng_lkd((uint8_t *)&r, 2);
     if (r < packet_loss_level) {
-      coap_log_debug("Following packet no %u dropped\n", send_packet_count);
+      coap_log_debug("Following packet no %"PRIuS " dropped\n", send_packet_count);
       return 0;
     }
   }
@@ -1503,7 +1522,7 @@ coap_debug_send_packet(void) {
     for (i = 0; i < num_packet_fail_intervals; i++) {
       if (send_packet_count >= packet_fail_intervals[i].start &&
           send_packet_count <= packet_fail_intervals[i].end) {
-        coap_log_debug("Following packet no %u failed\n", send_packet_count);
+        coap_log_debug("Following packet no %"PRIuS " failed\n", send_packet_count);
         errno = ECONNREFUSED;
         return -1;
       }
@@ -1513,7 +1532,7 @@ coap_debug_send_packet(void) {
     uint16_t r = 0;
     coap_prng_lkd((uint8_t *)&r, 2);
     if (r < packet_fail_level) {
-      coap_log_debug("Following packet no %u failed\n", send_packet_count);
+      coap_log_debug("Following packet no %"PRIuS " failed\n", send_packet_count);
       errno = ECONNREFUSED;
       return -1;
     }
@@ -1523,54 +1542,52 @@ coap_debug_send_packet(void) {
 
 int
 coap_debug_set_packet_fail(const char *fail_level) {
-  const char *p = fail_level;
-  char *end = NULL;
-  int n = (int)strtol(p, &end, 10), i = 0;
-  if (end == p || n < 0)
-    return 0;
-  if (*end == '%') {
-    if (n > 100)
-      n = 100;
-    packet_fail_level = n * 0xffff / 100;
-    coap_log_debug("packet fail level set to %d%%\n", n);
-  } else {
-    if (n <= 0)
-      return 0;
-    while (i < 10) {
-      packet_fail_intervals[i].start = n;
-      if (*end == '-') {
-        p = end + 1;
-        n = (int)strtol(p, &end, 10);
-        if (end == p || n <= 0)
-          return 0;
+  return coap_debug_set_packet_common(fail_level, packet_fail_intervals,
+                                      &num_packet_fail_intervals, &packet_fail_level, &send_packet_count);
+}
+
+int
+coap_debug_set_packet_drop(const char *drop_level) {
+  return coap_debug_set_packet_common(drop_level, packet_drop_intervals,
+                                      &num_packet_drop_intervals, &packet_drop_level, &recv_packet_count);
+}
+
+int
+coap_debug_recv_packet(void) {
+  ++recv_packet_count;
+  if (num_packet_drop_intervals > 0) {
+    int i;
+    for (i = 0; i < num_packet_drop_intervals; i++) {
+      if (recv_packet_count >= packet_drop_intervals[i].start &&
+          recv_packet_count <= packet_drop_intervals[i].end) {
+        coap_log_debug("Incoming packet no %" PRIuS " dropped\n", recv_packet_count);
+        return 0;
       }
-      packet_fail_intervals[i++].end = n;
-      if (*end == 0)
-        break;
-      if (*end != ',')
-        return 0;
-      p = end + 1;
-      n = (int)strtol(p, &end, 10);
-      if (end == p || n <= 0)
-        return 0;
     }
-    if (i == 10)
-      return 0;
-    num_packet_fail_intervals = i;
   }
-  send_packet_count = 0;
+  if (packet_drop_level > 0) {
+    uint16_t r = 0;
+    coap_prng_lkd((uint8_t *)&r, 2);
+    if (r < packet_drop_level) {
+      coap_log_debug("Incoming packet no %"PRIuS " dropped\n", recv_packet_count);
+      return 0;
+    }
+  }
   return 1;
 }
+
 
 void
 coap_debug_reset(void) {
   log_handler = NULL;
   maxlog = COAP_LOG_WARN;
   use_fprintf_for_show_pdu = 1;
-  memset(&packet_loss_intervals, 0, sizeof(packet_loss_intervals));
   num_packet_loss_intervals = 0;
   packet_loss_level = 0;
   num_packet_fail_intervals = 0;
   packet_fail_level = 0;
   send_packet_count = 0;
+  num_packet_drop_intervals = 0;
+  packet_drop_level = 0;
+  recv_packet_count = 0;
 }

@@ -1760,7 +1760,7 @@ usage(const char *program, const char *version) {
           "\t\t[-f scheme://address[:port]] [-g group] [-l loss] [-o] [-p port]\n"
           "\t\t[-q tls_engine_conf_file] [-r] [-v num] [-w [port][,secure_port]]\n"
           "\t\t[-x] [-y rec_secs] [-z scheme://addr[:port][/resource[?query]]]\n"
-          "\t\t[-A address] [-B resource[:check]] [-E oscore_conf_file[,seq_file]]\n"
+          "\t\t[-A address] [-B resource[:check]] [-D drop] [-E oscore_conf_file[,seq_file]]\n"
           "\t\t[-G group_if] [-I rate_limit_ppm] [-K interval] [-L value] [-N]\n"
           "\t\t[-O oscore_cred_dir] [-P scheme://address[:port],[name1[,name2..]]]\n"
           "\t\t[-T max_token_size] [-U type] [-V num] [-X size] [-Z fail] [-3]\n"
@@ -1852,6 +1852,11 @@ usage(const char *program, const char *version) {
           "\t       \t\tinformation in the PUT request can define the IP (ip=xxx)\n"
           "\t       \t\tand port (port=yyy) the downstream client should be\n"
           "\t       \t\tspecifying to connect to in the proxy request\n"
+          "\t-D drop\t\tFail to receive some datagrams specified by a comma\n"
+          "\t       \t\tseparated list of numbers or number ranges\n"
+          "\t       \t\t(for debugging only)\n"
+          "\t-D loss%%\tRandomly fail to receive datagrams with the specified\n"
+          "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
           "\t-E oscore_conf_file[,seq_file]\n"
           "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
           "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
@@ -2825,7 +2830,8 @@ main(int argc, char **argv) {
   clock_offset = time(NULL);
 
   while ((opt = getopt(argc, argv,
-                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:xy:z:A:B:C:E:G:I:J:K:L:M:NP:O:R:S:T:U:V:X:YZ:23")) != -1) {
+                       "a:b:c:d:ef:g:h:i:j:k:l:mnop:q:rs:tu:v:w:xy:z:A:B:C:D:E:G:I:J:K:L:M:NO:P:R:S:T:U:V:X:YZ:23")) !=
+         -1) {
     switch (opt) {
 #ifndef _WIN32
     case 'a':
@@ -2855,6 +2861,12 @@ main(int argc, char **argv) {
       break;
     case 'd' :
       support_dynamic = atoi(optarg);
+      break;
+    case 'D':
+      if (!coap_debug_set_packet_drop(optarg)) {
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        goto failed;
+      }
       break;
     case 'e':
       echo_back = 1;

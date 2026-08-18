@@ -28,7 +28,7 @@ SYNOPSIS
               [*-i*] [*-l* loss]
               [*-m* method] [*-o* file] [*-p* port] [*-q* tls_engine_conf_file]
               [*-r*] [*-s duration*] [*-t* type] [*-v* num] [*-w*] [*-x*]
-              [*-y* rec_secs] [*-z*] [*-A* type] [*-B* seconds]
+              [*-y* rec_secs] [*-z*] [*-A* type] [*-B* seconds] [*-D* drop]
               [*-E* oscore_conf_file[,seq_file]] [*-G* count] [*-H* hoplimit]
               [*-I* rate_limit_ppm] [*-K* interval] [*-L* value] [*-N*] [*-O* num,text]
               [*-P* scheme://addr[:port]] [*-S*] [*-T* token] [*-U*] [*-V* num]
@@ -162,6 +162,14 @@ OPTIONS - General
 
 *-B* seconds::
    Break operation after waiting given seconds (default is 90).
+
+*-D* drop::
+   Fail to receive some datagrams specified by a comma separated list of
+   numbers or number ranges (debugging only).
+
+*-D* loss%::
+   Randomly failed to receive datagrams with the specified probability - 100%
+   all datagrams, 0% no datagrams (debugging only).
 
 *-E* oscore_conf_file[,seq_file]::
    'oscore_conf_file' contains OSCORE configuration. See *coap-oscore-conf*(5)

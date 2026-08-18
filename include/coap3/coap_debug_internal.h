@@ -31,6 +31,15 @@ extern "C" {
 int coap_debug_send_packet(void);
 
 /**
+ * Check to see whether an incoming packet should be dropped or not.
+ *
+ * Internal function
+ *
+ * @return @c 1 if packet is to be let through, @c 0 if packet is to be dropped.
+ */
+int coap_debug_recv_packet(void);
+
+/**
  * Reset all the defined logging parameters.
  *
  * Internal function

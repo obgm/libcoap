@@ -423,6 +423,21 @@ int coap_debug_set_packet_loss(const char *loss_level);
  */
 int coap_debug_set_packet_fail(const char *fail_level);
 
+/**
+ * Set the packet receive fail level for testing.  This can be in one of two forms.
+ *
+ * Percentage : 0% to 100%.  Use the specified probability.
+ * 0% is receive all packets, 100% is drop all packets.
+ *
+ * List: A comma separated list of numbers or number ranges that are the
+ * packets to fail.
+ *
+ * @param drop_level The defined drop level (percentage or list).
+ *
+ * @return @c 1 If drop level set, @c 0 if there is an error.
+ */
+int coap_debug_set_packet_drop(const char *drop_level);
+
 #ifdef __cplusplus
 }
 #endif

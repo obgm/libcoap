@@ -30,7 +30,7 @@ SYNOPSIS
               [*-r*] [*-t*]  [*-v* num] [*-w* [port][,secure_port]] [*-x*]
               [*-y* rec_secs] [*-z* scheme://addr[:port][/resource[?query]]]
               [*-A* address]
-              [*-B* resource[:check] [*-E* oscore_conf_file[,seq_file]]
+              [*-B* resource[:check] [*-D* drop] [*-E* oscore_conf_file[,seq_file]]
               [*-G* group_if] [*-I* rate_limit_ppm] [*-K* interval] [*-L* value]
               [*-N*] [*-O* oscore_cred_dir]
               [*-P* scheme://addr[:port] | allow-mcast,[name1[,name2..]]]
@@ -144,6 +144,14 @@ OPTIONS - General
   optional check key as a query option (check=vvv). Query information in the
   PUT request can define the IP (ip=xxx) and port (port=yyy) the downstream
   client should be specifying to connect to in the proxy request.
+
+*-D* drop::
+   Fail to receive some datagrams specified by a comma separated list of
+   numbers or number ranges (debugging only).
+
+*-D* loss%::
+   Randomly failed to receive datagrams with the specified probability - 100%
+   all datagrams, 0% no datagrams (debugging only).
 
 *-E* oscore_conf_file[,seq_file]::
    'oscore_conf_file' contains OSCORE configuration. See *coap-oscore-conf*(5)
