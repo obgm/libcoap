@@ -33,6 +33,7 @@ coap_session_set_probing_rate,
 coap_session_get_probing_rate,
 coap_debug_set_packet_loss,
 coap_debug_set_packet_fail
+coap_debug_set_packet_drop
 - Work with CoAP packet transmissions
 
 SYNOPSIS
@@ -96,6 +97,8 @@ uint32_t _value_)*;
 *int coap_debug_set_packet_loss(const char *_loss_level_)*;
 
 *int coap_debug_set_packet_fail(const char *_fail_level_)*;
+
+*int coap_debug_set_packet_drop(const char *_fail_level_)*;
 
 For specific (D)TLS library support, link with
 *-lcoap-@LIBCOAP_API_VERSION@-notls*, *-lcoap-@LIBCOAP_API_VERSION@-gnutls*,
@@ -284,7 +287,7 @@ probing rate value (RFC7252).
 
 *Function: coap_debug_set_packet_loss()*
 
-The *coap_debug_set_packet_loss*() function is used to set the packet loss
+The *coap_debug_set_packet_loss*() function is used to set send packet loss
 levels as defined in _loss_level_.  _loss_level_ can be set as a percentage
 from "0%" to "100%".
 Alternatively, it is possible to specify which UDP packets of a packet sequence
@@ -296,7 +299,7 @@ To remove any packet losses, set the _loss_level_ to "0%".
 
 *Function: coap_debug_set_packet_fail()*
 
-The *coap_debug_set_packet_fail*() function is used to set the packet fail
+The *coap_debug_set_packet_fail*() function is used to set send packet fail
 levels (which generates a session disconnected for that transmitted packet)
 as defined in _fail_level_.  _fail_level_ can be set as a percentage from
 "0%" to "100%".
@@ -317,6 +320,19 @@ To remove any packet failures, set the _fail_level_ to "0%".
 would cause sent packets 1 and 3 to be dropped and packets 2 and 4-n to report
 failures.
 
+*Function: coap_debug_set_packet_drop()*
+
+The *coap_debug_set_packet_drop*() function is used to set received packet drop
+levels as defined in _drop_level_.  _drop_level_ can be set as a percentage
+from "0%" to "100%".
+Alternatively, it is possible to specify which UDP packets of a packet sequence
+are dropped.  A definition of "1,5-9,11-20,101" means that packets 1, 5
+through 9, 11 through 20 and 101 will get dropped. A maximum of 10 different
+packet sets is supported.  The packet count is reset to 0 when
+*coap_debug_set_packet_drop*() is called.
+To remove any packet losses, set the _drop_level_ to "0%".
+
+
 RETURN VALUES
 -------------
 *coap_session_get_ack_random_factor*(), *coap_session_get_ack_timeout*(),
@@ -330,6 +346,9 @@ respective current values.
 correctly, otherwise 1 if successful.
 
 *coap_debug_set_packet_fail*() returns 0 if _fail_level_ does not parse
+correctly, otherwise 1 if successful.
+
+*coap_debug_set_packet_drop*() returns 0 if _drop_level_ does not parse
 correctly, otherwise 1 if successful.
 
 TESTING

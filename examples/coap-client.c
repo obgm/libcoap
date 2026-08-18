@@ -603,7 +603,7 @@ usage(const char *program, const char *version) {
           "Usage: %s [-a addr] [-b [num,]size] [-e text] [-f file] [-g file] [-i]\n"
           "\t\t[-l loss] [-m method] [-o file] [-p port] [-q tls_engine_conf_file]\n"
           "\t\t[-r] [-s duration] [-t type] [-v num] [-w] [-x] [-y rec_secs]\n"
-          "\t\t[-z] [-A type] [-B seconds] [-E oscore_conf_file[,seq_file]]\n"
+          "\t\t[-z] [-A type] [-B seconds] [-D drop] [-E oscore_conf_file[,seq_file]]\n"
           "\t\t[-G count] [-H hoplimit] [-I rate_limit_ppm] [-K interval]\n"
           "\t\t[-L value] [-N] [-O num,text] [-P scheme://address[:port]\n"
           "\t\t[-S] [-T token] [-U] [-V num] [-X size] [-Z fail] [-3]\n"
@@ -652,6 +652,11 @@ usage(const char *program, const char *version) {
           "\t-A type\t\tAccepted media type\n"
           "\t-B seconds\tBreak operation after waiting given seconds\n"
           "\t       \t\t(default is %d)\n"
+          "\t-D drop\t\tFail to receive some datagrams specified by a comma\n"
+          "\t       \t\tseparated list of numbers or number ranges\n"
+          "\t       \t\t(for debugging only)\n"
+          "\t-D loss%%\tRandomly fail to receive datagrams with the specified\n"
+          "\t       \t\tprobability - 100%% all datagrams, 0%% no datagrams\n"
           "\t-E oscore_conf_file[,seq_file]\n"
           "\t       \t\toscore_conf_file contains OSCORE configuration. See\n"
           "\t       \t\tcoap-oscore-conf(5) for definitions.\n"
@@ -671,11 +676,11 @@ usage(const char *program, const char *version) {
           "\t       \t\thandling methods. Default is 1 (COAP_BLOCK_USE_LIBCOAP)\n"
           "\t       \t\t(Sum of one or more of 1,2,4,8,16,32 and 512)\n"
           "\t-N     \t\tSend NON-confirmable message\n"
+          ,program, wait_seconds);
+  fprintf(stderr,
           "\t-O num,text\tAdd option num with contents text to request. If the\n"
           "\t       \t\ttext begins with 0x, then the hex text (two [0-9a-f] per\n"
           "\t       \t\tbyte) is converted to binary data\n"
-          ,program, wait_seconds);
-  fprintf(stderr,
           "\t-P scheme://address[:port]\n"
           "\t       \t\tScheme, address and optional port to define how to\n"
           "\t       \t\tconnect to a CoAP proxy (automatically adds Proxy-Uri\n"
@@ -1977,7 +1982,7 @@ main(int argc, char **argv) {
   coap_startup();
 
 #define COAP_SUPPORTED_OPTIONS \
-  "a:b:c:d:e:f:g:h:ij:k:l:m:no:p:q:rs:t:u:v:wxy:zA:B:C:E:G:H:I:J:K:L:M:NO:P:R:ST:UV:X:YZ:23"
+  "a:b:c:d:e:f:g:h:ij:k:l:m:no:p:q:rs:t:u:v:wxy:zA:B:C:D:E:G:H:I:J:K:L:M:NO:P:R:ST:UV:X:YZ:23"
 
   while ((opt = getopt(argc, argv, COAP_SUPPORTED_OPTIONS)) != -1) {
     switch (opt) {
@@ -2117,6 +2122,12 @@ main(int argc, char **argv) {
       break;
     case 'l':
       if (!coap_debug_set_packet_loss(optarg)) {
+        usage(argv[0], LIBCOAP_PACKAGE_VERSION);
+        goto failed;
+      }
+      break;
+    case 'D':
+      if (!coap_debug_set_packet_drop(optarg)) {
         usage(argv[0], LIBCOAP_PACKAGE_VERSION);
         goto failed;
       }

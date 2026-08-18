@@ -3140,7 +3140,11 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
     }
   }
 
-  coap_dispatch(ctx, session, pdu);
+  if (coap_debug_recv_packet()) {
+    coap_dispatch(ctx, session, pdu);
+  } else {
+    coap_show_pdu(COAP_LOG_DEBUG, pdu);
+  }
   coap_delete_pdu_lkd(pdu);
   return 0;
 
