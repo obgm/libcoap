@@ -106,7 +106,7 @@ typedef pthread_mutex_t coap_mutex_t;
 typedef sys_mutex_t coap_mutex_t;
 
 #define coap_mutex_init(a)    sys_mutex_new(a)
-#define coap_mutex_destroy(a) sys_mutex_set_invalid(a)
+#define coap_mutex_destroy(a) sys_mutex_free(a)
 #define coap_mutex_lock(a)    sys_mutex_lock(a)
 #define coap_mutex_unlock(a)  sys_mutex_unlock(a)
 #ifdef _WIN32
