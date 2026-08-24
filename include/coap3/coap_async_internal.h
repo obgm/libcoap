@@ -42,6 +42,8 @@ struct coap_async_t {
   void *app_data;                   /**< User definable data pointer */
   coap_app_data_free_callback_t app_cb; /**< callback to call when async is
                                              being released (or NULL) */
+  coap_address_t local_if;         /**< local address the request was
+                                        received on */
 };
 
 /**
