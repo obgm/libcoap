@@ -103,6 +103,9 @@ coap_register_async_lkd(coap_session_t *session,
 
   s->session = coap_session_reference_lkd(session);
 
+  /* Snapshot local address; addr_info.local may change before the async fires (multicast). */
+  coap_address_copy(&s->local_if, &session->addr_info.local);
+
   coap_async_set_delay_lkd(s, delay);
 
   return s;
