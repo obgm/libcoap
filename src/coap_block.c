@@ -3352,6 +3352,14 @@ coap_handle_request_put_block(coap_context_t *context,
   rtag_opt = coap_check_option(pdu,
                                COAP_OPTION_RTAG,
                                &opt_iter);
+#if COAP_Q_BLOCK_SUPPORT
+  if (block_option == COAP_OPTION_Q_BLOCK1 && (!size_opt || !rtag_opt)) {
+    /* RFC9177 section-4.3 */
+    coap_log_info("Q-Block1: Size1 and RTag options required\n");
+    response->code = COAP_RESPONSE_CODE(400);
+    goto skip_app_handler;
+  }
+#endif /* COAP_Q_BLOCK_SUPPORT */
   rtag_length = rtag_opt ? coap_opt_length(rtag_opt) : 0;
   rtag = rtag_opt ? coap_opt_value(rtag_opt) : NULL;
 
@@ -4397,6 +4405,16 @@ coap_handle_response_get_block(coap_context_t *context,
         size_t saved_offset;
         int updated_block;
 
+#if COAP_Q_BLOCK_SUPPORT
+        if (block_opt == COAP_OPTION_Q_BLOCK2 && (!size_opt || !etag_opt)) {
+          /* RFC9177 section-4.4 */
+          coap_log_info("Q-Block2: Size2 and ETag options required\n");
+          /* Try to hint to the server there is an issue */
+          coap_send_rst_lkd(session, rcvd);
+          coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
+          return 1;
+        }
+#endif /* COAP_Q_BLOCK_SUPPORT */
         if (length > block.chunk_size) {
           coap_log_debug("block: Oversized packet - reduced to %"PRIu32" from %" PRIuS "\n",
                          block.chunk_size, length);
