@@ -220,6 +220,10 @@ struct coap_context_t {
   uint8_t shutdown_no_send_observe; /**< Do not send out unsolicited observe when
                                          coap_free_context() is called. Otherwise
                                          5.03 will get sent */
+  uint32_t lg_srcv_cnt;            /**< Number of active lg_srcv */
+  size_t max_bodies_ram;           /**< Max RAM usable for concurrent lg_srcv
+                                        0 = unlimited */
+  size_t cur_bodies_ram;           /**< Current RAM in use for concurrent lg_srcv */
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_PROXY_SUPPORT
   coap_proxy_entry_t *proxy_list;  /**< Set of active proxy sessions */
@@ -235,7 +239,7 @@ struct coap_context_t {
   coap_resource_dynamic_create_t dyn_create_handler; /**< Dynamic resource create handler */
   uint32_t dynamic_cur;            /**< Current number of dynamic resources */
   uint32_t dynamic_max;            /**< Max number of dynamic resources or 0 is unlimited */
-  uint32_t max_body_size;          /**< Max supported body size or 0 is unlimited */
+  size_t max_body_size;          /**< Max supported body size or 0 is unlimited */
 #if COAP_THREAD_SAFE
   pthread_t *thread_id;            /**< Set of current additional threads */
   uint32_t thread_id_count;        /**< Number of additional threads */

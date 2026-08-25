@@ -2095,6 +2095,17 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now,
 #endif /* COAP_Q_BLOCK_SUPPORT */
     partial_timeout = COAP_MAX_TRANSMIT_WAIT_TICKS(session);
 
+  if (session->context->lg_srcv_cnt > 5) {
+    /* In case someone is DOSing us.
+     * DEFAULT_NON_PARTIAL_TIMEOUT is 247 seconds.
+     * MAX_TRANSIT_WAIT is 93 seconds.
+     */
+    partial_timeout /= (session->context->lg_srcv_cnt - 5);
+    if (partial_timeout < 10 * COAP_TICKS_PER_SECOND) {
+      /* Do not shrink it too much */
+      partial_timeout = 10 * COAP_TICKS_PER_SECOND;
+    }
+  }
   LL_FOREACH_SAFE(session->lg_srcv, lg_srcv, q) {
     if (lg_srcv->dont_timeout) {
       /* Not safe to timeout at present */
@@ -2832,7 +2843,7 @@ coap_block_delete_lg_crcv(coap_session_t *session,
     return;
   }
 
-  coap_free_type(COAP_STRING, lg_crcv->body_data);
+  coap_delete_binary(lg_crcv->body_data);
   if (lg_crcv->obs_data) {
     coap_block_release_lg_xmit_data(session, lg_crcv->obs_data);
     lg_crcv->obs_data = NULL;
@@ -2854,9 +2865,6 @@ coap_block_delete_lg_crcv(coap_session_t *session,
 void
 coap_block_delete_lg_srcv(coap_session_t *session,
                           coap_lg_srcv_t *lg_srcv) {
-#if (COAP_MAX_LOGGING_LEVEL < _COAP_LOG_DEBUG)
-  (void)session;
-#endif
   if (lg_srcv == NULL)
     return;
 
@@ -2867,10 +2875,13 @@ coap_block_delete_lg_srcv(coap_session_t *session,
 
   coap_delete_cache_key(lg_srcv->cache_key);
   coap_delete_bin_const(lg_srcv->last_token);
-  coap_free_type(COAP_STRING, lg_srcv->body_data);
+  if (lg_srcv->body_data)
+    session->context->cur_bodies_ram -= lg_srcv->body_data->length;
+  coap_delete_binary(lg_srcv->body_data);
   coap_log_debug("** %s: lg_srcv %p released\n",
                  coap_session_str(session), (void *)lg_srcv);
   coap_free_type(COAP_LG_SRCV, lg_srcv);
+  session->context->lg_srcv_cnt--;
 }
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -3467,15 +3478,15 @@ coap_handle_request_put_block(coap_context_t *context,
       (block_option == COAP_OPTION_BLOCK1 && block.num == 0 && block.m == 0)) {
     /* Not blocked, or a single block */
     if (context->max_body_size && total > context->max_body_size) {
-      uint8_t buf[4];
+      uint8_t buf[8];
 
       coap_update_option(response,
                          COAP_OPTION_SIZE1,
-                         coap_encode_var_safe((uint8_t *)buf, sizeof(buf),
-                                              context->max_body_size),
+                         coap_encode_var_safe8((uint8_t *)buf, sizeof(buf),
+                                               context->max_body_size),
                          (uint8_t *)buf);
       response->code = COAP_RESPONSE_CODE(413);
-      coap_log_warn("Unable to handle data size %" PRIuS " (max %" PRIu32 ")\n", total,
+      coap_log_warn("Unable to handle data size %" PRIuS " (max %" PRIuS ")\n", total,
                     context->max_body_size);
       goto skip_app_handler;
     }
@@ -3540,20 +3551,20 @@ coap_handle_request_put_block(coap_context_t *context,
         (total > max_body)) {
       /* Suggested body size larger than allowed */
       char buf[32];
-      uint32_t max_body_size = context->max_body_size;
+      size_t max_body_size = context->max_body_size;
 
       if (max_body_size == 0 || max_body < max_body_size) {
         max_body_size = max_body;
       }
       coap_update_option(response,
                          COAP_OPTION_SIZE1,
-                         coap_encode_var_safe((uint8_t *)buf, sizeof(buf),
-                                              max_body_size),
+                         coap_encode_var_safe8((uint8_t *)buf, sizeof(buf),
+                                               max_body_size),
                          (uint8_t *)buf);
-      snprintf(buf, sizeof(buf), "Max body size %" PRIu32, max_body_size);
+      snprintf(buf, sizeof(buf), "Max body size %" PRIuS, max_body_size);
       coap_add_data(response, strlen(buf), (uint8_t *)buf);
       response->code = COAP_RESPONSE_CODE(413);
-      coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", total, max_body_size);
+      coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIuS ")\n", total, max_body_size);
       goto skip_app_handler;
     }
   }
@@ -3634,10 +3645,12 @@ coap_handle_request_put_block(coap_context_t *context,
     }
     coap_log_debug("** %s: lg_srcv %p initialized\n",
                    coap_session_str(session), (void *)lg_srcv);
+    session->context->lg_srcv_cnt++;
     memset(lg_srcv, 0, sizeof(coap_lg_srcv_t));
 #if COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT
     lg_srcv->recipient_ctx = session->recipient_ctx;
 #endif /* COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT */
+    coap_ticks(&lg_srcv->last_used);
     lg_srcv->resource = resource;
     lg_srcv->cache_key = cache_key_l;
     cache_key_l = NULL;
@@ -3661,7 +3674,6 @@ coap_handle_request_put_block(coap_context_t *context,
       memcpy(lg_srcv->rtag, coap_opt_value(rtag_opt), lg_srcv->rtag_length);
       lg_srcv->rtag_set = 1;
     }
-    lg_srcv->body_data = NULL;
 #if COAP_Q_BLOCK_SUPPORT
     lg_srcv->r_m_payload_set = -1;
 #endif /* COAP_Q_BLOCK_SUPPORT */
@@ -3702,6 +3714,24 @@ coap_handle_request_put_block(coap_context_t *context,
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
   lg_srcv->last_type = pdu->type;
+
+  if (context->max_bodies_ram) {
+    ssize_t increase = total - (lg_srcv->body_data ? lg_srcv->body_data->length : 0);
+
+    if (increase > 0 && context->cur_bodies_ram + increase > context->max_bodies_ram) {
+      uint8_t buf[4];
+
+      coap_update_option(response, COAP_OPTION_MAXAGE,
+                         coap_encode_var_safe(buf,
+                                              sizeof(buf),
+                                              5),
+                         buf);
+      coap_add_data(response, sizeof("Memory limit hit")-1,
+                    (const uint8_t *)"Memory limit hit");
+      response->code = COAP_RESPONSE_CODE(503);
+      goto skip_app_handler;
+    }
+  }
 
   update_data = 0;
   saved_num = block.num;
@@ -3763,6 +3793,8 @@ coap_handle_request_put_block(coap_context_t *context,
                                 ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) && \
                                 (resource->flags & COAP_RESOURCE_USE_BLOCK_DATA_HANDLER))
 
+    if (lg_srcv->body_data)
+      session->context->cur_bodies_ram -= lg_srcv->body_data->length;
     if (USE_BLOCK_DATA_HANDLER) {
       coap_response_t resp;
 
@@ -3785,6 +3817,8 @@ coap_handle_request_put_block(coap_context_t *context,
         goto skip_app_handler;
       }
     }
+    if (lg_srcv->body_data)
+      context->cur_bodies_ram += lg_srcv->body_data->length;
   } else {
 #if COAP_Q_BLOCK_SUPPORT
     if (block_option == COAP_OPTION_Q_BLOCK1) {
@@ -4499,7 +4533,7 @@ coap_block_build_body_lkd(coap_binary_t *body_data, size_t length,
     return NULL;
 
   /* Check no overflow (including a 8 byte small headroom) */
-  if (SIZE_MAX - length < 8 || offset > SIZE_MAX - length - 8) {
+  if (SIZE_MAX - 8 < length || offset > SIZE_MAX - length - 8) {
     coap_delete_binary(body_data);
     return NULL;
   }
@@ -4656,7 +4690,7 @@ reinit:
 #endif /* COAP_Q_BLOCK_SUPPORT */
           lg_crcv->initial = 0;
           if (lg_crcv->body_data) {
-            coap_free_type(COAP_STRING, lg_crcv->body_data);
+            coap_delete_binary(lg_crcv->body_data);
             lg_crcv->body_data = NULL;
           }
           if (etag_opt) {
@@ -4693,12 +4727,12 @@ reinit:
           max_body = MAX_BLK_LEN;
         if ((context->max_body_size && size2 > context->max_body_size) ||
             (size2 > max_body)) {
-          uint32_t max_body_size = context->max_body_size;
+          size_t max_body_size = context->max_body_size;
 
           if (max_body_size == 0 || max_body < max_body_size) {
             max_body_size = max_body;
           }
-          coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", size2, max_body_size);
+          coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIuS ")\n", size2, max_body_size);
           /* Try to hint to the server there is an issue */
           coap_send_rst_lkd(session, rcvd);
           coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
@@ -4726,7 +4760,7 @@ reinit:
               coap_handle_event_lkd(context, COAP_EVENT_PARTIAL_BLOCK, session);
 
             lg_crcv->initial = 1;
-            coap_free_type(COAP_STRING, lg_crcv->body_data);
+            coap_delete_binary(lg_crcv->body_data);
             lg_crcv->body_data = NULL;
 
             coap_session_new_token(session, &len, buf);
@@ -5017,7 +5051,7 @@ give_to_app:
                                                 COAP_OPTION_OBSERVE,
                                                 &opt_iter);
         if (context->max_body_size && length > context->max_body_size) {
-          coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", length,
+          coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIuS ")\n", length,
                         context->max_body_size);
           /* Try to hint to the server there is an issue */
           coap_send_rst_lkd(session, rcvd);
@@ -5175,7 +5209,7 @@ fail_resp:
       }
       coap_get_data(rcvd, &length, &data);
       if (context->max_body_size && length > context->max_body_size) {
-        coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIu32 ")\n", length,
+        coap_log_warn("Unable to handle body size %" PRIuS " (max %" PRIuS ")\n", length,
                       context->max_body_size);
         /* Try to hint to the server there is an issue */
         coap_send_rst_lkd(session, rcvd);

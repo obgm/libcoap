@@ -69,6 +69,7 @@ global:
   coap_context_set_csm_timeout_ms;
   coap_context_set_keepalive;
   coap_context_set_max_block_size;
+  coap_context_set_max_bodies_ram;
   coap_context_set_max_body_size;
   coap_context_set_max_handshake_sessions;
   coap_context_set_max_idle_sessions;

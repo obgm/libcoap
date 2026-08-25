@@ -480,11 +480,28 @@ coap_context_rate_limit_ppm(coap_context_t *context,
 
 void
 coap_context_set_max_body_size(coap_context_t *context,
-                               uint32_t max_body_size) {
+                               size_t max_body_size) {
   assert(max_body_size == 0 || max_body_size > 1024);
   if (max_body_size == 0 || max_body_size > 1024) {
     context->max_body_size = max_body_size;
   }
+}
+
+void
+coap_context_set_max_bodies_ram(coap_context_t *context,
+                                size_t max_bodies_ram) {
+#if COAP_SERVER_SUPPORT
+  assert(max_bodies_ram == 0 || max_bodies_ram > 1024);
+  if (max_bodies_ram == 0 || max_bodies_ram > 1024) {
+    context->max_bodies_ram = max_bodies_ram;
+  }
+  /* Cannot let a single session keep failing if it is larger then max_bodies_ram */
+  if (context->max_body_size == 0)
+    context->max_body_size = max_bodies_ram;
+#else
+  (void)context;
+  (void)max_bodies_ram;
+#endif /* COAP_SERVER_SUPPORT */
 }
 
 void
@@ -4602,6 +4619,49 @@ handle_response(coap_context_t *context, coap_session_t *session,
     return;
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
+
+  /* See if the server is struggling */
+  if (rcvd->code == COAP_RESPONSE_CODE(503) || rcvd->code == COAP_RESPONSE_CODE(429)) {
+    if (!sent && session->lg_crcv)
+      sent = session->lg_crcv->sent_pdu;
+
+    if (sent) {
+      /* sent is not active, so safe to reuse */
+      uint8_t buf[4];
+      /* Need to resend request in max_age seconds */
+      size_t max_age = 60;
+      coap_opt_iterator_t opt_iter;
+      coap_opt_t *option = coap_check_option(rcvd, COAP_OPTION_MAXAGE, &opt_iter);
+      coap_queue_t *node = coap_new_node();
+      if (option)
+        max_age = coap_decode_var_bytes(coap_opt_value(option),
+                                        coap_opt_length(option));
+
+      if (!node) {
+        coap_log_debug("retransmit delay: insufficient memory\n");
+        return;
+      }
+
+      coap_pdu_reference_lkd(sent);
+      sent->mid = coap_new_message_id_lkd(session);
+      coap_update_option(sent,
+                         COAP_OPTION_RTAG,
+                         coap_encode_var_safe(buf, sizeof(buf),
+                                              ++session->tx_rtag),
+                         buf);
+      coap_pdu_encode_header(sent, session->proto);
+      node->id = sent->mid;
+      node->pdu = sent;
+      coap_log_debug("   %s: mid=0x%04x: re-request delayed for %u secs\n",
+                     coap_session_str(session),
+                     sent->mid,
+                     (unsigned int)max_age);
+      node->timeout = (unsigned int)max_age * COAP_TICKS_PER_SECOND;
+      /* Use this to delay transmission */
+      coap_wait_ack(session->context, session, node);
+    }
+    return;
+  }
 
   if (session->block_mode & COAP_BLOCK_USE_LIBCOAP) {
     /* See if need to send next block to server */
