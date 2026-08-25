@@ -14,6 +14,7 @@ coap_block,
 coap_context_set_block_mode,
 coap_context_set_max_block_size,
 coap_context_set_max_body_size,
+coap_context_set_max_bodies_ram,
 coap_add_data_large_request,
 coap_add_data_large_request_app,
 coap_add_data_large_response,
@@ -34,7 +35,10 @@ uint32_t _block_mode_);*
 size_t _max_block_size_);*
 
 *void coap_context_set_max_body_size(coap_context_t *_context_,
-uint32_t _max_body_size_);*
+size_t _max_body_size_);*
+
+*void coap_context_set_max_bodies_ram(coap_context_t *_context_,
+size_t _max_bodies_ram_);*
 
 *int coap_add_data_large_request(coap_session_t *_session_,
 coap_pdu_t *_pdu_, size_t _length_, const uint8_t *_data_,
@@ -284,11 +288,34 @@ Block2 options are used.  This must be set before a server session is created.
 *Function: coap_context_set_max_body_size()*
 
 The *coap_context_set_max_body_size*() function is used to set the
-_max_body_size_ in the _context_ that a server or client supports when the Block1 or
-Block2 options are used.  This must be set before a server session is created.
-_max_body_size_ specifies the maximum size that the peer can handle after
-re-assembling all the individual blocks.  If set to 0 (the default),
-_max_body_size_ is treated as unlimited.
+_max_body_size_ in the _context_ that a server or client supports when the (Q-)Block1
+ or (Q-)Block2 options are used and COAP_BLOCK_SINGLE_BODY is set.  This should be called
+before a server session is created.  _max_body_size_ specifies the maximum size that
+the peer can handle after re-assembling all the individual blocks within a
+transferred body.  If set to 0 (the default), _max_body_size_ is treated as unlimited.
+
+*NOTE:* If COAP_BLOCK_SINGLE_BODY is not set, then it is up to the application to respond
+with a 4.13 code (server) or RST (client) should a limit be hit as libcoap is not
+tracking the size.
+
+*Function: coap_context_set_max_bodies_ram()*
+
+The *coap_context_set_max_bodies_ram*() function is used to set the
+_max_bodies_ram_ in the _context_ that a server supports across all the pending
+body transfers when the (Q-)Block1 option is used and COAP_BLOCK_SINGLE_BODY is set.
+This should be called before a server session is created.  _max_bodies_ram_ specifies
+the maximum size that the server can handle after re-assembling all the individual
+blocks across all the sessions. If set to 0 (the default), _max_bodies_ram_ is
+treated as unlimited.
+
+*NOTE:* *coap_context_set_max_body_size*() sets the individual body maximum,
+*coap_context_set_max_bodies_ram*() sets the sum of the bodies maximum.
+Both can be used. If *coap_context_set_max_body_size*() is not used, then
+_max_body_size_ is assumed to have the value of _max_bodies_ram_.
+
+*NOTE:* If COAP_BLOCK_SINGLE_BODY is not set, then it is up to the application to
+respond with a 5.03 code should a limit be hit as libcoap is not tracking the
+pending bodies summation.
 
 *Function: coap_add_data_large_request()*
 
