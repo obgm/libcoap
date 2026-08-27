@@ -1778,6 +1778,8 @@ coap_block_check_lg_crcv_timeouts(coap_session_t *session, coap_tick_t now,
         goto expire;
       }
       if (lg_crcv->rec_blocks.last_seen + scaled_timeout <= now) {
+        coap_log_debug("** %s: lg_crcv %p timeout\n",
+                       coap_session_str(session), (void *)lg_crcv);
         coap_request_missing_q_block2(session, lg_crcv);
       } else {
         if (*tim_rem > lg_crcv->rec_blocks.last_seen + scaled_timeout - now) {
@@ -1946,7 +1948,7 @@ check_any_blocks_next_payload_set(coap_session_t *session,
 #if COAP_Q_BLOCK_SUPPORT
 /*
  * To reduce the number of retransmitted missing requests, if the request comes
- * from a inc_toblock in the same PAYLOAD_SET as the last time, the request is not
+ * from a inc_to_block in the same PAYLOAD_SET as the last time, the request is not
  * retransmitted, unless this is from a timeout request when inc_to_block is the
  * the last expected block based on SIZE1, not the last received block.
  *
@@ -1964,6 +1966,12 @@ check_any_blocks_next_payload_set(coap_session_t *session,
  * It is not safe to report missing blocks in the same PAYLOAD_SET as inc_to_block as
  * the individual blocks may arrive in a random order (generates a lot of duplicate
  * blocks).
+ *
+ * However, if some missing blocks, but the last 2 blocks of a PAYLOAD_SET have been
+ * received, then immediately trigger the 4.08 missing blocks request (not suggested
+ * in RFC9177) as this considerably reduces the risk that the penultimate block is in
+ * flight, but received in the wrong order and hence requesting a duplicate
+ * re-transmission.
  */
 static int
 coap_request_missing_q_block1(coap_session_t *session, coap_lg_srcv_t *lg_srcv,
@@ -3778,6 +3786,19 @@ q_block_1_check:
             saved_num = block.num = lg_srcv->rec_blocks.range[0].end;
           }
         } else if (lg_srcv->rec_blocks.used > 1 &&
+                   (block.num % COAP_MAX_PAYLOADS(session)) + 1 == COAP_MAX_PAYLOADS(session) &&
+                   lg_srcv->rec_blocks.range[lg_srcv->rec_blocks.used-1].begin <
+                   lg_srcv->rec_blocks.range[lg_srcv->rec_blocks.used-1].end &&
+                   (lg_srcv->rec_blocks.range[lg_srcv->rec_blocks.used-1].end % COAP_MAX_PAYLOADS(session)) + 1
+                   == COAP_MAX_PAYLOADS(session)) {
+          /*
+           * At least the last 2 of a payload set have been received, but some
+           * missing packets, but have seen the emd of a payload set.
+           */
+          coap_log_debug("Fast recovery for block %u\n", block.num);
+          coap_request_missing_q_block1(session, lg_srcv, block.num);
+          goto skip_app_handler;
+        } else if (lg_srcv->rec_blocks.used > 1 &&
                    (block.num / COAP_MAX_PAYLOADS(session)) >
                    (lg_srcv->rec_blocks.range[0].end / COAP_MAX_PAYLOADS(session))) {
           /*
@@ -4713,20 +4734,35 @@ reinit:
 
             coap_log_debug("found Block option, block size is %u, block nr. %u\n",
                            1 << (block.szx + 4), block.num);
-#if COAP_Q_BLOCK_SUPPORT
-            if (block_opt == COAP_OPTION_Q_BLOCK2 && lg_crcv->rec_blocks.used &&
-                this_payload_set > lg_crcv->rec_blocks.processing_payload_set &&
-                this_payload_set != lg_crcv->rec_blocks.latest_payload_set) {
-              coap_request_missing_q_block2(session, lg_crcv);
-            }
-            lg_crcv->rec_blocks.latest_payload_set = this_payload_set;
-#endif /* COAP_Q_BLOCK_SUPPORT */
             /* Update list of blocks received */
             if (blocks_add_entry(&lg_crcv->rec_blocks, block.num, block.m)) {
               updated_block = 1;
             } else {
               coap_log_debug("Block nr %u ignored (too many missing blocks)\n", block.num);
             }
+#if COAP_Q_BLOCK_SUPPORT
+            if (block_opt == COAP_OPTION_Q_BLOCK2) {
+              if (lg_crcv->rec_blocks.used > 1 &&
+                  (block.num == lg_crcv->rec_blocks.range[lg_crcv->rec_blocks.used-1].end ||
+                   block.num == lg_crcv->rec_blocks.range[lg_crcv->rec_blocks.used-1].end - 1) &&
+                  lg_crcv->rec_blocks.range[lg_crcv->rec_blocks.used-1].begin <
+                  lg_crcv->rec_blocks.range[lg_crcv->rec_blocks.used-1].end &&
+                  (lg_crcv->rec_blocks.range[lg_crcv->rec_blocks.used-1].end % COAP_MAX_PAYLOADS(session)) + 1
+                  == COAP_MAX_PAYLOADS(session)) {
+                /*
+                 * At least the last 2 of a PAYLOAD_SET have been received, but some
+                 * missing packets, but have seen the emd of a PAYLOAD_SET.
+                 */
+                coap_log_debug("Fast recovery for block %u\n", block.num);
+                coap_request_missing_q_block2(session, lg_crcv);
+              } else if (lg_crcv->rec_blocks.used &&
+                         this_payload_set > lg_crcv->rec_blocks.processing_payload_set &&
+                         this_payload_set != lg_crcv->rec_blocks.latest_payload_set) {
+                coap_request_missing_q_block2(session, lg_crcv);
+              }
+            }
+            lg_crcv->rec_blocks.latest_payload_set = this_payload_set;
+#endif /* COAP_Q_BLOCK_SUPPORT */
           } else {
             coap_log_debug("Duplicate block nr %u\n", block.num);
           }
