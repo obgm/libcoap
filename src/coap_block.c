@@ -1168,7 +1168,7 @@ coap_add_data_large_internal(coap_session_t *session,
       if (opt) {
         lg_xmit->b.b2.rtag_length = (uint8_t)min(coap_opt_length(opt),
                                                  sizeof(lg_xmit->b.b2.rtag));
-        memcpy(lg_xmit->b.b2.rtag, coap_opt_value(opt), coap_opt_length(opt));
+        memcpy(lg_xmit->b.b2.rtag, coap_opt_value(opt), lg_xmit->b.b2.rtag_length);
         lg_xmit->b.b2.rtag_set = 1;
       } else {
         lg_xmit->b.b2.rtag_set = 0;
@@ -3361,6 +3361,7 @@ coap_handle_request_put_block(coap_context_t *context,
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
   rtag_length = rtag_opt ? coap_opt_length(rtag_opt) : 0;
+  rtag_length = min(rtag_length, 8);
   rtag = rtag_opt ? coap_opt_value(rtag_opt) : NULL;
 
   if (length > block.chunk_size) {
@@ -3495,7 +3496,7 @@ coap_handle_request_put_block(coap_context_t *context,
       lg_srcv->observe_set = 1;
     }
     if (rtag_opt) {
-      lg_srcv->rtag_length = coap_opt_length(rtag_opt);
+      lg_srcv->rtag_length = (uint8_t)rtag_length;
       memcpy(lg_srcv->rtag, coap_opt_value(rtag_opt), lg_srcv->rtag_length);
       lg_srcv->rtag_set = 1;
     }
@@ -4448,7 +4449,7 @@ reinit:
             lg_crcv->body_data = NULL;
           }
           if (etag_opt) {
-            lg_crcv->etag_length = coap_opt_length(etag_opt);
+            lg_crcv->etag_length = (uint8_t)min(coap_opt_length(etag_opt), sizeof(lg_crcv->etag));
             memcpy(lg_crcv->etag, coap_opt_value(etag_opt), lg_crcv->etag_length);
             lg_crcv->etag_set = 1;
           } else {
