@@ -138,7 +138,7 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
 
   pdu->alloc_size = min(size, COAP_DEFAULT_MTU);
 #ifdef WITH_LWIP
-  pdu->pbuf = pbuf_alloc(PBUF_TRANSPORT, max(size, COAP_DEFAULT_MTU) + pdu->max_hdr_size,
+  pdu->pbuf = pbuf_alloc(PBUF_TRANSPORT, pdu->alloc_size + pdu->max_hdr_size,
                          PBUF_RAM);
   if (pdu->pbuf == NULL) {
     coap_free_type(COAP_PDU, pdu);
