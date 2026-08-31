@@ -721,7 +721,8 @@ usage(const char *program, const char *version) {
           "\t       \t\toptions. E.g., per line\n"
           "\t       \t\t hint_to_match,use_user,with_key\n"
           "\t       \t\tNote: -k and -u still need to be defined for the default\n"
-          "\t       \t\tin case there is no match\n"
+          "\t       \t\tin case there is no match.\n"
+          "\t       \t\tNote: with_key can be in hex as defined in -k option\n"
           "\t-k key \t\tPre-shared key for the specified user identityt. If the\n"
           "\t       \t\tkey begins with 0x, then the hex text (two [0-9a-f] per\n"
           "\t       \t\tbyte) is converted to binary data\n"
@@ -1509,11 +1510,22 @@ cmdline_read_hint_check(const char *arg) {
       cp = tcp+1;
       tcp = strchr(cp, ',');
       if (tcp) {
+        size_t len;
+
         valid_ihs.ih_list[valid_ihs.count].new_identity =
             coap_new_bin_const((const uint8_t *)cp, tcp-cp);
         cp = tcp+1;
+        len = strlen(cp);
+        if (len) {
+          /* read hex string alternative when key starts with "0x" */
+          if (len >= 4 && cp[0] == '0' && (cp[1] == 'x' || cp[1] == 'X')) {
+            /* As tmpbuf is part of our environment we can do
+             * the conversion in place. */
+            len = convert_hex_string(cp + 2, (uint8_t *)cp);
+          }
+        }
         valid_ihs.ih_list[valid_ihs.count].new_key =
-            coap_new_bin_const((const uint8_t *)cp, strlen(cp));
+            coap_new_bin_const((const uint8_t *)cp, len);
         valid_ihs.count++;
       } else {
         /* Badly formatted */
@@ -1538,6 +1550,22 @@ verify_cn_callback(const char *cn,
   return 1;
 }
 
+static char *
+print_in_hex(const uint8_t *buf, size_t buflen, char *obuf, size_t obuf_len) {
+  size_t i;
+  size_t ofs = 0;
+  const char hex[] = "0123456789ABCDEF";
+
+  for (i = 0; i < buflen; i++) {
+    if (ofs + 2 >= obuf_len)
+      break;
+    obuf[ofs++] = hex[(buf[i] & 0xf0) >> 4];
+    obuf[ofs++] = hex[(buf[i] & 0x0f)];
+  }
+  obuf[ofs] = '\000';
+  return obuf;
+}
+
 static const coap_dtls_cpsk_info_t *
 verify_ih_callback(coap_str_const_t *hint,
                    coap_session_t *c_session COAP_UNUSED,
@@ -1553,6 +1581,7 @@ verify_ih_callback(coap_str_const_t *hint,
   /* Test for hint to possibly change identity + key */
   for (i = 0; i < valid_ihs.count; i++) {
     if (strcmp(lhint, valid_ihs.ih_list[i].hint_match) == 0) {
+      char obuf[256];
       /* Preset */
       psk_identity_info = *psk_info;
       if (valid_ihs.ih_list[i].new_key) {
@@ -1561,8 +1590,9 @@ verify_ih_callback(coap_str_const_t *hint,
       if (valid_ihs.ih_list[i].new_identity) {
         psk_identity_info.identity = *valid_ihs.ih_list[i].new_identity;
       }
-      coap_log_info("Switching to using '%s' identity + '%s' key\n",
-                    psk_identity_info.identity.s, psk_identity_info.key.s);
+      coap_log_info("Switching to using '%s' identity + '0x%s' key\n",
+                    psk_identity_info.identity.s,
+                    print_in_hex(psk_identity_info.key.s, psk_identity_info.key.length, obuf, sizeof(obuf)));
       return &psk_identity_info;
     }
   }

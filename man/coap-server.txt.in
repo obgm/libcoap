@@ -266,6 +266,7 @@ OPTIONS - PSK
    Note: A match using the *-s* option may mean that the current Identity Hint
    is different to that defined by *-h*. +
    Note: If *-h* is not defined, the hint from the first line is used. +
+   Note: use_key can be in hex as defined in *-k* option. +
    Note: Using this option disables (D)TLS1.3 negotiation.
 
 *-k* key::
@@ -288,6 +289,7 @@ OPTIONS - PSK
    match. The update checking order is *-s* followed by *-i*.
    Note: If the hint is not defined (by *-h* or *-i*), the hint from the first
    line is used. +
+   Note: with_key can be in hex as defined in *-k* option. +
    Note: Using this option disables (D)TLS1.3 negotiation.
 
 *-u* user ::

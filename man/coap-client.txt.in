@@ -271,7 +271,8 @@ OPTIONS - PSK
    hint_to_match,use_user,with_key +
    A line that starts with # is treated as a comment. +
    Note: *-k key* and *-u user* still need to be defined for the default case in
-   case there is no match.
+   case there is no match. +
+   Note: with_key can be in hex as defined in *-k* option.
 
 *-k* key::
    Pre-shared key for the specified user identity (*-u* option also required). +

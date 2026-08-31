@@ -136,6 +136,8 @@ while getopts "c:s:h:n:p:L:k:u:H:IB:DPFK" OPTION; do
   esac
 done
 
+PSK_KEY_HEX=0x`echo -n "$PSK_KEY" | od -t x1 -v | sed "s/^[0-9]*$//g ; s/^[0-9]* //g ; s/ //g" | tr -d "\n" | tr '[a-z]' '[A-Z]'`
+
 if [ ! -x "$CLIENT" ]; then
   echo "Client executable not found or not executable: $CLIENT"
   exit 1
@@ -940,7 +942,7 @@ run_psk_identity_hint_callback () {
      assert_contains "$LOGDIR/$case_name.server" "does not support Identity Hint" ; then
     skip_case "Identity Hint not supported"
   elif assert_contains "$LOGDIR/$case_name.client" "Identity Hint '$PSK_HINT' provided" &&
-     assert_contains "$LOGDIR/$case_name.client" "Switching to using '$PSK_IDENTITY' identity \\+ '$PSK_KEY' key" &&
+     assert_contains "$LOGDIR/$case_name.client" "Switching to using '$PSK_IDENTITY' identity \\+ '$PSK_KEY_HEX' key" &&
      assert_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
      assert_contains "$LOGDIR/$case_name.client" "2\\.05" &&
      assert_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then
@@ -965,7 +967,7 @@ run_psk_identity_callback () {
   run_client "$case_name" "$PSK_KEY" "" "$CLIENT_TIMEOUT"
 
   if assert_contains "$LOGDIR/$case_name.server" "Identity '$PSK_IDENTITY' requested, current hint ''" &&
-     assert_contains "$LOGDIR/$case_name.server" "Switching to using '$PSK_KEY' key" &&
+     assert_contains "$LOGDIR/$case_name.server" "Switching to using '$PSK_KEY_HEX' key" &&
      assert_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
      assert_contains "$LOGDIR/$case_name.client" "2\\.05" &&
      assert_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then

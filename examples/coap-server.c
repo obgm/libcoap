@@ -1517,6 +1517,22 @@ verify_pki_sni_callback(const char *sni,
   return &dtls_key;
 }
 
+static char *
+print_in_hex(const uint8_t *buf, size_t buflen, char *obuf, size_t obuf_len) {
+  size_t i;
+  size_t ofs = 0;
+  const char hex[] = "0123456789ABCDEF";
+
+  for (i = 0; i < buflen; i++) {
+    if (ofs + 2 >= obuf_len)
+      break;
+    obuf[ofs++] = hex[(buf[i] & 0xf0) >> 4];
+    obuf[ofs++] = hex[(buf[i] & 0x0f)];
+  }
+  obuf[ofs] = '\000';
+  return obuf;
+}
+
 static const coap_dtls_spsk_info_t *
 verify_psk_sni_callback(const char *sni,
                         coap_session_t *c_session COAP_UNUSED,
@@ -1533,14 +1549,16 @@ verify_psk_sni_callback(const char *sni,
     size_t i;
     coap_log_info("SNI '%s' requested\n", sni);
     for (i = 0; i < valid_psk_snis.count; i++) {
+      char obuf[256];
+
       /* Test for identity match to change key */
       if (strcasecmp(sni,
                      valid_psk_snis.psk_sni_list[i].sni_match) == 0) {
-        coap_log_info("Switching to using '%.*s' hint + '%.*s' key\n",
+        coap_log_info("Switching to using '%.*s' hint + '0x%s' key\n",
                       (int)valid_psk_snis.psk_sni_list[i].new_hint->length,
                       valid_psk_snis.psk_sni_list[i].new_hint->s,
-                      (int)valid_psk_snis.psk_sni_list[i].new_key->length,
-                      valid_psk_snis.psk_sni_list[i].new_key->s);
+                      print_in_hex(valid_psk_snis.psk_sni_list[i].new_key->s,
+                                   valid_psk_snis.psk_sni_list[i].new_key->length, obuf, sizeof(obuf)));
         psk_info.hint = *valid_psk_snis.psk_sni_list[i].new_hint;
         psk_info.key = *valid_psk_snis.psk_sni_list[i].new_key;
         break;
@@ -1575,9 +1593,10 @@ verify_id_callback(coap_bin_const_t *identity,
     }
     /* Test for identity match to change key */
     if (coap_binary_equal(identity, valid_ids.id_list[i].identity_match)) {
-      coap_log_info("Switching to using '%.*s' key\n",
-                    (int)valid_ids.id_list[i].new_key->length,
-                    valid_ids.id_list[i].new_key->s);
+      char obuf[256];
+      coap_log_info("Switching to using '0x%s' key\n",
+                    print_in_hex(valid_ids.id_list[i].new_key->s,
+                                 valid_ids.id_list[i].new_key->length, obuf, sizeof(obuf)));
       return valid_ids.id_list[i].new_key;
     }
   }
@@ -1945,6 +1964,7 @@ usage(const char *program, const char *version) {
           "\t       \t\tcurrent Identity Hint is different to that defined by -h.\n"
           "\t       \t\tNote: If -h is not defined, the hint from the first line\n"
           "\t       \t\tis used.\n"
+          "\t       \t\tNote: use_key can be in hex as defined in -k option\n."
           "\t       \t\tNote: Using this option disables (D)TLS1.3 negotiation\n"
           "\t-k key \t\tPre-Shared Key. This argument requires (D)TLS with PSK\n"
           "\t       \t\tto be available. This cannot be empty if defined.\n"
@@ -1968,6 +1988,7 @@ usage(const char *program, const char *version) {
           "\t       \t\t-s followed by -i\n"
           "\t       \t\tNote: If -h or -i is not defined, the hint from the first\n"
           "\t       \t\tline is used.\n"
+          "\t       \t\tNote: with_key can be in hex as defined in -k option\n."
           "\t       \t\tNote: Using this option disables (D)TLS1.3 negotiation\n"
           "\t-u user\t\tUser identity for pre-shared key mode (only used if\n"
           "\t       \t\toption -P is set)\n"
@@ -2572,11 +2593,22 @@ cmdline_read_psk_sni_check(char *arg) {
       cp = tcp+1;
       tcp = strchr(cp, ',');
       if (tcp) {
+        size_t len;
+
         valid_psk_snis.psk_sni_list[valid_psk_snis.count].new_hint =
             coap_new_bin_const((const uint8_t *)cp, tcp-cp);
         cp = tcp+1;
+        len = strlen(cp);
+        if (len) {
+          /* read hex string alternative when key starts with "0x" */
+          if (len >= 4 && cp[0] == '0' && (cp[1] == 'x' || cp[1] == 'X')) {
+            /* As tmpbuf is part of our environment we can do
+             * the conversion in place. */
+            len = convert_hex_string(cp + 2, (uint8_t *)cp);
+          }
+        }
         valid_psk_snis.psk_sni_list[valid_psk_snis.count].new_key =
-            coap_new_bin_const((const uint8_t *)cp, strlen(cp));
+            coap_new_bin_const((const uint8_t *)cp, len);
         valid_psk_snis.count++;
       } else {
         free(valid_psk_snis.psk_sni_list[valid_psk_snis.count].sni_match);
@@ -2617,11 +2649,22 @@ cmdline_read_identity_check(char *arg) {
       cp = tcp+1;
       tcp = strchr(cp, ',');
       if (tcp) {
+        size_t len;
+
         valid_ids.id_list[valid_ids.count].identity_match =
             coap_new_bin_const((const uint8_t *)cp, tcp-cp);
         cp = tcp+1;
+        len = strlen(cp);
+        if (len) {
+          /* read hex string alternative when key starts with "0x" */
+          if (len >= 4 && cp[0] == '0' && (cp[1] == 'x' || cp[1] == 'X')) {
+            /* As tmpbuf is part of our environment we can do
+             * the conversion in place. */
+            len = convert_hex_string(cp + 2, (uint8_t *)cp);
+          }
+        }
         valid_ids.id_list[valid_ids.count].new_key =
-            coap_new_bin_const((const uint8_t *)cp, strlen(cp));
+            coap_new_bin_const((const uint8_t *)cp, len);
         valid_ids.count++;
       } else {
         free(valid_ids.id_list[valid_ids.count].hint_match);
