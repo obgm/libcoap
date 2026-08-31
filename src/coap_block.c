@@ -716,8 +716,26 @@ coap_retransmit_oscore_pdu(coap_session_t *session,
     if (!resend_pdu)
       goto error;
     if (echo) {
+      coap_opt_iterator_t opt_iter;
+      coap_opt_t *opt = coap_check_option(resend_pdu, COAP_OPTION_OBSERVE,
+                                          &opt_iter);
+
       coap_insert_option(resend_pdu, COAP_OPTION_ECHO, coap_opt_length(echo),
                          coap_opt_value(echo));
+      if (opt) {
+        if (!lg_crcv->obs_token) {
+          lg_crcv->obs_token = coap_malloc_type(COAP_STRING, sizeof(lg_crcv->obs_token[0]));
+          if (!lg_crcv->obs_token) {
+            return COAP_INVALID_MID;
+          }
+          lg_crcv->obs_token_cnt = 1;
+        } else {
+          coap_delete_bin_const(lg_crcv->obs_token[0]);
+        }
+        lg_crcv->obs_token[0] = coap_new_bin_const(ltoken, ltoken_len);
+        if (lg_crcv->obs_token[0] == NULL)
+          return COAP_INVALID_MID;
+      }
     }
     if (coap_get_data(lg_crcv->sent_pdu, &data_len, &data)) {
       if (coap_get_block_b(session, resend_pdu, COAP_OPTION_BLOCK1, &block)) {
@@ -935,13 +953,14 @@ coap_add_data_large_internal(coap_session_t *session,
       if (coap_binary_equal(&pdu->actual_token, lg_xmit->b.b1.app_token)) {
         /* Unfortunately need to free this off as potential size change */
         int is_mcast = 0;
+        coap_tick_t last_all_sent = lg_xmit->last_all_sent;
 #if COAP_CLIENT_SUPPORT
         is_mcast = coap_is_mcast(&lg_xmit->b.b1.upstream);
 #endif /* COAP_CLIENT_SUPPORT */
         LL_DELETE(session->lg_xmit, lg_xmit);
         coap_block_delete_lg_xmit(session, lg_xmit);
         lg_xmit = NULL;
-        if (!is_mcast)
+        if (!is_mcast && !last_all_sent)
           coap_handle_event_lkd(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
         break;
       }
@@ -970,11 +989,13 @@ coap_add_data_large_internal(coap_session_t *session,
      */
     lg_xmit = coap_find_lg_xmit_response(session, request, resource, query);
     if (lg_xmit) {
+      coap_tick_t last_all_sent = lg_xmit->last_all_sent;
       /* Unfortunately need to free this off as potential size change */
       LL_DELETE(session->lg_xmit, lg_xmit);
       coap_block_delete_lg_xmit(session, lg_xmit);
       lg_xmit = NULL;
-      coap_handle_event_lkd(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
+      if (!last_all_sent)
+        coap_handle_event_lkd(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
     }
 #endif /* COAP_SERVER_SUPPORT */
   }
@@ -1561,6 +1582,7 @@ coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now,
     } else if (lg_xmit->last_sent) {
       if (lg_xmit->last_sent + partial_timeout <= now) {
         /* Expire this entry */
+        coap_tick_t last_all_sent = lg_xmit->last_all_sent;
         int is_mcast = 0;
 #if COAP_CLIENT_SUPPORT
         is_mcast = COAP_PDU_IS_REQUEST(lg_xmit->sent_pdu) &&
@@ -1569,7 +1591,7 @@ coap_block_check_lg_xmit_timeouts(coap_session_t *session, coap_tick_t now,
         LL_DELETE(session->lg_xmit, lg_xmit);
 
         coap_block_delete_lg_xmit(session, lg_xmit);
-        if (!is_mcast)
+        if (!is_mcast && !last_all_sent)
           coap_handle_event_lkd(session->context, COAP_EVENT_XMIT_BLOCK_FAIL, session);
       } else {
         /* Delay until the lg_xmit needs to expire */
