@@ -2033,6 +2033,17 @@ coap_block_check_lg_srcv_timeouts(coap_session_t *session, coap_tick_t now,
 #endif /* COAP_Q_BLOCK_SUPPORT */
     partial_timeout = COAP_MAX_TRANSMIT_WAIT_TICKS(session);
 
+  if (session->context->lg_srcv_cnt > 5) {
+    /* In case someone is DOSing us.
+     * DEFAULT_NON_PARTIAL_TIMEOUT is 247 seconds.
+     * MAX_TRANSIT_WAIT is 93 seconds.
+     */
+    partial_timeout /= (session->context->lg_srcv_cnt - 5);
+    if (partial_timeout < 10 * COAP_TICKS_PER_SECOND) {
+      /* Do not shrink it too much */
+      partial_timeout = 10 * COAP_TICKS_PER_SECOND;
+    }
+  }
   LL_FOREACH_SAFE(session->lg_srcv, lg_srcv, q) {
     if (lg_srcv->dont_timeout) {
       /* Not safe to timeout at present */
@@ -2758,9 +2769,6 @@ coap_block_delete_lg_crcv(coap_session_t *session,
 void
 coap_block_delete_lg_srcv(coap_session_t *session,
                           coap_lg_srcv_t *lg_srcv) {
-#if (COAP_MAX_LOGGING_LEVEL < _COAP_LOG_DEBUG)
-  (void)session;
-#endif
   if (lg_srcv == NULL)
     return;
 
@@ -2775,6 +2783,7 @@ coap_block_delete_lg_srcv(coap_session_t *session,
   coap_log_debug("** %s: lg_srcv %p released\n",
                  coap_session_str(session), (void *)lg_srcv);
   coap_free_type(COAP_LG_SRCV, lg_srcv);
+  session->context->lg_srcv_cnt--;
 }
 #endif /* COAP_SERVER_SUPPORT */
 
@@ -3497,7 +3506,9 @@ coap_handle_request_put_block(coap_context_t *context,
     }
     coap_log_debug("** %s: lg_srcv %p initialized\n",
                    coap_session_str(session), (void *)lg_srcv);
+    session->context->lg_srcv_cnt++;
     memset(lg_srcv, 0, sizeof(coap_lg_srcv_t));
+    coap_ticks(&lg_srcv->last_used);
     lg_srcv->resource = resource;
     if (resource == context->unknown_resource ||
         resource == context->proxy_uri_resource)
