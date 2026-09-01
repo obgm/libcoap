@@ -706,6 +706,9 @@ coap_retransmit_oscore_pdu(coap_session_t *session,
 
   lg_crcv = coap_find_lg_crcv(session, pdu);
   if (lg_crcv) {
+    coap_opt_iterator_t opt_iter;
+    coap_opt_t *opt = coap_check_option(pdu, COAP_OPTION_OBSERVE,
+                                        &opt_iter);
     /* Re-send request with new token */
     token = STATE_TOKEN_FULL(lg_crcv->state_token,
                              ++lg_crcv->retry_counter);
@@ -716,26 +719,22 @@ coap_retransmit_oscore_pdu(coap_session_t *session,
     if (!resend_pdu)
       goto error;
     if (echo) {
-      coap_opt_iterator_t opt_iter;
-      coap_opt_t *opt = coap_check_option(resend_pdu, COAP_OPTION_OBSERVE,
-                                          &opt_iter);
-
       coap_insert_option(resend_pdu, COAP_OPTION_ECHO, coap_opt_length(echo),
                          coap_opt_value(echo));
-      if (opt) {
+    }
+    if (opt) {
+      if (!lg_crcv->obs_token) {
+        lg_crcv->obs_token = coap_malloc_type(COAP_STRING, sizeof(lg_crcv->obs_token[0]));
         if (!lg_crcv->obs_token) {
-          lg_crcv->obs_token = coap_malloc_type(COAP_STRING, sizeof(lg_crcv->obs_token[0]));
-          if (!lg_crcv->obs_token) {
-            return COAP_INVALID_MID;
-          }
-          lg_crcv->obs_token_cnt = 1;
-        } else {
-          coap_delete_bin_const(lg_crcv->obs_token[0]);
-        }
-        lg_crcv->obs_token[0] = coap_new_bin_const(ltoken, ltoken_len);
-        if (lg_crcv->obs_token[0] == NULL)
           return COAP_INVALID_MID;
+        }
+        lg_crcv->obs_token_cnt = 1;
+      } else {
+        coap_delete_bin_const(lg_crcv->obs_token[0]);
       }
+      lg_crcv->obs_token[0] = coap_new_bin_const(ltoken, ltoken_len);
+      if (lg_crcv->obs_token[0] == NULL)
+        return COAP_INVALID_MID;
     }
     if (coap_get_data(lg_crcv->sent_pdu, &data_len, &data)) {
       if (coap_get_block_b(session, resend_pdu, COAP_OPTION_BLOCK1, &block)) {
