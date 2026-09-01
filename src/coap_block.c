@@ -1295,6 +1295,19 @@ coap_add_data_large_internal(coap_session_t *session,
                          option,
                          coap_encode_var_safe(buf, sizeof(buf),
                                               (0 << 4) | (0 << 3) | blk_size), buf);
+      if (COAP_PDU_IS_REQUEST(pdu)) {
+        coap_update_option(pdu,
+                           COAP_OPTION_SIZE1,
+                           coap_encode_var_safe(buf, sizeof(buf),
+                                                (unsigned int)length),
+                           buf);
+      } else {
+        coap_update_option(pdu,
+                           COAP_OPTION_SIZE2,
+                           coap_encode_var_safe(buf, sizeof(buf),
+                                                (unsigned int)length),
+                           buf);
+      }
     }
 add_data:
     if (get_func) {
