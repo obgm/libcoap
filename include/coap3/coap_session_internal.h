@@ -109,6 +109,7 @@ struct coap_session_t {
                                          used in this session */
   coap_queue_t *delayqueue;         /**< list of delayed messages waiting to
                                          be sent */
+  coap_queue_t *delayqueue_tail;    /**< tail of delayqueue for O(1) append */
   coap_lg_xmit_t *lg_xmit;          /**< list of large transmissions */
 #if COAP_CLIENT_SUPPORT
   coap_lg_crcv_t *lg_crcv;       /**< Client list of expected large receives */
