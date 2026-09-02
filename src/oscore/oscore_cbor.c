@@ -52,7 +52,6 @@
 
 static void
 util_write_byte(uint8_t **buffer, size_t *buf_size, uint8_t value) {
-  assert(*buf_size >= 1);
   if (*buf_size < 1)
     return;
   (*buf_size)--;
@@ -85,7 +84,6 @@ oscore_cbor_put_text(uint8_t **buffer,
                      size_t text_len) {
   uint8_t *pt = *buffer;
   size_t nb = oscore_cbor_put_unsigned(buffer, buf_size, text_len);
-  assert(*buf_size >= text_len);
   if (*buf_size < text_len)
     return nb;
   (*buf_size) -= text_len;
@@ -110,9 +108,8 @@ oscore_cbor_put_bytes(uint8_t **buffer,
                       size_t bytes_len) {
   uint8_t *pt = *buffer;
   size_t nb = oscore_cbor_put_unsigned(buffer, buf_size, bytes_len);
-  assert(*buf_size >= bytes_len);
   if (*buf_size < bytes_len)
-    return nb;
+    return 0;
   (*buf_size) -= bytes_len;
   *pt = (*pt | 0x40);
   if (bytes_len)
@@ -177,7 +174,6 @@ put_b_f(uint8_t **buffer, uint64_t value, uint8_t nr) {
 size_t
 oscore_cbor_put_unsigned(uint8_t **buffer, size_t *buf_size, uint64_t value) {
   if (value < 0x18) { /* small value half a byte */
-    assert(*buf_size >= 1);
     if (*buf_size < 1)
       return 0;
     (*buf_size)--;
@@ -186,7 +182,6 @@ oscore_cbor_put_unsigned(uint8_t **buffer, size_t *buf_size, uint64_t value) {
     return 1;
   } else if ((value > 0x17) && (value < 0x100)) {
     /* one byte uint8_t  */
-    assert(*buf_size >= 2);
     if (*buf_size < 2)
       return 0;
     (*buf_size) -= 2;
@@ -196,7 +191,6 @@ oscore_cbor_put_unsigned(uint8_t **buffer, size_t *buf_size, uint64_t value) {
     return 2;
   } else if ((value > 0xff) && (value < 0x10000)) {
     /* 2 bytes uint16_t     */
-    assert(*buf_size >= 3);
     if (*buf_size < 3)
       return 0;
     (*buf_size) -= 3;
@@ -206,7 +200,6 @@ oscore_cbor_put_unsigned(uint8_t **buffer, size_t *buf_size, uint64_t value) {
     return 3;
   } else if ((value > 0xffff) && (value < 0x100000000)) {
     /* 4 bytes uint32_t   */
-    assert(*buf_size >= 5);
     if (*buf_size < 5)
       return 0;
     (*buf_size) -= 5;
@@ -216,7 +209,6 @@ oscore_cbor_put_unsigned(uint8_t **buffer, size_t *buf_size, uint64_t value) {
     return 5;
   } else { /*if(value > 0xffffffff)*/
     /* 8 bytes uint64_t  */
-    assert(*buf_size >= 9);
     if (*buf_size < 9)
       return 0;
     (*buf_size) -= 9;
@@ -397,7 +389,6 @@ oscore_cbor_skip_value(const uint8_t **data, size_t *buf_len) {
   switch (elem) {
   case CBOR_UNSIGNED_INTEGER:
   case CBOR_NEGATIVE_INTEGER:
-    assert((*buf_len) >= num);
     if (*buf_len < num)
       return 0;
     *buf_len -= num;
@@ -408,7 +399,6 @@ oscore_cbor_skip_value(const uint8_t **data, size_t *buf_len) {
   case CBOR_TEXT_STRING:
     size = num;
     size += oscore_cbor_get_element_size(data, buf_len);
-    assert((*buf_len) >= (size - num));
     if (*buf_len < size - num)
       return 0;
     *buf_len -= (size - num);
@@ -450,7 +440,6 @@ oscore_cbor_skip_value(const uint8_t **data, size_t *buf_len) {
     }
     break;
   case CBOR_TAG:
-    assert((*buf_len) >= 1);
     if (*buf_len < 1)
       return 0;
     *buf_len -= 1;
