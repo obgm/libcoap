@@ -585,6 +585,8 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
                                                NULL,
                                                external_aad_buffer,
                                                sizeof(external_aad_buffer));
+    if (external_aad.length == 0)
+      goto error;
     cose_encrypt0_set_external_aad(cose, &external_aad);
 
     /* AAD */
@@ -593,6 +595,8 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
                                     external_aad.length,
                                     aad_buffer,
                                     sizeof(aad_buffer));
+    if (aad.length == 0)
+      goto error;
     assert(aad.length < AAD_BUF_LEN);
     cose_encrypt0_set_aad(cose, &aad);
   }
@@ -1280,6 +1284,8 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                                NULL,
                                                external_aad_buffer,
                                                sizeof(external_aad_buffer));
+    if (external_aad.length == 0)
+      goto error;
     cose_encrypt0_set_external_aad(cose, &external_aad);
 
     /* AAD */
@@ -1288,6 +1294,8 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                     external_aad.length,
                                     aad_buffer,
                                     sizeof(aad_buffer));
+    if (aad.length == 0)
+      goto error;
     assert(aad.length < AAD_BUF_LEN);
     cose_encrypt0_set_aad(cose, &aad);
 
@@ -1420,6 +1428,8 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                                NULL,
                                                external_aad_buffer,
                                                sizeof(external_aad_buffer));
+    if (external_aad.length == 0)
+      goto error;
     cose_encrypt0_set_external_aad(cose, &external_aad);
 
     /* AAD */
@@ -1428,6 +1438,8 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                     external_aad.length,
                                     aad_buffer,
                                     sizeof(aad_buffer));
+    if (aad.length == 0)
+      goto error;
     assert(aad.length < AAD_BUF_LEN);
     cose_encrypt0_set_aad(cose, &aad);
 #ifdef OSCORE_EXTRA_DEBUG

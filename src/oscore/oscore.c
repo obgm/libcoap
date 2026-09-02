@@ -127,37 +127,58 @@ oscore_prepare_e_aad(oscore_ctx_t *ctx,
                      size_t external_aad_size) {
   size_t external_aad_len = 0;
   size_t rem_size = external_aad_size;
+  size_t len;
 
   (void)oscore_option;
   (void)oscore_option_len;
   (void)sender_public_key;
 
-  external_aad_len += oscore_cbor_put_array(&external_aad_ptr, &rem_size, 5);
+  if ((len = oscore_cbor_put_array(&external_aad_ptr, &rem_size, 5)) == 0)
+    goto fail;
+  external_aad_len += len;
 
   /* oscore_version, always "1" */
-  external_aad_len += oscore_cbor_put_unsigned(&external_aad_ptr, &rem_size, 1);
+  if ((len = oscore_cbor_put_unsigned(&external_aad_ptr, &rem_size, 1)) == 0)
+    goto fail;
+  external_aad_len += len;
 
   /* Algorithms array with one item*/
-  external_aad_len += oscore_cbor_put_array(&external_aad_ptr, &rem_size, 1);
+  if ((len = oscore_cbor_put_array(&external_aad_ptr, &rem_size, 1)) == 0)
+    goto fail;
+  external_aad_len += len;
+
   /* Encryption Algorithm   */
-  external_aad_len +=
-      oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg);
+  if ((len = oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg)) == 0)
+    goto fail;
+  external_aad_len += len;
+
   /* request_kid */
-  external_aad_len += oscore_cbor_put_bytes(&external_aad_ptr,
-                                            &rem_size,
-                                            cose->key_id.s,
-                                            cose->key_id.length);
+  if ((len = oscore_cbor_put_bytes(&external_aad_ptr,
+                                   &rem_size,
+                                   cose->key_id.s,
+                                   cose->key_id.length)) == 0)
+    goto fail;
+  external_aad_len += len;
+
   /* request_piv */
-  external_aad_len += oscore_cbor_put_bytes(&external_aad_ptr,
-                                            &rem_size,
-                                            cose->partial_iv.s,
-                                            cose->partial_iv.length);
+  if ((len = oscore_cbor_put_bytes(&external_aad_ptr,
+                                   &rem_size,
+                                   cose->partial_iv.s,
+                                   cose->partial_iv.length)) == 0)
+    goto fail;
+  external_aad_len += len;
+
   /* options */
   /* Put integrity protected options, at present there are none. */
-  external_aad_len +=
-      oscore_cbor_put_bytes(&external_aad_ptr, &rem_size, NULL, 0);
+  if ((len = oscore_cbor_put_bytes(&external_aad_ptr, &rem_size, NULL, 0)) == 0)
+    goto fail;
+  external_aad_len += len;
 
   return external_aad_len;
+
+fail:
+  coap_log_info("oscore_prepare_e_aad: Buffer size too small: %" PRIuS "\n", external_aad_size);
+  return 0;
 }
 
 /*
@@ -322,24 +343,39 @@ oscore_prepare_aad(const uint8_t *external_aad_buffer,
                    uint8_t *aad_buffer,
                    size_t aad_size) {
   size_t ret = 0;
+  size_t len;
   size_t rem_size = aad_size;
   char encrypt0[] = "Encrypt0";
 
   (void)aad_size; /* TODO */
   /* Creating the AAD */
-  ret += oscore_cbor_put_array(&aad_buffer, &rem_size, 3);
+  if ((len = oscore_cbor_put_array(&aad_buffer, &rem_size, 3)) == 0)
+    goto fail;
+  ret += len;
+
   /* 1. "Encrypt0" */
-  ret +=
-      oscore_cbor_put_text(&aad_buffer, &rem_size, encrypt0, strlen(encrypt0));
+  if ((len = oscore_cbor_put_text(&aad_buffer, &rem_size, encrypt0, strlen(encrypt0))) == 0)
+    goto fail;
+  ret += len;
+
   /* 2. Empty h'' entry */
-  ret += oscore_cbor_put_bytes(&aad_buffer, &rem_size, NULL, 0);
+  if ((len = oscore_cbor_put_bytes(&aad_buffer, &rem_size, NULL, 0)) == 0)
+    goto fail;
+  ret += len;
+
   /* 3. External AAD */
-  ret += oscore_cbor_put_bytes(&aad_buffer,
-                               &rem_size,
-                               external_aad_buffer,
-                               external_aad_len);
+  if ((len = oscore_cbor_put_bytes(&aad_buffer,
+                                   &rem_size,
+                                   external_aad_buffer,
+                                   external_aad_len)) == 0)
+    goto fail;
+  ret += len;
 
   return ret;
+
+fail:
+  coap_log_info("oscore_prepare_aad: Buffer size too small: %" PRIuS "\n", aad_size);
+  return 0;
 }
 
 /*
