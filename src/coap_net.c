@@ -3010,13 +3010,13 @@ coap_io_do_epoll_lkd(coap_context_t *ctx, struct epoll_event *events, size_t nev
       if (sock->endpoint) {
         coap_endpoint_t *endpoint = sock->endpoint;
         if ((sock->flags & COAP_SOCKET_WANT_READ) &&
-            (events[j].events & EPOLLIN)) {
+            (events[j].events & (EPOLLIN|EPOLLERR|EPOLLHUP|EPOLLRDHUP))) {
           sock->flags |= COAP_SOCKET_CAN_READ;
           coap_read_endpoint(endpoint->context, endpoint, now);
         }
 
         if ((sock->flags & COAP_SOCKET_WANT_WRITE) &&
-            (events[j].events & EPOLLOUT)) {
+            (events[j].events & (EPOLLOUT|EPOLLERR|EPOLLHUP|EPOLLRDHUP))) {
           /*
            * Need to update this to EPOLLIN as EPOLLOUT will normally always
            * be true causing epoll_wait to return early
