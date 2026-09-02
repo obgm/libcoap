@@ -259,6 +259,11 @@ struct coap_lg_srcv_t {
 #if COAP_Q_BLOCK_SUPPORT
   int32_t r_m_payload_set; /**< Last payload set when requested missing blocks */
 #endif /* COAP_Q_BLOCK_SUPPORT */
+#if COAP_OSCORE_SUPPORT
+  oscore_recipient_ctx_t *recipient_ctx; /**< OSCORE recipient context
+                                              for lg_srcv_t */
+#endif /* COAP_OSCORE_SUPPORT */
+  coap_cache_key_t *cache_key; /**< Cache key of (Q-)Block PDU */
 };
 #endif /* COAP_SERVER_SUPPORT */
 

@@ -38,7 +38,8 @@ typedef void (*coap_cache_app_data_free_callback_t)(void *data);
 
 typedef enum coap_cache_session_based_t {
   COAP_CACHE_NOT_SESSION_BASED,
-  COAP_CACHE_IS_SESSION_BASED
+  COAP_CACHE_IS_SESSION_BASED,
+  COAP_CACHE_IS_SESSION_BASED_NO_DATA
 } coap_cache_session_based_t;
 
 typedef enum coap_cache_record_pdu_t {
