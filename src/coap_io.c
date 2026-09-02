@@ -707,6 +707,8 @@ release_1:
             } else {
               s->delayqueue = q->next;
             }
+            if (s->delayqueue_tail == q)
+              s->delayqueue_tail = p;
             coap_delete_node_lkd(q);
             break;
           }

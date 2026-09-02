@@ -2645,6 +2645,8 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
       break;
     }
     session->delayqueue = q->next;
+    if (session->delayqueue == NULL)
+      session->delayqueue_tail = NULL;
     session->partial_write = 0;
     coap_delete_node_lkd(q);
   }

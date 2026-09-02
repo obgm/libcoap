@@ -572,6 +572,7 @@ coap_session_mfree(coap_session_t *session) {
     }
     coap_delete_node_lkd(q);
   }
+  session->delayqueue_tail = NULL;
 
 #if COAP_CLIENT_SUPPORT
   coap_pdu_t *p, *ptmp;
@@ -707,6 +708,8 @@ coap_session_server_keepalive_failed(coap_session_t *session) {
     coap_queue_t *q = session->delayqueue;
 
     session->delayqueue = q->next;
+    if (session->delayqueue == NULL)
+      session->delayqueue_tail = NULL;
     coap_delete_node_lkd(q);
   }
   /* Force session to go away */
@@ -856,7 +859,13 @@ coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
     }
     coap_address_copy(&node->remote, &session->addr_info.remote);
   }
-  LL_APPEND(session->delayqueue, node);
+  node->next = NULL;
+  if (session->delayqueue_tail) {
+    session->delayqueue_tail->next = node;
+  } else {
+    session->delayqueue = node;
+  }
+  session->delayqueue_tail = node;
   coap_show_pdu(COAP_LOG_DEBUG, node->pdu);
   coap_log_debug("** %s: mid=0x%04x: delayed\n",
                  coap_session_str(session), node->id);
@@ -988,6 +997,8 @@ coap_session_connected(coap_session_t *session) {
     }
     /* Take entry off the queue */
     session->delayqueue = q->next;
+    if (session->delayqueue == NULL)
+      session->delayqueue_tail = NULL;
     q->next = NULL;
 
     coap_address_copy(&remote, &session->addr_info.remote);
@@ -1009,6 +1020,8 @@ coap_session_connected(coap_session_t *session) {
       if (bytes_written <= 0 || (size_t)bytes_written < q->pdu->used_size + q->pdu->hdr_size) {
         q->next = session->delayqueue;
         session->delayqueue = q;
+        if (q->next == NULL)
+          session->delayqueue_tail = q;
         if (bytes_written > 0)
           session->partial_write = (size_t)bytes_written;
         break;
@@ -1116,6 +1129,8 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
   while (session->delayqueue) {
     q = session->delayqueue;
     session->delayqueue = q->next;
+    if (session->delayqueue == NULL)
+      session->delayqueue_tail = NULL;
     q->next = NULL;
     coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
                    coap_session_str(session), q->id);
@@ -1164,6 +1179,8 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
   while (session->delayqueue) {
     q = session->delayqueue;
     session->delayqueue = q->next;
+    if (session->delayqueue == NULL)
+      session->delayqueue_tail = NULL;
     q->next = NULL;
     coap_log_debug("** %s: mid=0x%04x: not transmitted after disconnect\n",
                    coap_session_str(session), q->id);
