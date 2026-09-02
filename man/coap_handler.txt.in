@@ -118,7 +118,8 @@ This _handler_ must not call *coap_send*(3) to send _response_pdu_.
 _response_pdu_ gets sent on return from _handler_, assuming the response
 code has been updated. If the response code was not updated, then an empty
 ACK packet will get sent for CON type requests or nothing for NON type
-requests.
+requests.  Nothing gets sent for a separate response (*coap_async*(3)), as
+an Empty message is only valid as an ACK or a RST.
 
 *NOTE:* Any data associated with _incoming_pdu_ is no longer be available after
 exiting this function as _incoming_pdu_ is deleted.  In particular

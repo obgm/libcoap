@@ -3573,8 +3573,9 @@ enum respond_t { RESPONSE_DEFAULT, RESPONSE_DROP, RESPONSE_SEND };
  * change it to an empty ACK and @c RESPONSE_SEND so the client does not keep
  * on retrying.
  *
- * Checks if the response code is 0.00 and if either the session is reliable or
- * non-confirmable, @c RESPONSE_DROP is also returned.
+ * Checks if the response code is 0.00 and if the response is confirmable,
+ * non-confirmable, or the session is reliable, @c RESPONSE_DROP is also
+ * returned.  An Empty confirmable message is a ping, not a response.
  *
  * Multicast response checking is also carried out.
  *
@@ -3673,8 +3674,13 @@ no_response(coap_pdu_t *request, coap_pdu_t *response,
     }
   } else if (COAP_PDU_IS_EMPTY(response) &&
              (response->type == COAP_MESSAGE_NON ||
+              response->type == COAP_MESSAGE_CON ||
               COAP_PROTO_RELIABLE(session->proto))) {
-    /* response is 0.00, and this is reliable or non-confirmable */
+    /* Response is 0.00, and this is reliable, non-confirmable, or a separate
+     * (confirmable) response.  An Empty CON is a ping (RFC 7252 4.2), not a
+     * response, and the PDU still has the request's token attached, which
+     * RFC 7252 4.1 does not allow.  A CON would then get retransmitted up to
+     * MAX_RETRANSMIT times. */
     return RESPONSE_DROP;
   }
 
@@ -4352,6 +4358,7 @@ skip_handler:
     }
   } else if (COAP_PDU_IS_EMPTY(response) &&
              (response->type == COAP_MESSAGE_NON ||
+              response->type == COAP_MESSAGE_CON ||
               COAP_PROTO_RELIABLE(session->proto))) {
     coap_delete_pdu_lkd(response);
   } else {
