@@ -2844,6 +2844,7 @@ coap_block_delete_lg_srcv(coap_session_t *session,
     return;
   }
 
+  coap_delete_cache_key(lg_srcv->cache_key);
   coap_delete_str_const(lg_srcv->uri_path);
   coap_delete_bin_const(lg_srcv->last_token);
   coap_free_type(COAP_STRING, lg_srcv->body_data);
@@ -3367,6 +3368,15 @@ blocks_add_entry(coap_rblock_t *rec_blocks, uint32_t block_num, uint32_t block_m
 }
 
 #if COAP_SERVER_SUPPORT
+
+static const uint16_t coap_lg_srcv_ignore_options[] = { COAP_OPTION_ETAG,
+                                                        COAP_OPTION_RTAG,
+                                                        COAP_OPTION_BLOCK2,
+                                                        COAP_OPTION_Q_BLOCK2,
+                                                        COAP_OPTION_BLOCK1,
+                                                        COAP_OPTION_Q_BLOCK1,
+                                                        COAP_OPTION_OSCORE
+                                                      };
 /*
  * Need to check if this is a large PUT / POST etc. using multiple blocks
  *
@@ -3407,6 +3417,7 @@ coap_handle_request_put_block(coap_context_t *context,
 #if COAP_Q_BLOCK_SUPPORT
   int request_missing = 0;
 #endif /* COAP_Q_BLOCK_SUPPORT */
+  coap_cache_key_t *cache_key_l = NULL;
 
   *added_block = 0;
   *pfree_lg_srcv = NULL;
@@ -3551,6 +3562,14 @@ coap_handle_request_put_block(coap_context_t *context,
   /*
    * locate the lg_srcv
    */
+  cache_key_l = coap_cache_derive_key_w_ignore(session, pdu,
+                                               COAP_CACHE_IS_SESSION_BASED_NO_DATA,
+                                               coap_lg_srcv_ignore_options,
+                                               sizeof(coap_lg_srcv_ignore_options)/sizeof(coap_lg_srcv_ignore_options[0]));
+  if (!cache_key_l) {
+    response->code = COAP_RESPONSE_CODE(500);
+    goto skip_app_handler;
+  }
   LL_FOREACH(session->lg_srcv, lg_srcv) {
     if (rtag_opt || lg_srcv->rtag_set == 1) {
       if (!(rtag_opt && lg_srcv->rtag_set == 1))
@@ -3559,13 +3578,14 @@ coap_handle_request_put_block(coap_context_t *context,
           memcmp(lg_srcv->rtag, rtag, rtag_length) != 0)
         continue;
     }
-    if (resource == lg_srcv->resource) {
+#if COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT
+    if (session->recipient_ctx == lg_srcv->recipient_ctx ||
+        memcmp(cache_key_l, lg_srcv->cache_key, sizeof(coap_cache_key_t)) == 0)
       break;
-    }
-    if ((lg_srcv->resource == context->unknown_resource ||
-         resource == context->proxy_uri_resource) &&
-        coap_string_equal(uri_path, lg_srcv->uri_path))
+#else /* !COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT */
+    if (memcmp(cache_key_l, lg_srcv->cache_key, sizeof(coap_cache_key_t)) == 0)
       break;
+#endif /* !COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT */
   }
 
   if (!lg_srcv && block.num != 0 && session->block_mode & COAP_BLOCK_NOT_RANDOM_BLOCK1) {
@@ -3587,7 +3607,12 @@ coap_handle_request_put_block(coap_context_t *context,
     coap_log_debug("** %s: lg_srcv %p initialized\n",
                    coap_session_str(session), (void *)lg_srcv);
     memset(lg_srcv, 0, sizeof(coap_lg_srcv_t));
+#if COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT
+    lg_srcv->recipient_ctx = session->recipient_ctx;
+#endif /* COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT */
     lg_srcv->resource = resource;
+    lg_srcv->cache_key = cache_key_l;
+    cache_key_l = NULL;
     if (resource == context->unknown_resource ||
         resource == context->proxy_uri_resource)
       lg_srcv->uri_path = coap_new_str_const(uri_path->s, uri_path->length);
@@ -3936,6 +3961,7 @@ give_app_data:
   *pfree_lg_srcv = lg_srcv;
 
 call_app_handler:
+  coap_delete_cache_key(cache_key_l);
   if (lg_srcv_is_refed)
     coap_lg_srcv_release_lkd(session, lg_srcv);
   return 0;
@@ -3945,6 +3971,7 @@ free_lg_srcv:
   coap_block_delete_lg_srcv(session, lg_srcv);
 
 skip_app_handler:
+  coap_delete_cache_key(cache_key_l);
   if (lg_srcv_is_refed)
     coap_lg_srcv_release_lkd(session, lg_srcv);
   return 1;

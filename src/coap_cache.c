@@ -101,7 +101,8 @@ coap_cache_derive_key_w_ignore(const coap_session_t *session,
   if (!dctx)
     return NULL;
 
-  if (session_based == COAP_CACHE_IS_SESSION_BASED) {
+  if (session_based == COAP_CACHE_IS_SESSION_BASED ||
+      session_based == COAP_CACHE_IS_SESSION_BASED_NO_DATA) {
     /* Include the session ptr */
     if (!coap_digest_update(dctx, (const uint8_t *)&session, sizeof(session))) {
       goto update_fail;
@@ -123,7 +124,8 @@ coap_cache_derive_key_w_ignore(const coap_session_t *session,
 
   /* The body of a FETCH payload is part of the cache key,
    * see https://rfc-editor.org/rfc/rfc8132#section-2 */
-  if (pdu->code == COAP_REQUEST_CODE_FETCH) {
+  if (pdu->code == COAP_REQUEST_CODE_FETCH &&
+      session_based != COAP_CACHE_IS_SESSION_BASED_NO_DATA) {
     size_t len;
     const uint8_t *data;
     if (coap_get_data(pdu, &len, &data)) {
