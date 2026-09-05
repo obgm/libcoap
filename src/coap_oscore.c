@@ -753,7 +753,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
   coap_delete_pdu_lkd(plain_pdu);
   plain_pdu = NULL;
 
-  if (association && association->is_observe == 0)
+  if (association && (association->is_observe == 0 || COAP_RESPONSE_CLASS(pdu->code) != 2))
     oscore_delete_association(session, association);
   association = NULL;
 
