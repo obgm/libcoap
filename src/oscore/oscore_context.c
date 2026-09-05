@@ -1021,6 +1021,7 @@ oscore_new_association(coap_session_t *session,
   if (association == NULL)
     return 0;
 
+  coap_log_oscore("Association %p created\n", (void *)association);
   memset(association, 0, sizeof(oscore_association_t));
   coap_oscore_association_set_recipient_ctx(association, recipient_ctx);
   association->is_observe = is_observe;
@@ -1083,6 +1084,7 @@ oscore_delete_association(coap_session_t *session,
                           oscore_association_t *association) {
   if (association) {
     OSCORE_ASSOCIATIONS_DELETE(session->associations, association);
+    coap_log_oscore("Association %p deleted\n", (void *)association);
     oscore_free_association(association);
     return 1;
   }
@@ -1097,6 +1099,7 @@ oscore_delete_server_associations(coap_session_t *session) {
 
     OSCORE_ASSOCIATIONS_ITER_SAFE(session->associations, association, tmp) {
       OSCORE_ASSOCIATIONS_DELETE(session->associations, association);
+      coap_log_oscore("Association %p deleted\n", (void *)association);
       oscore_free_association(association);
     }
     session->associations = NULL;
