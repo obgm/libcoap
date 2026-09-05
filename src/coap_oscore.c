@@ -757,7 +757,8 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
   coap_delete_pdu_lkd(plain_pdu);
   plain_pdu = NULL;
 
-  if (association && association->is_observe == 0)
+  if (association && (association->is_observe == 0 || (COAP_RESPONSE_CLASS(pdu->code) != 2 &&
+                                                       pdu->code != COAP_RESPONSE_CODE(401))))
     oscore_delete_association(session, association);
   association = NULL;
 
@@ -823,6 +824,9 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
   return osc_pdu;
 
 error:
+  if (association && (association->is_observe == 0 || (COAP_RESPONSE_CLASS(pdu->code) != 2 &&
+                                                       pdu->code != COAP_RESPONSE_CODE(401))))
+    oscore_delete_association(session, association);
   if (ciphertext_buffer)
     coap_free_type(COAP_OSCORE_BUF, ciphertext_buffer);
   coap_delete_pdu_lkd(osc_pdu);
