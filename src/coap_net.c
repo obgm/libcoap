@@ -4708,6 +4708,8 @@ handle_signaling(coap_context_t *context, coap_session_t *session,
   } else if (pdu->code == COAP_SIGNALING_CODE_RELEASE
              || pdu->code == COAP_SIGNALING_CODE_ABORT) {
     coap_session_disconnected_lkd(session, COAP_NACK_RST);
+  } else {
+    coap_log_debug("PDU signaling code %u.%02u unknown\n", (pdu->code >> 5) & 0x7, pdu->code & 0x1f);
   }
 }
 #endif /* !COAP_DISABLE_TCP */

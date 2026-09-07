@@ -683,7 +683,7 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
  * The transmission parameters for CoAP rate control ("Congestion
  * Control" in stream-oriented protocols) are defined in
  * https://rfc-editor.org/rfc/rfc7252#section-4.8 and
- * https://rfc-editor.org/rfc/rfc9177#section-6.2
+ * https://rfc-editor.org/rfc/rfc9177#section-7.2
  * @{
  */
 
@@ -741,7 +741,7 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 /**
  * Number of Q-Block1 or Q-Block2 payloads that can be sent in a burst
  * before a delay has to kick in.
- * RFC9177 Section 6.2 Default value of MAX_PAYLOAD is 10
+ * RFC9177 Section 7.2 Default value of MAX_PAYLOAD is 10
  *
  * Configurable using coap_session_set_max_payloads()
  */
@@ -750,7 +750,7 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 /**
  * The number of times for requests for re-transmission of missing Q-Block1
  * when no response has been received.
- * RFC9177 Section 6.2 Default value of NON_MAX_RETRANSMIT is 4
+ * RFC9177 Section 7.2 Default value of NON_MAX_RETRANSMIT is 4
  *
  * Configurable using coap_session_set_non_max_retransmit()
  */
@@ -759,7 +759,7 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 /**
  * The delay (+ ACK_RANDOM_FACTOR) to introduce once NON MAX_PAYLOADS
  * Q-Block1 or Q-Block2 have been sent to reduce congestion control.
- * RFC9177 Section 6.2 Default value of NON_TIMEOUT is 2.
+ * RFC9177 Section 7.2 Default value of NON_TIMEOUT is 2.
  *
  * Configurable using coap_session_set_non_timeout()
  */
@@ -768,7 +768,7 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
 /**
  * The time to wait for any missing Q-Block1 or Q-Block2 packets before
  * requesting re-transmission of missing packets.
- * RFC9177 Section 6.2 Default value of NON_RECEIVE_TIMEOUT is 4.
+ * RFC9177 Section 7.2 Default value of NON_RECEIVE_TIMEOUT is 4.
  *
  * Configurable using coap_session_set_non_receive_timeout()
  */
