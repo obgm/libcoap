@@ -311,6 +311,10 @@ As the _uri_path_ of the resource has to be unique across all of the resources
 associated with a _context_, *coap_add_resource*() will delete any previous
 _resource_ with the same _uri_path_ before adding in the new _resource_.
 
+*NOTE:* *coap_add_resource*() should only be called after the rest of the
+resource has been set up (handlers, observable, attributes etc.) in case another
+thread starts to use the resource.
+
 *Function: coap_delete_resource()*
 
 The *coap_delete_resource*() function deletes the resource identified by
