@@ -889,8 +889,9 @@ coap_add_observer(coap_resource_t *resource,
     }
   }
 
-  /* We are done if subscription was found. */
+  /* Refresh the destination when an existing observation is renewed. */
   if (s) {
+    coap_address_copy(&s->local_if, &session->addr_info.local);
     return s;
   }
 
@@ -938,6 +939,7 @@ coap_add_observer(coap_resource_t *resource,
   }
   s->cache_key = cache_key;
   s->session = coap_session_reference_lkd(session);
+  coap_address_copy(&s->local_if, &session->addr_info.local);
   session->ref_subscriptions++;
 
   /* add subscriber to resource */
@@ -1235,6 +1237,11 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         /* Waiting for the previous blocked unsolicited response to finish */
         goto next_one_fail;
       }
+
+      /* Other packets on this session may have changed the local address,
+       * including multicast requests from the same peer and source port.
+       * Restore it before the handler can register an async response. */
+      coap_address_copy(&obs_session->addr_info.local, &obs->local_if);
 
       obs->dirty = 0;
       /* initialize response */

@@ -41,6 +41,80 @@ fpeq(const coap_fixed_point_t a, const coap_fixed_point_t b) {
          (a.fractional_part == b.fractional_part);
 }
 
+#if COAP_SERVER_SUPPORT && COAP_ASYNC_SUPPORT
+static coap_address_t observe_expected_local;
+static coap_async_t *observe_async;
+static unsigned int observe_calls;
+
+static void
+observe_address_handler(coap_resource_t *resource COAP_UNUSED,
+                        coap_session_t *s,
+                        const coap_pdu_t *request,
+                        const coap_string_t *query COAP_UNUSED,
+                        coap_pdu_t *response) {
+  observe_calls++;
+  CU_ASSERT(coap_address_equals(&s->addr_info.local, &observe_expected_local));
+  observe_async = coap_register_async(s, request, 0);
+  CU_ASSERT_PTR_NOT_NULL(observe_async);
+  if (observe_async)
+    CU_ASSERT(coap_address_equals(&observe_async->local_if, &observe_expected_local));
+  coap_pdu_set_type(response, COAP_MESSAGE_NON);
+}
+
+static void
+t_observe_local_address(void) {
+  coap_address_t saved_local;
+  coap_address_copy(&saved_local, &session->addr_info.local);
+  for (unsigned int non = 0; non < 2; non++) {
+    coap_resource_t *resource = coap_resource_init(coap_make_str_const("address-test"), 0);
+    coap_pdu_t *request = coap_pdu_init(non ? COAP_MESSAGE_NON : COAP_MESSAGE_CON,
+                                        COAP_REQUEST_CODE_GET, 1, 128);
+    ReturnIf_CU_ASSERT_PTR_NOT_NULL(resource);
+    ReturnIf_CU_ASSERT_PTR_NOT_NULL(request);
+    coap_add_token(request, 1, (const uint8_t *)"t");
+    coap_add_option(request, COAP_OPTION_OBSERVE, 0, NULL);
+    coap_add_option(request, COAP_OPTION_URI_PATH, 12, (const uint8_t *)"address-test");
+    coap_resource_set_get_observable(resource, 1);
+    coap_register_request_handler(resource, COAP_REQUEST_GET, observe_address_handler);
+    coap_add_resource(ctx, resource);
+    coap_address_copy(&session->addr_info.local, &saved_local);
+    coap_address_copy(&observe_expected_local, &saved_local);
+    coap_lock_lock(return);
+    coap_subscription_t *obs = coap_add_observer(resource, session, &request->actual_token, request);
+    coap_lock_unlock();
+    CU_ASSERT_PTR_NOT_NULL(obs);
+    if (!obs)
+      return;
+
+    for (unsigned int renewal = 0; renewal < 2; renewal++) {
+      if (renewal) {
+        coap_address_set_port(&observe_expected_local, 12345);
+        coap_address_copy(&session->addr_info.local, &observe_expected_local);
+        coap_lock_lock(return);
+        CU_ASSERT(coap_add_observer(resource, session, &request->actual_token, request) == obs);
+        coap_lock_unlock();
+      }
+      /* Reproduce a multicast packet from the same peer overwriting the session. */
+      session->addr_info.local.addr.sin6.sin6_addr = in6addr_any;
+      session->addr_info.local.addr.sin6.sin6_addr.s6_addr[0] = 0xff;
+      session->addr_info.local.addr.sin6.sin6_addr.s6_addr[1] = 0x02;
+      session->addr_info.local.addr.sin6.sin6_addr.s6_addr[15] = 0xfd;
+      observe_calls = 0;
+      observe_async = NULL;
+      coap_resource_notify_observers(resource, NULL);
+      coap_check_notify(ctx);
+      CU_ASSERT(observe_calls == 1);
+      CU_ASSERT_PTR_NOT_NULL(observe_async);
+      if (observe_async)
+        coap_free_async(session, observe_async);
+    }
+    coap_delete_pdu(request);
+    coap_delete_resource(ctx, resource);
+  }
+  coap_address_copy(&session->addr_info.local, &saved_local);
+}
+#endif
+
 static void
 t_session1(void) {
   CU_ASSERT(session->ref == 1);
@@ -216,6 +290,9 @@ t_init_session_tests(void) {
             CU_get_error_msg());                                      \
   }
 
+#if COAP_SERVER_SUPPORT && COAP_ASYNC_SUPPORT
+  SESSION_TEST(suite, t_observe_local_address);
+#endif
   SESSION_TEST(suite, t_session1);
   SESSION_TEST(suite, t_session2);
   SESSION_TEST(suite, t_session3);
