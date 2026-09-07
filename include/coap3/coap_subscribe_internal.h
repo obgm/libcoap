@@ -58,6 +58,7 @@ extern "C" {
 struct coap_subscription_t {
   struct coap_subscription_t *next; /**< next element in linked list */
   struct coap_session_t *session;   /**< subscriber session */
+  coap_address_t local_if;         /**< local address of the observe request */
 
   uint8_t non_cnt;  /**< up to 255 non-confirmable notifies allowed */
   uint8_t fail_cnt; /**< up to 255 confirmable notifies can fail */
