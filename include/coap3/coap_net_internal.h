@@ -220,6 +220,7 @@ struct coap_context_t {
   uint8_t shutdown_no_send_observe; /**< Do not send out unsolicited observe when
                                          coap_free_context() is called. Otherwise
                                          5.03 will get sent */
+  uint32_t lg_srcv_cnt;             /**< Number of active lg_srcv */
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_PROXY_SUPPORT
   coap_proxy_entry_t *proxy_list;  /**< Set of active proxy sessions */
