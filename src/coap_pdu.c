@@ -257,8 +257,7 @@ coap_pdu_duplicate_lkd(const coap_pdu_t *old_pdu,
 #endif /* COAP_CLIENT_SUPPORT */
   pdu = coap_pdu_init(old_pdu->type, old_pdu->code,
                       coap_new_message_id_lkd(session),
-                      max(old_pdu->max_size,
-                          coap_session_max_pdu_size_lkd(session)));
+                      old_pdu->max_size);
 #if COAP_CLIENT_SUPPORT
   /* Restore any pending waits */
   session->doing_first = doing_first;
@@ -395,7 +394,12 @@ coap_pdu_resize(coap_pdu_t *pdu, size_t new_size) {
 int
 coap_pdu_check_resize(coap_pdu_t *pdu, size_t size) {
   if (size > pdu->alloc_size) {
+#if defined WITH_LWIP || defined WITH_CONTIKI || defined RIOT_BERSION || defined __ZEPHYR__
+    size_t new_size = max(64, pdu->alloc_size * 2);
+#else /* ! WITH_LWIP && ! WITH_CONTIKI && ! RIOT_BERSION && ! __ZEPHYR__ */
     size_t new_size = max(256, pdu->alloc_size * 2);
+#endif /* ! WITH_LWIP && ! WITH_CONTIKI && ! RIOT_BERSION && ! __ZEPHYR__ */
+
     while (size > new_size)
       new_size *= 2;
     if (pdu->max_size && new_size > pdu->max_size) {
