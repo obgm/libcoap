@@ -118,8 +118,8 @@ coap_prng_default(void *buf, size_t len) {
     return 0;
   }
 
-  sys_rand_get(buf, len);
-  return 1;
+  /* sys_csrand_get() returns 0 on success */
+  return (sys_csrand_get(buf, len) ? 0 : 1);
 
 #elif defined(HAVE_GETRANDOM)
   return (getrandom(buf, len, 0) > 0) ? 1 : 0;
