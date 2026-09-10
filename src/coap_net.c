@@ -2622,12 +2622,13 @@ coap_connect_session(coap_session_t *session, coap_tick_t now) {
 
 static void
 coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
+  coap_queue_t *q;
+
   (void)ctx;
   assert(session->sock.flags & COAP_SOCKET_CONNECTED);
 
-  while (session->delayqueue) {
+  while ((q = coap_remove_first_from_delayq(session)) != NULL) {
     ssize_t bytes_written;
-    coap_queue_t *q = session->delayqueue;
 
     coap_address_copy(&session->addr_info.remote, &q->remote);
     coap_log_debug("** %s: mid=0x%04x: transmitted after delay (1)\n",
@@ -2642,9 +2643,9 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
         (size_t)bytes_written < q->pdu->used_size + q->pdu->hdr_size - session->partial_write) {
       if (bytes_written > 0)
         session->partial_write += (size_t)bytes_written;
+      coap_add_to_head_delayq(session, q);
       break;
     }
-    session->delayqueue = q->next;
     session->partial_write = 0;
     coap_delete_node_lkd(q);
   }
@@ -3156,6 +3157,60 @@ error:
   coap_send_rst_lkd(session, pdu);
   coap_delete_pdu_lkd(pdu);
   return -1;
+}
+
+coap_queue_t *
+coap_remove_mid_from_delayq(coap_session_t *session, coap_mid_t mid) {
+  coap_queue_t *p = NULL;
+  coap_queue_t *q;
+
+  LL_FOREACH(session->delayqueue, q) {
+    if (q->id == mid) {
+      if (p) {
+        p->next = q->next;
+      } else {
+        session->delayqueue = q->next;
+      }
+      if (session->delayqueue_tail == q)
+        session->delayqueue_tail = p;
+      q->next = NULL;
+      return q;
+    }
+    p = q;
+  }
+  return NULL;
+}
+
+coap_queue_t *
+coap_remove_first_from_delayq(coap_session_t *session) {
+  coap_queue_t *q = session->delayqueue;
+
+  if (q) {
+    session->delayqueue = q->next;
+    if (session->delayqueue == NULL)
+      session->delayqueue_tail = NULL;
+    q->next = NULL;
+  }
+  return q;
+}
+
+void
+coap_add_to_tail_delayq(coap_session_t *session, coap_queue_t *node) {
+  node->next = NULL;
+  if (session->delayqueue_tail) {
+    session->delayqueue_tail->next = node;
+  } else {
+    session->delayqueue = node;
+  }
+  session->delayqueue_tail = node;
+}
+
+void
+coap_add_to_head_delayq(coap_session_t *session, coap_queue_t *node) {
+  node->next = session->delayqueue;
+  session->delayqueue = node;
+  if (node->next == NULL)
+    session->delayqueue_tail = node;
 }
 
 int

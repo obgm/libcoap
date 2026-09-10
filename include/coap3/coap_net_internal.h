@@ -368,10 +368,51 @@ coap_mid_t coap_retransmit(coap_context_t *context, coap_queue_t *node);
 int coap_handle_dgram(coap_context_t *ctx, coap_session_t *session, uint8_t *data, size_t data_len);
 
 /**
- * This function removes the element with given @p id from the list given list.
- * If @p id was found, @p node is updated to point to the removed element. Note
+ * This function removes the node with given @p mid from the delayqueue.
+ * Note that the storage allocated by the returned node entry is @b not released.
+ * The caller must do this manually using coap_delete_node_lkd().
+ *
+ * @param session The session to process.
+ * @param mid   The message id to look for.
+ *
+ * @return      The found queue entry or NULL.
+ */
+coap_queue_t *coap_remove_mid_from_delayq(coap_session_t *session, coap_mid_t mid);
+
+/**
+ * This function adds the node to the head of the delayqueue.
+ *
+ * @param session The session to process.
+ * @param node   The queue entry node.
+ *
+ */
+void coap_add_to_head_delayq(coap_session_t *session, coap_queue_t *node);
+
+/**
+ * This function adds the node to the tail of the delayqueue.
+ *
+ * @param session The session to process.
+ * @param node   The queue entry node.
+ *
+ */
+void coap_add_to_tail_delayq(coap_session_t *session, coap_queue_t *node);
+
+/**
+ * This function removes the first node from the delayqueue.
+ * Note that the storage allocated by the returned node entry is @b not released.
+ * The caller must do this manually using coap_delete_node_lkd().
+ *
+ * @param session The session to process.
+ *
+ * @return      The found queue entry or NULL.
+ */
+coap_queue_t *coap_remove_first_from_delayq(coap_session_t *session);
+
+/**
+ * This function removes the element with given @p mid from the list given list.
+ * If @p mid was found, @p node is updated to point to the removed element. Note
  * that the storage allocated by @p node is @b not released. The caller must do
- * this manually using coap_delete_node(). This function returns @c 1 if the
+ * this manually using coap_delete_node_lkd(). This function returns @c 1 if the
  * element with id @p id was found, @c 0 otherwise. For a return value of @c 0,
  * the contents of @p node is undefined.
  *
@@ -382,7 +423,7 @@ int coap_handle_dgram(coap_context_t *ctx, coap_session_t *session, uint8_t *dat
  * @param node  If found, @p node is updated to point to the removed node. You
  *              must release the storage pointed to by @p node manually.
  *
- * @return      @c 1 if @p id was found, @c 0 otherwise.
+ * @return      @c 1 if @p mid was found, @c 0 otherwise.
  */
 int coap_remove_from_queue(coap_queue_t **queue,
                            coap_session_t *session,
