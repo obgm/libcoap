@@ -1203,7 +1203,9 @@ coap_send_rst(coap_session_t *session, const coap_pdu_t *request) {
 
 coap_mid_t
 coap_send_rst_lkd(coap_session_t *session, const coap_pdu_t *request) {
-  return coap_send_message_type_lkd(session, request, COAP_MESSAGE_RST);
+  if (request->type == COAP_MESSAGE_CON || request->type == COAP_MESSAGE_NON)
+    return coap_send_message_type_lkd(session, request, COAP_MESSAGE_RST);
+  return COAP_INVALID_MID;
 }
 
 COAP_API coap_mid_t
@@ -3357,6 +3359,9 @@ coap_new_error_response(const coap_pdu_t *request, coap_pdu_code_t code,
 
   assert(request);
 
+  if (request->type != COAP_MESSAGE_NON && request->type != COAP_MESSAGE_CON)
+    return NULL;
+
   /* cannot send ACK if original request was not confirmable */
   type = request->type == COAP_MESSAGE_CON ?
          COAP_MESSAGE_ACK : COAP_MESSAGE_NON;
@@ -4449,9 +4454,14 @@ coap_call_response_handler(coap_session_t *session,
                                    /* context is being freed off */
                                    return);
   } else {
-    ret = COAP_RESPONSE_OK;
+    /*
+     * RFC7252 4.2
+     * (b) reject the message if the recipient lacks context to process the
+     *  message properly
+     */
+    ret = COAP_RESPONSE_FAIL;
   }
-  if (ret == COAP_RESPONSE_FAIL && rcvd->type != COAP_MESSAGE_ACK) {
+  if (ret == COAP_RESPONSE_FAIL) {
     coap_send_rst_lkd(session, rcvd);
     session->last_con_handler_res = COAP_RESPONSE_FAIL;
   } else {

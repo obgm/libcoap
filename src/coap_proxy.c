@@ -1622,7 +1622,7 @@ cache_fail:
     coap_proxy_del_req(proxy_entry, proxy_req);
 
 finish:
-  if (ret == COAP_RESPONSE_FAIL && rcvd->type != COAP_MESSAGE_ACK) {
+  if (ret == COAP_RESPONSE_FAIL) {
     coap_send_rst_lkd(session, rcvd);
     session->last_con_handler_res = COAP_RESPONSE_FAIL;
   } else {
