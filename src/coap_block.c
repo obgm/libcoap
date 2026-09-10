@@ -1266,17 +1266,32 @@ coap_add_data_large_internal(coap_session_t *session,
 #if COAP_CONSTRAINED_STACK
       /* Protected by global_lock if needed */
       static uint8_t l_data[1024];
+      uint8_t *data_buf = l_data;
 #else /* ! COAP_CONSTRAINED_STACK */
       uint8_t l_data[1024];
+      uint8_t *data_buf = l_data;
 #endif /* ! COAP_CONSTRAINED_STACK */
       size_t l_length;
+      int data_buf_allocated = 0;
 
-      assert(rem <= 1024);
-      if (get_func(session, rem, block.num * chunk, l_data, &l_length, lg_xmit->data_info->app_ptr)) {
-        if (!coap_add_data(pdu, l_length, l_data)) {
+      if (rem > sizeof(l_data)) {
+        data_buf = coap_malloc_type(COAP_STRING, rem);
+        if (!data_buf) {
+          coap_log_warn("out of memory allocating %" PRIuS " bytes for block data\n", rem);
+          goto fail;
+        }
+        data_buf_allocated = 1;
+      }
+      if (get_func(session, rem, block.num * chunk, data_buf, &l_length,
+                   lg_xmit->data_info->app_ptr)) {
+        if (!coap_add_data(pdu, l_length, data_buf)) {
+          if (data_buf_allocated)
+            coap_free_type(COAP_STRING, data_buf);
           goto fail;
         }
       }
+      if (data_buf_allocated)
+        coap_free_type(COAP_STRING, data_buf);
     } else {
       if (!coap_add_data(pdu, rem, &data[block.num * chunk]))
         goto fail;
