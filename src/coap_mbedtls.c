@@ -3144,6 +3144,8 @@ coap_tls_write(coap_session_t *c_session, const uint8_t *data,
         break;
       }
       amount_sent += ret;
+      /* Report all TLS records written, not just the final record. */
+      ret = (int)amount_sent;
     }
   } else {
     ret = do_mbedtls_handshake(c_session, m_env);
