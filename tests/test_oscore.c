@@ -14,6 +14,7 @@
 
 #if COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT
 #include "test_oscore.h"
+#include "coap3/coap_oscore_internal.h"
 #include "oscore/oscore.h"
 #include "oscore/oscore_context.h"
 
@@ -1427,6 +1428,48 @@ fail:
   coap_free(session);
 }
 
+/*
+ * A repeated recipient attachment must not add or remove a reference.
+ */
+static void
+t_find_4(void) {
+  static const char conf_data[] = REF_CONF_DATA;
+  const coap_str_const_t conf = { sizeof(conf_data) - 1,
+                                  (const uint8_t *)conf_data
+                                };
+  coap_oscore_conf_t *oscore_conf = NULL;
+  coap_session_t *session = NULL;
+  oscore_recipient_ctx_t *recipient_ctx;
+  unsigned int ref;
+
+  oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  CU_ASSERT(coap_context_oscore_server(ctx, oscore_conf) == 1);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+
+  recipient_ctx = ctx->p_osc_ctx->recipient_chain;
+  FailIf_CU_ASSERT_PTR_NOT_NULL(recipient_ctx);
+
+  session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session);
+  memset(session, 0, sizeof(coap_session_t));
+  session->context = ctx;
+
+  ref = recipient_ctx->ref;
+  coap_oscore_session_set_recipient_ctx(session, recipient_ctx);
+  CU_ASSERT(recipient_ctx->ref == ref + 1);
+
+  ref = recipient_ctx->ref;
+  coap_oscore_session_set_recipient_ctx(session, recipient_ctx);
+  CU_ASSERT(recipient_ctx->ref == ref);
+
+fail:
+  if (session && session->recipient_ctx)
+    oscore_release_recipient_ctx(&session->recipient_ctx);
+  coap_free(session);
+  oscore_free_contexts(ctx);
+}
+
 /************************************************************************
  ** Per-recipient state (last_seq / sliding_window) in conf buffer
  ************************************************************************/
@@ -1926,6 +1969,7 @@ t_init_oscore_tests(void) {
     OSCORE_TEST(t_find_1);
     OSCORE_TEST(t_find_2);
     OSCORE_TEST(t_find_3);
+    OSCORE_TEST(t_find_4);
 
     OSCORE_TEST(t_rcp_state_basic);
     OSCORE_TEST(t_rcp_state_max_64bit);

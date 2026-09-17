@@ -388,9 +388,10 @@ match:
         *recipient_ctx = tmp_ctx->recipient_chain;
       }
       tmp_ctx->recipient_chain = *recipient_ctx;
+      const coap_bool_t  already_attached = session->recipient_ctx == *recipient_ctx;
       coap_oscore_session_set_recipient_ctx(session, *recipient_ctx);
       /* Remove the tmp_ctx reference */
-      if (*recipient_ctx)
+      if (*recipient_ctx && !already_attached)
         (*recipient_ctx)->ref--;
       return tmp_ctx;
     }
