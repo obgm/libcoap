@@ -604,7 +604,8 @@ msg_code_string(uint16_t c) {
   } else if (c >= 224 && c - 224 < (int)(sizeof(signals)/sizeof(const char *))) {
     return signals[c-224];
   } else {
-    snprintf(buf, sizeof(buf), "%u.%02u", (c >> 5) & 0x7, c & 0x1f);
+    snprintf(buf, sizeof(buf), "%u.%02u", (unsigned)((c >> 5) & 0x7),
+             (unsigned)(c & 0x1f));
     return buf;
   }
 }
@@ -758,7 +759,7 @@ print_content_format(unsigned int format_type,
   }
 
   /* unknown content format, just print numeric value to buf */
-  return snprintf((char *)result, buflen, "%d", format_type);
+  return snprintf((char *)result, buflen, "%u", format_type);
 }
 
 /**
@@ -958,7 +959,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
           buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
                              coap_opt_block_num(option), /* block number */
                              COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-                             (1 << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+                             (unsigned)(1u << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
         }
 
         break;
