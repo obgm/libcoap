@@ -418,6 +418,8 @@ coap_ws_rd_http_header_client(coap_session_t *session) {
   if (!ws->seen_first) {
     value = coap_ws_split_rd_header(session);
 
+    if (!value)
+      return 0;
     if (strcmp((char *)ws->http_hdr, "HTTP/1.1") != 0 ||
         atoi(value) != 101) {
       coap_log_info("WS: Invalid GET response %s\n", (char *)ws->http_hdr);
