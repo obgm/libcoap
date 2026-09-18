@@ -381,6 +381,8 @@ static coap_proxy_entry_t *
 coap_proxy_get_add_list_entry(coap_session_t *incoming, coap_session_t *ongoing,
                               coap_uri_t uri, coap_proxy_server_list_t *server_list,
                               int allow_add) {
+  if (!incoming && !ongoing)
+    return NULL;
   coap_context_t *context = incoming ? incoming->context : ongoing->context;
   coap_proxy_entry_t *proxy_list = context->proxy_list;
   size_t proxy_list_count = context->proxy_list_count;
