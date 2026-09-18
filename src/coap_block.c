@@ -475,11 +475,13 @@ coap_context_set_max_block_size_lkd(coap_context_t *context, size_t max_block_si
   return 1;
 }
 
+#if COAP_CLIENT_SUPPORT
 COAP_STATIC_INLINE int
 full_match(const uint8_t *a, size_t alen,
            const uint8_t *b, size_t blen) {
   return alen == blen && (alen == 0 || memcmp(a, b, alen) == 0);
 }
+#endif /* COAP_CLIENT_SUPPORT */
 
 coap_lg_xmit_t *
 coap_find_lg_xmit(coap_session_t *session, coap_pdu_t *pdu) {
