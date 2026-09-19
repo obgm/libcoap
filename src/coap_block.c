@@ -3511,8 +3511,14 @@ coap_handle_request_put_block(coap_context_t *context,
     response->code = COAP_RESPONSE_CODE(400);
     goto skip_app_handler;
   }
-  total = size_opt ? coap_decode_var_bytes(coap_opt_value(size_opt),
-                                           coap_opt_length(size_opt)) : 0;
+  if (size_opt) {
+    total = coap_decode_var_bytes(coap_opt_value(size_opt), coap_opt_length(size_opt));
+  } else {
+    if (block_option) {
+      total = block.num * (1 << (block.szx + 4)) + (block.m ? 1 : length);
+    }
+  }
+
   if (total) {
     uint32_t max_body;
 
