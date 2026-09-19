@@ -1015,7 +1015,7 @@ if(ENABLE_EXAMPLES)
                             PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
     endif()
 
-    if(ENABLE_CLIENT_MODE AND ENABLE_SERVER_MODE)
+    if(ENABLE_CLIENT_MODE)
       add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
       target_link_libraries(tiny PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
     endif()
@@ -1146,7 +1146,7 @@ if(ENABLE_EXAMPLES)
         COMPONENT dev)
     endif()
 
-    if(ENABLE_CLIENT_MODE AND ENABLE_SERVER_MODE)
+    if(ENABLE_CLIENT_MODE)
       install(
         TARGETS tiny
         DESTINATION ${CMAKE_INSTALL_BINDIR}
