@@ -983,32 +983,42 @@ endif()
 #
 
 if(ENABLE_EXAMPLES)
-  add_executable(coap-client ${CMAKE_CURRENT_LIST_DIR}/examples/coap-client.c)
-  target_link_libraries(coap-client
-                        PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+  # Examples are only built when the library mode they depend on is enabled,
+  # otherwise their link step fails with undefined references.
+  if(ENABLE_CLIENT_MODE)
+    add_executable(coap-client ${CMAKE_CURRENT_LIST_DIR}/examples/coap-client.c)
+    target_link_libraries(coap-client
+                          PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+  endif()
 
-  add_executable(coap-rd ${CMAKE_CURRENT_LIST_DIR}/examples/coap-rd.c)
-  target_include_directories(coap-rd
-    PRIVATE
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}>)
-  target_link_libraries(coap-rd PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+  if(ENABLE_SERVER_MODE)
+    add_executable(coap-rd ${CMAKE_CURRENT_LIST_DIR}/examples/coap-rd.c)
+    target_include_directories(coap-rd
+      PRIVATE
+           $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}>)
+    target_link_libraries(coap-rd PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
 
-  add_executable(coap-server ${CMAKE_CURRENT_LIST_DIR}/examples/coap-server.c)
-  target_link_libraries(coap-server
-                        PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+    add_executable(coap-server ${CMAKE_CURRENT_LIST_DIR}/examples/coap-server.c)
+    target_link_libraries(coap-server
+                          PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+  endif()
 
   if(NOT WIN32 AND NOT MINGW)
-    add_executable(etsi_iot_01 ${CMAKE_CURRENT_LIST_DIR}/examples/etsi_iot_01.c)
-    target_link_libraries(etsi_iot_01
-                          PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+    if(ENABLE_SERVER_MODE)
+      add_executable(etsi_iot_01 ${CMAKE_CURRENT_LIST_DIR}/examples/etsi_iot_01.c)
+      target_link_libraries(etsi_iot_01
+                            PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
 
-    add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
-    target_link_libraries(tiny PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+      add_executable(oscore-interop-server
+                     ${CMAKE_CURRENT_LIST_DIR}/examples/oscore-interop-server.c)
+      target_link_libraries(oscore-interop-server
+                            PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+    endif()
 
-    add_executable(oscore-interop-server
-                   ${CMAKE_CURRENT_LIST_DIR}/examples/oscore-interop-server.c)
-    target_link_libraries(oscore-interop-server
-                          PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+    if(ENABLE_CLIENT_MODE)
+      add_executable(tiny ${CMAKE_CURRENT_LIST_DIR}/examples/tiny.c)
+      target_link_libraries(tiny PUBLIC ${PROJECT_NAME}::${COAP_LIBRARY_NAME})
+    endif()
   endif()
 endif()
 
@@ -1114,15 +1124,33 @@ install(
   PATTERN "*.h")
 
 if(ENABLE_EXAMPLES)
-  install(
-    TARGETS coap-server coap-client coap-rd
-    DESTINATION ${CMAKE_INSTALL_BINDIR}
-    COMPONENT dev)
-
-  if(NOT WIN32 AND NOT MINGW)
+  if(ENABLE_CLIENT_MODE)
     install(
-      TARGETS etsi_iot_01 tiny oscore-interop-server
+      TARGETS coap-client
       DESTINATION ${CMAKE_INSTALL_BINDIR}
       COMPONENT dev)
+  endif()
+
+  if(ENABLE_SERVER_MODE)
+    install(
+      TARGETS coap-server coap-rd
+      DESTINATION ${CMAKE_INSTALL_BINDIR}
+      COMPONENT dev)
+  endif()
+
+  if(NOT WIN32 AND NOT MINGW)
+    if(ENABLE_SERVER_MODE)
+      install(
+        TARGETS etsi_iot_01 oscore-interop-server
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        COMPONENT dev)
+    endif()
+
+    if(ENABLE_CLIENT_MODE)
+      install(
+        TARGETS tiny
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        COMPONENT dev)
+    endif()
   endif()
 endif()
