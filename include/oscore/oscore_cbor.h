@@ -107,8 +107,7 @@ uint8_t oscore_cbor_get_next_element(const uint8_t **buffer, size_t *buf_size);
 
 uint64_t oscore_cbor_get_element_size(const uint8_t **buffer, size_t *buf_size);
 
-uint8_t oscore_cbor_elem_contained(const uint8_t *data, size_t *buf_size,
-                                   uint8_t *end);
+uint8_t oscore_cbor_elem_contained(const uint8_t *data, size_t *buf_size);
 
 uint8_t oscore_cbor_get_number(const uint8_t **data, size_t *buf_size,
                                int64_t *value);
