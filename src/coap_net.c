@@ -4162,7 +4162,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
         resource->flags & COAP_RESOURCE_FLAGS_FORCE_SINGLE_BODY)
       session->block_mode |= COAP_BLOCK_SINGLE_BODY;
     if (coap_handle_request_put_block(context, session, pdu, response,
-                                      resource, uri_path, observe,
+                                      resource, observe,
                                       &added_block, &free_lg_srcv)) {
       session->block_mode = block_mode;
       goto skip_handler;

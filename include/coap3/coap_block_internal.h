@@ -252,7 +252,6 @@ struct coap_lg_srcv_t {
   size_t total_len;      /**< Length as indicated by SIZE1 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
   coap_resource_t *resource; /**< associated resource */
-  coap_str_const_t *uri_path; /** set to uri_path if unknown resource */
   coap_rblock_t rec_blocks; /** < list of received blocks */
   coap_bin_const_t *last_token; /**< last used token */
   uint32_t ref;          /**< Reference count */
@@ -449,12 +448,25 @@ int coap_handle_request_send_block(coap_session_t *session,
                                    coap_resource_t *resource,
                                    coap_string_t *query);
 
+/**
+ * Handle the next incoming PUT/POST PDU - if (Q-)Block1 option, handle accordingly.
+ *
+ * @param context  The context.
+ * @param session  The incoming session.
+ * @param pdu      The incoming PDU.
+ * @param response The PDU set up for the response.
+ * @param resource The matching resource (could be unknown / proxy).
+ * @param observe  The Observe option in the incoming PDU (if any).
+ * @param added_block Set to 1 if block option added to response.
+ * @param free_lg_srcv Contains the lg_srcv_t to release if set.
+ *
+ * @return @c 0 to invoke application handler, else @c 1 to just send response.
+ */
 int coap_handle_request_put_block(coap_context_t *context,
                                   coap_session_t *session,
                                   coap_pdu_t *pdu,
                                   coap_pdu_t *response,
                                   coap_resource_t *resource,
-                                  coap_string_t *uri_path,
                                   coap_opt_t *observe,
                                   int *added_block,
                                   coap_lg_srcv_t **free_lg_srcv);

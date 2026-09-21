@@ -2862,7 +2862,6 @@ coap_block_delete_lg_srcv(coap_session_t *session,
   }
 
   coap_delete_cache_key(lg_srcv->cache_key);
-  coap_delete_str_const(lg_srcv->uri_path);
   coap_delete_bin_const(lg_srcv->last_token);
   coap_free_type(COAP_STRING, lg_srcv->body_data);
   coap_log_debug("** %s: lg_srcv %p released\n",
@@ -3408,7 +3407,6 @@ coap_handle_request_put_block(coap_context_t *context,
                               coap_pdu_t *pdu,
                               coap_pdu_t *response,
                               coap_resource_t *resource,
-                              coap_string_t *uri_path,
                               coap_opt_t *observe,
                               int *added_block,
                               coap_lg_srcv_t **pfree_lg_srcv) {
@@ -3630,9 +3628,6 @@ coap_handle_request_put_block(coap_context_t *context,
     lg_srcv->resource = resource;
     lg_srcv->cache_key = cache_key_l;
     cache_key_l = NULL;
-    if (resource == context->unknown_resource ||
-        resource == context->proxy_uri_resource)
-      lg_srcv->uri_path = coap_new_str_const(uri_path->s, uri_path->length);
     lg_srcv->content_format = fmt;
     lg_srcv->total_len = total;
     max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
