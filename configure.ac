@@ -1380,9 +1380,17 @@ AC_INCLUDES_DEFAULT
 AC_MSG_CHECKING([operating system])
 
 # Set up here some extra platform depended defines and variables.
-# The "ADDITIONAL_CFLAGS" is need as this stand-alone definition
+# The "ADDITIONAL_CFLAGS" is needed as this is a stand-alone definition
 # for the doxygen part.
 case $host in
+    i386-pc-none)
+    AC_MSG_RESULT([Linux 32bit])
+    ADDITIONAL_CFLAGS="-D_GNU_SOURCE -m32"
+    LIBCOAP_NAME_SUFFIX=$LIBCOAP_NAME_SUFFIX-32
+    LIBCOAP_DTLS_LIB_EXTENSION_NAME=$LIBCOAP_DTLS_LIB_EXTENSION_NAME-32
+    SAN_CFLAGS="$SAN_CFLAGS -m32"
+    ;;
+
     *-linux* | *-uclinux*)
     AC_MSG_RESULT([Linux])
     ADDITIONAL_CFLAGS="-D_GNU_SOURCE"

@@ -46,7 +46,6 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   const uint8_t *p = buf;
   size_t len = size;
-  uint8_t *const end = buf + size;
   int guard = 0;
 
   /* Walk the input as a stream of CBOR elements, mirroring the decode loops in
@@ -77,7 +76,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       /* Exercise the containment check the same way callers guard a string
        * before reading it (uses a private copy of the length cursor). */
       size_t probe_len = len;
-      oscore_cbor_elem_contained(p, &probe_len, end);
+      oscore_cbor_elem_contained(p, &probe_len);
 
       /* Safe extraction: get_string_array() bounds *len against the remaining
        * buffer, allocates, and copies via get_string()/get_array(). */
