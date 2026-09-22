@@ -119,7 +119,8 @@ OPTIONS - General
 
 *-s* duration::
    Subscribe to / observe the resource specified by URI for the given
-   'duration' in seconds.
+   'duration' in seconds. If *-T token* is not used, then the initial token is
+   defined as non empty.
 
 *-t* type::
    Content format for given resource for PUT/POST. 'type' must be either
