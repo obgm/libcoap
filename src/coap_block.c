@@ -2429,6 +2429,8 @@ coap_block_check_q_block1_xmit(coap_session_t *session, coap_tick_t now, coap_ti
     if (now <= non_timeout) {
       /* Too early in the startup cycle to have an accurate response */
       *tim_rem = non_timeout - now;
+      if (*tim_rem < 100)
+        *tim_rem = 100;
       return 1;
     }
     timed_out = now - non_timeout;
@@ -2496,6 +2498,8 @@ coap_block_check_q_block2_xmit(coap_session_t *session, coap_tick_t now, coap_ti
     if (now <= non_timeout) {
       /* Too early in the startup cycle to have an accurate response */
       *tim_rem = non_timeout - now;
+      if (*tim_rem < 100)
+        *tim_rem = 100;
       return 1;
     }
     timed_out = now - non_timeout;
