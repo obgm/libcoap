@@ -637,7 +637,8 @@ usage(const char *program, const char *version) {
           "\t       \t\ttls_engine_conf_file contains TLS ENGINE configuration.\n"
           "\t       \t\tSee coap-tls-engine-conf(5) for definitions.\n"
           "\t-s duration\tSubscribe to / Observe resource for given duration\n"
-          "\t       \t\tin seconds\n"
+          "\t       \t\tin seconds. If '-T token' is not used, then the initial\n"
+          "\t       \t\ttoken is defined as non empty\n"
           "\t-t type\t\tContent format for given resource for PUT/POST\n"
           "\t-v num \t\tVerbosity level (default 4, maximum is 8) for general\n"
           "\t       \t\tCoAP logging\n"
@@ -2322,6 +2323,12 @@ main(int argc, char **argv) {
       coap_log_warn("coap_context_set_cid_tuple_change: "
                     "Unable to set CID tuple change\n");
     }
+  }
+
+  if (doing_observe && the_token.length == 0) {
+    /* Some servers insist on a token when doing observe */
+    the_token.length = 1;
+    the_token.s[0] = 0x01; /* a token */
   }
 
   session = get_session(ctx,
