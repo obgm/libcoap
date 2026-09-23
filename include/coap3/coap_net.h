@@ -341,7 +341,17 @@ void coap_context_rate_limit_ppm(coap_context_t *context,
  * @param max_body_size The maximum supported body size. 0 indicates unlimited.
  */
 void coap_context_set_max_body_size(coap_context_t *context,
-                                    uint32_t max_body_size);
+                                    size_t max_body_size);
+
+/**
+ * Set the maximum supported total pending bodies that are being received.
+ *
+ * @param context         The coap_context_t object.
+ * @param max_bodies_ram The maximum supported ram usage by server's pending
+ *                        receive queues. 0 (the default) indicates unlimited.
+ */
+void coap_context_set_max_bodies_ram(coap_context_t *context,
+                                     size_t max_bodies_ram);
 
 /**
  * Set the maximum token size (RFC8974).
