@@ -20,7 +20,7 @@ env:
   # Pinned until the next openHiTLS release
   OPENHITLS_REF: 2d524d8e0f9c392a4bc3c244f976a69f9f6bb64a
   # Keep in sync with examples/contiki/Makefile
-  WITH_CONTIKI_NG_BRANCH: release/v4.9
+  WITH_CONTIKI_NG_BRANCH: release/v5.2
   # Keep in sync with examples/lwip/Makefile
   WITH_LWIP_BRANCH: STABLE-2_2_1_RELEASE
   # Keep in sync with examples/zephyr/Makefile

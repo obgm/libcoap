@@ -4,7 +4,7 @@ Example of libcoap running on Contiki-NG
 To run the example, do
 
     $ make
-    $ sudo ./server.native
+    $ sudo build/native/server.native
 
 and query `coap://[fd00::302:304:506:708]/time?ticks` with any coap tool,
 or query `coap://[fd00::302:304:506:708]/.well-known/core`
