@@ -286,7 +286,7 @@ CU_pSuite
 t_init_proxy_tests(void) {
   CU_pSuite suite;
 
-  suite = CU_add_suite("proxyon",
+  suite = CU_add_suite("proxy",
                        t_proxy_tests_create, t_proxy_tests_remove);
   if (!suite) {                        /* signal error */
     fprintf(stderr, "W: cannot add proxy test suite (%s)\n",
