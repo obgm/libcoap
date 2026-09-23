@@ -188,8 +188,8 @@ coap_add_block(coap_pdu_t *pdu,
 
 5.4 Source Code Documentation
 -----------------------------
-* A useful source code documentation is mandatory. Mostly to be done within the
-  source code files, but more complex description should be done in extra
+* Useful source code documentation is mandatory. Mostly to be done within the
+  source code files, but more complex descriptions should be done in extra
   README files.
 
 * Please set up/adjust the doxygen documentation if you create new functions or

@@ -19,6 +19,8 @@ case "x${TLS}" in
                ;;
     xwolfssl)  WITH_TLS="--with-wolfssl"
                ;;
+    xopenhitls)  WITH_TLS="--with-openhitls"
+               ;;
     xtinydtls) WITH_TLS="--with-tinydtls"
                # Need this as libtinydtls.so has not been installed
                # as a part of the travis build
@@ -57,6 +59,12 @@ case "${PLATFORM}" in
              ;;
     lwip)    config "--disable-tests $WITH_DOCS --disable-examples $WITH_TLS" && \
                make -C examples/lwip
+             ;;
+    riot)    config "--disable-tests $WITH_DOCS --disable-examples $WITH_TLS" && \
+               make -C examples/riot
+             ;;
+    zephyr)    config "--disable-tests $WITH_DOCS --disable-examples $WITH_TLS" && \
+               make -C examples/zephyr
              ;;
     posix|*) config "$WITH_TESTS $WITH_DOCS --enable-examples $WITH_TLS $OTHER_OPTS" && \
                make && make check
