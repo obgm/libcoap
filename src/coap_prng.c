@@ -124,6 +124,9 @@ coap_prng_default(void *buf, size_t len) {
 #elif defined(HAVE_GETRANDOM)
   return (getrandom(buf, len, 0) > 0) ? 1 : 0;
 
+#elif defined(HAVE_GETENTROPY)
+  return (getentropy(buf, len) == 0) ? 1 : 0;
+
 #elif defined(HAVE_RANDOM)
 #define RAND_BYTES (RAND_MAX >= 0xffffff ? 3 : (RAND_MAX >= 0xffff ? 2 : 1))
   unsigned char *dst = (unsigned char *)buf;
