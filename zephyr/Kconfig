@@ -216,6 +216,13 @@ config LIBCOAP_OBS_MAX_NON
     help
         Number of NON notifications before sending a CON (RFC7641 4.5).
 
+config LIBCOAP_DEFAULT_MAX_LATENCY
+    int "Default max latency in seconds"
+    default 100
+    help
+        Maximum network latency used by CoAP timeout calculations.
+        RFC7252 Section 4.8.2 specifies a default of 100 seconds.
+
 config LIBCOAP_DEFAULT_SESSION_TIMEOUT
     int "Default session timeout"
     default 300

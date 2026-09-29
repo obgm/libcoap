@@ -778,7 +778,9 @@ const char *coap_endpoint_str(const coap_endpoint_t *endpoint);
  * The MAX_LATENCY definition.
  * RFC 7252, Section 4.8.2 MAX_LATENCY is 100.
  */
+#ifndef COAP_DEFAULT_MAX_LATENCY
 #define COAP_DEFAULT_MAX_LATENCY (100U)
+#endif /* COAP_DEFAULT_MAX_LATENCY */
 
 /**
 * Set the CoAP initial ack response timeout before the next re-transmit
