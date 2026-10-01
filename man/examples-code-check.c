@@ -365,15 +365,16 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
                   (outbuf[len-3] == '*' && outbuf[len-2] == ';'))) {
     if (!is_inline_func && !is_void_func && !is_number_func && !is_struct_func && !is_struct &&
         !is_ptr) {
-      char *lcp = strchr(buffer, ' ');
+      const char *lcp = strchr(buffer, ' ');
 
       if (lcp)
-        *lcp = '\000';
-      fprintf(stderr,
-              "man/examples-code-check.c: Function return type '%s' undefined in pointer_list[] or number_list[]\n",
-              &buffer[1]);
-      if (lcp)
-        *lcp = ' ';
+        fprintf(stderr,
+                "man/examples-code-check.c: Function return type '%*.*s' undefined in pointer_list[] or number_list[]\n",
+                (int)(lcp - buffer), (int)(lcp - buffer), &buffer[1]);
+      else
+        fprintf(stderr,
+                "man/examples-code-check.c: Function return type '%s' undefined in pointer_list[] or number_list[]\n",
+                &buffer[1]);
       exit_code = 1;
     }
     if (is_inline_func) {
@@ -401,43 +402,47 @@ decode_synopsis_definition(FILE *fpheader, const char *buffer, int in_synopsis) 
   }
 cleanup:
   if (in_synopsis && func_start) {
-    char *wcp = strchr(func_start, '(');
+    const char *wcp = strchr(func_start, '(');
+    char tmpbuf[99];
 
     if (!wcp && is_struct)
       wcp = strchr(func_start, ';');
     if (!wcp) {
       wcp = strchr(func_start, '\n');
       if (wcp)
-        *wcp = '\000';
-      fprintf(stderr, "SYNOPSIS: function %s issue\n", func_start);
+        fprintf(stderr, "SYNOPSIS: function %*.*s issue\n", (int)(wcp - func_start),
+                (int)(wcp - func_start), func_start);
+      else
+        fprintf(stderr, "SYNOPSIS: function %s issue\n", func_start);
       return;
     }
-    *wcp = '\000';
+    snprintf(tmpbuf, sizeof(tmpbuf), "%*.*s", (int)(wcp - func_start), (int)(wcp - func_start),
+             func_start);
     for (i = 0; i < name_cnt; i++) {
-      if (strcmp(name_list[i], func_start) == 0) {
+      if (strcmp(name_list[i], tmpbuf) == 0) {
         name_list[i][0] = '\000';
         break;
       }
     }
     if (i == name_cnt) {
-      fprintf(stderr, "SYNOPSIS: %s not in NAME\n", func_start);
+      fprintf(stderr, "SYNOPSIS: %s not in NAME\n", tmpbuf);
       exit_code = 1;
     }
     if (!is_void_func && !is_struct) {
       for (i = 0; i < return_cnt; i++) {
-        if (strcmp(func_start, return_list[i]) == 0) {
-          fprintf(stderr, "SYNOPSIS: %s duplicated\n", func_start);
+        if (strcmp(tmpbuf, return_list[i]) == 0) {
+          fprintf(stderr, "SYNOPSIS: %s duplicated\n", tmpbuf);
           break;
         }
       }
       if (i != return_cnt)
         return;
       if (i >= (int)(sizeof(return_list)/sizeof(return_list[0]))) {
-        fprintf(stderr, "SYNOPSIS: %s insufficient space (%u >= %u)\n", func_start,
+        fprintf(stderr, "SYNOPSIS: %s insufficient space (%u >= %u)\n", tmpbuf,
                 i, (int)(sizeof(return_list)/sizeof(return_list[0])));
         return;
       }
-      strncpy(return_list[i], func_start, sizeof(return_list[i])-1);
+      strncpy(return_list[i], tmpbuf, sizeof(return_list[i])-1);
       return_cnt++;
     }
   }

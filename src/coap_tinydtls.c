@@ -1331,8 +1331,8 @@ ec_abstract_pkcs8_asn1(const uint8_t *asn1_ptr, size_t asn1_length) {
 
 static coap_binary_t *
 pem_decode_mem_asn1(const char *begstr, const uint8_t *str) {
-  char *bcp = str ? strstr((const char *)str, begstr) : NULL;
-  char *tcp = bcp ? strstr(bcp, "-----END ") : NULL;
+  const char *bcp = str ? strstr((const char *)str, begstr) : NULL;
+  const char *tcp = bcp ? strstr(bcp, "-----END ") : NULL;
 
   if (bcp && tcp) {
     bcp += strlen(begstr);
