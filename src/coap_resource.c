@@ -79,7 +79,7 @@ match(const coap_str_const_t *text, const coap_str_const_t *pattern,
   while (remaining_length) {
     size_t token_length;
     const uint8_t *token = next_token;
-    next_token = (unsigned char *)memchr(token, ' ', remaining_length);
+    next_token = (const unsigned char *)memchr(token, ' ', remaining_length);
 
     if (next_token) {
       token_length = next_token - token;

@@ -25,7 +25,7 @@ USE_LWIP_CONTRIB := $(shell if [ $(WITH_LWIP_BRANCH) = "STABLE-2_1_3_RELEASE" ] 
 	fi)
 
 # Update to latest TinyDTLS submodule as defined for libcoap
-WITH_TINYDTLS_BRANCH=c6a209f689a225655534249e79103558aa8656e6
+WITH_TINYDTLS_BRANCH=f009bc82283e847905490d84e3f3cfc7ee6cc447
 
 # Need to determine which library clock_gettime() resides in (as found by ./autogen.sh)
 LDLIBS := $(shell if [ -f $(libcoap_dir)/config.log ] ; then \
