@@ -108,6 +108,7 @@ jobs:
           west sdk install --install-base=zephyrproject/../ -t x86_64-zephyr-elf
           cd ../../
           deactivate
+
   pre-commit:
     runs-on: ubuntu-latest
     steps:
@@ -116,6 +117,7 @@ jobs:
         with:
           python-version: 3.x
       - uses: pre-commit/action@v3.0.1
+
   scan-build:
     runs-on: ubuntu-latest
     steps:
@@ -128,6 +130,7 @@ jobs:
         run: |
           ./configure --disable-documentation --disable-doxygen --disable-man --enable-examples --enable-tests --disable-dtls
           scan-build --status-bugs make V=0
+
   check-missing-updates:
     runs-on: ubuntu-latest
     steps:
@@ -142,6 +145,7 @@ jobs:
       - name: check
         run: |
           scripts/check-missing-updates.sh
+
   build-linux:
     needs: do-caches
     runs-on: ubuntu-latest
@@ -188,6 +192,7 @@ jobs:
           cd build-${{matrix.TLS}}-${{matrix.CC}}
           libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
           examples/coap-server -? 2>&1 | head -10
+
   build-linux2:
     needs: do-caches
     runs-on: ubuntu-latest
@@ -235,6 +240,34 @@ jobs:
           cd build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
           libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
           examples/coap-server -? 2>&1 | head -10
+
+  build-linux-sanitizer:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        BITS: ["32", "64" ]
+    steps:
+      - uses: actions/checkout@v6
+      - name: setup
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags build-essential libc6-dev-i386 libcunit1-dev:i386
+          ./autogen.sh
+      - name: configure-32
+        if: matrix.BITS == '32'
+        run: |
+          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --disable-dtls --enable-sanitizer --build=i386
+      - name: configure-64
+        if: matrix.BITS == '64'
+        run: |
+          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --disable-dtls --enable-sanitizer
+      - name: compile
+        run: |
+          make EXTRA_CFLAGS=-Werror
+      - name: tests
+        run: |
+          tests/testdriver
+
   tinydtls-build:
     runs-on: ubuntu-latest
     steps:
@@ -254,6 +287,7 @@ jobs:
       - name: test
         run: |
           LD_LIBRARY_PATH=ext/tinydtls libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
+
   cmake-build:
     needs: do-caches
     runs-on: ubuntu-latest
@@ -299,6 +333,7 @@ jobs:
           cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
           valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression ./testdriver
           ./coap-server -? 2>&1 | head -10
+
   cmake-build2:
     needs: do-caches
     runs-on: ubuntu-latest
@@ -345,6 +380,7 @@ jobs:
           cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-${{matrix.OSCORE_ONLY}}-cmake
           valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression ./testdriver
           ./coap-server -? 2>&1 | head -10
+
   cmake-macos:
     runs-on: macos-latest
 
@@ -361,6 +397,7 @@ jobs:
       run: |
         cd build_test
         cmake --build .
+
   contiki-build-macos:
     runs-on: macos-latest
 
@@ -373,6 +410,7 @@ jobs:
     - name: compile
       run: |
         gmake -C examples/contiki
+
   other-build:
     needs: do-caches
     runs-on: ubuntu-latest
@@ -430,6 +468,7 @@ jobs:
       - name: compile
         run: |
           make -C examples/${{matrix.OS}} EXTRA_CFLAGS=-Werror
+
   ms-build:
     runs-on: windows-latest
 
@@ -446,6 +485,7 @@ jobs:
       - name: Build sln
         shell: cmd
         run: call .\scripts\msbuild.sln.cmd
+
   ms-cmake:
     runs-on: windows-latest
     steps:
@@ -466,6 +506,7 @@ jobs:
       run: |
         cd build_test
         cmake --build .
+
   mingw-cmake:
     runs-on: windows-latest
     strategy:
@@ -544,6 +585,7 @@ jobs:
       - name: installation check
         run: |
           make install && ls -lR $GITHUB_WORKSPACE/test-install
+
   distribution-tarball:
     needs: do-caches
     runs-on: ubuntu-latest
@@ -571,6 +613,7 @@ jobs:
           cd build-dist
           make dist
           cp -f libcoap-*.tar.bz2 ${{ runner.temp }}
+
   distribution-builds:
     needs: distribution-tarball
     runs-on: ubuntu-latest
