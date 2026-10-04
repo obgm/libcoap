@@ -1027,16 +1027,16 @@ if test "x$build_gcov" = "xyes"; then
 fi
 
 # configure options
-# __sanitize__
-AC_ARG_ENABLE([sanitize],
-              [AS_HELP_STRING([--enable-sanitize],
+# __sanitizer__
+AC_ARG_ENABLE([sanitizer],
+              [AS_HELP_STRING([--enable-sanitizer],
                               [Enable building with sanitize=address,undefined coverage support [default=no]])],
-              [build_sanitize="$enableval"],
-              [build_sanitize="no"])
+              [build_sanitizer="$enableval"],
+              [build_sanitizer="no"])
 
 SAN_CFLAGS=
 SAN_LIBS=
-if test "x$build_sanitize" = "xyes"; then
+if test "x$build_sanitizer" = "xyes"; then
    AX_CHECK_COMPILE_FLAG([-fsanitize=address,undefined], [SAN_CFLAGS="-fsanitize=address,undefined"])
    SAN_LIBS="$SAN_CFLAGS"
    AX_CHECK_COMPILE_FLAG([-fno-omit-frame-pointer], [SAN_CFLAGS="$SAN_CFLAGS -fno-omit-frame-pointer"])
@@ -1383,7 +1383,7 @@ AC_MSG_CHECKING([operating system])
 # The "ADDITIONAL_CFLAGS" is needed as this is a stand-alone definition
 # for the doxygen part.
 case $host in
-    i386-pc-none)
+    *386-pc-none)
     AC_MSG_RESULT([Linux 32bit])
     ADDITIONAL_CFLAGS="-D_GNU_SOURCE -m32"
     LIBCOAP_NAME_SUFFIX=$LIBCOAP_NAME_SUFFIX-32
@@ -1745,10 +1745,10 @@ if test "x$enable_static" = "xyes"; then
 else
     AC_MSG_RESULT([      build static library           : "no"])
 fi
-if test "x$enable_sanitize" = "xyes"; then
-    AC_MSG_RESULT([      build with sanitize            : "yes"])
+if test "x$enable_sanitizer" = "xyes"; then
+    AC_MSG_RESULT([      build with sanitizer           : "yes"])
 else
-    AC_MSG_RESULT([      build with sanitize            : "no"])
+    AC_MSG_RESULT([      build with sanitizer           : "no"])
 fi
 
 mkdir -p include/coap$LIBCOAP_API_VERSION
