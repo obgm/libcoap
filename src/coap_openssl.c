@@ -3382,14 +3382,14 @@ coap_dtls_context_load_pki_trust_store(coap_context_t *ctx) {
   coap_openssl_context_t *context =
       ((coap_openssl_context_t *)ctx->dtls_context);
   if (context->dtls.ctx) {
-    if (!SSL_CTX_set_default_verify_store(context->dtls.ctx)) {
+    if (!SSL_CTX_set_default_verify_paths(context->dtls.ctx)) {
       coap_log_warn("Unable to load trusted root CAs\n");
       return 0;
     }
   }
 #if !COAP_DISABLE_TCP
   if (context->tls.ctx) {
-    if (!SSL_CTX_set_default_verify_store(context->tls.ctx)) {
+    if (!SSL_CTX_set_default_verify_paths(context->tls.ctx)) {
       coap_log_warn("Unable to load trusted root CAs\n");
       return 0;
     }
