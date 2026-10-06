@@ -1412,7 +1412,21 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
         }
 #endif /* COAP_Q_BLOCK_SUPPORT */
       }
-      mid = coap_send_internal(obs_session, response, NULL);
+      if (response->code == COAP_EMPTY_CODE &&
+          (response->type == COAP_MESSAGE_NON ||
+           response->type == COAP_MESSAGE_CON) &&
+          response->actual_token.length != 0) {
+        /*
+         * If a resource has been updated, triggering the sending of an
+         * observer response and the request handler does not set a response
+         * code (a coding error condition), then this PDU must be dropped as
+         * it is illegally formatted.
+         */
+        coap_delete_pdu_lkd(response);
+        mid = (coap_mid_t)COAP_DROPPED_RESPONSE;
+      } else {
+        mid = coap_send_internal(obs_session, response, NULL);
+      }
 
 #if COAP_Q_BLOCK_SUPPORT
 finish:
