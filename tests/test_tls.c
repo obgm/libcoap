@@ -1157,6 +1157,187 @@ finish:
   if (client_ctx)
     coap_free_context(client_ctx);
 }
+
+static const char t_tls_sni_ca_crt[] =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBdDCCARugAwIBAgIUCGPL5uxnBIBhJeMnQgGNorpPTBwwCgYIKoZIzj0EAwIw\n"
+    "DzENMAsGA1UEAwwEdC1jYTAgFw0yNjEwMTQxMzMyMjdaGA8yMTI2MDkyMDEzMzIy\n"
+    "N1owDzENMAsGA1UEAwwEdC1jYTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJn0\n"
+    "scLSukei+VWJUr3DmeDvluPfl1gC0vjXVpnEMXfm46/GrOFn7oY/rYQ852R8brQS\n"
+    "X2tgH8X502GkDOJgpp2jUzBRMB0GA1UdDgQWBBQBGcDOQYufhk/7QTM0HFCpPkp8\n"
+    "ETAfBgNVHSMEGDAWgBQBGcDOQYufhk/7QTM0HFCpPkp8ETAPBgNVHRMBAf8EBTAD\n"
+    "AQH/MAoGCCqGSM49BAMCA0cAMEQCID5WHrw2o9+OQnCqn8EK3BTt3sst4wnNEpGj\n"
+    "6FO8Qyy3AiBE4fQ4lxpWTTF28SGgBCSpokSFeY3T/VnFtWt1HdOtbQ==\n"
+    "-----END CERTIFICATE-----\n";
+
+static const char t_tls_sni_server_crt[] =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBHDCBwwIUeyem08NGZUCR7oRFmQePyNJ+8LAwCgYIKoZIzj0EAwIwDzENMAsG\n"
+    "A1UEAwwEdC1jYTAgFw0yNjEwMTQxMzMyMjdaGA8yMTI2MDkyMDEzMzIyN1owETEP\n"
+    "MA0GA1UEAwwGc2VydmVyMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELIFSQxKG\n"
+    "6rIpFWWILZcfELJWbvQ8IWtw4KMVuj6PkDdEOD/uKrl65ArSwsxDW4Z60OaTRSUj\n"
+    "WeF7nfkcKXvVuDAKBggqhkjOPQQDAgNIADBFAiB42vs1mmeL7ysb0qHBQaONbbxk\n"
+    "k6e56SctXsJstzn4igIhAMSg6KW4UIQELQ2hHtDjhcKwJNPRHxx+CaCIWN4VsPok\n"
+    "-----END CERTIFICATE-----\n";
+
+static const char t_tls_sni_server_key_pem[] =
+    "-----BEGIN EC PRIVATE KEY-----\n"
+    "MHcCAQEEIMsHdm0zxrbfDqpTKH2Mm7LTYsuz/HaCYxUCAK/Ltax7oAoGCCqGSM49\n"
+    "AwEHoUQDQgAELIFSQxKG6rIpFWWILZcfELJWbvQ8IWtw4KMVuj6PkDdEOD/uKrl6\n"
+    "5ArSwsxDW4Z60OaTRSUjWeF7nfkcKXvVuA==\n"
+    "-----END EC PRIVATE KEY-----\n";
+
+static const char t_tls_sni_client_crt[] =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBHTCBwwIUeyem08NGZUCR7oRFmQePyNJ+8LEwCgYIKoZIzj0EAwIwDzENMAsG\n"
+    "A1UEAwwEdC1jYTAgFw0yNjEwMTQxMzMyMjdaGA8yMTI2MDkyMDEzMzIyN1owETEP\n"
+    "MA0GA1UEAwwGY2xpZW50MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfWPYIrFt\n"
+    "7L7whEUPKkod3EDooN86vtpua7Xqbr9WGY9xX938NdevSeQOeev41htQdgv0n4bN\n"
+    "ewFDvBMUjqGGaDAKBggqhkjOPQQDAgNJADBGAiEAskouMIMp+d/0ikwRsCyHsvwr\n"
+    "FeANvqn23UUVGdMdExgCIQDABdToUDGcQSaUaDRd2ombFNLjZHRfFxuLR3vBpQSf\n"
+    "IA==\n"
+    "-----END CERTIFICATE-----\n";
+
+static const char t_tls_sni_client_key_pem[] =
+    "-----BEGIN EC PRIVATE KEY-----\n"
+    "MHcCAQEEIF1Hdghwr34c7M0jkQUOLLmzaPyquZ05wFKh4pfHEtfuoAoGCCqGSM49\n"
+    "AwEHoUQDQgAEfWPYIrFt7L7whEUPKkod3EDooN86vtpua7Xqbr9WGY9xX938Ndev\n"
+    "SeQOeev41htQdgv0n4bNewFDvBMUjqGGaA==\n"
+    "-----END EC PRIVATE KEY-----\n";
+
+static coap_dtls_key_t t_tls_sni_server_key;
+
+static void
+t_tls_sni_set_key(coap_dtls_key_t *key, const char *cert, const char *pkey) {
+  memset(key, 0, sizeof(*key));
+  key->key_type = COAP_PKI_KEY_DEFINE;
+  key->key.define.ca.s_byte = t_tls_sni_ca_crt;
+  key->key.define.ca_len = sizeof(t_tls_sni_ca_crt);
+  key->key.define.public_cert.s_byte = cert;
+  key->key.define.public_cert_len = strlen(cert) + 1;
+  key->key.define.private_key.s_byte = pkey;
+  key->key.define.private_key_len = strlen(pkey) + 1;
+  key->key.define.ca_def = COAP_PKI_KEY_DEF_PEM_BUF;
+  key->key.define.public_cert_def = COAP_PKI_KEY_DEF_PEM_BUF;
+  key->key.define.private_key_def = COAP_PKI_KEY_DEF_PEM_BUF;
+}
+
+static coap_dtls_key_t *
+t_tls_sni_cb(const char *sni COAP_UNUSED, void *arg COAP_UNUSED) {
+  t_tls_sni_set_key(&t_tls_sni_server_key, t_tls_sni_server_crt,
+                    t_tls_sni_server_key_pem);
+  return &t_tls_sni_server_key;
+}
+
+/*
+ * Two clients handshake at the same time, each asking the server for a
+ * different SNI.  Each new SNI adds an entry to the server's SNI cache,
+ * which must not invalidate the certificates the first handshake uses.
+ */
+static void
+t_tls17(void) {
+  static char sni_one[] = "one.example";
+  static char sni_two[] = "two.example";
+  char *sni_names[2] = { sni_one, sni_two };
+  coap_context_t *server_ctx = NULL;
+  coap_context_t *client_ctx[2] = { NULL, NULL };
+  coap_session_t *client_session[2] = { NULL, NULL };
+  coap_endpoint_t *endpoint;
+  coap_address_t listen_addr;
+  coap_address_t server_addr;
+  coap_dtls_pki_t spki;
+  coap_dtls_pki_t cpki;
+  coap_tls_version_t *version;
+  unsigned int i;
+  int j;
+
+  if (!coap_dtls_is_supported() || !coap_dtls_pki_is_supported())
+    return;
+  version = coap_get_tls_library_version();
+  /* wolfSSL does not complete this DTLS handshake with client certificates */
+  if (version && (version->type == COAP_TLS_LIBRARY_TINYDTLS ||
+                  version->type == COAP_TLS_LIBRARY_WOLFSSL))
+    return;
+
+  server_ctx = coap_new_context(NULL);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(server_ctx);
+  memset(&spki, 0, sizeof(spki));
+  spki.version = COAP_DTLS_PKI_SETUP_VERSION;
+  spki.verify_peer_cert = 1;
+  spki.check_common_ca = 1;
+  spki.allow_expired_certs = 1;
+  spki.validate_sni_call_back = t_tls_sni_cb;
+  t_tls_sni_set_key(&spki.pki_key, t_tls_sni_server_crt,
+                    t_tls_sni_server_key_pem);
+  CU_ASSERT(coap_context_set_pki(server_ctx, &spki) == 1);
+
+  t_tls_init_address(&listen_addr, 0);
+  endpoint = coap_new_endpoint(server_ctx, &listen_addr, COAP_PROTO_DTLS);
+  if (!endpoint) {
+    CU_ASSERT_PTR_NOT_NULL(endpoint);
+    goto finish;
+  }
+  coap_address_copy(&server_addr, &endpoint->bind_addr);
+
+  for (j = 0; j < 2; j++) {
+    client_ctx[j] = coap_new_context(NULL);
+    if (!client_ctx[j]) {
+      CU_ASSERT_PTR_NOT_NULL(client_ctx[j]);
+      goto finish;
+    }
+  }
+
+  /*
+   * The second client starts once the first one has sent its Client Hello
+   * with the cookie, so the second SNI is added to the server's SNI cache
+   * while the first handshake is in progress.
+   */
+  for (i = 0; i < 300; i++) {
+    (void)coap_io_process(client_ctx[0], 10);
+    for (j = 0; j < 2; j++) {
+      if (client_session[j] || (j == 1 && i < 1))
+        continue;
+      memset(&cpki, 0, sizeof(cpki));
+      cpki.version = COAP_DTLS_PKI_SETUP_VERSION;
+      cpki.verify_peer_cert = 0;
+      cpki.allow_sni_cn_mismatch = 1;
+      cpki.client_sni = sni_names[j];
+      t_tls_sni_set_key(&cpki.pki_key, t_tls_sni_client_crt,
+                        t_tls_sni_client_key_pem);
+      client_session[j] = coap_new_client_session_pki3(client_ctx[j], NULL,
+                                                       &server_addr,
+                                                       COAP_PROTO_DTLS, &cpki,
+                                                       NULL, NULL, NULL);
+      if (!client_session[j]) {
+        CU_ASSERT_PTR_NOT_NULL(client_session[j]);
+        goto finish;
+      }
+    }
+    if (client_session[1])
+      (void)coap_io_process(client_ctx[1], 10);
+    (void)coap_io_process(server_ctx, 10);
+    if (client_session[0]->state == COAP_SESSION_STATE_ESTABLISHED &&
+        client_session[1] &&
+        client_session[1]->state == COAP_SESSION_STATE_ESTABLISHED)
+      break;
+  }
+  if (!client_session[1]) {
+    CU_ASSERT_PTR_NOT_NULL(client_session[1]);
+    goto finish;
+  }
+  CU_ASSERT(client_session[0]->state == COAP_SESSION_STATE_ESTABLISHED);
+  CU_ASSERT(client_session[1]->state == COAP_SESSION_STATE_ESTABLISHED);
+
+finish:
+  for (j = 0; j < 2; j++) {
+    if (client_session[j])
+      coap_session_release(client_session[j]);
+    if (client_ctx[j])
+      coap_free_context(client_ctx[j]);
+  }
+  if (server_ctx)
+    coap_free_context(server_ctx);
+}
 #endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT */
 
 static int
@@ -1216,6 +1397,7 @@ t_init_tls_tests(void) {
 #endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && !COAP_DISABLE_TCP && COAP_IPV4_SUPPORT */
 #if COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT
   TLS_TEST(suite, t_tls16);
+  TLS_TEST(suite, t_tls17);
 #endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT */
 
   return suite;
