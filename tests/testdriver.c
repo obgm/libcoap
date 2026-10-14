@@ -14,6 +14,7 @@
 #include <CUnit/Basic.h>
 
 #include "test_common.h"
+#include "test_block.h"
 #include "test_uri.h"
 #include "test_encode.h"
 #include "test_options.h"
@@ -47,6 +48,7 @@ main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
 #if COAP_CLIENT_SUPPORT
   t_init_session_tests();
   t_init_sendqueue_tests();
+  t_init_block_tests();
 #endif /* COAP_CLIENT_SUPPORT */
 #if COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT
   t_init_wellknown_tests();

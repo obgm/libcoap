@@ -621,7 +621,13 @@ coap_cancel_observe_lkd(coap_session_t *session, coap_binary_t *token,
                                                   lg_crcv->o_blk_size),
                              buf);
         }
-        if (lg_crcv->obs_data) {
+        if (lg_crcv->obs_data && lg_crcv->obs_data->get_func) {
+          coap_add_data_large_request_app_lkd(session, pdu,
+                                              lg_crcv->obs_data->length,
+                                              NULL,
+                                              lg_crcv->obs_data->get_func,
+                                              lg_crcv->obs_data->app_ptr);
+        } else if (lg_crcv->obs_data) {
           coap_add_data_large_request_lkd(session, pdu,
                                           lg_crcv->obs_data->length,
                                           lg_crcv->obs_data->data, NULL, NULL);
@@ -798,6 +804,31 @@ coap_find_lg_xmit_response(const coap_session_t *session,
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
+
+/*
+ * Add up to length bytes of the body starting at offset, as provided by
+ * the application's get_func, to pdu.
+ */
+static int
+add_get_func_data(coap_session_t *session, coap_pdu_t *pdu,
+                  coap_get_large_data_t get_func, void *app_ptr,
+                  size_t offset, size_t length) {
+  uint8_t *l_data;
+  size_t l_length;
+  int ret = 1;
+
+  if (length == 0)
+    return 1;
+  l_data = coap_malloc_type(COAP_STRING, length);
+  if (!l_data) {
+    coap_log_warn("out of memory allocating %" PRIuS " bytes for block data\n", length);
+    return 0;
+  }
+  if (get_func(session, length, offset, l_data, &l_length, app_ptr))
+    ret = coap_add_data(pdu, l_length, l_data);
+  coap_free_type(COAP_STRING, l_data);
+  return ret;
+}
 
 static int
 coap_add_data_large_internal(coap_session_t *session,
@@ -1094,8 +1125,14 @@ coap_add_data_large_internal(coap_session_t *session,
       rem = chunk;
       if (chunk > length - block.num * chunk)
         rem = length - block.num * chunk;
-      if (!coap_add_data(pdu, rem, &data[block.num * chunk]))
-        goto fail;
+      if (get_func) {
+        if (!add_get_func_data(session, pdu, get_func, app_ptr,
+                               block.num * chunk, rem))
+          goto fail;
+      } else {
+        if (!coap_add_data(pdu, rem, &data[block.num * chunk]))
+          goto fail;
+      }
     }
     if (release_func) {
       coap_lock_callback(release_func(session, app_ptr));
@@ -1329,16 +1366,8 @@ coap_add_data_large_internal(coap_session_t *session,
     }
 add_data:
     if (get_func) {
-      uint8_t *l_data = coap_malloc_type(COAP_STRING, length);
-      size_t l_length;
-
-      if (get_func(session, length, 0, l_data, &l_length, app_ptr)) {
-        if (!coap_add_data(pdu, l_length, l_data)) {
-          coap_free_type(COAP_STRING, l_data);
-          goto fail;
-        }
-        coap_free_type(COAP_STRING, l_data);
-      }
+      if (!add_get_func_data(session, pdu, get_func, app_ptr, 0, length))
+        goto fail;
     } else {
       if (!coap_add_data(pdu, length, data))
         goto fail;
@@ -4092,6 +4121,12 @@ check_freshness(coap_session_t *session, coap_pdu_t *rcvd, coap_pdu_t *sent,
       uint8_t ltoken[8];
       size_t ltoken_len;
       uint64_t token;
+#if COAP_CONSTRAINED_STACK
+      /* Protected by global_lock if needed */
+      static uint8_t l_data[1024];
+#else /* ! COAP_CONSTRAINED_STACK */
+      uint8_t l_data[1024];
+#endif /* ! COAP_CONSTRAINED_STACK */
 
       if (sent) {
         if (coap_get_data(sent, &data_len, &data))
@@ -4101,10 +4136,20 @@ check_freshness(coap_session_t *session, coap_pdu_t *rcvd, coap_pdu_t *sent,
         if (lg_xmit->data_info->length) {
           size_t blk_size = (size_t)1 << (lg_xmit->blk_size + 4);
           size_t offset = (lg_xmit->last_block + 1) * blk_size;
-          have_data = 1;
-          data = &lg_xmit->data_info->data[offset];
-          data_len = (lg_xmit->data_info->length - offset) > blk_size ? blk_size :
-                     lg_xmit->data_info->length - offset;
+          if (lg_xmit->data_info->get_func) {
+            assert(blk_size <= sizeof(l_data));
+            if (lg_xmit->data_info->get_func(session, blk_size, offset, l_data,
+                                             &data_len,
+                                             lg_xmit->data_info->app_ptr)) {
+              have_data = 1;
+              data = l_data;
+            }
+          } else {
+            have_data = 1;
+            data = &lg_xmit->data_info->data[offset];
+            data_len = (lg_xmit->data_info->length - offset) > blk_size ? blk_size :
+                       lg_xmit->data_info->length - offset;
+          }
         }
       } else { /* lg_crcv */
         sent = lg_crcv->sent_pdu;
