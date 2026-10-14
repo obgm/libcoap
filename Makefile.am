@@ -152,6 +152,7 @@ EXTRA_DIST = \
   src/coap_strm_contiki.c \
   src/coap_strm_lwip.c \
   src/coap_strm_riot.c \
+  tests/test_block.h \
   tests/test_common.h \
   tests/test_error_response.h \
   tests/test_encode.h \

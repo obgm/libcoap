@@ -953,6 +953,8 @@ if(ENABLE_TESTS)
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_common.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_encode.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_encode.h
+    ${CMAKE_CURRENT_LIST_DIR}/tests/test_block.c
+    ${CMAKE_CURRENT_LIST_DIR}/tests/test_block.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_error_response.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_error_response.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_options.c

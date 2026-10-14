@@ -18,6 +18,7 @@ noinst_PROGRAMS = \
 
 testdriver_SOURCES = \
  testdriver.c \
+ test_block.c \
  test_error_response.c \
  test_encode.c \
  test_options.c \
