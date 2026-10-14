@@ -65,6 +65,8 @@ struct coap_subscription_t {
   uint8_t dirty;    /**< set if the notification temporarily could not be
                      *   sent (in that case, the resource's partially
                      *   dirty flag is set too) */
+  uint8_t to_visit; /**< set while coap_notify_observers() has still to
+                     *   visit this subscription */
   coap_cache_key_t *cache_key; /** cache_key to identify requester */
   coap_pdu_t *pdu;         /**< PDU to use for additional requests */
 };

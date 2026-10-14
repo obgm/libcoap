@@ -1183,7 +1183,7 @@ static void
 coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                       coap_deleting_resource_t deleting) {
   coap_method_handler_t h;
-  coap_subscription_t *obs, *otmp;
+  coap_subscription_t *obs;
   coap_pdu_t *response;
   uint8_t buf[4];
   coap_string_t *query;
@@ -1201,10 +1201,29 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
 
     r->partiallydirty = 0;
 
-    LL_FOREACH_SAFE(r->subscribers, obs, otmp) {
+    /*
+     * Any subscription (not just the one being notified) may get deleted
+     * in the callback, by another running thread when executing the
+     * callback, or when sending a response (e.g. the session fails and all
+     * of its subscriptions are deleted). So no pointer into the list is kept
+     * over a notification: the next subscription to visit is looked up again
+     * from the head of the list each time.
+     */
+    LL_FOREACH(r->subscribers, obs) {
+      obs->to_visit = 1;
+    }
+    for (;;) {
       coap_session_t *obs_session;
       coap_pdu_t *obs_pdu;
       coap_mid_t mid = COAP_INVALID_MID;
+
+      LL_FOREACH(r->subscribers, obs) {
+        if (obs->to_visit)
+          break;
+      }
+      if (obs == NULL)
+        break;
+      obs->to_visit = 0;
 
       if ((r->dirty == 0 && obs->dirty == 0) || obs->session->is_rate_limiting) {
         /*
