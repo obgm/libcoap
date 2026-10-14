@@ -2488,6 +2488,16 @@ coap_dtls_hello(coap_session_t *session,
 
 #endif /* COAP_SERVER_SUPPORT */
 
+static void
+coap_dtls_receive_done(coap_ssl_data_t *ssl_data, int r) {
+  if (ssl_data->pdu_len) {
+    /* pdu data is held on stack which will not stay there */
+    coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", r, ssl_data->pdu_len);
+    ssl_data->pdu_len = 0;
+    ssl_data->pdu = NULL;
+  }
+}
+
 int
 coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len) {
   coap_ssl_data_t *ssl_data;
@@ -2513,12 +2523,16 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
   if (r > 0) {
     coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
                    coap_session_str(session), r);
-    r =  coap_handle_dgram(session->context, session, pdu, (size_t)r);
-    goto finished;
+    coap_dtls_receive_done(ssl_data, r);
+    /* May close session->tls, so ssl_data is no longer used */
+    return coap_handle_dgram(session->context, session, pdu, (size_t)r);
   } else {
     int err = wolfSSL_get_error(ssl, r);
     if (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE) {
       if (in_init && wolfSSL_is_init_finished(ssl)) {
+        /* Event and establish may close session->tls */
+        coap_dtls_receive_done(ssl_data, 0);
+        ssl_data = NULL;
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                       coap_session_str(session), wolfSSL_get_cipher((ssl)));
 #if defined(WOLFSSL_DTLS_CID) && defined(WOLFSSL_DTLS13) && COAP_CLIENT_SUPPORT
@@ -2544,8 +2558,9 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
     } else if (err == APP_DATA_READY) {
       r = wolfSSL_read(ssl, pdu, (int)sizeof(pdu));
       if (r > 0) {
-        r =  coap_handle_dgram(session->context, session, pdu, (size_t)r);
-        goto finished;
+        coap_dtls_receive_done(ssl_data, r);
+        /* May close session->tls, so ssl_data is no longer used */
+        return coap_handle_dgram(session->context, session, pdu, (size_t)r);
       }
       session->dtls_event = COAP_EVENT_DTLS_ERROR;
       r = -1;
@@ -2580,13 +2595,8 @@ coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len)
     }
   }
 
-finished:
-  if (ssl_data && ssl_data->pdu_len) {
-    /* pdu data is held on stack which will not stay there */
-    coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", r, ssl_data->pdu_len);
-    ssl_data->pdu_len = 0;
-    ssl_data->pdu = NULL;
-  }
+  if (ssl_data)
+    coap_dtls_receive_done(ssl_data, r);
   return r;
 }
 

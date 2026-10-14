@@ -3842,6 +3842,16 @@ coap_dtls_hello(coap_session_t *session,
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+static void
+coap_dtls_receive_done(coap_ssl_data *ssl_data, int r) {
+  if (ssl_data->pdu_len) {
+    /* pdu data is held on stack which will not stay there */
+    coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", r, ssl_data->pdu_len);
+    ssl_data->pdu_len = 0;
+    ssl_data->pdu = NULL;
+  }
+}
+
 int
 coap_dtls_receive(coap_session_t *session, const uint8_t *data, size_t data_len) {
   coap_ssl_data *ssl_data;
@@ -3879,14 +3889,16 @@ retry:
   if (r > 0) {
     coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
                    coap_session_str(session), r);
-    r =  coap_handle_dgram(session->context, session, pdu, (size_t)r);
-    /* Possible there was a DTLS error */
-    ssl_data = (coap_ssl_data *)BIO_get_data(rbio);
-    goto finished;
+    coap_dtls_receive_done(ssl_data, r);
+    /* May close session->tls, so ssl_data is no longer used */
+    return coap_handle_dgram(session->context, session, pdu, (size_t)r);
   } else {
     int err = SSL_get_error(ssl, r);
     if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
       if (in_init && SSL_is_init_finished(ssl)) {
+        /* Event and establish may close session->tls */
+        coap_dtls_receive_done(ssl_data, 0);
+        ssl_data = NULL;
         coap_dtls_log(COAP_LOG_INFO, "*  %s: Using cipher: %s\n",
                       coap_session_str(session), SSL_get_cipher_name(ssl));
         coap_handle_event_lkd(session->context, COAP_EVENT_DTLS_CONNECTED, session);
@@ -3929,13 +3941,8 @@ retry:
     }
   }
 
-finished:
-  if (ssl_data && ssl_data->pdu_len) {
-    /* pdu data is held on stack which will not stay there */
-    coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", r, ssl_data->pdu_len);
-    ssl_data->pdu_len = 0;
-    ssl_data->pdu = NULL;
-  }
+  if (ssl_data)
+    coap_dtls_receive_done(ssl_data, r);
   return r;
 }
 

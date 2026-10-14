@@ -1371,6 +1371,83 @@ t_tls18(void) {
   }
   coap_free_context(ctx);
 }
+
+static unsigned int tls_get_handler_calls;
+
+static void
+t_tls_get_handler(coap_resource_t *resource COAP_UNUSED,
+                  coap_session_t *session COAP_UNUSED,
+                  const coap_pdu_t *request COAP_UNUSED,
+                  const coap_string_t *query COAP_UNUSED,
+                  coap_pdu_t *response) {
+  tls_get_handler_calls++;
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+  coap_add_data(response, 5, (const uint8_t *)"hello");
+}
+
+/*
+ * The server fails to send the response to a request it reads from a DTLS
+ * session, which disconnects that session while the request is still being
+ * read.
+ */
+static void
+t_tls19(void) {
+  coap_context_t *server_ctx = NULL;
+  coap_context_t *client_ctx = NULL;
+  coap_session_t *client_session;
+  coap_resource_t *resource;
+  coap_tls_version_t *version;
+  coap_pdu_t *pdu;
+  unsigned int i;
+
+  if (!coap_dtls_is_supported() || !coap_dtls_psk_is_supported())
+    return;
+  version = coap_get_tls_library_version();
+  if (version && version->type == COAP_TLS_LIBRARY_TINYDTLS)
+    return;
+
+  memset(&tls_write_error_state, 0, sizeof(tls_write_error_state));
+  tls_get_handler_calls = 0;
+  client_session = t_tls_new_dtls_psk_pair(&server_ctx, &client_ctx);
+  if (!client_session)
+    goto finish;
+  resource = coap_resource_init(coap_make_str_const("t"), 0);
+  coap_register_request_handler(resource, COAP_REQUEST_GET, t_tls_get_handler);
+  coap_add_resource(server_ctx, resource);
+
+  for (i = 0; i < 100 && !tls_write_error_state.server_session; i++)
+    t_tls_io_process_pair(server_ctx, client_ctx, 1, 10);
+  CU_ASSERT_PTR_NOT_NULL(tls_write_error_state.server_session);
+  if (!tls_write_error_state.server_session)
+    goto release;
+  /* Let any remaining handshake traffic complete */
+  for (i = 0; i < 5; i++)
+    t_tls_io_process_pair(server_ctx, client_ctx, 1, 10);
+  tls_write_error_state.lower_write_calls = 0;
+  tls_write_error_state.server_session->sock.lfunc[COAP_LAYER_TLS].l_write =
+      t_tls_lower_write_error_cb;
+
+  pdu = coap_new_pdu(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET, client_session);
+  if (!pdu) {
+    CU_ASSERT_PTR_NOT_NULL(pdu);
+    goto release;
+  }
+  coap_add_option(pdu, COAP_OPTION_URI_PATH, 1, (const uint8_t *)"t");
+  CU_ASSERT(coap_send(client_session, pdu) != COAP_INVALID_MID);
+  for (i = 0; i < 20 && !tls_get_handler_calls; i++)
+    (void)coap_io_process(server_ctx, 10);
+  CU_ASSERT(tls_get_handler_calls == 1);
+  CU_ASSERT(tls_write_error_state.lower_write_calls > 0);
+
+release:
+  coap_session_release(client_session);
+
+finish:
+  if (server_ctx)
+    coap_free_context(server_ctx);
+  if (client_ctx)
+    coap_free_context(client_ctx);
+}
 #endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT */
 
 static int
@@ -1432,6 +1509,7 @@ t_init_tls_tests(void) {
   TLS_TEST(suite, t_tls16);
   TLS_TEST(suite, t_tls17);
   TLS_TEST(suite, t_tls18);
+  TLS_TEST(suite, t_tls19);
 #endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT */
 
   return suite;

@@ -2840,6 +2840,16 @@ coap_dtls_handle_timeout(coap_session_t *c_session) {
   return 0;
 }
 
+static void
+coap_dtls_receive_done(coap_ssl_t *ssl_data, int ret) {
+  if (ssl_data->pdu_len) {
+    /* pdu data is held on stack which will not stay there */
+    coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
+    ssl_data->pdu_len = 0;
+    ssl_data->pdu = NULL;
+  }
+}
+
 /*
  * return +ve data amount
  *          0 no more
@@ -2880,12 +2890,9 @@ coap_dtls_receive(coap_session_t *c_session,
     if (ret > 0) {
       coap_log_debug("*  %s: dtls:  recv %4d bytes\n",
                      coap_session_str(c_session), ret);
-      ret = coap_handle_dgram(c_session->context, c_session, pdu, (size_t)ret);
-      if (!c_session->tls) {
-        /* Possible there was a DTLS error */
-        ssl_data = NULL;
-      }
-      goto finish;
+      coap_dtls_receive_done(ssl_data, ret);
+      /* May close c_session->tls, so ssl_data is no longer used */
+      return coap_handle_dgram(c_session->context, c_session, pdu, (size_t)ret);
     }
     switch (ret) {
     case 0:
@@ -2928,13 +2935,8 @@ coap_dtls_receive(coap_session_t *c_session,
       ret = -1;
     }
   }
-finish:
-  if (ssl_data && ssl_data->pdu_len) {
-    /* pdu data is held on stack which will not stay there */
-    coap_log_debug("coap_dtls_receive: ret %d: remaining data %u\n", ret, ssl_data->pdu_len);
-    ssl_data->pdu_len = 0;
-    ssl_data->pdu = NULL;
-  }
+  if (ssl_data)
+    coap_dtls_receive_done(ssl_data, ret);
   return ret;
 }
 
