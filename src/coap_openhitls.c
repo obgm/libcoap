@@ -1930,6 +1930,10 @@ coap_hitls_new_config(coap_session_t *session, coap_dtls_role_t role,
 #if COAP_CLIENT_SUPPORT
     coap_dtls_cpsk_t *setup_data = &session->cpsk_setup_data;
 
+    if (!setup_data) {
+      HITLS_CFG_FreeConfig(config);
+      return NULL;
+    }
     if (setup_data->client_sni && setup_data->client_sni[0] &&
         HITLS_CFG_SetServerName(config,
                                 (uint8_t *)setup_data->client_sni,

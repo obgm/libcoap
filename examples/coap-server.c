@@ -2358,9 +2358,13 @@ static const char *oscore_cred_dir = NULL;
 static int
 oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
   if (oscore_seq_num_fp) {
+    int k_errno;
+
     rewind(oscore_seq_num_fp);
+    k_errno = errno;
     fprintf(oscore_seq_num_fp, "%" PRIu64 "\n", sender_seq_num);
     fflush(oscore_seq_num_fp);
+    errno = k_errno;
   }
   return 1;
 }

@@ -18,6 +18,7 @@
 #include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
@@ -905,9 +906,13 @@ static const char *oscore_seq_save_file = NULL;
 static int
 oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
   if (oscore_seq_num_fp) {
+    int k_errno;
+
     rewind(oscore_seq_num_fp);
+    k_errno = errno;
     fprintf(oscore_seq_num_fp, "%" PRIu64 "\n", sender_seq_num);
     fflush(oscore_seq_num_fp);
+    errno = k_errno;
   }
   return 1;
 }
@@ -1369,8 +1374,6 @@ cmdline_input_from_file(char *filename, coap_string_t *buf) {
     buf->s = (unsigned char *)coap_malloc(buf->length);
     if (!buf->s)
       return 0;
-
-    inputfile = stdin;
   } else {
     /* read from specified input file */
     inputfile = fopen(filename, "r");
@@ -1393,10 +1396,10 @@ cmdline_input_from_file(char *filename, coap_string_t *buf) {
     }
   }
 
-  len = fread(buf->s, 1, buf->length, inputfile);
+  len = fread(buf->s, 1, buf->length, inputfile ? inputfile : stdin);
 
   if (len < 0 || ((size_t)len < buf->length)) {
-    if (ferror(inputfile) != 0) {
+    if (ferror(inputfile ? inputfile : stdin) != 0) {
       perror("cmdline_input_from_file: fread");
       coap_free(buf->s);
       buf->length = 0;
@@ -1407,7 +1410,7 @@ cmdline_input_from_file(char *filename, coap_string_t *buf) {
     }
   }
 
-  if (inputfile != stdin)
+  if (inputfile)
     fclose(inputfile);
 
   return result;

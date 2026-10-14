@@ -81,6 +81,10 @@
 #include <wolfssl/openssl/ssl.h>
 #include <wolfssl/openssl/x509v3.h>
 
+#if DTLS_CID_MAX_SIZE == 0
+#undef WOLFSSL_DTLS_CID
+#endif
+
 #ifdef COAP_EPOLL_SUPPORT
 # include <sys/epoll.h>
 #endif /* COAP_EPOLL_SUPPORT */
@@ -895,7 +899,7 @@ coap_sock_write(WOLFSSL *ssl, char *in, int inl, void *ctx) {
   if (ret == 0) {
     ret = -1;
   } else {
-    if (ret == -1) {
+    if (ret == -1 && session) {
       if ((session->state == COAP_SESSION_STATE_CSM ||
            session->state == COAP_SESSION_STATE_HANDSHAKE) &&
           (errno == EPIPE || errno == ECONNRESET)) {
@@ -2085,7 +2089,7 @@ coap_dtls_new_server_session(coap_session_t *session) {
 #if defined(WOLFSSL_DTLS_CID) && defined(WOLFSSL_DTLS13)
 
 #if COAP_DTLS_CID_LENGTH > DTLS_CID_MAX_SIZE
-#bad COAP_DTLS_CID_LENGTH > DTLS_CID_MAX_SIZE
+#error COAP_DTLS_CID_LENGTH > DTLS_CID_MAX_SIZE
 #endif /* COAP_DTLS_CID_LENGTH > DTLS_CID_MAX_SIZE */
 
   if (wolfSSL_dtls_cid_use(ssl) != WOLFSSL_SUCCESS)
@@ -2121,7 +2125,8 @@ error:
   if (ssl)
     wolfSSL_free(ssl);
   coap_dtls_free_wolfssl_env(w_env);
-  session->tls = NULL;
+  if (session)
+    session->tls = NULL;
   return NULL;
 }
 #endif /* COAP_SERVER_SUPPORT */
@@ -2315,7 +2320,8 @@ error:
   if (ssl)
     wolfSSL_free(ssl);
   coap_dtls_free_wolfssl_env(w_env);
-  session->tls = NULL;
+  if (session)
+    session->tls = NULL;
   return NULL;
 }
 
