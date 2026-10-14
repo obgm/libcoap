@@ -115,6 +115,88 @@ t_observe_local_address(void) {
 }
 #endif
 
+#if COAP_SERVER_SUPPORT
+static void
+notify_fail_handler(coap_resource_t *resource COAP_UNUSED,
+                    coap_session_t *s COAP_UNUSED,
+                    const coap_pdu_t *request COAP_UNUSED,
+                    const coap_string_t *query COAP_UNUSED,
+                    coap_pdu_t *response) {
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+  coap_add_data(response, 1, (const uint8_t *)"x");
+}
+
+/* A notification that cannot be sent disconnects the session, which removes
+ * all of its observers while the list of observers is being walked (the
+ * use of a removed observer is reported by ASan or valgrind) */
+static void
+t_session_notify_send_fail(void) {
+  static const char *queries[] = { "a", "b", "c" };
+  coap_context_t *nctx;
+  coap_session_t *nsession;
+  coap_resource_t *r;
+  coap_address_t addr;
+  coap_subscription_t *s;
+  unsigned int count = 0;
+  size_t i;
+
+  coap_address_init(&addr);
+  addr.size = sizeof(struct sockaddr_in6);
+  addr.addr.sin6.sin6_family = AF_INET6;
+  addr.addr.sin6.sin6_addr = in6addr_loopback;
+  addr.addr.sin6.sin6_port = htons(20004);
+
+  nctx = coap_new_context(NULL);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(nctx);
+  r = coap_resource_init(coap_make_str_const("obs"), 0);
+  if (!r) {
+    CU_FAIL("no resource");
+    coap_free_context(nctx);
+    return;
+  }
+  coap_resource_set_get_observable(r, 1);
+  coap_register_request_handler(r, COAP_REQUEST_GET, notify_fail_handler);
+  coap_add_resource(nctx, r);
+  nsession = coap_new_client_session(nctx, NULL, &addr, COAP_PROTO_UDP);
+  if (!nsession) {
+    CU_FAIL("no session");
+    coap_free_context(nctx);
+    return;
+  }
+
+  coap_lock_lock(return);
+  for (i = 0; i < sizeof(queries) / sizeof(queries[0]); i++) {
+    coap_pdu_t *request = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET,
+                                        coap_new_message_id_lkd(nsession), 64);
+    uint8_t token = (uint8_t)('1' + i);
+
+    CU_ASSERT_PTR_NOT_NULL(request);
+    if (!request)
+      continue;
+    coap_add_token(request, 1, &token);
+    coap_add_option(request, COAP_OPTION_OBSERVE, 0, NULL);
+    coap_add_option(request, COAP_OPTION_URI_PATH, 3, (const uint8_t *)"obs");
+    coap_add_option(request, COAP_OPTION_URI_QUERY, 1,
+                    (const uint8_t *)queries[i]);
+    CU_ASSERT_PTR_NOT_NULL(coap_add_observer(r, nsession, &request->actual_token,
+                                             request));
+    coap_delete_pdu_lkd(request);
+  }
+  /* The second notification fails to be sent */
+  coap_debug_set_packet_fail("2");
+  coap_resource_notify_observers_lkd(r, COAP_NOT_DELETING_RESOURCE);
+  coap_debug_set_packet_fail("0%");
+  coap_lock_unlock();
+
+  /* The failed send dropped the session's observers */
+  LL_COUNT(r->subscribers, s, count);
+  CU_ASSERT(count == 0);
+
+  coap_session_release(nsession);
+  coap_free_context(nctx);
+}
+#endif /* COAP_SERVER_SUPPORT */
+
 static void
 t_session1(void) {
   CU_ASSERT(session->ref == 1);
@@ -403,6 +485,9 @@ t_init_session_tests(void) {
   SESSION_TEST(suite, t_session3);
   SESSION_TEST(suite, t_session4);
   SESSION_TEST(suite, t_session5);
+#if COAP_SERVER_SUPPORT
+  SESSION_TEST(suite, t_session_notify_send_fail);
+#endif /* COAP_SERVER_SUPPORT */
   SESSION_TEST(suite, t_session6);
 #if COAP_PROXY_SUPPORT
   SESSION_TEST(suite, t_session_proxy_remove);
