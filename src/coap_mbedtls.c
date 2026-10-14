@@ -401,7 +401,8 @@ typedef struct psk_sni_entry {
 typedef struct coap_mbedtls_context_t {
   coap_dtls_pki_t setup_data;
   size_t pki_sni_count;
-  pki_sni_entry *pki_sni_entry_list;
+  /* Entries are not moved, as handshakes refer to their certificates */
+  pki_sni_entry **pki_sni_entry_list;
   size_t psk_sni_count;
   psk_sni_entry *psk_sni_entry_list;
   char *root_ca_file;
@@ -944,7 +945,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
         buffer = mbedtls_malloc(length + 1);
         if (!buffer) {
           coap_log_err("mbedtls_malloc failed\n");
-          return 0;
+          return -1;
         }
         memcpy(buffer, key.key.define.private_key.u_byte, length);
         buffer[length] = '\000';
@@ -1055,7 +1056,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
         buffer = mbedtls_malloc(length + 1);
         if (!buffer) {
           coap_log_err("mbedtls_malloc failed\n");
-          return 0;
+          return -1;
         }
         memcpy(buffer, key.key.define.public_cert.u_byte, length);
         buffer[length] = '\000';
@@ -1111,7 +1112,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
     if (ret < 0) {
       coap_log_err("mbedtls_ssl_conf_own_cert returned -0x%x: '%s'\n",
                    -ret, get_error_string(ret));
-      return 0;
+      return -1;
     }
   }
 
@@ -1149,7 +1150,7 @@ setup_pki_credentials(mbedtls_x509_crt *cacert,
         buffer = mbedtls_malloc(length + 1);
         if (!buffer) {
           coap_log_err("mbedtls_malloc failed\n");
-          return 0;
+          return -1;
         }
         memcpy(buffer, key.key.define.ca.u_byte, length);
         buffer[length] = '\000';
@@ -1312,7 +1313,7 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
 
   /* Is this a cached entry? */
   for (i = 0; i < m_context->pki_sni_count; i++) {
-    if (strcasecmp(name, m_context->pki_sni_entry_list[i].sni) == 0) {
+    if (strcasecmp(name, m_context->pki_sni_entry_list[i]->sni) == 0) {
       break;
     }
   }
@@ -1321,7 +1322,8 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
      * New PKI SNI request
      */
     coap_dtls_key_t *new_entry;
-    pki_sni_entry *pki_sni_entry_list;
+    pki_sni_entry **pki_sni_entry_list;
+    pki_sni_entry *entry;
 
     coap_lock_callback_ret(new_entry,
                            m_context->setup_data.validate_sni_call_back(name,
@@ -1332,40 +1334,52 @@ pki_sni_callback(void *p_info, mbedtls_ssl_context *ssl,
     }
 
     pki_sni_entry_list = mbedtls_realloc(m_context->pki_sni_entry_list,
-                                         (i+1)*sizeof(pki_sni_entry));
+                                         (i+1)*sizeof(pki_sni_entry *));
 
     if (pki_sni_entry_list == NULL) {
       mbedtls_free(name);
       return -1;
     }
     m_context->pki_sni_entry_list = pki_sni_entry_list;
-    memset(&m_context->pki_sni_entry_list[i], 0,
-           sizeof(m_context->pki_sni_entry_list[i]));
-    m_context->pki_sni_entry_list[i].sni = name;
-    m_context->pki_sni_entry_list[i].pki_key = *new_entry;
+    entry = mbedtls_malloc(sizeof(pki_sni_entry));
+    if (entry == NULL) {
+      mbedtls_free(name);
+      return -1;
+    }
+    memset(entry, 0, sizeof(*entry));
+    mbedtls_x509_crt_init(&entry->cacert);
+    mbedtls_x509_crt_init(&entry->public_cert);
+    mbedtls_pk_init(&entry->private_key);
+    entry->pki_key = *new_entry;
     sni_setup_data = m_context->setup_data;
     sni_setup_data.pki_key = *new_entry;
-    if (setup_pki_credentials(&m_context->pki_sni_entry_list[i].cacert,
-                              &m_context->pki_sni_entry_list[i].public_cert,
-                              &m_context->pki_sni_entry_list[i].private_key,
+    if (setup_pki_credentials(&entry->cacert,
+                              &entry->public_cert,
+                              &entry->private_key,
                               m_env,
                               m_context,
                               c_session,
                               &sni_setup_data, COAP_DTLS_ROLE_SERVER) < 0) {
+      mbedtls_x509_crt_free(&entry->public_cert);
+      mbedtls_pk_free(&entry->private_key);
+      mbedtls_x509_crt_free(&entry->cacert);
+      mbedtls_free(entry);
       mbedtls_free(name);
       return -1;
     }
-    /* name has been absorbed into pki_sni_entry_list[].sni entry */
+    /* name has been absorbed into pki_sni_entry_list[]->sni entry */
+    entry->sni = name;
+    m_context->pki_sni_entry_list[i] = entry;
     m_context->pki_sni_count++;
   } else {
     mbedtls_free(name);
   }
 
-  mbedtls_ssl_set_hs_ca_chain(ssl, &m_context->pki_sni_entry_list[i].cacert,
+  mbedtls_ssl_set_hs_ca_chain(ssl, &m_context->pki_sni_entry_list[i]->cacert,
                               NULL);
   return mbedtls_ssl_set_hs_own_cert(ssl,
-                                     &m_context->pki_sni_entry_list[i].public_cert,
-                                     &m_context->pki_sni_entry_list[i].private_key);
+                                     &m_context->pki_sni_entry_list[i]->public_cert,
+                                     &m_context->pki_sni_entry_list[i]->private_key);
 }
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
@@ -2616,13 +2630,15 @@ coap_dtls_free_context(void *dtls_context) {
   unsigned int i;
 
   for (i = 0; i < m_context->pki_sni_count; i++) {
-    mbedtls_free(m_context->pki_sni_entry_list[i].sni);
+    mbedtls_free(m_context->pki_sni_entry_list[i]->sni);
 
-    mbedtls_x509_crt_free(&m_context->pki_sni_entry_list[i].public_cert);
+    mbedtls_x509_crt_free(&m_context->pki_sni_entry_list[i]->public_cert);
 
-    mbedtls_pk_free(&m_context->pki_sni_entry_list[i].private_key);
+    mbedtls_pk_free(&m_context->pki_sni_entry_list[i]->private_key);
 
-    mbedtls_x509_crt_free(&m_context->pki_sni_entry_list[i].cacert);
+    mbedtls_x509_crt_free(&m_context->pki_sni_entry_list[i]->cacert);
+
+    mbedtls_free(m_context->pki_sni_entry_list[i]);
   }
   if (m_context->pki_sni_entry_list)
     mbedtls_free(m_context->pki_sni_entry_list);
