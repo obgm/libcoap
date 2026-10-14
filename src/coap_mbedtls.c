@@ -1592,131 +1592,103 @@ coap_ssl_ciphersuite_uses_psk(const mbedtls_ssl_ciphersuite_t *info) {
 }
 #endif /* defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED) */
 
+/* Cipher suite lists a cipher suite is put in by set_ciphersuites() */
+#define COAP_CIPHER_IN_PSK     0x01
+#define COAP_CIPHER_IN_PKI     0x02
+#define COAP_CIPHER_IN_ECJPAKE 0x04
+
+/*
+ * Returns which of the PSK, PKI and EC JPAKE lists the cipher suite
+ * belongs in (0 if none). Used for both counting and filling the lists
+ * so that they always agree.
+ */
+static int
+coap_ciphersuite_lists(int id) {
+  const mbedtls_ssl_ciphersuite_t *cur = mbedtls_ssl_ciphersuite_from_id(id);
+
+  if (!cur)
+    return 0;
+#if MBEDTLS_VERSION_NUMBER >= 0x03020000
+  if (cur->max_tls_version < MBEDTLS_SSL_VERSION_TLS1_2) {
+    /* Minimum of TLS1.2 required - skip */
+    return 0;
+  }
+#else
+  if (cur->max_minor_ver < MBEDTLS_SSL_MINOR_VERSION_3) {
+    /* Minimum of TLS1.2 required - skip */
+    return 0;
+  }
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
+#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
+  if (cur->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE)
+    return COAP_CIPHER_IN_ECJPAKE;
+#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
+#if MBEDTLS_VERSION_NUMBER >= 0x03060000
+  if (cur->min_tls_version >= MBEDTLS_SSL_VERSION_TLS1_3)
+    return COAP_CIPHER_IN_PSK | COAP_CIPHER_IN_PKI;
+#endif /* MBEDTLS_VERSION_NUMBER >= 0x03060000 */
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
+  if (coap_ssl_ciphersuite_uses_psk(cur))
+    return COAP_CIPHER_IN_PSK;
+#endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
+  return COAP_CIPHER_IN_PKI;
+}
+
 static void
 set_ciphersuites(mbedtls_ssl_config *conf, coap_enc_method_t method) {
   if (!processed_ciphers) {
-    const int *list = mbedtls_ssl_list_ciphersuites();
-    const int *base = list;
+    const int *base = mbedtls_ssl_list_ciphersuites();
+    const int *list;
     int *psk_list;
     int *pki_list;
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     int *ecjpake_list;
-    int ecjpake_count = 1;
-#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
     int psk_count = 1; /* account for empty terminator */
     int pki_count = 1;
+    int ecjpake_count = 1;
 
-    while (*list) {
-      const mbedtls_ssl_ciphersuite_t *cur =
-          mbedtls_ssl_ciphersuite_from_id(*list);
+    for (list = base; *list; list++) {
+      int in = coap_ciphersuite_lists(*list);
 
-      if (cur) {
-#if MBEDTLS_VERSION_NUMBER >= 0x03020000
-        if (cur->max_tls_version < MBEDTLS_SSL_VERSION_TLS1_2) {
-          /* Minimum of TLS1.2 required - skip */
-        }
-#else
-        if (cur->max_minor_ver < MBEDTLS_SSL_MINOR_VERSION_3) {
-          /* Minimum of TLS1.2 required - skip */
-        }
-#endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-        else if (cur->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE) {
-          ecjpake_count++;
-        }
-#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
-#if MBEDTLS_VERSION_NUMBER >= 0x03060000
-        else if (cur->min_tls_version >= MBEDTLS_SSL_VERSION_TLS1_3) {
-          psk_count++;
-          pki_count++;
-        }
-#endif /* MBEDTLS_VERSION_NUMBER >= 0x03060000 */
-#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
-        else if (coap_ssl_ciphersuite_uses_psk(cur)) {
-          psk_count++;
-        }
-#endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
-        else {
-          pki_count++;
-        }
-      }
-      list++;
+      if (in & COAP_CIPHER_IN_PSK)
+        psk_count++;
+      if (in & COAP_CIPHER_IN_PKI)
+        pki_count++;
+      if (in & COAP_CIPHER_IN_ECJPAKE)
+        ecjpake_count++;
     }
-    list = base;
 
     psk_ciphers = mbedtls_malloc(psk_count * sizeof(psk_ciphers[0]));
-    if (psk_ciphers == NULL) {
-      coap_log_err("set_ciphers: mbedtls_malloc with count %d failed\n", psk_count);
-      return;
-    }
     pki_ciphers = mbedtls_malloc(pki_count * sizeof(pki_ciphers[0]));
-    if (pki_ciphers == NULL) {
-      coap_log_err("set_ciphers: mbedtls_malloc with count %d failed\n", pki_count);
-      mbedtls_free(psk_ciphers);
-      psk_ciphers = NULL;
-      return;
-    }
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     ecjpake_ciphers = mbedtls_malloc(ecjpake_count * sizeof(ecjpake_ciphers[0]));
-    if (ecjpake_ciphers == NULL) {
-      coap_log_err("set_ciphers: mbedtls_malloc with count %d failed\n", pki_count);
+    if (psk_ciphers == NULL || pki_ciphers == NULL || ecjpake_ciphers == NULL) {
+      coap_log_err("set_ciphers: mbedtls_malloc failed\n");
       mbedtls_free(psk_ciphers);
       mbedtls_free(pki_ciphers);
+      mbedtls_free(ecjpake_ciphers);
       psk_ciphers = NULL;
       pki_ciphers = NULL;
+      ecjpake_ciphers = NULL;
       return;
     }
-#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
     psk_list = psk_ciphers;
     pki_list = pki_ciphers;
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     ecjpake_list = ecjpake_ciphers;
-#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
-    while (*list) {
-      const mbedtls_ssl_ciphersuite_t *cur =
-          mbedtls_ssl_ciphersuite_from_id(*list);
-      if (cur) {
-#if MBEDTLS_VERSION_NUMBER >= 0x03020000
-        if (cur->max_tls_version < MBEDTLS_SSL_VERSION_TLS1_2) {
-          /* Minimum of TLS1.2 required - skip */
-        }
-#else
-        if (cur->max_minor_ver < MBEDTLS_SSL_MINOR_VERSION_3) {
-          /* Minimum of TLS1.2 required - skip */
-        }
-#endif /* MBEDTLS_VERSION_NUMBER >= 0x03020000 */
-#if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
-        else if (cur->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE) {
-          *ecjpake_list = *list;
-          ecjpake_list++;
-        }
-#endif /* MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
-#if MBEDTLS_VERSION_NUMBER >= 0x03060000
-        else if (cur->min_tls_version >= MBEDTLS_SSL_VERSION_TLS1_3) {
-          *psk_list = *list;
-          psk_list++;
-          *pki_list = *list;
-          pki_list++;
-        }
-#endif /* MBEDTLS_VERSION_NUMBER >= 0x03060000 */
-#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
-        else if (coap_ssl_ciphersuite_uses_psk(cur)) {
-          *psk_list = *list;
-          psk_list++;
-        }
-#endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
-        else {
-          *pki_list = *list;
-          pki_list++;
-        }
-      }
-      list++;
+    for (list = base; *list; list++) {
+      int in = coap_ciphersuite_lists(*list);
+
+      if (in & COAP_CIPHER_IN_PSK)
+        *psk_list++ = *list;
+      if (in & COAP_CIPHER_IN_PKI)
+        *pki_list++ = *list;
+      if (in & COAP_CIPHER_IN_ECJPAKE)
+        *ecjpake_list++ = *list;
     }
     /* zero terminate */
     *psk_list = 0;
     *pki_list = 0;
+    *ecjpake_list = 0;
     processed_ciphers = 1;
   }
   switch (method) {
