@@ -242,6 +242,111 @@ t_session6(void) {
   coap_session_release(session);
 }
 
+#if COAP_PROXY_SUPPORT
+static coap_pdu_t *
+t_proxy_request(const char *proxy_uri) {
+  coap_pdu_t *pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_GET,
+                                  0x1234, 1152);
+
+  if (pdu) {
+    coap_add_token(pdu, 1, (const uint8_t *)"p");
+    coap_add_option(pdu, COAP_OPTION_PROXY_URI, strlen(proxy_uri),
+                    (const uint8_t *)proxy_uri);
+  }
+  return pdu;
+}
+
+/*
+ * Removing a tracked client session must drop its proxy requests from
+ * every proxy entry, not just from the first one that tracks it.
+ */
+static void
+t_session_proxy_remove(void) {
+  coap_proxy_server_list_t server_list;
+  coap_address_t addr;
+  coap_session_t *incoming;
+  coap_session_t *ongoing;
+  coap_pdu_t *request;
+  coap_pdu_t *response;
+  coap_pdu_t *upstream_rsp;
+  coap_bin_const_t token = { 0, NULL };
+  size_t i;
+  int found = 0;
+
+  memset(&server_list, 0, sizeof(server_list));
+  server_list.type = COAP_PROXY_FWD_DYNAMIC;
+  server_list.track_client_session = 1;
+
+  coap_address_init(&addr);
+  addr.size = sizeof(struct sockaddr_in);
+  addr.addr.sin.sin_family = AF_INET;
+  addr.addr.sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.addr.sin.sin_port = htons(5699);
+  incoming = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(incoming);
+  response = coap_pdu_init(COAP_MESSAGE_ACK, 0, 0x1234, 1152);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
+
+  /*
+   * A forward that fails (multicast not enabled) leaves a tracked entry
+   * for incoming with no upstream session
+   */
+  request = t_proxy_request("coap://224.0.1.187/x");
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(request);
+  CU_ASSERT(coap_proxy_forward_request(incoming, request, response, NULL,
+                                       NULL, &server_list) == 0);
+  coap_delete_pdu(request);
+
+  /* A second upstream server, also tracked for incoming */
+  request = t_proxy_request("coap://127.0.0.1:5698/y");
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(request);
+  CU_ASSERT(coap_proxy_forward_request(incoming, request, response, NULL,
+                                       NULL, &server_list) == 1);
+  coap_delete_pdu(request);
+  coap_delete_pdu(response);
+
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx->proxy_list);
+  ongoing = NULL;
+  for (i = 0; i < ctx->proxy_list_count; i++) {
+    if (ctx->proxy_list[i].proxy_req) {
+      ongoing = ctx->proxy_list[i].ongoing;
+      token = *ctx->proxy_list[i].proxy_req->token_used;
+    }
+  }
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ongoing);
+  coap_session_reference(ongoing);
+  upstream_rsp = coap_pdu_init(COAP_MESSAGE_NON, COAP_RESPONSE_CODE(205),
+                               0x4321, 1152);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(upstream_rsp);
+  coap_add_token(upstream_rsp, token.length, token.s);
+
+  /* As done on COAP_EVENT_SERVER_SESSION_DEL */
+  coap_lock_lock(return);
+  coap_proxy_remove_association(incoming, 0);
+  coap_lock_unlock();
+
+  for (i = 0; i < ctx->proxy_list_count; i++) {
+    coap_proxy_req_t *proxy_req;
+
+    if (ctx->proxy_list[i].incoming == incoming)
+      CU_ASSERT_PTR_NULL(ctx->proxy_list[i].ongoing);
+    LL_FOREACH(ctx->proxy_list[i].proxy_req, proxy_req) {
+      if (proxy_req->incoming == incoming)
+        found = 1;
+    }
+  }
+  CU_ASSERT(found == 0);
+
+  coap_session_release(incoming);
+
+  /* A late upstream response must be ignored */
+  CU_ASSERT(coap_proxy_forward_response(ongoing, upstream_rsp, NULL) ==
+            COAP_RESPONSE_OK);
+  coap_delete_pdu(upstream_rsp);
+  coap_session_release(ongoing);
+}
+#endif /* COAP_PROXY_SUPPORT */
+
 /* This function creates a set of nodes for testing. These nodes
  * will exist for all tests and are modified by coap_insert_node()
  * and coap_remove_from_queue().
@@ -299,6 +404,9 @@ t_init_session_tests(void) {
   SESSION_TEST(suite, t_session4);
   SESSION_TEST(suite, t_session5);
   SESSION_TEST(suite, t_session6);
+#if COAP_PROXY_SUPPORT
+  SESSION_TEST(suite, t_session_proxy_remove);
+#endif /* COAP_PROXY_SUPPORT */
 
   return suite;
 }

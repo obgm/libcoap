@@ -572,12 +572,16 @@ retry:
       }
     }
     if (proxy_entry->incoming == session) {
-      /* Only if there is a one-to-one tracking */
+      /*
+       * One-to-one tracking (track_client_session): release this entry's
+       * upstream session.  session may be tracked by several entries, so
+       * keep going.
+       */
       coap_session_t *ongoing = proxy_entry->ongoing;
 
       proxy_entry->ongoing = NULL;
       coap_session_release_lkd(ongoing);
-      return 0;
+      continue;
     }
 
     /* Check for outgoing match */
