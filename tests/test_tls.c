@@ -1338,6 +1338,39 @@ finish:
   if (server_ctx)
     coap_free_context(server_ctx);
 }
+
+/* An EC-JPAKE client session starts its handshake with a zero terminated
+ * cipher suite list. */
+static void
+t_tls18(void) {
+  static const uint8_t psk[] = "secretPSK";
+  coap_context_t *ctx;
+  coap_session_t *session;
+  coap_dtls_cpsk_t cpsk;
+  coap_address_t dst;
+
+  if (!coap_dtls_is_supported() || !coap_dtls_psk_is_supported())
+    return;
+
+  ctx = coap_new_context(NULL);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx);
+  memset(&cpsk, 0, sizeof(cpsk));
+  cpsk.version = COAP_DTLS_CPSK_SETUP_VERSION;
+  cpsk.ec_jpake = 1;
+  cpsk.psk_info.identity.s = (const uint8_t *)"id";
+  cpsk.psk_info.identity.length = 2;
+  cpsk.psk_info.key.s = psk;
+  cpsk.psk_info.key.length = sizeof(psk) - 1;
+  t_tls_init_address(&dst, 5684);
+  session = coap_new_client_session_psk2(ctx, NULL, &dst, COAP_PROTO_DTLS,
+                                         &cpsk);
+  CU_ASSERT_PTR_NOT_NULL(session);
+  if (session) {
+    CU_ASSERT(session->state == COAP_SESSION_STATE_HANDSHAKE);
+    coap_session_release(session);
+  }
+  coap_free_context(ctx);
+}
 #endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT */
 
 static int
@@ -1398,6 +1431,7 @@ t_init_tls_tests(void) {
 #if COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT
   TLS_TEST(suite, t_tls16);
   TLS_TEST(suite, t_tls17);
+  TLS_TEST(suite, t_tls18);
 #endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT */
 
   return suite;
