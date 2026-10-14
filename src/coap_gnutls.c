@@ -1325,12 +1325,12 @@ setup_pki_credentials(gnutls_certificate_credentials_t *pki_credentials,
         }
       }
       if (!have_done_key) {
-        if ((ret = gnutls_certificate_set_rawpk_key_mem(*pki_credentials,
-                                                        &cert,
-                                                        &pkey,
-                                                        GNUTLS_X509_FMT_PEM, NULL,
-                                                        COAP_GNUTLS_KEY_RPK,
-                                                        NULL, 0, 0)) < 0) {
+        if (gnutls_certificate_set_rawpk_key_mem(*pki_credentials,
+                                                 &cert,
+                                                 &pkey,
+                                                 GNUTLS_X509_FMT_PEM, NULL,
+                                                 COAP_GNUTLS_KEY_RPK,
+                                                 NULL, 0, 0) < 0) {
           if (alloced_cert_memory)
             gnutls_free(cert.data);
           if (alloced_pkey_memory)

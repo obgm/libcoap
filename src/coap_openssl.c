@@ -1004,9 +1004,7 @@ coap_dtls_info_callback(const SSL *ssl, int where, int ret) {
                           ssl_function_definition(e));
         }
       } else {
-        long e;
-
-        while ((e = ERR_get_error())) {
+        while (ERR_get_error()) {
         }
       }
     }
