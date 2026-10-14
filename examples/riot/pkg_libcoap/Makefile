@@ -1,7 +1,7 @@
 PKG_NAME=libcoap
 PKG_URL=https://github.com/obgm/libcoap
-# develop branch as of 21st July 2026
-PKG_VERSION=18df85af6d2ca628a1f0b5a56b785d0e493fa314
+# develop branch as of 14th October 2026
+PKG_VERSION=3dc2c812c63267e6d7cdbfcd3d1179462524257e
 PKG_LICENSE=BSD-2-Clause
 
 LIBCOAP_BUILD_DIR=$(BINDIR)/pkg/$(PKG_NAME)
