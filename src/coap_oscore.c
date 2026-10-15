@@ -23,7 +23,14 @@
 #if COAP_OSCORE_SUPPORT
 #include <ctype.h>
 
-#define AAD_BUF_LEN 200 /* length of aad_buffer */
+/*
+ * RFC 10021 Section 3.4: the Group OSCORE external_aad carries the sender's
+ * and the Group Manager's authentication credentials (e.g. 118 B + 124 B CCS),
+ * the kid context twice and the OSCORE option, so it does not fit the RFC 8613
+ * sized buffers.
+ */
+#define E_AAD_BUF_LEN 512 /* length of external_aad_buffer */
+#define AAD_BUF_LEN (E_AAD_BUF_LEN + 32) /* length of aad_buffer */
 
 static oscore_ctx_t *coap_oscore_init(coap_context_t *c_context,
                                       coap_oscore_conf_t *oscore_conf);
@@ -419,7 +426,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
   uint32_t observe_value = 0;
   oscore_association_t *association = NULL;
   oscore_sender_ctx_t *snd_ctx;
-  uint8_t external_aad_buffer[200];
+  uint8_t external_aad_buffer[E_AAD_BUF_LEN];
   coap_bin_const_t external_aad;
   uint8_t oscore_option[255];
   ssize_t oscore_option_len;
@@ -1038,7 +1045,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   oscore_recipient_ctx_t *rcp_ctx = NULL;
   oscore_association_t *association = NULL;
   oscore_association_t *decrypt_request_association = NULL;
-  uint8_t external_aad_buffer[100];
+  uint8_t external_aad_buffer[E_AAD_BUF_LEN];
   coap_bin_const_t external_aad;
   oscore_sender_ctx_t *snd_ctx = NULL;
 #if COAP_CLIENT_SUPPORT
