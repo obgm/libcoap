@@ -212,54 +212,56 @@ oscore_prepare_e_aad(oscore_ctx_t *ctx,
     external_aad_len += len;
 #if COAP_OSCORE_GROUP_SUPPORT
   } else {
-    /* Algorithms array with 4 items */
+    /*
+     * Algorithms array with 4 items. RFC 10021 Section 3.4: each entry is the
+     * algorithm from the Common Context, "regardless of whether the endpoint
+     * supports" the group or the pairwise mode, and the CBOR simple value null
+     * only if it is not set.
+     */
     if ((len = oscore_cbor_put_array(&external_aad_ptr, &rem_size, 4)) == 0)
       goto fail;
     external_aad_len += len;
-
-    if (mode == OSCORE_MODE_GROUP) {
-      /* alg_aead */
+    /* alg_aead */
+    if (ctx->aead_alg) {
       if ((len = oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg)) == 0)
         goto fail;
       external_aad_len += len;
-
-      /* alg_group_enc */
+    } else {
+      if ((len = oscore_cbor_put_nil(&external_aad_ptr, &rem_size)) == 0)
+        goto fail;
+      external_aad_len += len;
+    }
+    /* alg_group_enc */
+    if (ctx->alg_group_enc) {
       if ((len = oscore_cbor_put_number(&external_aad_ptr,
                                         &rem_size,
                                         ctx->alg_group_enc)) == 0)
         goto fail;
       external_aad_len += len;
-
-      /* alg_signature */
+    } else {
+      if ((len = oscore_cbor_put_nil(&external_aad_ptr, &rem_size)) == 0)
+        goto fail;
+      external_aad_len += len;
+    }
+    /* alg_signature */
+    if (ctx->alg_signature) {
       if ((len = oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->alg_signature)) == 0)
         goto fail;
       external_aad_len += len;
-
-      /* alg_pairwise_key_agreement */
+    } else {
       if ((len = oscore_cbor_put_nil(&external_aad_ptr, &rem_size)) == 0)
+        goto fail;
+      external_aad_len += len;
+    }
+    /* alg_pairwise_key_agreement */
+    if (ctx->alg_pairwise_key_agreement) {
+      if ((len = oscore_cbor_put_number(&external_aad_ptr,
+                                        &rem_size,
+                                        ctx->alg_pairwise_key_agreement)) == 0)
         goto fail;
       external_aad_len += len;
     } else {
-      /* OSCORE_MODE_PAIRWISE */
-      /* alg_aead */
-      if ((len = oscore_cbor_put_number(&external_aad_ptr, &rem_size, ctx->aead_alg)) == 0)
-        goto fail;
-      external_aad_len += len;
-
-      /* alg_group_enc */
       if ((len = oscore_cbor_put_nil(&external_aad_ptr, &rem_size)) == 0)
-        goto fail;
-      external_aad_len += len;
-
-      /* alg_signature */
-      if ((len = oscore_cbor_put_nil(&external_aad_ptr, &rem_size)) == 0)
-        goto fail;
-      external_aad_len += len;
-
-      /* alg_pairwise_key_agreement */
-      if ((len =oscore_cbor_put_number(&external_aad_ptr,
-                                       &rem_size,
-                                       ctx->alg_pairwise_key_agreement)) == 0)
         goto fail;
       external_aad_len += len;
     }
