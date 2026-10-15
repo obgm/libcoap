@@ -1344,7 +1344,7 @@ coap_pdu_parse_opt_base(coap_option_num_t number, size_t len, const uint8_t *opt
       res = 0;
     break;
   case COAP_OPTION_URI_QUERY:
-    if (len < 1 || len > 255)
+    if (len > 255)
       res = 0;
     break;
   case COAP_OPTION_HOP_LIMIT:
