@@ -175,6 +175,27 @@ coap_pdu_t *coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
 struct coap_pdu_t *coap_oscore_decrypt_pdu(coap_session_t *session,
                                            coap_pdu_t *pdu);
 
+/** coap_oscore_decrypt_pdu_ext() flag: verify a request without the replay
+ * check and without touching the Recipient Context replay state; no
+ * association, no session change, nothing sent. Requests only. */
+#define COAP_OSCORE_DECRYPT_NO_REPLAY 0x01
+
+/**
+ * As coap_oscore_decrypt_pdu(), with @p flags (COAP_OSCORE_DECRYPT_*).
+ * Used to verify the phantom observation request of
+ * draft-ietf-core-observe-multicast-notifications (Section 9.3.1).
+ *
+ * @param session The session the @p pdu is associated with.
+ * @param pdu     The PDU to decrypt.
+ * @param flags   0 (== coap_oscore_decrypt_pdu()) or
+ *                COAP_OSCORE_DECRYPT_NO_REPLAY.
+ *
+ * @return The decrypted @p pdu, or @c NULL on error.
+ */
+struct coap_pdu_t *coap_oscore_decrypt_pdu_ext(coap_session_t *session,
+                                               coap_pdu_t *pdu,
+                                               uint32_t flags);
+
 /**
  * Cleanup all allocated OSCORE information.
  *
