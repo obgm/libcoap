@@ -1010,6 +1010,39 @@ error:
   return NULL;
 }
 
+/*
+ * Replay state of a Recipient Context before an incoming message advanced it.
+ * Restored when the message then fails verification (RFC 8613 8.2 Step 6 /
+ * 8.4 Step 5; Group OSCORE 7.2 / 7.4: "SHALL NOT update the Replay Window").
+ * Unlike oscore_roll_back_seq(), a saved value of 0 is restored as well and
+ * nothing is restored unless this message saved it.
+ */
+typedef struct {
+  uint64_t last_seq;
+  uint64_t sliding_window;
+  uint8_t initial_state;
+  uint8_t saved;
+} oscore_replay_state_t;
+
+static void
+oscore_replay_save(oscore_replay_state_t *st, const oscore_recipient_ctx_t *rcp) {
+  st->last_seq = rcp->last_seq;
+  st->sliding_window = rcp->sliding_window;
+  st->initial_state = rcp->initial_state;
+  st->saved = 1;
+}
+
+static void
+oscore_replay_restore(oscore_replay_state_t *st, oscore_recipient_ctx_t *rcp) {
+  if (!st->saved)
+    return;
+  rcp->last_seq = st->last_seq;
+  rcp->sliding_window = st->sliding_window;
+  rcp->initial_state = st->initial_state;
+  st->saved = 0;
+  coap_log_oscore("OSCORE: replay state restored after verification failure\n");
+}
+
 /* pdu contains incoming message with encrypted COSE ciphertext payload
  * function returns decrypted message
  * and verifies signature, if present
@@ -1059,6 +1092,7 @@ coap_oscore_decrypt_pdu_ext(coap_session_t *session,
   int doing_resp_observe = 0;
   uint8_t coap_request = COAP_PDU_IS_REQUEST(pdu);
   int no_replay = (flags & COAP_OSCORE_DECRYPT_NO_REPLAY) != 0;
+  oscore_replay_state_t replay_saved = { 0, 0, 0, 0 };
   coap_bin_const_t pdu_token;
   uint8_t *st_encrypt;
   size_t encrypt_len;
@@ -1294,9 +1328,11 @@ coap_oscore_decrypt_pdu_ext(coap_session_t *session,
      * Skipped with COAP_OSCORE_DECRYPT_NO_REPLAY, together with the
      * last_seq update below.
      */
+    if (!no_replay)
+      oscore_replay_save(&replay_saved, rcp_ctx);
     if (no_replay) {
       coap_log_oscore("OSCORE: no replay check, replay state unchanged\n");
-    } else if (rcp_ctx->initial_state == 0 &&
+    } else if ((rcp_ctx->initial_state == 0 || osc_ctx->rfc8613_b_1_2 == 0) &&
                !oscore_validate_sender_seq(rcp_ctx, cose)) {
       coap_log_warn("OSCORE: Replayed or old message\n");
       build_and_send_error_pdu(session,
@@ -1530,7 +1566,7 @@ coap_oscore_decrypt_pdu_ext(coap_session_t *session,
        * left on the session (association cleared above).
        */
       decrypt_request_association = no_replay ? NULL :
-          oscore_find_association(session, &pdu_token);
+                                    oscore_find_association(session, &pdu_token);
     }
     /* So association is not released when handling decrypt */
     association = NULL;
@@ -1547,6 +1583,7 @@ coap_oscore_decrypt_pdu_ext(coap_session_t *session,
     } else {
       uint64_t last_seq;
 
+      oscore_replay_save(&replay_saved, rcp_ctx);
       if ((rcp_ctx->initial_state == 0 || osc_ctx->rfc8613_b_1_2 == 0) &&
           !oscore_validate_sender_seq(rcp_ctx, cose)) {
         coap_log_warn("OSCORE: Replayed or old message\n");
@@ -1772,6 +1809,7 @@ coap_oscore_decrypt_pdu_ext(coap_session_t *session,
     coap_free_type(COAP_STRING, sig_buffer);
     if (sign_res == 0) {
       coap_log_warn("OSCORE: Signature verification Failure\n");
+      oscore_replay_restore(&replay_saved, rcp_ctx);
       if (coap_request) {
         if (!no_replay)
           build_and_send_error_pdu(session,
@@ -1797,6 +1835,7 @@ coap_oscore_decrypt_pdu_ext(coap_session_t *session,
   if (pltxt_size <= 0) {
     coap_log_warn("OSCORE: Decryption Failure, result code: %d \n",
                   (int)pltxt_size);
+    oscore_replay_restore(&replay_saved, rcp_ctx);
     if (coap_request) {
       if (no_replay)
         goto error_no_ack; /* nothing was advanced, nothing to roll back */
