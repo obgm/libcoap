@@ -2344,9 +2344,8 @@ coap_crypto_read_ccs_public_cred(coap_bin_const_t *binary,
               local->pub_raw = coap_new_bin_const(data, elem_size);
               if (!local->pub_raw)
                 goto error;
-              local->pub_der = (coap_bin_const_t *)coap_asn1_pri_key(local->sign_curve, local->pub_raw);
-              if (!local->pub_der)
-                goto error;
+              data += elem_size;
+              data_len -= elem_size;
               break;
             default:
               coap_log_warn("coap_crypto_read_ccs_public_cred: COSE_Key %" PRIi64 " not supported\n", oo);
@@ -2362,34 +2361,40 @@ coap_crypto_read_ccs_public_cred(coap_bin_const_t *binary,
           goto error;
         }
       }
-      if (local->cred_crv == COSE_CURVE_ED25519) {
-        local->sign_hash = COSE_ALGORITHM_SHA_512;
-        local->wire_sign_size = cose_hash_len(local->sign_hash);
-      }
-      if (local->cred_kty && local->cred_crv && local->pub_raw) {
-        uint8_t tmp_cbor[100];
-        uint8_t *ptr = tmp_cbor;
-        size_t tmp_cbor_rem = 100;
-        size_t cbor_len = 0;
+      if (local->cred_kty == COSE_KTY_OKP &&
+          local->cred_crv == COSE_CURVE_ED25519 &&
+          local->pub_raw && local->pub_raw->length == 32) {
+        /* SubjectPublicKeyInfo for an Ed25519 key (RFC 8410) */
+        static const uint8_t spki_ed25519[] = {
+          0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65,
+          0x70, 0x03, 0x21, 0x00
+        };
+        coap_binary_t *der = coap_new_binary(sizeof(spki_ed25519) +
+                                             local->pub_raw->length);
+        coap_crypto_cred_t *cred = NULL;
 
-        cbor_len += oscore_cbor_put_map(&ptr, &tmp_cbor_rem, 3);
-        /* kty */
-        cbor_len += oscore_cbor_put_number(&ptr, &tmp_cbor_rem, 1);
-        cbor_len += oscore_cbor_put_number(&ptr, &tmp_cbor_rem, local->cred_kty);
-        /* crv */
-        cbor_len += oscore_cbor_put_number(&ptr, &tmp_cbor_rem, -1);
-        cbor_len += oscore_cbor_put_number(&ptr, &tmp_cbor_rem, local->cred_crv);
-        /* public key */
-        cbor_len += oscore_cbor_put_number(&ptr, &tmp_cbor_rem, -2);
-        cbor_len += oscore_cbor_put_bytes(&ptr, &tmp_cbor_rem, local->pub_raw->s,
-                                          local->pub_raw->length);
-
-        local->auth_cred = coap_new_bin_const(tmp_cbor, cbor_len);
-        if (!local->auth_cred)
+        if (!der)
           goto error;
-        *public = local;
-        local->cred_type = OSCORE_AUTH_CRED_CCS;
-        coap_delete_bin_const(binary);
+        memcpy(der->s, spki_ed25519, sizeof(spki_ed25519));
+        memcpy(der->s + sizeof(spki_ed25519), local->pub_raw->s,
+               local->pub_raw->length);
+        /* der always gets deleted in coap_crypto_read_asn1_public_cred() */
+        if (!coap_crypto_read_asn1_public_cred((coap_bin_const_t *)der, &cred))
+          goto error;
+        /*
+         * RFC 10021 Sections 2.4 and 3.4: the
+         * 'sender_cred' and 'gm_cred' of the external_aad are the original
+         * binary representation of the authentication credential, i.e. the
+         * CCS exactly as provided, not a re-encoding of the COSE Key.
+         */
+        cred->auth_cred = binary;
+        cred->cred_type = OSCORE_AUTH_CRED_CCS;
+        cred->cred_kty = local->cred_kty;
+        cred->cred_crv = local->cred_crv;
+        cred->cred_alg = local->cred_alg;
+        coap_delete_bin_const(local->pub_raw);
+        coap_free_type(COAP_STRING, local);
+        *public = cred;
         return 1;
       }
       coap_log_warn("coap_crypto_read_ccs_public_cred: Not all of kty, crv and public_key defined\n");
