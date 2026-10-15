@@ -638,7 +638,10 @@ cose_sign1_verify(cose_sign1_t *ptr) {
                          "Public Cred",
                          ptr->public_cred->pub_der);
   }
-  return coap_crypto_hash_verify(ptr->alg, signature, text, ptr->public_cred);
+  /* As cose_sign1_sign(): the hash of the credential, not the COSE
+   * signature algorithm (e.g. SHA-512, not EdDSA) */
+  return coap_crypto_hash_verify(ptr->public_cred->sign_hash, signature, text,
+                                 ptr->public_cred);
 }
 #endif /* COAP_OSCORE_GROUP_SUPPORT */
 
