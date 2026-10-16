@@ -491,8 +491,8 @@ else()
 endif()
 
 if(${WITH_EPOLL}
-   AND HAVE_EPOLL_H
-   AND HAVE_TIMERFD_H)
+   AND HAVE_SYS_EPOLL_H
+   AND HAVE_SYS_TIMERFD_H)
   set(COAP_EPOLL_SUPPORT "1")
   message(STATUS "compiling with epoll support")
 else()
