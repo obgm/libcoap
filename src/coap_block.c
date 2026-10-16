@@ -3730,7 +3730,9 @@ coap_handle_request_put_block(coap_context_t *context,
 
 #if COAP_Q_BLOCK_SUPPORT
   if (block_option == COAP_OPTION_Q_BLOCK1) {
-    if (total != lg_srcv->total_len) {
+    /* The body is passed on as total_len bytes, so the last block must end there */
+    if (total != lg_srcv->total_len ||
+        (!block.m && offset + length != total)) {
       coap_add_data(response, sizeof("Size1 mismatch")-1,
                     (const uint8_t *)"Size1 mismatch");
       response->code = COAP_RESPONSE_CODE(408);
@@ -3741,6 +3743,16 @@ coap_handle_request_put_block(coap_context_t *context,
                                              pdu->actual_token.length);
   }
 #endif /* COAP_Q_BLOCK_SUPPORT */
+
+  /* Once the last block has set the body length, no block can go past it */
+  if (lg_srcv->total_len_set &&
+      (offset + length > lg_srcv->total_len ||
+       (!block.m && offset + length != lg_srcv->total_len))) {
+    coap_add_data(response, sizeof("Block after last block")-1,
+                  (const uint8_t *)"Block after last block");
+    response->code = COAP_RESPONSE_CODE(408);
+    goto free_lg_srcv;
+  }
 
   lg_srcv->last_type = pdu->type;
 
@@ -3812,7 +3824,11 @@ coap_handle_request_put_block(coap_context_t *context,
     lg_srcv->rec_blocks.processing_payload_set =
         block.num / COAP_MAX_PAYLOADS(session);
 #endif /* COAP_Q_BLOCK_SUPPORT */
-    if (lg_srcv->total_len < saved_offset + length) {
+    /* The last block gives the body length, Size1 is only an estimate */
+    if (!block.m) {
+      lg_srcv->total_len = saved_offset + length;
+      lg_srcv->total_len_set = 1;
+    } else if (lg_srcv->total_len < saved_offset + length) {
       lg_srcv->total_len = saved_offset + length;
     }
 
@@ -4752,11 +4768,14 @@ reinit:
           lg_crcv->last_type = rcvd->type;
           lg_crcv->rec_blocks.used = 0;
           lg_crcv->rec_blocks.total_blocks = 0;
+          lg_crcv->total_len_set = 0;
 #if COAP_Q_BLOCK_SUPPORT
           lg_crcv->rec_blocks.processing_payload_set = 0;
 #endif /* COAP_Q_BLOCK_SUPPORT */
         }
-        if (lg_crcv->total_len < size2)
+        /* Q-Block2 Size2 is the body length and is checked below */
+        if (block_opt != COAP_OPTION_Q_BLOCK2 && !lg_crcv->total_len_set &&
+            lg_crcv->total_len < size2)
           lg_crcv->total_len = size2;
 
         /* Check whether we can handle this size */
@@ -4843,7 +4862,22 @@ reinit:
                         size2, lg_crcv->total_len);
           goto fail_resp;
         }
+        /* The body is passed on as total_len bytes, so the last block must end there */
+        if (block_opt == COAP_OPTION_Q_BLOCK2 && !block.m &&
+            saved_offset + length != lg_crcv->total_len) {
+          coap_log_warn("Q-Block2: last block ends at %" PRIuS ", Size2 is %" PRIuS "\n",
+                        saved_offset + length, lg_crcv->total_len);
+          goto fail_resp;
+        }
 #endif /* COAP_Q_BLOCK_SUPPORT */
+        /* Once the last block has set the body length, no block can go past it */
+        if (lg_crcv->total_len_set &&
+            (saved_offset + length > lg_crcv->total_len ||
+             (!block.m && saved_offset + length != lg_crcv->total_len))) {
+          coap_log_warn("block: block %u ends at %" PRIuS ", last block ends at %" PRIuS "\n",
+                        block.num, saved_offset + length, lg_crcv->total_len);
+          goto fail_resp;
+        }
         if (block.num == 0) {
           coap_opt_t *obs_opt = coap_check_option(rcvd,
                                                   COAP_OPTION_OBSERVE,
@@ -4909,6 +4943,10 @@ reinit:
 
           /* Update last_used to prevent premature timeout during long transfers */
           coap_ticks(&lg_crcv->last_used);
+          if (!block.m) {
+            lg_crcv->total_len = saved_offset + length;
+            lg_crcv->total_len_set = 1;
+          }
 
           if ((session->block_mode & COAP_SINGLE_BLOCK_OR_Q) || block.bert) {
             if (size2 < saved_offset + length) {

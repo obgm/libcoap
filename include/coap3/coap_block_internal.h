@@ -220,6 +220,7 @@ struct coap_lg_crcv_t {
   size_t obs_token_cnt;  /**< number of tokens used to set up Observe */
   uint16_t o_block_option; /**< Block CoAP option used when initiating Observe */
   uint8_t o_blk_size;    /**< Block size used when initiating Observe */
+  uint8_t total_len_set; /**< Set if total_len is where the last block ends */
   uint32_t ref;          /**< Reference count */
   uint64_t state_token;  /**< state token */
   coap_pdu_t *sent_pdu;  /**< The sent pdu with all the data */
@@ -248,6 +249,7 @@ struct coap_lg_srcv_t {
   uint8_t szx;           /**< size of individual blocks */
   uint16_t block_option; /**< Block option in use */
   uint8_t dont_timeout;  /**< Set if app handler in use */
+  uint8_t total_len_set; /**< Set if total_len is where the last block ends */
   coap_tick_t last_used; /**< Last time data sent or 0 */
   size_t total_len;      /**< Length as indicated by SIZE1 option */
   coap_binary_t *body_data; /**< Used for re-assembling entire body */
