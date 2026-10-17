@@ -365,7 +365,11 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
   nextpdu = coap_peek_next(ctx);
   while (nextpdu && now >= ctx->sendqueue_basetime &&
          nextpdu->t <= now - ctx->sendqueue_basetime) {
+    coap_session_t *session = nextpdu->session;
+
+    coap_session_hold_lkd(session);
     coap_retransmit(ctx, coap_pop_next(ctx));
+    coap_session_unhold_lkd(session);
     nextpdu = coap_peek_next(ctx);
   }
   if (nextpdu && now >= ctx->sendqueue_basetime &&
@@ -435,7 +439,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
             timeout = s_timeout;
         }
         /* Make sure the session object is not deleted in any callbacks */
-        coap_session_reference_lkd(s);
+        coap_session_hold_lkd(s);
         /* Check any DTLS timeouts and expire if appropriate */
         if (check_dtls_timeouts && s->state == COAP_SESSION_STATE_HANDSHAKE &&
             s->proto == COAP_PROTO_DTLS && s->tls) {
@@ -489,7 +493,7 @@ coap_io_prepare_io_lkd(coap_context_t *ctx,
         }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 release_1:
-        coap_session_release_lkd(s);
+        coap_session_unhold_lkd(s);
       }
       if (s->type == COAP_SESSION_TYPE_SERVER &&
           s->state == COAP_SESSION_STATE_ESTABLISHED &&
@@ -617,7 +621,7 @@ release_1:
 #endif /* !COAP_DISABLE_TCP */
 
     /* Make sure the session object is not deleted in any callbacks */
-    coap_session_reference_lkd(s);
+    coap_session_hold_lkd(s);
     /* Check any DTLS timeouts and expire if appropriate */
     if (s->state == COAP_SESSION_STATE_HANDSHAKE &&
         s->proto == COAP_PROTO_DTLS && s->tls) {
@@ -732,16 +736,23 @@ release_1:
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
 #if !defined(COAP_EPOLL_SUPPORT) && !defined(WITH_LWIP) && !defined(RIOT_VERSION)
-    assert(s->ref > 1);
-    if (s->sock.flags & (COAP_SOCKET_WANT_READ |
-                         COAP_SOCKET_WANT_WRITE |
-                         COAP_SOCKET_WANT_CONNECT)) {
+    /*
+     * Not listed if the unhold below is to free off s, which a pending
+     * disconnect can do by dropping the sendqueue's references to s
+     */
+    if (s->ref > 1 && !s->disconnect_pending &&
+        (s->sock.flags & (COAP_SOCKET_WANT_READ |
+                          COAP_SOCKET_WANT_WRITE |
+                          COAP_SOCKET_WANT_CONNECT))) {
       if (*num_sockets < max_sockets && !(s->sock.flags & COAP_SOCKET_SLAVE))
         sockets[(*num_sockets)++] = &s->sock;
     }
 #endif /* ! COAP_EPOLL_SUPPORT && ! WITH_LWIP && ! RIOT_VERSION */
+    /* Any disconnect deferred by the work above is done here */
+    coap_session_unhold_lkd(s);
+    continue;
 release_2:
-    coap_session_release_lkd(s);
+    coap_session_unhold_lkd(s);
   }
 #endif /* COAP_CLIENT_SUPPORT */
 

@@ -93,7 +93,9 @@ test_reliable_transport(coap_context_t *ctx, coap_session_t *session,
     }
   }
 
+  coap_lock_lock(return);
   coap_dispatch(ctx, session, pdu);
+  coap_lock_unlock();
 
   coap_delete_pdu(pdu);
 }
