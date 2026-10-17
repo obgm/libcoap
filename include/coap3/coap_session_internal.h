@@ -89,6 +89,15 @@ struct coap_session_t {
   coap_session_state_t state;       /**< current state of relationship with
                                          peer */
   unsigned ref;                     /**< reference count from queues */
+  unsigned hold_in_use;             /**< depth of work in progress on the
+                                         session (coap_session_hold_lkd()) */
+  uint8_t disconnect_pending;       /**< Set if a disconnect is deferred
+                                         until the session is no longer in
+                                         use */
+  uint8_t disconnecting;            /**< Set while the session is being
+                                         disconnected */
+  coap_nack_reason_t disconnect_reason; /**< reason for the pending
+                                             disconnect */
   size_t tls_overhead;              /**< overhead of TLS layer */
   size_t mtu;                       /**< path or CSM mtu (xmt) */
   size_t csm_rcv_mtu;               /**< CSM mtu (rcv) */
@@ -341,8 +350,8 @@ void coap_session_connected(coap_session_t *session);
  * @param session The CoAP session.
  * @param reason The reason why the session was disconnected.
  */
-void coap_session_disconnected_lkd(coap_session_t *session,
-                                   coap_nack_reason_t reason);
+void coap_session_disconnected_do_it_lkd(coap_session_t *session,
+                                         coap_nack_reason_t reason);
 
 /**
  * Send a ping message for the session.
@@ -475,6 +484,49 @@ int coap_session_set_type_server_lkd(coap_session_t *session);
  * @param session The CoAP session.
  */
 void coap_session_release_lkd(coap_session_t *session);
+
+/**
+ * Mark the session as in use for a unit of work (reading and dispatching
+ * received data, timeout handling, a notification) and take a reference on
+ * it.
+ *
+ * While the session is in use, the session is not disconnected straight
+ * away (see coap_session_disconnected_lkd()), so that
+ * what is still being worked on (lg_xmit, lg_crcv, lg_srcv, observers, TLS
+ * data) is not freed off under the caller. Units of work may be nested.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ */
+void coap_session_hold_lkd(coap_session_t *session);
+
+/**
+ * End a unit of work started by coap_session_hold_lkd(). When the outermost
+ * unit of work ends, any deferred disconnect is done, and
+ * then the reference is released. The session may be deleted as a result
+ * and should not be used after this call.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ */
+void coap_session_unhold_lkd(coap_session_t *session);
+
+/**
+ * The session is to be disconnected (a send on it has failed, the peer or
+ * the (D)TLS layer has closed it, ...).
+ * If the session is in use, the disconnect is deferred until it is no longer
+ * in use and nothing more is sent on the session until then, else the
+ * session is disconnected straight away.
+ *
+ * Note: This function must be called in the locked state.
+ *
+ * @param session The CoAP session.
+ * @param reason The reason why the session is to be disconnected.
+ */
+void coap_session_disconnected_lkd(coap_session_t *session,
+                                   coap_nack_reason_t reason);
 
 /**
  * Send a pdu according to the session's protocol. This function returns
