@@ -329,6 +329,68 @@ t_parse_pdu17(void) {
   CU_ASSERT(result == 0);
 }
 
+static char show_pdu_output[512];
+
+static void
+show_pdu_log_handler(coap_log_t level, const char *message) {
+  size_t len = strlen(show_pdu_output);
+
+  (void)level;
+  snprintf(&show_pdu_output[len], sizeof(show_pdu_output) - len, "%s", message);
+}
+
+/*
+ * Check the coap_show_pdu() output for a PDU with a text payload and
+ * for one with a binary payload.
+ */
+static void
+t_parse_pdu18(void) {
+  uint8_t teststr1[] = { 0x44, 0x01, 0x12, 0x34, 0xde, 0xad, 0xbe, 0xef,
+                         0x42, 0x0a, 0x0b,            /* ETag */
+                         0x21, 0x05,                  /* Observe */
+                         0x54, 't', 'e', 's', 't',    /* Uri-Path */
+                         0x11, 0x32,                  /* Content-Format */
+                         0x33, 'a', '=', '1',         /* Uri-Query */
+                         0x81, 0x1a,                  /* Block2 */
+                         0xff, 'h', 'e', 'l', 'l', 'o'
+                       };
+  uint8_t teststr2[] = { 0x52, 0x45, 0xab, 0xcd, 0x01, 0x02,
+                         0xc1, 0x2a,                  /* Content-Format */
+                         0xff, 0x00, 0x41, 0xff
+                       };
+  coap_log_t old_level = coap_get_log_level();
+  int result;
+
+  coap_set_log_level(COAP_LOG_DEBUG);
+  coap_set_show_pdu_output(0);
+  coap_set_log_handler(show_pdu_log_handler);
+
+  coap_pdu_clear(pdu, pdu->max_size);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr1, sizeof(teststr1), pdu);
+  CU_ASSERT(result > 0);
+  show_pdu_output[0] = '\000';
+  coap_show_pdu(COAP_LOG_ERR, pdu);
+  CU_ASSERT_STRING_EQUAL(show_pdu_output,
+                         "v:1 t:CON c:GET i:1234 {deadbeef} [ ETag:0x0a0b, Observe:5, "
+                         "Uri-Path:test, Content-Format:application/json, "
+                         "Uri-Query:a=1, Block2:1/M/64 ] :: 'hello'\n");
+
+  coap_pdu_clear(pdu, pdu->max_size);
+  result = coap_pdu_parse(COAP_PROTO_UDP, teststr2, sizeof(teststr2), pdu);
+  CU_ASSERT(result > 0);
+  show_pdu_output[0] = '\000';
+  coap_show_pdu(COAP_LOG_ERR, pdu);
+  CU_ASSERT_STRING_EQUAL(show_pdu_output,
+                         "v:1 t:NON c:2.05 i:abcd {0102} "
+                         "[ Content-Format:application/octet-stream ] :: "
+                         "binary data length 3\n"
+                         "<<0041ff>>\n"
+                         "<<. A . >>\n");
+
+  coap_set_log_handler(NULL);
+  coap_set_log_level(old_level);
+}
+
 /************************************************************************
  ** PDU encoder
  ************************************************************************/
@@ -1506,6 +1568,7 @@ t_init_pdu_tests(void) {
   PDU_TEST(suite[0], t_parse_pdu15);
   PDU_TEST(suite[0], t_parse_pdu16);
   PDU_TEST(suite[0], t_parse_pdu17);
+  PDU_TEST(suite[0], t_parse_pdu18);
 
   suite[1] = CU_add_suite("pdu encoder", t_pdu_tests_create, t_pdu_tests_remove);
   if (suite[1]) {

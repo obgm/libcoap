@@ -56,6 +56,29 @@ void coap_debug_reset(void);
  */
 const char *coap_option_string(coap_pdu_code_t code, coap_option_num_t number);
 
+/**
+ * The equivalent to snprintf() functionality, but returning the actual
+ * characters added and defining the buffer offset in a separate parameter.
+ *
+ * Internal function
+ *
+ * @param buffer   The start of the buffer to write into.
+ * @param buf_size The size of the buffer to write into.
+ * @param offset   The start offset into @p buffer, updated after buffer is updated
+ *                 with the currently used length of buffer, not including the NUL
+ *                 terminator.
+ * @param format   The formatting string to use as per printf().
+ *
+ * @return         The number of characters written to the string.  If 0, an error
+ *                 or no more data can be put in @p buffer.
+ */
+#if (defined(__GNUC__))
+int coap_snprintf(char *buffer, size_t buf_size, size_t *offset,
+                  const char *format, ...) __attribute__((format(printf, 4, 5)));
+#else
+int coap_snprintf(char *buffer, size_t buf_size, size_t *offset, const char *format, ...);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
