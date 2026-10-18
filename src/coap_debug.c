@@ -226,6 +226,31 @@ print_readable(const uint8_t *data, size_t len,
   return cnt;
 }
 
+int
+coap_snprintf(char *buffer, size_t buf_size, size_t *offset,
+              const char *format, ...) {
+  va_list ap;
+  int ret;
+  size_t start = *offset;
+
+  assert(buf_size > 0 && start < buf_size);
+  if (buf_size == 0 || start >= buf_size - 1)
+    return 0;
+
+  va_start(ap, format);
+  ret = vsnprintf(&buffer[start], buf_size - start, format, ap);
+  va_end(ap);
+  if (ret < 0) {
+    buffer[start] = '\000';
+    return 0;
+  } else if ((size_t)ret >= buf_size - start) {
+    *offset = buf_size - 1;
+  } else {
+    *offset = start + (size_t)ret;
+  }
+  return (int)(*offset - start);
+}
+
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -756,16 +781,17 @@ print_content_format(unsigned int format_type,
   };
 
   size_t i;
+  size_t len = 0;
 
   /* search format_type in list of known content formats */
   for (i = 0; i < sizeof(formats)/sizeof(struct desc_t); i++) {
     if (format_type == formats[i].type) {
-      return snprintf((char *)result, buflen, "%s", formats[i].name);
+      return coap_snprintf((char *)result, buflen, &len, "%s", formats[i].name);
     }
   }
 
   /* unknown content format, just print numeric value to buf */
-  return snprintf((char *)result, buflen, "%u", format_type);
+  return coap_snprintf((char *)result, buflen, &len, "%u", format_type);
 }
 
 /**
@@ -866,39 +892,36 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
              msg_code_string(pdu->code));
   }
 
-  for (i = 0; i < pdu->actual_token.length; i++) {
-    outbuflen = strlen(outbuf);
-    snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-             "%02x", pdu->actual_token.s[i]);
-  }
   outbuflen = strlen(outbuf);
-  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "}");
+  for (i = 0; i < pdu->actual_token.length; i++) {
+    coap_snprintf(outbuf, sizeof(outbuf), &outbuflen,
+                  "%02x", pdu->actual_token.s[i]);
+  }
+  coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, "}");
 
   /* show options, if any */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
-  outbuflen = strlen(outbuf);
-  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " [");
+  coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, " [");
   while ((option = coap_option_next(&opt_iter))) {
     buf[0] = '\000';
+    buf_len = 0;
     if (!have_options) {
       have_options = 1;
     } else {
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ",");
+      coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, ",");
     }
 
     if (pdu->code == COAP_SIGNALING_CODE_CSM) {
       switch ((coap_sig_csm_opt_t)opt_iter.number) {
       case COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH:
       case COAP_SIG_OPT_MAX_MESSAGE_SIZE:
-        buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-                           coap_decode_var_bytes(coap_opt_value(option),
-                                                 coap_opt_length(option)));
+        coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%u",
+                      coap_decode_var_bytes(coap_opt_value(option),
+                                            coap_opt_length(option)));
         break;
       case COAP_SIG_OPT_BLOCK_WISE_TRANSFER:
       default:
-        buf_len = 0;
         break;
       }
     } else if (pdu->code == COAP_SIGNALING_CODE_PING ||
@@ -906,7 +929,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       switch ((coap_sig_ping_opt_t)opt_iter.number) {
       case COAP_SIG_OPT_CUSTODY:
       default:
-        buf_len = 0;
+        break;
       }
     } else if (pdu->code == COAP_SIGNALING_CODE_RELEASE) {
       switch ((coap_sig_release_opt_t)opt_iter.number) {
@@ -916,23 +939,21 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
                                  buf, sizeof(buf), 0);
         break;
       case COAP_SIG_OPT_HOLD_OFF:
-        buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-                           coap_decode_var_bytes(coap_opt_value(option),
-                                                 coap_opt_length(option)));
+        coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%u",
+                      coap_decode_var_bytes(coap_opt_value(option),
+                                            coap_opt_length(option)));
         break;
       default:
-        buf_len = 0;
         break;
       }
     } else if (pdu->code == COAP_SIGNALING_CODE_ABORT) {
       switch ((coap_sig_abort_opt_t)opt_iter.number) {
       case COAP_SIG_OPT_BAD_CSM_OPTION:
-        buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-                           coap_decode_var_bytes(coap_opt_value(option),
-                                                 coap_opt_length(option)));
+        coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%u",
+                      coap_decode_var_bytes(coap_opt_value(option),
+                                            coap_opt_length(option)));
         break;
       default:
-        buf_len = 0;
         break;
       }
     } else {
@@ -953,19 +974,19 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
          * letter M if set, the _ otherwise */
         if (COAP_OPT_BLOCK_SZX(option) == 7) {
           if (coap_get_data(pdu, &data_len, &data))
-            buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT(%" PRIuS ")",
-                               coap_opt_block_num(option), /* block number */
-                               COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-                               data_len);
+            coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%u/%c/BERT(%" PRIuS ")",
+                          coap_opt_block_num(option), /* block number */
+                          COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+                          data_len);
           else
-            buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT",
-                               coap_opt_block_num(option), /* block number */
-                               COAP_OPT_BLOCK_MORE(option) ? 'M' : '_'); /* M bit */
+            coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%u/%c/BERT",
+                          coap_opt_block_num(option), /* block number */
+                          COAP_OPT_BLOCK_MORE(option) ? 'M' : '_'); /* M bit */
         } else {
-          buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
-                             coap_opt_block_num(option), /* block number */
-                             COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-                             (unsigned)(1u << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+          coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%u/%c/%u",
+                        coap_opt_block_num(option), /* block number */
+                        COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+                        (unsigned)(1u << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
         }
 
         break;
@@ -988,12 +1009,11 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
             if (cnt > opt_len - ofs)
               goto no_more;
             buf_len = strlen((char *)buf);
-            snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%spIV=0x",
-                     buf_len ? "," : "");
+            coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%spIV=0x",
+                          buf_len ? "," : "");
             for (i = 0; (uint32_t)i < cnt; i++) {
-              buf_len = strlen((char *)buf);
-              snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
-                       "%02x", opt_val[ofs + i]);
+              coap_snprintf((char *)buf, sizeof(buf), &buf_len,
+                            "%02x", opt_val[ofs + i]);
             }
             ofs += cnt;
           }
@@ -1006,12 +1026,11 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
               goto no_more;
             ofs++;
             buf_len = strlen((char *)buf);
-            snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%skc=0x",
-                     buf_len ? "," : "");
+            coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%skc=0x",
+                          buf_len ? "," : "");
             for (i = 0; (uint32_t)i < cnt; i++) {
-              buf_len = strlen((char *)buf);
-              snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
-                       "%02x", opt_val[ofs + i]);
+              coap_snprintf((char *)buf, sizeof(buf), &buf_len,
+                            "%02x", opt_val[ofs + i]);
             }
             ofs += cnt;
           }
@@ -1021,12 +1040,11 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
               goto no_more;
             cnt = opt_len - ofs;
             buf_len = strlen((char *)buf);
-            snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%skid=0x",
-                     buf_len ? "," : "");
+            coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%skid=0x",
+                          buf_len ? "," : "");
             for (i = 0; (uint32_t)i < cnt; i++) {
-              buf_len = strlen((char *)buf);
-              snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
-                       "%02x", opt_val[ofs + i]);
+              coap_snprintf((char *)buf, sizeof(buf), &buf_len,
+                            "%02x", opt_val[ofs + i]);
             }
           }
         }
@@ -1043,9 +1061,9 @@ no_more:
       case COAP_OPTION_HOP_LIMIT:
         if (coap_opt_length(option)) {
           /* show values as unsigned decimal value */
-          buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-                             coap_decode_var_bytes(coap_opt_value(option),
-                                                   coap_opt_length(option)));
+          coap_snprintf((char *)buf, sizeof(buf), &buf_len, "%u",
+                        coap_decode_var_bytes(coap_opt_value(option),
+                                              coap_opt_length(option)));
         }
         break;
 
@@ -1057,12 +1075,11 @@ no_more:
         opt_len = coap_opt_length(option);
         opt_val = coap_opt_value(option);
         snprintf((char *)buf, sizeof(buf), "0x");
-        for (i = 0; (uint32_t)i < opt_len; i++) {
-          buf_len = strlen((char *)buf);
-          snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
-                   "%02x", opt_val[i]);
-        }
         buf_len = strlen((char *)buf);
+        for (i = 0; (uint32_t)i < opt_len; i++) {
+          coap_snprintf((char *)buf, sizeof(buf), &buf_len,
+                        "%02x", opt_val[i]);
+        }
         break;
       case COAP_OPTION_URI_PATH_ABB:
         value = coap_decode_var_bytes(coap_opt_value(option),
@@ -1097,23 +1114,19 @@ no_more:
                                  buf, sizeof(buf), 1);
       }
     }
-    outbuflen = strlen(outbuf);
-    snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-             " %s:%.*s", coap_option_string(pdu->code, opt_iter.number),
-             (int)buf_len, buf);
+    coap_snprintf(outbuf, sizeof(outbuf), &outbuflen,
+                  " %s:%.*s", coap_option_string(pdu->code, opt_iter.number),
+                  (int)buf_len, buf);
   }
 
-  outbuflen = strlen(outbuf);
-  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " ]");
+  coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, " ]");
 
   if (coap_get_data(pdu, &data_len, &data)) {
     if (!enable_data_for_show_pdu) {
       /* Only output data if wanted */
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-               "data length %"PRIuS " (data suppressed)\n", data_len);
+      coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, " :: ");
+      coap_snprintf(outbuf, sizeof(outbuf), &outbuflen,
+                    "data length %"PRIuS " (data suppressed)\n", data_len);
       COAP_DO_SHOW_OUTPUT_LINE;
 #if COAP_THREAD_SAFE
       coap_mutex_unlock(&m_show_pdu);
@@ -1121,35 +1134,30 @@ no_more:
       return;
     }
 
-    outbuflen = strlen(outbuf);
-    snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
+    coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, " :: ");
 
     if (is_binary(content_format) || !isprint(data[0]) || is_oscore_payload) {
       size_t keep_data_len = data_len;
       const uint8_t *keep_data = data;
 
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-               "binary data length %"PRIuS "\n", data_len);
+      coap_snprintf(outbuf, sizeof(outbuf), &outbuflen,
+                    "binary data length %"PRIuS "\n", data_len);
       COAP_DO_SHOW_OUTPUT_LINE;
       /*
        * Output hex dump of binary data as a continuous entry
        */
       outbuf[0] = '\000';
       snprintf(outbuf, sizeof(outbuf),  "<<");
-      while (data_len--) {
-        outbuflen = strlen(outbuf);
-        snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-                 "%02x", *data++);
-      }
       outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
+      while (data_len--) {
+        coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, "%02x", *data++);
+      }
+      coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, ">>");
       data_len = keep_data_len;
       data = keep_data;
-      outbuflen = strlen(outbuf);
       if (outbuflen == sizeof(outbuf)-1)
         outbuflen--;
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
+      coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, "\n");
       COAP_DO_SHOW_OUTPUT_LINE;
       /*
        * Output ascii readable (if possible), immediately under the
@@ -1157,14 +1165,13 @@ no_more:
        */
       outbuf[0] = '\000';
       snprintf(outbuf, sizeof(outbuf),  "<<");
+      outbuflen = strlen(outbuf);
       while (data_len--) {
-        outbuflen = strlen(outbuf);
-        snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-                 "%c ", isprint(*data) ? *data : '.');
+        coap_snprintf(outbuf, sizeof(outbuf), &outbuflen,
+                      "%c ", isprint(*data) ? *data : '.');
         data++;
       }
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
+      coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, ">>");
     } else {
       size_t max_length;
 
@@ -1188,10 +1195,9 @@ no_more:
     }
   }
 
-  outbuflen = strlen(outbuf);
   if (outbuflen == sizeof(outbuf)-1)
     outbuflen--;
-  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
+  coap_snprintf(outbuf, sizeof(outbuf), &outbuflen, "\n");
   COAP_DO_SHOW_OUTPUT_LINE;
 
 #if COAP_THREAD_SAFE
