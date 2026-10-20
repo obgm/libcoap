@@ -441,6 +441,8 @@ oscore_validate_sender_seq(oscore_recipient_ctx_t *ctx, cose_encrypt0_t *cose) {
 
   ctx->rollback_last_seq = ctx->last_seq;
   ctx->rollback_sliding_window = ctx->sliding_window;
+  ctx->rollback_initial_state = ctx->initial_state;
+  ctx->rollback_valid = 1;
 
   /* Special case since we do not use unsigned int for seq */
   if (ctx->initial_state == 1) {
@@ -517,13 +519,11 @@ oscore_increment_sender_seq(oscore_ctx_t *ctx) {
 void
 oscore_roll_back_seq(oscore_recipient_ctx_t *ctx) {
 
-  if (ctx->rollback_sliding_window != 0) {
+  if (ctx->rollback_valid) {
     ctx->sliding_window = ctx->rollback_sliding_window;
-    ctx->rollback_sliding_window = 0;
-  }
-  if (ctx->rollback_last_seq != 0) {
     ctx->last_seq = ctx->rollback_last_seq;
-    ctx->rollback_last_seq = 0;
+    ctx->initial_state = ctx->rollback_initial_state;
+    ctx->rollback_valid = 0;
   }
 }
 

@@ -1470,6 +1470,59 @@ fail:
   oscore_free_contexts(ctx);
 }
 
+/*
+ * A message that fails decryption must leave the replay window as it was,
+ * including when the window was still in its initial state.
+ */
+static void
+t_replay_roll_back(void) {
+  static const char conf_data[] =
+      "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
+      "master_salt,hex,\"9e7ca92223786340\"\n"
+      "sender_id,hex,\"01\"\n"
+      "recipient_id,hex,\"\"\n"
+      "rfc8613_b_1_2,bool,false\n";
+  static const uint8_t forged_piv[] = { 0xff };
+  static const uint8_t genuine_piv[] = { 0x14 };
+  const coap_str_const_t conf = { sizeof(conf_data)-1,
+                                  (const uint8_t *)conf_data
+                                };
+  coap_oscore_conf_t *oscore_conf;
+  oscore_recipient_ctx_t *rcp_ctx;
+  cose_encrypt0_t cose[1];
+  coap_bin_const_t piv;
+
+  oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  coap_context_oscore_server(ctx, oscore_conf);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  rcp_ctx = ctx->p_osc_ctx->recipient_chain;
+  FailIf_CU_ASSERT_PTR_NOT_NULL(rcp_ctx);
+
+  /* Forged message passes the replay check, then fails decryption */
+  cose_encrypt0_init(cose);
+  piv.s = forged_piv;
+  piv.length = sizeof(forged_piv);
+  cose_encrypt0_set_partial_iv(cose, &piv);
+  CU_ASSERT(oscore_validate_sender_seq(rcp_ctx, cose) == 1);
+  oscore_roll_back_seq(rcp_ctx);
+
+  CU_ASSERT(rcp_ctx->initial_state == 1);
+  CU_ASSERT(rcp_ctx->last_seq == 0);
+  CU_ASSERT(rcp_ctx->sliding_window == 0);
+
+  /* Genuine message from the peer must still be accepted */
+  cose_encrypt0_init(cose);
+  piv.s = genuine_piv;
+  piv.length = sizeof(genuine_piv);
+  cose_encrypt0_set_partial_iv(cose, &piv);
+  CU_ASSERT(oscore_validate_sender_seq(rcp_ctx, cose) == 1);
+  CU_ASSERT(rcp_ctx->last_seq == 0x14);
+
+fail:
+  oscore_free_contexts(ctx);
+}
+
 /************************************************************************
  ** Per-recipient state (last_seq / sliding_window) in conf buffer
  ************************************************************************/
@@ -1970,6 +2023,8 @@ t_init_oscore_tests(void) {
     OSCORE_TEST(t_find_2);
     OSCORE_TEST(t_find_3);
     OSCORE_TEST(t_find_4);
+
+    OSCORE_TEST(t_replay_roll_back);
 
     OSCORE_TEST(t_rcp_state_basic);
     OSCORE_TEST(t_rcp_state_max_64bit);

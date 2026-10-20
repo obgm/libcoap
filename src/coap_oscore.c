@@ -1168,13 +1168,6 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       incoming_seq =
           coap_decode_var_bytes8(cose->partial_iv.s, cose->partial_iv.length);
       rcp_ctx->last_seq = incoming_seq;
-    } else if (session->context->oscore_update_seq_num_cb != NULL) {
-      /* notify custom credential storage */
-      coap_lock_callback(session->context->oscore_update_seq_num_cb(session,
-                         rcp_ctx->recipient_id,
-                         osc_ctx->id_context,
-                         rcp_ctx->last_seq,
-                         rcp_ctx->sliding_window));
     }
   } else { /* !coap_request */
     /*
@@ -1521,8 +1514,20 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       coap_handle_event_lkd(session->context,
                             COAP_EVENT_OSCORE_DECRYPTION_FAILURE,
                             session);
+      oscore_roll_back_seq(rcp_ctx);
     }
     goto error;
+  }
+  /* Replay window update is now verified */
+  rcp_ctx->rollback_valid = 0;
+  if (coap_request && rcp_ctx->initial_state == 0 &&
+      session->context->oscore_update_seq_num_cb != NULL) {
+    /* notify custom credential storage */
+    coap_lock_callback(session->context->oscore_update_seq_num_cb(session,
+                       rcp_ctx->recipient_id,
+                       osc_ctx->id_context,
+                       rcp_ctx->last_seq,
+                       rcp_ctx->sliding_window));
   }
 
   assert((size_t)pltxt_size < pdu->alloc_size + pdu->max_hdr_size);

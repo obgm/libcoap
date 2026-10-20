@@ -131,6 +131,8 @@ struct oscore_recipient_ctx_t {
   uint64_t rollback_last_seq;
   uint8_t echo_value[8];
   uint8_t initial_state;
+  uint8_t rollback_initial_state;
+  uint8_t rollback_valid;
   uint8_t silent_server;
 };
 
