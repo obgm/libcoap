@@ -275,7 +275,7 @@ int
 oscore_decode_option_value(const uint8_t *opt_value,
                            size_t option_len,
                            cose_encrypt0_t *cose) {
-  uint8_t partial_iv_len = (opt_value[0] & 0x07);
+  uint8_t partial_iv_len;
   size_t offset = 1;
 
   cose->oscore_option.s = opt_value;
@@ -284,6 +284,7 @@ oscore_decode_option_value(const uint8_t *opt_value,
   if (option_len == 0)
     return 1; /* empty option */
 
+  partial_iv_len = (opt_value[0] & 0x07);
   if (option_len > 255 || partial_iv_len == 6 || partial_iv_len == 7 ||
       (opt_value[0] & 0xC0) != 0) {
     return 0;
