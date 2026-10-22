@@ -111,12 +111,18 @@ coap_cache_derive_key_w_ignore(const coap_session_t *session,
   while ((option = coap_option_next(&opt_iter))) {
     if (is_cache_key(opt_iter.number, cache_ignore_count,
                      cache_ignore_options)) {
+      uint32_t olen = coap_opt_length(option);
+
       if (!coap_digest_update(dctx, (const uint8_t *)&opt_iter.number,
                               sizeof(opt_iter.number))) {
         goto update_fail;
       }
-      if (!coap_digest_update(dctx, coap_opt_value(option),
-                              coap_opt_length(option))) {
+      /* Length-delimit the value so distinct option sequences cannot hash to
+         the same key (the value is not self-terminating). */
+      if (!coap_digest_update(dctx, (const uint8_t *)&olen, sizeof(olen))) {
+        goto update_fail;
+      }
+      if (!coap_digest_update(dctx, coap_opt_value(option), olen)) {
         goto update_fail;
       }
     }
