@@ -197,6 +197,149 @@ t_session_notify_send_fail(void) {
 }
 #endif /* COAP_SERVER_SUPPORT */
 
+static unsigned int send_fail_nacks;
+static unsigned int send_fail_responses;
+static int send_fail_nack_resend;
+static int send_fail_release;
+
+static coap_response_t
+send_fail_response_handler(coap_session_t *s,
+                           const coap_pdu_t *sent COAP_UNUSED,
+                           const coap_pdu_t *received COAP_UNUSED,
+                           const coap_mid_t mid COAP_UNUSED) {
+  coap_pdu_t *pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_GET,
+                                  coap_new_message_id(s), 64);
+  uint8_t token = 0x5b;
+
+  send_fail_responses++;
+  /* The session is not disconnected yet, but nothing more is sent on it */
+  CU_ASSERT(send_fail_nacks == 0);
+  if (pdu) {
+    coap_add_token(pdu, 1, &token);
+    CU_ASSERT(coap_send(s, pdu) == COAP_INVALID_MID);
+  }
+  if (send_fail_release) {
+    /* The last reference to the session goes */
+    coap_session_release(s);
+  }
+  return COAP_RESPONSE_OK;
+}
+
+static void
+send_fail_nack_handler(coap_session_t *s,
+                       const coap_pdu_t *sent COAP_UNUSED,
+                       const coap_nack_reason_t reason COAP_UNUSED,
+                       const coap_mid_t mid COAP_UNUSED) {
+  send_fail_nacks++;
+  if (send_fail_nack_resend) {
+    /* This send fails as well */
+    coap_pdu_t *pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_GET,
+                                    coap_new_message_id(s), 64);
+    uint8_t token = 0x5c;
+
+    send_fail_nack_resend = 0;
+    if (pdu) {
+      coap_add_token(pdu, 1, &token);
+      CU_ASSERT(coap_send(s, pdu) == COAP_INVALID_MID);
+    }
+  }
+}
+
+static int
+send_fail_get_data(coap_session_t *s COAP_UNUSED, size_t max, size_t offset,
+                   uint8_t *data, size_t *length, void *app_ptr COAP_UNUSED) {
+  if (offset >= 4096)
+    return 0;
+  *length = max < 4096 - offset ? max : 4096 - offset;
+  memset(data, 'x', *length);
+  return 1;
+}
+
+/* A 4.01 with Echo for a request with a large body re-sends the request.
+ * If that send fails, the session must not be disconnected (freeing the
+ * lg_xmit) until the 4.01 has been dealt with, and nothing more is sent on
+ * the session until then. The disconnect then happens, calling the nack
+ * handler once, also when the nack handler sends on the session and that
+ * send fails, or when the last reference to the session has gone. A PDU
+ * received on the session in the same unit of work after the failed send
+ * is dropped. */
+static void
+t_session_send_fail_deferred(void) {
+  coap_context_t *l_ctx;
+  coap_session_t *l_session;
+  coap_address_t saddr;
+  coap_pdu_t *pdu;
+  uint8_t token = 0x5a;
+  uint8_t rsp[] = { 0x51, 0x81, 0x12, 0x34, 0x5a,
+                    0xd8, 0xef, 1, 2, 3, 4, 5, 6, 7, 8
+                  };
+  int variant;
+
+  coap_address_init(&saddr);
+  saddr.size = sizeof(struct sockaddr_in6);
+  saddr.addr.sin6.sin6_family = AF_INET6;
+  saddr.addr.sin6.sin6_addr = in6addr_loopback;
+  saddr.addr.sin6.sin6_port = htons(20005);
+
+  /*
+   * 0: plain, 1: the nack handler sends, 2: the last reference goes,
+   * 3: a second PDU is received in the same unit of work
+   */
+  for (variant = 0; variant < 4; variant++) {
+    l_ctx = coap_new_context(NULL);
+    ReturnIf_CU_ASSERT_PTR_NOT_NULL(l_ctx);
+    coap_context_set_block_mode(l_ctx, COAP_BLOCK_USE_LIBCOAP);
+    coap_register_nack_handler(l_ctx, send_fail_nack_handler);
+    coap_register_response_handler(l_ctx, send_fail_response_handler);
+    l_session = coap_new_client_session(l_ctx, NULL, &saddr, COAP_PROTO_UDP);
+    CU_ASSERT_PTR_NOT_NULL(l_session);
+    if (!l_session)
+      goto done;
+
+    pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_PUT,
+                        coap_new_message_id(l_session),
+                        coap_session_max_pdu_size(l_session));
+    CU_ASSERT_PTR_NOT_NULL(pdu);
+    if (!pdu)
+      goto done;
+    coap_add_token(pdu, 1, &token);
+    CU_ASSERT(coap_add_data_large_request_app(l_session, pdu, 4096, NULL,
+                                              send_fail_get_data, NULL) == 1);
+    CU_ASSERT(coap_send(l_session, pdu) != COAP_INVALID_MID);
+    CU_ASSERT_PTR_NOT_NULL(l_session->lg_xmit);
+
+    send_fail_nacks = 0;
+    send_fail_responses = 0;
+    send_fail_nack_resend = variant == 1;
+    send_fail_release = variant == 2;
+    coap_lock_lock(goto done);
+    /* Only the re-sent request fails, or every send when resending */
+    coap_debug_set_packet_fail(variant == 1 ? "1-100" : "1");
+    if (variant == 3) {
+      /* As the I/O loop does for a read of the session */
+      coap_session_hold_lkd(l_session);
+      coap_handle_dgram(l_ctx, l_session, rsp, sizeof(rsp));
+      CU_ASSERT(l_session->disconnect_pending == 1);
+      coap_handle_dgram(l_ctx, l_session, rsp, sizeof(rsp));
+      coap_session_unhold_lkd(l_session);
+    } else {
+      coap_handle_dgram(l_ctx, l_session, rsp, sizeof(rsp));
+    }
+    coap_debug_set_packet_fail("0%");
+    coap_lock_unlock();
+
+    CU_ASSERT(send_fail_responses == 1);
+    CU_ASSERT(send_fail_nacks == 1);
+    if (variant != 2) {
+      CU_ASSERT(l_session->in_use == 0);
+      CU_ASSERT(l_session->disconnect_pending == 0);
+      CU_ASSERT_PTR_NULL(l_session->lg_xmit);
+    }
+done:
+    coap_free_context(l_ctx);
+  }
+}
+
 static void
 t_session1(void) {
   CU_ASSERT(session->ref == 1);
@@ -489,6 +632,7 @@ t_init_session_tests(void) {
   SESSION_TEST(suite, t_session_notify_send_fail);
 #endif /* COAP_SERVER_SUPPORT */
   SESSION_TEST(suite, t_session6);
+  SESSION_TEST(suite, t_session_send_fail_deferred);
 #if COAP_PROXY_SUPPORT
   SESSION_TEST(suite, t_session_proxy_remove);
 #endif /* COAP_PROXY_SUPPORT */
