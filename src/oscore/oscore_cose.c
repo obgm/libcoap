@@ -466,7 +466,7 @@ cose_encrypt0_decrypt(cose_encrypt0_t *ptr,
   int ret_len = 0;
   coap_crypto_param_t params;
   size_t tag_len = cose_tag_len(ptr->alg);
-  size_t max_result_len = ptr->ciphertext.length - tag_len;
+  size_t max_result_len;
 
   if (ptr->key.s == NULL || ptr->key.length != (size_t)cose_key_len(ptr->alg)) {
     return -1;
@@ -479,9 +479,11 @@ cose_encrypt0_decrypt(cose_encrypt0_t *ptr,
     return -3;
   }
   if (ptr->ciphertext.s == NULL ||
+      ptr->ciphertext.length < tag_len ||
       ptr->ciphertext.length > (plaintext_len + tag_len)) {
     return -4;
   }
+  max_result_len = ptr->ciphertext.length - tag_len;
 
   memset(&params, 0, sizeof(params));
   params.alg = ptr->alg;

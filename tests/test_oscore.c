@@ -1962,6 +1962,123 @@ t_cbor_large_value(void) {
   free(cbor);
 }
 
+static uint8_t t_oscore_sent_code;
+
+static ssize_t
+t_oscore_record_write(coap_session_t *session COAP_UNUSED,
+                      const uint8_t *data, size_t datalen) {
+  t_oscore_sent_code = datalen > 1 ? data[1] : 0;
+  return (ssize_t)datalen;
+}
+
+static void
+t_oscore_short_ciphertext_rollback(void) {
+  static const char conf_data[] =
+      "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
+      "master_salt,hex,\"9e7ca92223786340\"\n"
+      "sender_id,hex,\"01\"\n"
+      "recipient_id,hex,\"\"\n";
+  static const uint8_t protected_coap_request[] = {
+    0x44, 0x02, 0x5d, 0x1f, 0x00, 0x00, 0x39, 0x74,
+    0x39, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x68, 0x6f,
+    0x73, 0x74, 0x62, 0x09, 0x14, 0xff, 0x61, 0x2f,
+    0x10, 0x92, 0xf1, 0x77, 0x6f, 0x1c, 0x16, 0x68,
+    0xb3, 0x82, 0x5e
+  };
+  static const uint8_t oscore_option[] = { 0x0a, 0x03, 0xe8 };
+  static const uint8_t ciphertext[16] = { 0 };
+  const coap_str_const_t conf = { sizeof(conf_data) - 1,
+                                  (const uint8_t *)conf_data
+                                };
+  coap_oscore_conf_t *oscore_conf;
+  oscore_recipient_ctx_t *recipient;
+  coap_session_t *session = NULL;
+  coap_pdu_t *incoming_pdu = NULL;
+  coap_pdu_t *decrypted_pdu = NULL;
+  size_t tag_len;
+  size_t payload_len;
+  int result;
+
+  oscore_conf = coap_new_oscore_conf(conf, NULL, NULL, 0);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(oscore_conf);
+  CU_ASSERT(coap_context_oscore_server(ctx, oscore_conf));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(ctx->p_osc_ctx);
+  recipient = ctx->p_osc_ctx->recipient_chain;
+  FailIf_CU_ASSERT_PTR_NOT_NULL(recipient);
+  tag_len = cose_tag_len(ctx->p_osc_ctx->aead_alg);
+  CU_ASSERT(tag_len > 0 && tag_len <= sizeof(ciphertext));
+  if (tag_len == 0 || tag_len > sizeof(ciphertext))
+    goto fail;
+
+  session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session);
+  memset(session, 0, sizeof(coap_session_t));
+  session->context = ctx;
+  session->proto = COAP_PROTO_UDP;
+  session->type = COAP_SESSION_TYPE_SERVER;
+  session->state = COAP_SESSION_STATE_ESTABLISHED;
+  session->sock.lfunc[COAP_LAYER_SESSION].l_write = t_oscore_record_write;
+  session->recipient_ctx = recipient;
+  recipient->initial_state = 0;
+
+  for (payload_len = 1; payload_len <= tag_len; payload_len++) {
+    recipient->last_seq = 10;
+    recipient->sliding_window = 5;
+    t_oscore_sent_code = 0;
+    incoming_pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_POST,
+                                 0, COAP_DEFAULT_MTU);
+    FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
+    /* coap_pdu_init() leaves the token pointer unset */
+    result = coap_add_token(incoming_pdu, 0, NULL) &&
+             coap_add_option(incoming_pdu, COAP_OPTION_OSCORE,
+                             sizeof(oscore_option), oscore_option) != 0;
+    CU_ASSERT(result);
+    if (!result)
+      goto fail;
+    result = coap_add_data(incoming_pdu, payload_len, ciphertext);
+    CU_ASSERT(result);
+    if (!result)
+      goto fail;
+
+    coap_lock_lock(goto fail);
+    decrypted_pdu = coap_oscore_decrypt_pdu(session, incoming_pdu);
+    coap_lock_unlock();
+    CU_ASSERT_PTR_NULL(decrypted_pdu);
+    CU_ASSERT(t_oscore_sent_code == COAP_RESPONSE_CODE(400));
+    CU_ASSERT(recipient->last_seq == 10);
+    CU_ASSERT(recipient->sliding_window == 5);
+    if (decrypted_pdu || recipient->last_seq != 10 ||
+        recipient->sliding_window != 5)
+      goto fail;
+    coap_delete_pdu(incoming_pdu);
+
+    incoming_pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
+    FailIf_CU_ASSERT_PTR_NOT_NULL(incoming_pdu);
+    result = coap_pdu_parse(COAP_PROTO_UDP, protected_coap_request,
+                            sizeof(protected_coap_request), incoming_pdu);
+    CU_ASSERT(result > 0);
+    if (result <= 0)
+      goto fail;
+    coap_lock_lock(goto fail);
+    decrypted_pdu = coap_oscore_decrypt_pdu(session, incoming_pdu);
+    coap_lock_unlock();
+    FailIf_CU_ASSERT_PTR_NOT_NULL(decrypted_pdu);
+    CU_ASSERT(decrypted_pdu->code == COAP_REQUEST_CODE_GET);
+    CU_ASSERT(recipient->last_seq == 20);
+    coap_delete_pdu(incoming_pdu);
+    incoming_pdu = NULL;
+    coap_delete_pdu(decrypted_pdu);
+    decrypted_pdu = NULL;
+  }
+
+fail:
+  coap_delete_pdu(incoming_pdu);
+  coap_delete_pdu(decrypted_pdu);
+  oscore_delete_server_associations(session);
+  coap_free(session);
+  oscore_free_contexts(ctx);
+}
+
 /************************************************************************
  ** initialization
  ************************************************************************/
@@ -2012,6 +2129,7 @@ t_init_oscore_tests(void) {
     OSCORE_TEST(t_oscore_c_7_2);
     OSCORE_TEST(t_oscore_c_8);
     OSCORE_TEST(t_oscore_c_8_2);
+    OSCORE_TEST(t_oscore_short_ciphertext_rollback);
 
     OSCORE_TEST(t_convert_1);
 
