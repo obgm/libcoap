@@ -2952,8 +2952,8 @@ add_block_send(uint32_t num, int is_continue, send_track *out_blocks,
     if (num == out_blocks[i].num)
       return 0;
     else if (num < out_blocks[i].num) {
-      if (*count - i > 1)
-        memmove(&out_blocks[i], &out_blocks[i+1], *count - i -1);
+      memmove(&out_blocks[i+1], &out_blocks[i],
+              (*count - i) * sizeof(out_blocks[0]));
       out_blocks[i].num = num;
       out_blocks[i].is_continue = is_continue;
       (*count)++;
@@ -3069,6 +3069,7 @@ coap_handle_request_send_block(coap_session_t *session,
     }
     if (!etag_opt) {
       /* Not a match - pass up to a higher level */
+      coap_free_type(COAP_STRING, out_blocks);
       return 0;
     }
   }
@@ -3281,6 +3282,7 @@ coap_handle_request_send_block(coap_session_t *session,
     if (i + 1 < request_cnt) {
       coap_ticks(&lg_xmit->last_sent);
       coap_send_internal(session, out_pdu, NULL);
+      out_pdu = response;
     }
   }
   coap_ticks(&lg_xmit->last_payload);
@@ -3296,6 +3298,8 @@ call_app_handler:
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
 internal_issue:
+  if (out_pdu != response)
+    coap_delete_pdu_lkd(out_pdu);
   response->code = COAP_RESPONSE_CODE(500);
   error_phrase = coap_response_phrase(response->code);
   coap_add_data(response, strlen(error_phrase),

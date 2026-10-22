@@ -442,6 +442,99 @@ t_block_block1_after_last(void) {
   CU_ASSERT(block1_put(COAP_OPTION_BLOCK1, repeated, 3, 32, &len, &code) == 0);
   CU_ASSERT(len == 32);
 }
+
+#if COAP_Q_BLOCK_SUPPORT
+static coap_pdu_t *
+qblock2_get_blks(coap_session_t *s, const uint32_t *blks, size_t count) {
+  static const uint8_t token[] = { 0x51, 0x32 };
+  uint8_t buf[4];
+  coap_pdu_t *pdu;
+  size_t i;
+
+  pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET,
+                      coap_new_message_id_lkd(s), 256);
+  if (!pdu)
+    return NULL;
+  coap_add_token(pdu, sizeof(token), token);
+  coap_add_option(pdu, COAP_OPTION_URI_PATH, 1, (const uint8_t *)"z");
+  for (i = 0; i < count; i++)
+    coap_add_option(pdu, COAP_OPTION_Q_BLOCK2,
+                    coap_encode_var_safe(buf, sizeof(buf), blks[i]), buf);
+  return pdu;
+}
+
+/* Q-Block2 requests for blocks out of numerical order must all be sent,
+ * with the highest numbered one going in the response */
+static void
+t_block_qblock2_out_of_order(void) {
+  static const uint32_t first[] = { (0 << 4) | (1 << 3) };
+  static const uint32_t later[] = { (5 << 4) | 0, (3 << 4) | 0 };
+  static uint8_t body[16 * 8];
+  coap_context_t *sctx;
+  coap_session_t *ssession;
+  coap_resource_t *resource;
+  coap_address_t addr;
+  coap_pdu_t *request;
+  coap_pdu_t *response;
+  coap_block_b_t block;
+
+  memset(body, 'q', sizeof(body));
+  coap_address_init(&addr);
+  addr.size = sizeof(struct sockaddr_in6);
+  addr.addr.sin6.sin6_family = AF_INET6;
+  addr.addr.sin6.sin6_addr = in6addr_loopback;
+  addr.addr.sin6.sin6_port = htons(20003);
+
+  sctx = coap_new_context(NULL);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(sctx);
+  coap_context_set_block_mode(sctx, COAP_BLOCK_USE_LIBCOAP |
+                              COAP_BLOCK_SINGLE_BODY);
+  ssession = coap_new_client_session(sctx, NULL, &addr, COAP_PROTO_UDP);
+  CU_ASSERT_PTR_NOT_NULL(ssession);
+  if (!ssession) {
+    coap_free_context(sctx);
+    return;
+  }
+
+  coap_lock_lock(return);
+  resource = coap_resource_init(coap_make_str_const("z"), 0);
+  CU_ASSERT_PTR_NOT_NULL(resource);
+  if (resource) {
+    coap_add_resource_lkd(sctx, resource);
+
+    /* Set up the large response */
+    request = qblock2_get_blks(ssession, first, 1);
+    response = coap_pdu_init(COAP_MESSAGE_ACK, 0, 0, 256);
+    if (request && response) {
+      response->code = COAP_RESPONSE_CODE(205);
+      CU_ASSERT(coap_add_data_large_response_lkd(resource, ssession, request,
+                                                 response, NULL,
+                                                 COAP_MEDIATYPE_TEXT_PLAIN,
+                                                 -1, 0, sizeof(body), body,
+                                                 NULL, NULL) == 1);
+    }
+    coap_delete_pdu_lkd(request);
+    coap_delete_pdu_lkd(response);
+
+    request = qblock2_get_blks(ssession, later, 2);
+    response = coap_pdu_init(COAP_MESSAGE_ACK, 0, 0, 256);
+    if (request && response) {
+      CU_ASSERT(coap_handle_request_send_block(ssession, request, response,
+                                               resource, NULL) == 1);
+      CU_ASSERT(response->code == COAP_RESPONSE_CODE(205));
+      CU_ASSERT(coap_get_block_b(ssession, response, COAP_OPTION_Q_BLOCK2,
+                                 &block) == 1);
+      CU_ASSERT(block.num == 5);
+    }
+    coap_delete_pdu_lkd(request);
+    coap_delete_pdu_lkd(response);
+  }
+  coap_lock_unlock();
+
+  coap_session_release(ssession);
+  coap_free_context(sctx);
+}
+#endif /* COAP_Q_BLOCK_SUPPORT */
 #endif /* COAP_SERVER_SUPPORT */
 
 CU_pSuite
@@ -471,6 +564,9 @@ t_init_block_tests(void) {
   BLOCK_TEST(suite, t_block_large_app_block_num);
   BLOCK_TEST(suite, t_block_block1_size1);
   BLOCK_TEST(suite, t_block_block1_after_last);
+#if COAP_Q_BLOCK_SUPPORT
+  BLOCK_TEST(suite, t_block_qblock2_out_of_order);
+#endif /* COAP_Q_BLOCK_SUPPORT */
 #endif /* COAP_SERVER_SUPPORT */
 
   return suite;
