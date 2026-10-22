@@ -3329,7 +3329,7 @@ blocks_delete_entry(coap_rblock_t *rec_blocks, uint32_t block_num) {
           /* Need to delete this range */
           if (i + 1 < rec_blocks->used) {
             memmove(&rec_blocks->range[i], &rec_blocks->range[i+1],
-                    (rec_blocks->used - i) * sizeof(rec_blocks->range[0]));
+                    (rec_blocks->used - i - 1) * sizeof(rec_blocks->range[0]));
           }
           rec_blocks->used--;
           break;
