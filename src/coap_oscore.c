@@ -1476,6 +1476,26 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   cose_encrypt0_set_ciphertext(cose, st_encrypt, encrypt_len);
 
   tag_len = cose_tag_len(cose->alg);
+  if (encrypt_len <= tag_len) {
+    /* Too short to hold the AEAD tag plus a 1 byte inner code; a shorter
+       value would underflow encrypt_len - tag_len below */
+    coap_log_warn("OSCORE: Ciphertext too short\n");
+    if (coap_request) {
+      build_and_send_error_pdu(session,
+                               pdu,
+                               COAP_RESPONSE_CODE(400),
+                               "Decryption failed",
+                               NULL,
+                               NULL,
+                               0);
+      oscore_roll_back_seq(rcp_ctx);
+      goto error_no_ack;
+    }
+    coap_handle_event_lkd(session->context,
+                          COAP_EVENT_OSCORE_DECRYPTION_FAILURE,
+                          session);
+    goto error;
+  }
   /* Decrypt into plain_pdu, so code (token), options and data are in place */
   plain_pdu = coap_pdu_init(pdu->type, 0, 0, encrypt_len /* - tag_len */);
   if (plain_pdu == NULL) {
