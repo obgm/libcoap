@@ -2041,10 +2041,15 @@ prepend_508_ip(coap_session_t *session, coap_pdu_t *pdu) {
       hop_limit =
           coap_decode_var_bytes(coap_opt_value(opt), coap_opt_length(opt));
       if (hop_limit == 1) {
-        coap_log_warn("Proxy loop detected '%s'\n",
-                      (char *)pdu->data);
+        size_t data_len;
+        const uint8_t *data;
+
+        if (!coap_get_data(pdu, &data_len, &data))
+          data = (const uint8_t *)"";
+        coap_log_warn("Proxy loop detected '%.*s'\n",
+                      (int)data_len, (const char *)data);
         coap_delete_pdu_lkd(pdu);
-        return (coap_mid_t)COAP_DROPPED_RESPONSE;
+        return 0;
       } else if (hop_limit < 1 || hop_limit > 255) {
         /* Something is bad - need to drop this pdu (TODO or delete option) */
         coap_log_warn("Proxy return has bad hop limit count '%" PRIuS "'\n",
