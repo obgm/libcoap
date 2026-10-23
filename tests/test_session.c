@@ -324,6 +324,38 @@ t_session6(void) {
   coap_session_release(session);
 }
 
+/*
+ * A 5.08 response that already has Hop-Limit 1 (e.g. relayed by a proxy
+ * from an upstream server) is freed by the loop check and must be dropped.
+ */
+static void
+t_session_508_hop_limit(void) {
+  coap_address_t addr;
+  coap_session_t *s;
+  coap_pdu_t *pdu;
+  uint8_t hop_limit = 1;
+
+  coap_address_init(&addr);
+  addr.size = sizeof(struct sockaddr_in);
+  addr.addr.sin.sin_family = AF_INET;
+  addr.addr.sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.addr.sin.sin_port = htons(5697);
+  s = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(s);
+  pdu = coap_pdu_init(COAP_MESSAGE_NON, COAP_RESPONSE_CODE(508),
+                      coap_new_message_id(s), 1152);
+  if (!pdu) {
+    CU_FAIL("no pdu");
+    coap_session_release(s);
+    return;
+  }
+  coap_add_option(pdu, COAP_OPTION_HOP_LIMIT, 1, &hop_limit);
+  coap_add_data(pdu, 9, (const uint8_t *)"192.0.2.1");
+
+  CU_ASSERT(coap_send(s, pdu) == COAP_DROPPED_RESPONSE);
+  coap_session_release(s);
+}
+
 #if COAP_PROXY_SUPPORT
 static coap_pdu_t *
 t_proxy_request(const char *proxy_uri) {
@@ -489,6 +521,7 @@ t_init_session_tests(void) {
   SESSION_TEST(suite, t_session_notify_send_fail);
 #endif /* COAP_SERVER_SUPPORT */
   SESSION_TEST(suite, t_session6);
+  SESSION_TEST(suite, t_session_508_hop_limit);
 #if COAP_PROXY_SUPPORT
   SESSION_TEST(suite, t_session_proxy_remove);
 #endif /* COAP_PROXY_SUPPORT */
