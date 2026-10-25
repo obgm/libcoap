@@ -830,12 +830,29 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
   const uint8_t *data;
   coap_string_t *l_query = NULL;
   coap_opt_filter_t opt_filter;
+  coap_opt_iterator_t opt_iter;
+  int rcvd_created = 0;
 
   coap_option_filter_clear(&opt_filter);
   if (!coap_option_check_critical(session, rcvd, &opt_filter, COAP_CRIT_PROXY)) {
     /* Need to send back a 5.02 response */
-    coap_send_error_lkd(session, rcvd, COAP_RESPONSE_CODE(502), &opt_filter);
-    return COAP_RESPONSE_FAIL;
+    resp_pdu = coap_new_error_response(proxy_req->pdu, COAP_RESPONSE_CODE(502), &opt_filter);
+    if (resp_pdu) {
+      rcvd_created = 1;
+      rcvd = resp_pdu;
+    }
+  }
+
+  if (rcvd->code == COAP_RESPONSE_CODE(508) && proxy_req->resource &&
+      proxy_req->resource == session->context->unknown_resource &&
+      proxy_req->resource->is_reverse_proxy && proxy_req && proxy_req->pdu &&
+      coap_check_option(rcvd, COAP_OPTION_HOP_LIMIT, &opt_iter)) {
+    /* Need to hide a 5.08 response if reverse proxy say resource not available */
+    resp_pdu = coap_new_error_response(proxy_req->pdu, COAP_RESPONSE_CODE(404), NULL);
+    if (resp_pdu) {
+      rcvd_created = 1;
+      rcvd = resp_pdu;
+    }
   }
 
   if (remove_observe) {
@@ -852,7 +869,7 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
                                       NULL, COAP_BOOL_FALSE);
   }
   if (!resp_pdu)
-    return COAP_RESPONSE_FAIL;
+    goto failed;
 
   assert(proxy_req);
   /* In case change in type of request over the proxy */
@@ -865,7 +882,7 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
   if (replace_mid)
     resp_pdu->mid = sent->mid;
 
-  proxy_req->mid =  resp_pdu->mid;
+  proxy_req->mid = resp_pdu->mid;
 
   /* We sent early ACK, and this is an ACK, need to convert it to CON */
   if (COAP_PROTO_NOT_RELIABLE(session->proto) && resp_pdu->type == COAP_MESSAGE_ACK) {
@@ -877,7 +894,6 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
     int maxage = -1;
     uint64_t etag = 0;
     coap_opt_t *option;
-    coap_opt_iterator_t opt_iter;
     coap_bin_const_t *body;
 
     /* COAP_BLOCK_SINGLE_BODY is set, so single body should be given */
@@ -937,6 +953,8 @@ failed:
     ret = COAP_RESPONSE_FAIL;
     coap_delete_pdu_lkd(resp_pdu);
   }
+  if (rcvd_created)
+    coap_delete_pdu_lkd(rcvd);
   coap_delete_string(l_query);
   return ret;
 }
