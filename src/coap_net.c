@@ -3837,7 +3837,6 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_opt_t *opt;
   int is_proxy_uri = 0;
   int is_proxy_scheme = 0;
-  int skip_hop_limit_check = 0;
   int resp = 0;
   coap_string_t *query = NULL;
   coap_opt_t *observe = NULL;
@@ -3954,37 +3953,11 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
         }
         is_proxy_uri = 0;
         is_proxy_scheme = 0;
-        skip_hop_limit_check = 1;
       }
     }
     resource = NULL;
   }
   assert(resource == NULL);
-
-  if (!skip_hop_limit_check) {
-    opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
-    if (opt) {
-      size_t hop_limit;
-      uint8_t buf[4];
-
-      hop_limit =
-          coap_decode_var_bytes(coap_opt_value(opt), coap_opt_length(opt));
-      if (hop_limit == 1) {
-        /* coap_send_internal() will fill in the IP address for us */
-        resp = 508;
-        goto fail_response;
-      } else if (hop_limit < 1 || hop_limit > 255) {
-        /* Need to return a 4.00 RFC8768 Section 3 */
-        coap_log_info("Invalid Hop Limit\n");
-        resp = 400;
-        goto fail_response;
-      }
-      hop_limit--;
-      coap_update_option(pdu, COAP_OPTION_HOP_LIMIT,
-                         coap_encode_var_safe8(buf, sizeof(buf), hop_limit),
-                         buf);
-    }
-  }
 
   uri_path = coap_get_uri_path(pdu);
   if (!uri_path) {
@@ -4091,6 +4064,38 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   }
 
   coap_resource_reference_lkd(resource);
+
+  if (is_proxy_scheme || is_proxy_uri ||
+      (resource == context->unknown_resource && resource->is_reverse_proxy)) {
+    opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
+    if (opt) {
+      size_t hop_limit;
+      uint8_t buf[4];
+
+      hop_limit =
+          coap_decode_var_bytes(coap_opt_value(opt), coap_opt_length(opt));
+      if (hop_limit == 1) {
+        coap_log_info("Hop Limit expired\n");
+        if (resource == context->unknown_resource && resource->is_reverse_proxy) {
+          /* Need to hide this is a reverse proxy */
+          resp = 404;
+        } else {
+          /* coap_send_internal() will fill in the IP address for us */
+          resp = 508;
+        }
+        goto fail_response;
+      } else if (hop_limit < 1 || hop_limit > 255) {
+        /* Need to return a 4.00 RFC8768 Section 3 */
+        coap_log_info("Invalid Hop Limit\n");
+        resp = 400;
+        goto fail_response;
+      }
+      hop_limit--;
+      coap_update_option(pdu, COAP_OPTION_HOP_LIMIT,
+                         coap_encode_var_safe8(buf, sizeof(buf), hop_limit),
+                         buf);
+    }
+  }
 
 #if COAP_OSCORE_SUPPORT
   if ((resource->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY) && !session->oscore_encryption) {
