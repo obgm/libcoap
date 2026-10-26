@@ -232,7 +232,7 @@ OPTIONS - General
 
 *-X* size::
    Maximum message size to use for TCP based connections (default is 8388864).
-   Maximum value of 2^32 -1.
+   Maximum value of 2^32 -1, but limited to 8388864.
 
 *-Z* fail::
    Network fail some sent datagrams specified by a comma separated list of
