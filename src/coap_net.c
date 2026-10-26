@@ -2771,6 +2771,15 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
                        + session->partial_pdu->hdr_size
                        - session->partial_read;
           size_t n = min(len, (size_t)bytes_read);
+
+          assert(n <= session->partial_pdu->alloc_size + session->partial_pdu->hdr_size -
+                 session->partial_read);
+          if (n > session->partial_pdu->alloc_size + session->partial_pdu->hdr_size -
+              session->partial_read) {
+            bytes_read = -1;
+            break;
+          }
+
           memcpy(session->partial_pdu->token - session->partial_pdu->hdr_size
                  + session->partial_read, p, n);
           p += n;
@@ -2816,10 +2825,10 @@ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now)
             /* Header now all in */
             size_t size = coap_pdu_parse_size(session->proto, session->read_header,
                                               hdr_size + tok_ext_bytes);
-            if (size > COAP_DEFAULT_MAX_PDU_RX_SIZE) {
-              coap_log_warn("** %s: incoming PDU length too large (%" PRIuS " > %lu)\n",
+            if (size > session->context->csm_max_message_size) {
+              coap_log_warn("** %s: incoming PDU length too large (%" PRIuS " > %u)\n",
                             coap_session_str(session),
-                            size, COAP_DEFAULT_MAX_PDU_RX_SIZE);
+                            size, session->context->csm_max_message_size);
               bytes_read = -1;
               break;
             }

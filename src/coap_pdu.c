@@ -1113,31 +1113,38 @@ coap_pdu_parse_size(coap_proto_t proto,
                     const uint8_t *data,
                     size_t length) {
   assert(data);
-  assert(proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS ||
-         proto == COAP_PROTO_WS || proto == COAP_PROTO_WSS);
-  assert(coap_pdu_parse_header_size(proto, data) <= length);
+  assert(proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS);
 
-  size_t size = 0;
+  uint64_t size = 0;
   const uint8_t *token_start = NULL;
+
+  if (coap_pdu_parse_header_size(proto, data) > length)
+    return 0;
 
   if ((proto == COAP_PROTO_TCP || proto == COAP_PROTO_TLS) && length >= 1) {
     uint8_t len = *data >> 4;
     uint8_t tkl = *data & 0x0f;
+    size_t extra_for_tkl = tkl == COAP_TOKEN_EXT_2B_TKL ? 2 :
+                           tkl == COAP_TOKEN_EXT_1B_TKL ? 1 : 0;
+
+    if (tkl > COAP_TOKEN_EXT_2B_TKL)
+      return 0;
 
     if (len < 13) {
       size = len;
       token_start = &data[2];
-    } else if (length >= 2) {
+    } else if (length >= (2 + extra_for_tkl)) {
       if (len==13) {
         size = (size_t)data[1] + COAP_MESSAGE_SIZE_OFFSET_TCP8;
         token_start = &data[3];
-      } else if (length >= 3) {
+      } else if (length >= (3 + extra_for_tkl)) {
         if (len==14) {
           size = ((size_t)data[1] << 8) + data[2] + COAP_MESSAGE_SIZE_OFFSET_TCP16;
           token_start = &data[4];
-        } else if (length >= 5) {
-          size = ((size_t)data[1] << 24) + ((size_t)data[2] << 16)
-                 + ((size_t)data[3] << 8) + data[4] + COAP_MESSAGE_SIZE_OFFSET_TCP32;
+        } else if (length >= (5 + extra_for_tkl)) {
+          /* Need to handle 32 bit size_t */
+          size = ((uint64_t)data[1] << 24) + ((uint64_t)data[2] << 16)
+                 + ((uint64_t)data[3] << 8) + data[4] + COAP_MESSAGE_SIZE_OFFSET_TCP32;
           token_start = &data[6];
         }
       }
@@ -1156,8 +1163,14 @@ coap_pdu_parse_size(coap_proto_t proto,
       }
     }
   }
+  /*
+   * Check that there is not a 32bit size_t overflow.
+   * The Max-Message-Size Option limits size to be 32 bits.
+   */
+  if (size > (size_t)-1)
+    size = (size_t)-1;
 
-  return size;
+  return (size_t)size;
 }
 #endif /* ! COAP_DISABLE_TCP */
 
@@ -1216,7 +1229,7 @@ coap_pdu_parse_header(coap_pdu_t *pdu, coap_proto_t proto) {
 
 bad_ext_token:
   /* Invalid PDU provided - not wise to assert here though */
-  coap_log_debug("coap_pdu_parse: PDU header extended token size broken\n");
+  coap_log_warn("coap_pdu_parse: PDU header extended token size broken\n");
   pdu->e_token_length = 0;
   pdu->actual_token.length = 0;
   return 0;
