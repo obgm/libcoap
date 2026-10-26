@@ -200,6 +200,12 @@ coap_split_uri_sub(const uint8_t *str_var,
       goto error;
     }
 
+    if ((int)(q - p) > 255) {
+      coap_log_warn("Host name length too long (%d > 255)\n", (int)(q - p));
+      res = -6;
+      goto error;
+    }
+
     COAP_SET_STR(&uri->host, q - p, p);
     ++q;
     --len;
@@ -410,6 +416,8 @@ coap_uri_into_optlist_abbrev(const coap_uri_t *uri, const coap_address_t *dst,
         /* add Uri-Host */
         optlist = coap_new_optlist(COAP_OPTION_URI_HOST, uri_host_len,
                                    uri->host.s);
+        if (!optlist)
+          return 0;
         if (!coap_host_is_unix_domain(&uri->host)) {
           coap_replace_percents(optlist);
           coap_replace_upper_lower(optlist);
