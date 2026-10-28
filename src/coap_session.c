@@ -1803,10 +1803,28 @@ coap_new_client_session_psk_lkd(coap_context_t *ctx,
  */
 static void
 coap_sanitize_client_sni(char **client_sni) {
-  char *cp;
 
   if (*client_sni == NULL)
     return;
+
+#if defined(HAVE_INET_PTON) && defined(HAVE_ARPA_INET_H)
+#include <arpa/inet.h>
+  coap_address_t addr;
+#if COAP_IPV4_SUPPORT
+  if (inet_pton(AF_INET, *client_sni, &addr.addr.sin.sin_addr) == 1) {
+    *client_sni = NULL;
+    return;
+  }
+#endif /* COAP_IPV4_SUPPORT */
+#if COAP_IPV6_SUPPORT
+  if (inet_pton(AF_INET6, *client_sni, &addr.addr.sin6.sin6_addr) == 1) {
+    *client_sni = NULL;
+    return;
+  }
+#endif /* COAP_IPV6_SUPPORT */
+#else /* ! HAVE_INET_PTON || ! HAVE_ARPA_INET_H */
+  char *cp;
+  char has_colon = 0;
 
   cp = *client_sni;
   switch (*cp) {
@@ -1894,7 +1912,9 @@ check_ipv6:
     case 'D':
     case 'E':
     case 'F':
+      break;
     case ':':
+      has_colon = 1;
       break;
     case '%':
       /* Start of i/f specification,  Previous is IPv6 */
@@ -1906,7 +1926,9 @@ check_ipv6:
     }
     cp++;
   }
-  *client_sni = NULL;
+  if (has_colon)
+    *client_sni = NULL;
+#endif /* ! HAVE_INET_PTON || ! HAVE_ARPA_INET_H */
   return;
 }
 
