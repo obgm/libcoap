@@ -1463,7 +1463,6 @@ setup_server_ssl_session(coap_session_t *c_session,
   int ret = 0;
   m_context->psk_pki_enabled |= IS_SERVER;
 
-  mbedtls_ssl_cookie_init(&m_env->cookie_ctx);
   if ((ret = mbedtls_ssl_config_defaults(&m_env->conf,
                                          MBEDTLS_SSL_IS_SERVER,
                                          c_session->proto == COAP_PROTO_DTLS ?
@@ -2186,6 +2185,7 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
   mbedtls_entropy_init(&m_env->entropy);
 #endif /* !COAP_USE_PSA_CRYPTO */
   mbedtls_ssl_config_init(&m_env->conf);
+  mbedtls_ssl_cookie_init(&m_env->cookie_ctx);
 
 #if defined(ESPIDF_VERSION) && defined(CONFIG_MBEDTLS_DEBUG)
   mbedtls_esp_enable_debug_log(&m_env->conf, CONFIG_MBEDTLS_DEBUG_LEVEL);
@@ -2318,6 +2318,7 @@ coap_dtls_new_mbedtls_env(coap_session_t *c_session,
 
 fail:
   if (m_env) {
+    mbedtls_cleanup(m_env);
     mbedtls_free(m_env);
   }
   return NULL;

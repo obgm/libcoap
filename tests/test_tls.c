@@ -55,7 +55,25 @@
 
 #ifdef COAP_WITH_LIBMBEDTLS
 #define HAVE_DTLS 1
+#include <mbedtls/platform.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/threading.h>
 #include <mbedtls/version.h>
+#if COAP_CLIENT_SUPPORT && defined(MBEDTLS_SSL_CLI_C) && \
+    defined(MBEDTLS_PLATFORM_MEMORY) && \
+    !defined(MBEDTLS_PLATFORM_CALLOC_MACRO) && \
+    !defined(MBEDTLS_PLATFORM_FREE_MACRO) && \
+    defined(MBEDTLS_PLATFORM_STD_CALLOC) && \
+    defined(MBEDTLS_PLATFORM_STD_FREE) && \
+    (defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED) || \
+     defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED))
+#define HAVE_MBEDTLS_TEST_ALLOCATOR 1
+#if defined(MBEDTLS_THREADING_C) && \
+    MBEDTLS_VERSION_NUMBER < 0x04000000 && \
+    !defined(MBEDTLS_USE_PSA_CRYPTO)
+#define HAVE_MBEDTLS_TEST_MUTEX 1
+#endif /* Threaded non-PSA Mbed TLS 2/3 cookie implementation */
+#endif /* Mbed TLS client with runtime allocator hooks and PSK support */
 #endif /* COAP_WITH_LIBMBEDTLS */
 
 #if COAP_WITH_LIBMBEDTLS_OSCORE
@@ -376,6 +394,187 @@ t_tls_free_test_session(coap_session_t *session) {
   coap_free_type(COAP_SESSION, session);
 }
 #endif /* COAP_CLIENT_SUPPORT */
+
+#ifdef HAVE_MBEDTLS_TEST_ALLOCATOR
+static size_t tls_mbedtls_allocations;
+static size_t tls_mbedtls_frees;
+
+#ifdef HAVE_MBEDTLS_TEST_MUTEX
+static mbedtls_threading_mutex_t *tls_mbedtls_mutexes[16];
+static void (*tls_mbedtls_mutex_init)(mbedtls_threading_mutex_t *);
+static void (*tls_mbedtls_mutex_free)(mbedtls_threading_mutex_t *);
+
+/**
+ * @brief Track each mutex initialized in this synchronous test.
+ *
+ * @param mutex Native mutex to initialize using the saved backend callback.
+ * The fixed table bounds tracking; duplicates and overflow fail the test.
+ */
+static void
+t_tls_mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex) {
+  size_t i;
+  size_t slot = sizeof(tls_mbedtls_mutexes) / sizeof(*tls_mbedtls_mutexes);
+
+  for (i = 0; i < sizeof(tls_mbedtls_mutexes) /
+       sizeof(*tls_mbedtls_mutexes); i++) {
+    CU_ASSERT(tls_mbedtls_mutexes[i] != mutex);
+    if (tls_mbedtls_mutexes[i] == mutex)
+      return;
+    if (!tls_mbedtls_mutexes[i])
+      slot = i;
+  }
+  CU_ASSERT(slot < sizeof(tls_mbedtls_mutexes) /
+            sizeof(*tls_mbedtls_mutexes));
+  if (slot < sizeof(tls_mbedtls_mutexes) / sizeof(*tls_mbedtls_mutexes)) {
+    tls_mbedtls_mutexes[slot] = mutex;
+    tls_mbedtls_mutex_init(mutex);
+  }
+}
+
+/**
+ * @brief Require initialization before forwarding to the native destructor.
+ *
+ * @param mutex Native mutex whose tracked lifetime ends here.
+ * An unmatched free fails without invoking undefined backend behavior.
+ */
+static void
+t_tls_mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex) {
+  size_t i;
+
+  for (i = 0; i < sizeof(tls_mbedtls_mutexes) /
+       sizeof(*tls_mbedtls_mutexes); i++) {
+    if (tls_mbedtls_mutexes[i] == mutex) {
+      tls_mbedtls_mutexes[i] = NULL;
+      tls_mbedtls_mutex_free(mutex);
+      return;
+    }
+  }
+  CU_FAIL("Mbed TLS freed a mutex without a matching initialization");
+}
+#endif /* HAVE_MBEDTLS_TEST_MUTEX */
+
+/**
+ * @brief Count successful native TLS allocations during the synchronous test.
+ *
+ * @param count Number of elements.
+ * @param size Size of each element in bytes.
+ * @return Zeroed storage owned by Mbed TLS, or NULL on allocation failure.
+ */
+static void *
+t_tls_mbedtls_calloc(size_t count, size_t size) {
+  void *ptr = MBEDTLS_PLATFORM_STD_CALLOC(count, size);
+
+  if (ptr)
+    tls_mbedtls_allocations++;
+  return ptr;
+}
+
+/**
+ * @brief Count and release native TLS storage using the matching allocator.
+ *
+ * @param ptr Storage to release, or NULL.
+ */
+static void
+t_tls_mbedtls_free(void *ptr) {
+  if (ptr)
+    tls_mbedtls_frees++;
+  MBEDTLS_PLATFORM_STD_FREE(ptr);
+}
+
+/**
+ * @brief Check partial construction cleanup after PSK configuration succeeds.
+ *
+ * An oversized SNI makes native Mbed TLS reject setup after acquiring the
+ * PSK configuration (and, with Mbed TLS 2/3, RNG resources). No socket is
+ * opened. The test temporarily replaces the configured default allocator
+ * hooks; it must run without concurrent Mbed TLS users or custom allocator
+ * hooks and restores the matching defaults.
+ * Threaded non-PSA builds also check matched mutex init/free callbacks,
+ * restoring the saved pair. Server construction without a ClientHello also
+ * checks that init is not repeated; no completed handshake is required.
+ */
+static void
+t_tls_mbedtls_construction_failure(void) {
+  static const uint8_t key[] = "secret";
+  static const uint8_t identity[] = "client";
+  char sni[MBEDTLS_SSL_MAX_HOST_NAME_LEN + 2];
+  coap_dtls_cpsk_t setup_data;
+  coap_context_t *ctx;
+  coap_session_t *session;
+  void *tls;
+
+  memset(sni, 'a', sizeof(sni) - 1);
+  sni[sizeof(sni) - 1] = '\000';
+  memset(&setup_data, 0, sizeof(setup_data));
+  setup_data.version = COAP_DTLS_CPSK_SETUP_VERSION;
+  setup_data.client_sni = sni;
+  setup_data.psk_info.identity.s = identity;
+  setup_data.psk_info.identity.length = sizeof(identity) - 1;
+  setup_data.psk_info.key.s = key;
+  setup_data.psk_info.key.length = sizeof(key) - 1;
+
+  ctx = coap_new_context(NULL);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx);
+  session = t_tls_new_test_session(ctx, COAP_PROTO_DTLS);
+  if (!session) {
+    CU_ASSERT_PTR_NOT_NULL(session);
+    coap_free_context(ctx);
+    return;
+  }
+  session->cpsk_setup_data = setup_data;
+  CU_ASSERT(coap_dtls_context_set_cpsk(ctx, &setup_data) == 1);
+  tls_mbedtls_allocations = 0;
+  tls_mbedtls_frees = 0;
+#ifdef HAVE_MBEDTLS_TEST_MUTEX
+  memset(tls_mbedtls_mutexes, 0, sizeof(tls_mbedtls_mutexes));
+  tls_mbedtls_mutex_init = mbedtls_mutex_init;
+  tls_mbedtls_mutex_free = mbedtls_mutex_free;
+  mbedtls_mutex_init = t_tls_mbedtls_mutex_init;
+  mbedtls_mutex_free = t_tls_mbedtls_mutex_free;
+#endif /* HAVE_MBEDTLS_TEST_MUTEX */
+  CU_ASSERT(mbedtls_platform_set_calloc_free(t_tls_mbedtls_calloc,
+                                             t_tls_mbedtls_free) == 0);
+  tls = coap_dtls_new_client_session(session);
+  CU_ASSERT_PTR_NULL(tls);
+  session->tls = tls;
+  t_tls_free_test_session(session);
+#if COAP_SERVER_SUPPORT && defined(MBEDTLS_SSL_SRV_C) && \
+    defined(MBEDTLS_SSL_PROTO_DTLS)
+  session = t_tls_new_test_session(ctx, COAP_PROTO_DTLS);
+  CU_ASSERT_PTR_NOT_NULL(session);
+  if (session) {
+    session->type = COAP_SESSION_TYPE_HELLO;
+    CU_ASSERT(coap_dtls_hello(session, NULL, 0) >= 0);
+    CU_ASSERT_PTR_NOT_NULL(session->tls);
+    coap_delete_bin_const(session->client_cid);
+    session->client_cid = NULL;
+    t_tls_free_test_session(session);
+  }
+#endif /* COAP_SERVER_SUPPORT && MBEDTLS_SSL_SRV_C && MBEDTLS_SSL_PROTO_DTLS */
+  CU_ASSERT(tls_mbedtls_allocations > 0);
+  if (tls_mbedtls_allocations != tls_mbedtls_frees)
+    fprintf(stderr, "Mbed TLS construction: %zu allocations, %zu frees\n",
+            tls_mbedtls_allocations, tls_mbedtls_frees);
+  CU_ASSERT(tls_mbedtls_allocations == tls_mbedtls_frees);
+#ifdef HAVE_MBEDTLS_TEST_MUTEX
+  {
+    size_t i;
+
+    mbedtls_mutex_init = tls_mbedtls_mutex_init;
+    mbedtls_mutex_free = tls_mbedtls_mutex_free;
+    for (i = 0; i < sizeof(tls_mbedtls_mutexes) /
+         sizeof(*tls_mbedtls_mutexes); i++) {
+      CU_ASSERT_PTR_NULL(tls_mbedtls_mutexes[i]);
+      /* A failed cleanup may already have freed the containing object. */
+      tls_mbedtls_mutexes[i] = NULL;
+    }
+  }
+#endif /* HAVE_MBEDTLS_TEST_MUTEX */
+  CU_ASSERT(mbedtls_platform_set_calloc_free(MBEDTLS_PLATFORM_STD_CALLOC,
+                                             MBEDTLS_PLATFORM_STD_FREE) == 0);
+  coap_free_context(ctx);
+}
+#endif /* HAVE_MBEDTLS_TEST_ALLOCATOR */
 
 #if COAP_SERVER_SUPPORT && COAP_IPV4_SUPPORT
 static unsigned int tls_hello_write_count;
@@ -1511,6 +1710,9 @@ t_init_tls_tests(void) {
   TLS_TEST(suite, t_tls18);
   TLS_TEST(suite, t_tls19);
 #endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT */
+#ifdef HAVE_MBEDTLS_TEST_ALLOCATOR
+  TLS_TEST(suite, t_tls_mbedtls_construction_failure);
+#endif /* HAVE_MBEDTLS_TEST_ALLOCATOR */
 
   return suite;
 }
