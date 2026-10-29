@@ -128,6 +128,12 @@ typedef enum {
   COAP_EVENT_OSCORE_INTERNAL_ERROR,
   /** Triggered when there is an OSCORE decode of OSCORE option failure */
   COAP_EVENT_OSCORE_DECODE_ERROR,
+  /**
+   * Triggered when coap_oscore_session_set_recipient_ctx() replaces the
+   * recipient context bound to a session (not on first attach). The session
+   * still references the previous recipient when the handler runs.
+   */
+  COAP_EVENT_OSCORE_RECIPIENT_CHANGED,
   /*
    * WebSocket events
    */
