@@ -70,6 +70,15 @@ typedef enum coap_ext_token_check_t {
 #define COAP_MAX_PING_FAILURES 3
 #endif
 
+/*
+ * Upper bound for PDUs queued on session->doing_first_pdu while the client
+ * waits for the first exchange (OSCORE confirmation, Extended Token probe,
+ * Q-Block probe, etc.). Override before including libcoap headers if needed.
+ */
+#ifndef COAP_DOING_FIRST_MAX_QUEUE
+#define COAP_DOING_FIRST_MAX_QUEUE 4
+#endif /* COAP_DOING_FIRST_MAX_QUEUE */
+
 /**
  * Abstraction of virtual session that can be attached to coap_context_t
  * (client) or coap_endpoint_t (server).

@@ -1657,6 +1657,16 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
   }
 
   if (session->doing_first) {
+    unsigned int depth = 0;
+    coap_pdu_t *q_pdu;
+
+    LL_FOREACH(session->doing_first_pdu, q_pdu)
+    depth++;
+    if (depth >= COAP_DOING_FIRST_MAX_QUEUE) {
+      coap_log_warn("** %s: mid=0x%04x: doing_first queue full (%u) - dropped\n",
+                    coap_session_str(session), pdu->mid, depth);
+      goto error;
+    }
     LL_APPEND(session->doing_first_pdu, pdu);
     coap_show_pdu(COAP_LOG_DEBUG, pdu);
     coap_log_debug("** %s: mid=0x%04x: queued\n",
