@@ -4973,6 +4973,30 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
     }
 #endif /* COAP_SERVER_SUPPORT */
     if (decrypt) {
+#if COAP_ASYNC_SUPPORT
+      /*
+       * RFC7252 request deduplication must run before OSCORE replay checks
+       * (RFC8613).  A retransmitted CON for a request with a pending separate
+       * (async) response carries the same Sender Sequence Number and would
+       * otherwise be rejected during decrypt with an unprotected 4.01 instead
+       * of retransmitting the empty ACK.  The outer token matches the pending
+       * async entry (see handle_request()).
+       */
+      if (COAP_PDU_IS_REQUEST(pdu) && pdu->type == COAP_MESSAGE_CON) {
+        coap_async_t *dup_async = coap_find_async_lkd(session, pdu->actual_token);
+
+        if (dup_async) {
+          coap_tick_t now;
+
+          coap_ticks(&now);
+          if (dup_async->delay == 0 || dup_async->delay > now) {
+            coap_log_info("Duplicate request, async response pending\n");
+            coap_send_ack_lkd(session, pdu);
+            goto finish;
+          }
+        }
+      }
+#endif /* COAP_ASYNC_SUPPORT */
       /* find message id in sendqueue to stop retransmission and get sent (not empty packet) */
       coap_remove_from_queue(&context->sendqueue, session, pdu->mid, &pdu->actual_token, &sent);
       /* Bump ref so pdu is not freed of, and keep a pointer to it */
