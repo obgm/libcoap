@@ -1746,8 +1746,15 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
        * Not sure if remote supports OSCORE, or is going to send us a
        * "4.01 + ECHO" etc. so need to hold off future coap_send()s until all
        * is OK. Continue sending current pdu to test things.
+       *
+       * Record when we started waiting so coap_io_prepare_io_lkd() can time
+       * out (same 5s window as Extended Token / Q-Block) and call
+       * coap_reset_doing_first(). Without doing_first_timeout set, UDP clients
+       * could stall forever if no response arrives (e.g. observe resubscribe
+       * while recipient_ctx->initial_state is still 1).
        */
       session->doing_first = 1;
+      coap_ticks(&session->doing_first_timeout);
     }
     /* Need to convert Proxy-Uri to Proxy-Scheme option if needed */
     if (COAP_PDU_IS_REQUEST(pdu) && !coap_rebuild_pdu_for_proxy(pdu)) {
