@@ -2692,6 +2692,12 @@ coap_oscore_session_set_recipient_ctx(coap_session_t *session,
 
   old_ctx = session->recipient_ctx;
 
+  if (old_ctx != NULL) {
+    coap_handle_event_lkd(session->context,
+                          COAP_EVENT_OSCORE_RECIPIENT_CHANGED,
+                          session);
+  }
+
   /* attach recipient context */
   session->recipient_ctx = recipient_ctx;
   session->recipient_ctx->ref++;
