@@ -2704,18 +2704,22 @@ coap_oscore_session_set_recipient_ctx(coap_session_t *session,
 void
 coap_oscore_association_set_recipient_ctx(oscore_association_t *association,
                                           oscore_recipient_ctx_t *recipient_ctx) {
+  oscore_recipient_ctx_t *old_ctx;
+
   if (association == NULL)
     return;
 
   if (association->recipient_ctx == recipient_ctx)
     return;
 
-  if (association->recipient_ctx != NULL) {
-    association->recipient_ctx->ref--;
-  }
-
+  old_ctx = association->recipient_ctx;
   association->recipient_ctx = recipient_ctx;
-  association->recipient_ctx->ref++;
+
+  if (recipient_ctx != NULL)
+    oscore_reference_recipient_ctx(recipient_ctx);
+
+  if (old_ctx != NULL)
+    oscore_release_recipient_ctx(&old_ctx);
 }
 
 coap_oscore_conf_t *
