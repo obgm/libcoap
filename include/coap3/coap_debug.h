@@ -143,7 +143,7 @@ coap_no_log(void) { }
  *
  * In a future update, they will get removed.
  */
-#if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
+#if !defined(RIOT_VERSION) && !defined(WITH_LWIP) && !defined(WITH_CONTIKI) && !defined(__ZEPHYR__)
 #ifndef LOG_EMERG
 # define LOG_EMERG  COAP_LOG_EMERG
 #endif
@@ -168,7 +168,7 @@ coap_no_log(void) { }
 #ifndef LOG_DEBUG
 # define LOG_DEBUG  COAP_LOG_DEBUG
 #endif
-#endif /* ! RIOT_VERSION && ! WITH_LWIP && ! WITH_CONTIKI */
+#endif /* ! RIOT_VERSION && ! WITH_LWIP && ! WITH_CONTIKI && ! __ZEPHYR__ */
 
 /**
  * Get the current logging level.
