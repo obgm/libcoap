@@ -373,37 +373,54 @@ oscore_find_context(coap_session_t *session,
                     const coap_bin_const_t *ctxkey_id,
                     uint8_t *oscore_r2,
                     oscore_recipient_ctx_t **recipient_ctx) {
+  oscore_ctx_t *ram_ctx;
+
+  if (session->recipient_ctx) {
+    oscore_ctx_t *tmp_ctx = session->recipient_ctx->osc_ctx;
+
+    if (!tmp_ctx) {
+      return NULL;
+    }
+    if (coap_binary_equal(session->recipient_ctx->recipient_id, &rcpkey_id)) {
+      if (oscore_r2) {
+        if (tmp_ctx->id_context != NULL &&
+            tmp_ctx->id_context->length > 8) {
+          if (memcmp(tmp_ctx->id_context->s, oscore_r2, 8) == 0) {
+            goto match;
+          }
+        }
+      } else if (ctxkey_id) {
+        if (session->recipient_ctx->osc_ctx->id_context != NULL) {
+          if (!coap_binary_equal(tmp_ctx->id_context, ctxkey_id)) {
+            return NULL;
+          }
+        } else if (ctxkey_id->length > 0) {
+          return NULL;
+        }
+      }
+match:
+      *recipient_ctx = session->recipient_ctx;
+      return session->recipient_ctx->osc_ctx;
+    }
+  }
+
+  /*
+   * Reuse an in-RAM Common Context for this identity before calling
+   * oscore_find_cb. Concurrent sessions for the same (Recipient ID, ID
+   * Context) must share one sender sequence counter; rebuilding from
+   * storage per session creates duplicate sender contexts that can emit
+   * the same Partial IV under one sender key (RFC 8613 replay rule breach).
+   */
+  ram_ctx = oscore_find_context_in_ram(session->context, rcpkey_id, ctxkey_id,
+                                       oscore_r2, recipient_ctx);
+  if (ram_ctx != NULL) {
+    return ram_ctx;
+  }
+
   if (session->context->oscore_find_cb != NULL) {
     oscore_ctx_t *tmp_ctx = NULL;
     coap_oscore_conf_t *oscore_conf;
 
-    if (session->recipient_ctx) {
-      tmp_ctx = session->recipient_ctx->osc_ctx;
-      if (!tmp_ctx) {
-        return NULL;
-      }
-      if (coap_binary_equal(session->recipient_ctx->recipient_id, &rcpkey_id)) {
-        if (oscore_r2) {
-          if (tmp_ctx->id_context != NULL &&
-              tmp_ctx->id_context->length > 8) {
-            if (memcmp(tmp_ctx->id_context->s, oscore_r2, 8) == 0) {
-              goto match;
-            }
-          }
-        } else if (ctxkey_id) {
-          if (session->recipient_ctx->osc_ctx->id_context != NULL) {
-            if (!coap_binary_equal(tmp_ctx->id_context, ctxkey_id)) {
-              return NULL;
-            }
-          } else if (ctxkey_id->length > 0) {
-            return NULL;
-          }
-        }
-match:
-        *recipient_ctx = session->recipient_ctx;
-        return session->recipient_ctx->osc_ctx;
-      }
-    }
     coap_lock_callback_ret(oscore_conf, session->context->oscore_find_cb(session,
                            &rcpkey_id,
                            ctxkey_id));
@@ -422,6 +439,7 @@ match:
           tmp_ctx->recipient_chain->next_recipient != NULL) {
         oscore_recipient_ctx_t *rcp_ctx = tmp_ctx->recipient_chain;
         oscore_recipient_ctx_t *ref_ctx = NULL;
+
         while (rcp_ctx != NULL) {
           ref_ctx = rcp_ctx;
           rcp_ctx = rcp_ctx->next_recipient;
@@ -438,17 +456,13 @@ match:
         *recipient_ctx = tmp_ctx->recipient_chain;
       }
       tmp_ctx->recipient_chain = *recipient_ctx;
-      const coap_bool_t  already_attached = session->recipient_ctx == *recipient_ctx;
+      oscore_add_context(session->context, tmp_ctx);
       coap_oscore_session_set_recipient_ctx(session, *recipient_ctx);
-      /* Remove the tmp_ctx reference */
-      if (*recipient_ctx && !already_attached)
-        (*recipient_ctx)->ref--;
       return tmp_ctx;
     }
   }
 
-  return oscore_find_context_in_ram(session->context, rcpkey_id, ctxkey_id,
-                                    oscore_r2, recipient_ctx);
+  return NULL;
 }
 
 #define OSCORE_LOG_SIZE 16
