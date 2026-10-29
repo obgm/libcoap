@@ -938,6 +938,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
   size_t tag_len;
   oscore_recipient_ctx_t *rcp_ctx = NULL;
   oscore_association_t *association = NULL;
+  oscore_association_t *decrypt_request_association = NULL;
   uint8_t external_aad_buffer[100];
   coap_bin_const_t external_aad;
   oscore_sender_ctx_t *snd_ctx = NULL;
@@ -1332,15 +1333,24 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
       coap_oscore_association_set_recipient_ctx(association, rcp_ctx);
       /* So association is not released when handling decrypt */
       association = NULL;
-    } else if (!oscore_new_association(session,
-                                       NULL,
-                                       &pdu_token,
-                                       rcp_ctx,
-                                       &cose->aad,
-                                       &cose->nonce,
-                                       &cose->partial_iv,
-                                       0)) {
-      goto error;
+    } else {
+      if (!oscore_new_association(session,
+                                  NULL,
+                                  &pdu_token,
+                                  rcp_ctx,
+                                  &cose->aad,
+                                  &cose->nonce,
+                                  &cose->partial_iv,
+                                  0)) {
+        goto error;
+      }
+      /*
+       * New association for this request; delete on failure below if no
+       * OSCORE-protected response will be sent. Refreshed associations are
+       * left on the session (association cleared above).
+       */
+      decrypt_request_association =
+          oscore_find_association(session, &pdu_token);
     }
     /* So association is not released when handling decrypt */
     association = NULL;
@@ -1841,6 +1851,10 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
 error:
   coap_send_ack_lkd(session, pdu);
 error_no_ack:
+  if (decrypt_request_association) {
+    oscore_delete_association(session, decrypt_request_association);
+    decrypt_request_association = NULL;
+  }
   if (association && association->is_observe == 0)
     oscore_delete_association(session, association);
   coap_delete_pdu_lkd(decrypt_pdu);
