@@ -5476,6 +5476,7 @@ coap_handle_event_lkd(coap_context_t *context, coap_event_t event,
       break;
     case COAP_EVENT_SERVER_SESSION_DEL:
     case COAP_EVENT_SERVER_SESSION_CONNECTED:
+    case COAP_EVENT_OSCORE_RECIPIENT_CHANGED:
     case COAP_EVENT_MSG_RETRANSMITTED:
     case COAP_EVENT_WS_CONNECTED:
     case COAP_EVENT_KEEPALIVE_FAILURE:
