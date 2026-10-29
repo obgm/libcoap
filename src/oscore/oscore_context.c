@@ -311,6 +311,56 @@ oscore_remove_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
   return 0;
 }
 
+oscore_ctx_t *
+oscore_find_context_in_ram(const coap_context_t *c_context,
+                           const coap_bin_const_t rcpkey_id,
+                           const coap_bin_const_t *ctxkey_id,
+                           uint8_t *oscore_r2,
+                           oscore_recipient_ctx_t **recipient_ctx) {
+  oscore_ctx_t *pt = c_context->p_osc_ctx;
+
+  *recipient_ctx = NULL;
+  assert(rcpkey_id.length == 0 || rcpkey_id.s != NULL);
+  if (pt == NULL)
+    return NULL;
+  do {
+    int ok = 0;
+    oscore_recipient_ctx_t *rpt = pt->recipient_chain;
+
+    while (rpt) {
+      ok = 0;
+      if (rpt->recipient_id && rcpkey_id.length == rpt->recipient_id->length) {
+        if (rcpkey_id.length != 0)
+          ok = memcmp(rpt->recipient_id->s, rcpkey_id.s, rcpkey_id.length) != 0;
+        if (oscore_r2) {
+          if (pt->id_context != NULL && pt->id_context->length > 8) {
+            ok = ok + (memcmp(pt->id_context->s, oscore_r2, 8) != 0);
+          } else {
+            ok += 1;
+          }
+        } else if (ctxkey_id) {
+          if (pt->id_context != NULL) {
+            if (ctxkey_id->length != pt->id_context->length)
+              ok += 1;
+            else
+              ok = ok + (memcmp(pt->id_context->s,
+                                ctxkey_id->s,
+                                ctxkey_id->length) != 0);
+          } else if (ctxkey_id->length > 0)
+            ok += 1;
+        }
+        if (ok == 0) {
+          *recipient_ctx = rpt;
+          return pt;
+        }
+      }
+      rpt = rpt->next_recipient;
+    }
+    pt = pt->next;
+  } while (pt != c_context->p_osc_ctx);
+  return NULL;
+}
+
 /*
  *  oscore_find_context
  * Finds OSCORE context for rcpkey_id and optional ctxkey_id
@@ -397,49 +447,8 @@ match:
     }
   }
 
-  oscore_ctx_t *pt = session->context->p_osc_ctx;
-
-  *recipient_ctx = NULL;
-  assert(rcpkey_id.length == 0 || rcpkey_id.s != NULL);
-  if (pt == NULL)
-    return NULL;
-  do {
-    int ok = 0;
-    oscore_recipient_ctx_t *rpt = pt->recipient_chain;
-
-    while (rpt) {
-      ok = 0;
-      if (rpt->recipient_id && rcpkey_id.length == rpt->recipient_id->length) {
-        if (rcpkey_id.length != 0)
-          ok = memcmp(rpt->recipient_id->s, rcpkey_id.s, rcpkey_id.length) != 0;
-        if (oscore_r2) {
-          if (pt->id_context != NULL && pt->id_context->length > 8) {
-            ok = ok + (memcmp(pt->id_context->s, oscore_r2, 8) != 0);
-          } else {
-            ok += 1;
-          }
-        } else if (ctxkey_id) {
-          if (pt->id_context != NULL) {
-            if (ctxkey_id->length != pt->id_context->length)
-              ok += 1;
-            else
-              ok = ok + (memcmp(pt->id_context->s,
-                                ctxkey_id->s,
-                                ctxkey_id->length) != 0);
-          } else if (ctxkey_id->length > 0)
-            ok += 1;
-        }
-        if (ok == 0) {
-          /* optional id context and recipient id are the same  */
-          *recipient_ctx = rpt;
-          return pt; /* OSCORE context found */
-        }
-      }
-      rpt = rpt->next_recipient;
-    } /* while rpt */
-    pt = pt->next;
-  } while (pt != session->context->p_osc_ctx);
-  return NULL;
+  return oscore_find_context_in_ram(session->context, rcpkey_id, ctxkey_id,
+                                    oscore_r2, recipient_ctx);
 }
 
 #define OSCORE_LOG_SIZE 16
