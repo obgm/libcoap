@@ -1935,12 +1935,37 @@ check_if_received_block(coap_rblock_t *rec_blocks, uint32_t block_num) {
 }
 
 #if COAP_SERVER_SUPPORT
+static void
+scale_down_block_ranges(coap_rblock_t *rec_blocks, unsigned int shift,
+                        size_t total_len, unsigned int new_szx) {
+  uint32_t i;
+
+  for (i = 0; i < rec_blocks->used; i++) {
+    rec_blocks->range[i].begin <<= shift;
+    rec_blocks->range[i].end =
+        ((rec_blocks->range[i].end + 1) << shift) - 1;
+  }
+  if (rec_blocks->total_blocks) {
+    uint32_t total_blocks = total_len ?
+                            (uint32_t)(((total_len - 1) >> (new_szx + 4)) + 1) : 0;
+
+    rec_blocks->total_blocks = total_blocks;
+    if (total_blocks) {
+      for (i = 0; i < rec_blocks->used; i++) {
+        if (rec_blocks->range[i].end >= total_blocks)
+          rec_blocks->range[i].end = total_blocks - 1;
+      }
+    }
+  }
+}
+
 static int
-check_if_next_block(coap_rblock_t *rec_blocks, uint32_t block_num) {
+check_if_next_block(coap_rblock_t *rec_blocks, uint32_t block_num,
+                    unsigned int shift) {
   if (rec_blocks->used == 0) {
     return block_num == 0 ? 1 : 0;
   }
-  if (rec_blocks->range[rec_blocks->used-1].end + 1 == block_num)
+  if (((rec_blocks->range[rec_blocks->used-1].end + 1) << shift) == block_num)
     return 1;
 
   return 0;
@@ -3692,6 +3717,7 @@ coap_handle_request_put_block(coap_context_t *context,
     } else {
       lg_srcv->szx = block.szx;
     }
+    lg_srcv->rec_blocks_szx = block.szx;
     lg_srcv->block_option = block_option;
     if (observe) {
       lg_srcv->observe_length = min(coap_opt_length(observe), 3);
@@ -3712,20 +3738,41 @@ coap_handle_request_put_block(coap_context_t *context,
   coap_lg_srcv_reference_lkd(lg_srcv);
   lg_srcv_is_refed = 1;
 
-  if (block_option == COAP_OPTION_BLOCK1 &&
-      session->block_mode & COAP_BLOCK_NOT_RANDOM_BLOCK1 &&
-      !check_if_next_block(&lg_srcv->rec_blocks, block.num)) {
-    coap_add_data(response, sizeof("Missing interim block")-1,
-                  (const uint8_t *)"Missing interim block");
-    response->code = COAP_RESPONSE_CODE(408);
-    goto skip_app_handler;
-  }
-
   if (fmt != lg_srcv->content_format) {
     coap_add_data(response, sizeof("Content-Format mismatch")-1,
                   (const uint8_t *)"Content-Format mismatch");
     response->code = COAP_RESPONSE_CODE(408);
     goto free_lg_srcv;
+  }
+
+  saved_num = block.num;
+  saved_offset = offset;
+  if (block_option == COAP_OPTION_BLOCK1) {
+    unsigned int shift = 0;
+
+    /* Keep received ranges on the smallest SZX used by the transfer. */
+    if (block.szx < lg_srcv->rec_blocks_szx)
+      shift = lg_srcv->rec_blocks_szx - block.szx;
+    else
+      block.szx = lg_srcv->rec_blocks_szx;
+    block.num = (uint32_t)(offset >> (block.szx + 4));
+
+    if (session->block_mode & COAP_BLOCK_NOT_RANDOM_BLOCK1 &&
+        !check_if_next_block(&lg_srcv->rec_blocks, block.num, shift)) {
+      coap_add_data(response, sizeof("Missing interim block")-1,
+                    (const uint8_t *)"Missing interim block");
+      response->code = COAP_RESPONSE_CODE(408);
+      goto skip_app_handler;
+    }
+
+    if (shift) {
+      scale_down_block_ranges(&lg_srcv->rec_blocks,
+                              shift,
+                              lg_srcv->total_len, block.szx);
+      lg_srcv->rec_blocks_szx = block.szx;
+      if (lg_srcv->szx > block.szx)
+        lg_srcv->szx = block.szx;
+    }
   }
 
 #if COAP_Q_BLOCK_SUPPORT
@@ -3775,8 +3822,6 @@ coap_handle_request_put_block(coap_context_t *context,
   }
 
   update_data = 0;
-  saved_num = block.num;
-  saved_offset = offset;
 
   while (offset < saved_offset + length) {
     uint32_t block_m = block.m;
@@ -3787,7 +3832,7 @@ coap_handle_request_put_block(coap_context_t *context,
      * logical blocks as having more data so total_blocks is only set by the
      * final logical block.
      */
-    if (block.bert && offset + 1024 < saved_offset + length)
+    if (offset + ((size_t)1 << (block.szx + 4)) < saved_offset + length)
       block_m = 1;
     if (!check_if_received_block(&lg_srcv->rec_blocks, block.num)) {
       /* Update list of blocks received */
@@ -4589,6 +4634,8 @@ coap_block_build_body_lkd(coap_binary_t *body_data, size_t length,
     return NULL;
   if (body_data == NULL && total) {
     body_data = coap_new_binary(total);
+    if (body_data)
+      memset(body_data->s, 0, total);
   }
   if (body_data == NULL)
     return NULL;
@@ -4613,10 +4660,13 @@ coap_block_build_body_lkd(coap_binary_t *body_data, size_t length,
      *   estimate the server has of the total size of the resource
      *   representation, measured in bytes ("size indication").
      */
+    size_t old_len = body_data->length;
     coap_binary_t *new = coap_resize_binary(body_data, offset + length);
 
     if (new) {
       body_data = new;
+      if (body_data->length > old_len)
+        memset(&body_data->s[old_len], 0, body_data->length - old_len);
       memcpy(&body_data->s[offset], data, length);
     } else {
       coap_delete_binary(body_data);
