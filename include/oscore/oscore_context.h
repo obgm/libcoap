@@ -282,6 +282,27 @@ void oscore_log_char_value(coap_log_t level, const char *name,
                            const char *value);
 
 /**
+ * Locate an OSCORE security context in libcoap's in-RAM registry only.
+ *
+ * Walks @p c_context->p_osc_ctx and matches @p rcpkey_id and optionally
+ * @p ctxkey_id or Appendix B.2 @p oscore_r2. Does not use
+ * @p c_context->oscore_find_cb and does not require a CoAP session.
+ *
+ * @param c_context The CoAP context whose attached OSCORE contexts are searched.
+ * @param rcpkey_id The Recipient Key ID (KID); may be zero length.
+ * @param ctxkey_id ID Context to match, or @c NULL to skip ID Context check.
+ * @param oscore_r2 First 8 bytes of ID Context for B.2 matching, or @c NULL.
+ * @param recipient_ctx Updated with the matching recipient, or @c NULL.
+ *
+ * @return The OSCORE context, or @c NULL if not found in RAM.
+ */
+oscore_ctx_t *oscore_find_context_in_ram(const coap_context_t *c_context,
+                                         const coap_bin_const_t rcpkey_id,
+                                         const coap_bin_const_t *ctxkey_id,
+                                         uint8_t *oscore_r2,
+                                         oscore_recipient_ctx_t **recipient_ctx);
+
+/**
  *  oscore_find_context - Locate recipient context (and hence OSCORE context)
  *
  * @param session The CoAP session to search.

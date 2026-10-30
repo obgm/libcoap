@@ -1247,6 +1247,7 @@ fail:
 }
 
 static int t_find_mode; /* 0 = single rcp, 1 = multi rcp, -1 = return NULL */
+static int t_find_calls;
 
 static coap_oscore_conf_t *
 test_find_func(const coap_session_t *session,
@@ -1268,6 +1269,8 @@ test_find_func(const coap_session_t *session,
   (void)rcpkey_id;
   (void)ctxkey_id;
 
+  t_find_calls++;
+
   if (t_find_mode < 0)
     return NULL;
 
@@ -1283,8 +1286,7 @@ test_find_func(const coap_session_t *session,
 
 /*
  * t_find_1: External find with single recipient.
- * Temporary context is NOT attached to coap_context.
- * Freed when recipient is released.
+ * Context is registered on coap_context and freed with oscore_free_contexts().
  */
 static void
 t_find_1(void) {
@@ -1302,6 +1304,7 @@ t_find_1(void) {
   session->type = COAP_SESSION_TYPE_CLIENT;
 
   t_find_mode = 0;
+  t_find_calls = 0;
   ctx->oscore_find_cb = test_find_func;
 
   /* lock to pretend to run from inside coap_io_process */
@@ -1311,21 +1314,20 @@ t_find_1(void) {
   FailIf_CU_ASSERT_PTR_NOT_NULL(osc_ctx);
   FailIf_CU_ASSERT_PTR_NOT_NULL(rcp_ctx);
 
-  /* Temporary context NOT attached to coap_context */
-  CU_ASSERT(!oscore_is_context_attached(osc_ctx));
-  CU_ASSERT_PTR_NULL(ctx->p_osc_ctx);
+  CU_ASSERT(t_find_calls == 1);
+  CU_ASSERT(oscore_is_context_attached(osc_ctx));
+  CU_ASSERT(osc_ctx == ctx->p_osc_ctx);
 
   /* Single recipient returned */
   CU_ASSERT_PTR_NULL(rcp_ctx->next_recipient);
   CU_ASSERT(rcp_ctx->recipient_id->length == 6);
   CU_ASSERT(memcmp(rcp_ctx->recipient_id->s, "client", 6) == 0);
 
-  /* Release - frees temporary context too (unattached, last recipient) */
-  oscore_release_recipient_ctx(&rcp_ctx);
-  CU_ASSERT_PTR_NULL(rcp_ctx);
-
 fail:
   ctx->oscore_find_cb = NULL;
+  if (session && session->recipient_ctx)
+    oscore_release_recipient_ctx(&session->recipient_ctx);
+  oscore_free_contexts(ctx);
   coap_free(session);
 }
 
@@ -1349,6 +1351,7 @@ t_find_2(void) {
   session->type = COAP_SESSION_TYPE_CLIENT;
 
   t_find_mode = 1;
+  t_find_calls = 0;
   ctx->oscore_find_cb = test_find_func;
 
   coap_lock_lock();
@@ -1358,8 +1361,8 @@ t_find_2(void) {
   FailIf_CU_ASSERT_PTR_NOT_NULL(osc_ctx);
   FailIf_CU_ASSERT_PTR_NOT_NULL(rcp_ctx);
 
-  /* Temporary context NOT attached */
-  CU_ASSERT_PTR_NULL(osc_ctx->next);
+  CU_ASSERT(oscore_is_context_attached(osc_ctx));
+  CU_ASSERT(osc_ctx == ctx->p_osc_ctx);
 
   /* Only matching recipient "client1" kept */
   CU_ASSERT(rcp_ctx->recipient_id->length == 7);
@@ -1367,12 +1370,70 @@ t_find_2(void) {
   CU_ASSERT_PTR_NULL(rcp_ctx->next_recipient);
   CU_ASSERT(osc_ctx->recipient_chain == rcp_ctx);
 
-  oscore_release_recipient_ctx(&rcp_ctx);
-  CU_ASSERT_PTR_NULL(rcp_ctx);
+fail:
+  ctx->oscore_find_cb = NULL;
+  if (session && session->recipient_ctx)
+    oscore_release_recipient_ctx(&session->recipient_ctx);
+  oscore_free_contexts(ctx);
+  coap_free(session);
+}
+
+/*
+ * t_find_ram_reuse: Second session reuses in-RAM context; find_cb runs once.
+ */
+static void
+t_find_ram_reuse(void) {
+  coap_session_t *session1 = NULL;
+  coap_session_t *session2 = NULL;
+  oscore_ctx_t *osc_ctx1;
+  oscore_ctx_t *osc_ctx2;
+  oscore_recipient_ctx_t *rcp_ctx1 = NULL;
+  oscore_recipient_ctx_t *rcp_ctx2 = NULL;
+  coap_bin_const_t rcpkey_id = { 6, (const uint8_t *)"client" };
+  coap_bin_const_t ctxkey_id = { 0, (const uint8_t *)"" };
+
+  session1 = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session1);
+  memset(session1, 0, sizeof(coap_session_t));
+  session1->context = ctx;
+  session1->proto = COAP_PROTO_UDP;
+  session1->type = COAP_SESSION_TYPE_CLIENT;
+
+  session2 = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
+  FailIf_CU_ASSERT_PTR_NOT_NULL(session2);
+  memset(session2, 0, sizeof(coap_session_t));
+  session2->context = ctx;
+  session2->proto = COAP_PROTO_UDP;
+  session2->type = COAP_SESSION_TYPE_CLIENT;
+
+  t_find_mode = 0;
+  t_find_calls = 0;
+  ctx->oscore_find_cb = test_find_func;
+
+  coap_lock_lock();
+  osc_ctx1 = oscore_find_context(session1, rcpkey_id, &ctxkey_id, NULL, &rcp_ctx1);
+  osc_ctx2 = oscore_find_context(session2, rcpkey_id, &ctxkey_id, NULL, &rcp_ctx2);
+  coap_lock_unlock();
+
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_ctx1);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(osc_ctx2);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(rcp_ctx1);
+  FailIf_CU_ASSERT_PTR_NOT_NULL(rcp_ctx2);
+
+  CU_ASSERT(t_find_calls == 1);
+  CU_ASSERT(osc_ctx1 == osc_ctx2);
+  CU_ASSERT(rcp_ctx1 == rcp_ctx2);
+  CU_ASSERT(osc_ctx1 == ctx->p_osc_ctx);
 
 fail:
   ctx->oscore_find_cb = NULL;
-  coap_free(session);
+  if (session1 && session1->recipient_ctx)
+    oscore_release_recipient_ctx(&session1->recipient_ctx);
+  if (session2 && session2->recipient_ctx)
+    oscore_release_recipient_ctx(&session2->recipient_ctx);
+  oscore_free_contexts(ctx);
+  coap_free(session1);
+  coap_free(session2);
 }
 
 /*
@@ -2139,6 +2200,7 @@ t_init_oscore_tests(void) {
 
     OSCORE_TEST(t_find_1);
     OSCORE_TEST(t_find_2);
+    OSCORE_TEST(t_find_ram_reuse);
     OSCORE_TEST(t_find_3);
     OSCORE_TEST(t_find_4);
 
