@@ -1219,12 +1219,14 @@ else
 fi
 
 # Checks for header files.
-AC_CHECK_HEADERS([assert.h arpa/inet.h limits.h netdb.h netinet/in.h \
-                  netinet/ip_icmp.h netinet/icmp6.h linux/errqueue.h \
-                  pthread.h errno.h winsock2.h ws2tcpip.h signal.h \
-                  stdlib.h string.h strings.h sys/socket.h sys/select.h sys/time.h \
-                  time.h unistd.h sys/unistd.h sys/ioctl.h net/if.h ifaddrs.h \
-                  wait.h sys/wait.h])
+AC_CHECK_HEADERS([arpa/inet.h assert.h byteswap.h errno.h float.h ifaddrs.h inttypes.h limits.h \
+                  linux/errqueue.h linux/llc.h memory.h netdb.h netinet/ether.h \
+                  netinet/icmp6.h netinet/in.h netinet/ip_icmp.h net/if.h pthread.h \
+                  signal.h stdbool.h stddef.h stdint.h stdio.h stdlib.h strings.h string.h \
+                  sys/epoll.h sys/ioctl.h sys/random.h sys/select.h sys/socket.h \
+                  sys/stat.h sys/sysctl.h sys/timerfd.h sys/time.h sys/types.h \
+                  sys/uio.h sys/unistd.h sys/wait.h time.h unistd.h wait.h winsock2.h \
+                  ws2tcpip.h])
 
 # For epoll, need two headers (sys/epoll.h sys/timerfd.h), but set up one #define
 AC_CHECK_HEADER([sys/epoll.h])
@@ -1362,8 +1364,8 @@ AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo getifaddrs \
-                strnlen malloc pthread_mutex_lock getentropy getrandom random if_nametoindex])
+AC_CHECK_FUNCS([getaddrinfo getentropy getifaddrs getrandom if_nametoindex inet_pton malloc memset \
+                pthread_mutex_lock random select socket strcasecmp strnlen strrchr])
 
 # Check if -lsocket -lnsl is required (specifically Solaris)
 AC_SEARCH_LIBS([socket], [socket])

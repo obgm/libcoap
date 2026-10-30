@@ -18,7 +18,9 @@
 #endif
 
 #include <coap@LIBCOAP_API_VERSION@/coap_defines.h>
-
+/*
+ * Header file availability
+ */
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #cmakedefine HAVE_ARPA_INET_H @HAVE_ARPA_INET_H@
 
@@ -28,32 +30,14 @@
 /* Define to 1 if you have the <byteswap.h> header file. */
 #cmakedefine HAVE_BYTESWAP_H @HAVE_BYTESWAP_H@
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#cmakedefine HAVE_DLFCN_H @HAVE_DLFCN_H@
-
-/* Define to 1 if you have the <sys/epoll.h> header file. */
-#cmakedefine HAVE_SYS_EPOLL_H @HAVE_SYS_EPOLL_H@
-
 /* Define to 1 if you have the <errno.h> header file. */
 #cmakedefine HAVE_ERRNO_H @HAVE_ERRNO_H@
 
 /* Define to 1 if you have the <float.h> header file. */
 #cmakedefine HAVE_FLOAT_H @HAVE_FLOAT_H@
 
-/* Define to 1 if you have the `getaddrinfo' function. */
-#cmakedefine HAVE_GETADDRINFO @HAVE_GETADDRINFO@
-
-/* Define to 1 if you have the `getifaddrs' function. */
-#cmakedefine HAVE_GETIFADDRS @HAVE_GETIFADDRS@
-
-/* Define to 1 if you have the `getrandom' function. */
-#cmakedefine HAVE_GETRANDOM @HAVE_GETRANDOM@
-
 /* Define to 1 if you have the <ifaddrs.h> header file. */
 #cmakedefine HAVE_IFADDRS_H @HAVE_IFADDRS_H@
-
-/* Define to 1 if you have the `if_nametoindex' function. */
-#cmakedefine HAVE_IF_NAMETOINDEX @HAVE_IF_NAMETOINDEX@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H @HAVE_INTTYPES_H@
@@ -61,20 +45,23 @@
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H @HAVE_LIMITS_H@
 
-/* Define to 1 if you have the `malloc' function. */
-#cmakedefine HAVE_MALLOC @HAVE_MALLOC@
+/* Define to 1 if you have the <linux/errqueue.h> header file. */
+#cmakedefine HAVE_LINUX_ERRQUEUE_H @HAVE_LINUX_ERRQUEUE_H@
+
+/* Define to 1 if you have the <linux/llc.h> header file. */
+#cmakedefine HAVE_LINUX_LLC_H @HAVE_LINUX_LLC_H@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #cmakedefine HAVE_MEMORY_H @HAVE_MEMORY_H@
 
-/* Define to 1 if you have the `memset' function. */
-#cmakedefine HAVE_MEMSET @HAVE_MEMSET@
-
 /* Define to 1 if you have the <netdb.h> header file. */
 #cmakedefine HAVE_NETDB_H @HAVE_NETDB_H@
 
-/* Define to 1 if you have the <net/if.h> header file. */
-#cmakedefine HAVE_NET_IF_H @HAVE_NET_IF_H@
+/* Define to 1 if you have the <netinet/ether.h> header file. */
+#cmakedefine HAVE_NETINET_ETHER_H @HAVE_NETINET_ETHER_H@
+
+/* Define to 1 if you have the <netinet/icmp6.h> header file. */
+#cmakedefine HAVE_NETINET_ICMP6_H @HAVE_NETINET_ICMP6_H@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #cmakedefine HAVE_NETINET_IN_H @HAVE_NETINET_IN_H@
@@ -82,26 +69,14 @@
 /* Define to 1 if you have the <netinet/ip_icmp.h> header file. */
 #cmakedefine HAVE_NETINET_IP_ICMP_H @HAVE_NETINET_IP_ICMP_H@
 
-/* Define to 1 if you have the <netinet/icmp6.h> header file. */
-#cmakedefine HAVE_NETINET_ICMP6_H @HAVE_NETINET_ICMP6_H@
-
-/* Define to 1 if you have the <linux/errqueue.h> header file. */
-#cmakedefine HAVE_LINUX_ERRQUEUE_H @HAVE_LINUX_ERRQUEUE_H@
+/* Define to 1 if you have the <net/if.h> header file. */
+#cmakedefine HAVE_NET_IF_H @HAVE_NET_IF_H@
 
 /* Define to 1 if you have the <pthread.h> header file. */
 #cmakedefine HAVE_PTHREAD_H @HAVE_PTHREAD_H@
 
-/* Define to 1 if you have the `pthread_mutex_lock' function. */
-#cmakedefine HAVE_PTHREAD_MUTEX_LOCK @HAVE_PTHREAD_MUTEX_LOCK@
-
-/* Define to 1 if you have the `select' function. */
-#cmakedefine HAVE_SELECT @HAVE_SELECT@
-
 /* Define to 1 if you have the <signal.h> header file. */
 #cmakedefine HAVE_SIGNAL_H @HAVE_SIGNAL_H@
-
-/* Define to 1 if you have the `socket' function. */
-#cmakedefine HAVE_SOCKET @HAVE_SOCKET@
 
 /* Define to 1 if you have the <stdbool.h> header file. */
 #cmakedefine HAVE_STDBOOL_H @HAVE_STDBOOL_H@
@@ -112,11 +87,11 @@
 /* Define to 1 if you have the <stdint.h> header file. */
 #cmakedefine HAVE_STDINT_H @HAVE_STDINT_H@
 
+/* Define to 1 if you have the <stdio.h> header file. */
+#cmakedefine HAVE_STDIO_H @HAVE_STDIO_H@
+
 /* Define to 1 if you have the <stdlib.h> header file. */
 #cmakedefine HAVE_STDLIB_H @HAVE_STDLIB_H@
-
-/* Define to 1 if you have the `strcasecmp' function. */
-#cmakedefine HAVE_STRCASECMP @HAVE_STRCASECMP@
 
 /* Define to 1 if you have the <strings.h> header file. */
 #cmakedefine HAVE_STRINGS_H @HAVE_STRINGS_H@
@@ -124,20 +99,14 @@
 /* Define to 1 if you have the <string.h> header file. */
 #cmakedefine HAVE_STRING_H @HAVE_STRING_H@
 
-/* Define to 1 if you have the `strnlen' function. */
-#cmakedefine HAVE_STRNLEN @HAVE_STRNLEN@
-
-/* Define to 1 if you have the `strrchr' function. */
-#cmakedefine HAVE_STRRCHR @HAVE_STRRCHR@
-
-/* Define to 1 if you have the `randon' function. */
-#cmakedefine HAVE_RANDOM @HAVE_RANDOM@
-
-/* Define to 1 if the system has the type `struct cmsghdr'. */
-#cmakedefine HAVE_STRUCT_CMSGHDR @HAVE_STRUCT_CMSGHDR@
+/* Define to 1 if you have the <sys/epoll.h> header file. */
+#cmakedefine HAVE_SYS_EPOLL_H @HAVE_SYS_EPOLL_H@
 
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #cmakedefine HAVE_SYS_IOCTL_H @HAVE_SYS_IOCTL_H@
+
+/* Define to 1 if you have the <sys/random.h> header file. */
+#cmakedefine HAVE_SYS_RANDOM_H @HAVE_SYS_RANDOM_H@
 
 /* Define to 1 if you have the <sys/select.h> header file. */
 #cmakedefine HAVE_SYS_SELECT_H @HAVE_SYS_SELECT_H@
@@ -151,23 +120,32 @@
 /* Define to 1 if you have the <sys/sysctl.h> header file. */
 #cmakedefine HAVE_SYS_SYSCTL_H @HAVE_SYS_SYSCTL_H@
 
+/* Define to 1 if you have the <sys/timerfd.h> header file. */
+#cmakedefine HAVE_SYS_TIMERFD_H @HAVE_SYS_TIMERFD_H@
+
 /* Define to 1 if you have the <sys/time.h> header file. */
 #cmakedefine HAVE_SYS_TIME_H @HAVE_SYS_TIME_H@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #cmakedefine HAVE_SYS_TYPES_H @HAVE_SYS_TYPES_H@
 
+/* Define to 1 if you have the <sys/uio.h> header file. */
+#cmakedefine HAVE_SYS_UIO_H @HAVE_SYS_UIO_H@
+
 /* Define to 1 if you have the <sys/unistd.h> header file. */
 #cmakedefine HAVE_SYS_UNISTD_H @HAVE_SYS_UNISTD_H@
+
+/* Define to 1 if you have the <sys/wait.h> header file. */
+#cmakedefine HAVE_SYS_WAIT_H @HAVE_SYS_WAIT_H@
 
 /* Define to 1 if you have the <time.h> header file. */
 #cmakedefine HAVE_TIME_H @HAVE_TIME_H@
 
-/* Define to 1 if you have the <sys/timerfd.h> header file. */
-#cmakedefine HAVE_SYS_TIMERFD_H @HAVE_SYS_TIMERFD_H@
-
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H @HAVE_UNISTD_H@
+
+/* Define to 1 if you have the <wait.h> header file. */
+#cmakedefine HAVE_WAIT_H @HAVE_WAIT_H@
 
 /* Define to 1 if you have <winsock2.h> header file. */
 #cmakedefine HAVE_WINSOCK2_H @HAVE_WINSOCK2_H@
@@ -175,6 +153,63 @@
 /* Define to 1 if you have <ws2tcpip.h> header file. */
 #cmakedefine HAVE_WS2TCPIP_H @HAVE_WS2TCPIP_H@
 
+/*
+ * structure availability
+ */
+/* Define to 1 if the system has the type `struct cmsghdr'. */
+#cmakedefine HAVE_STRUCT_CMSGHDR @HAVE_STRUCT_CMSGHDR@
+
+/*
+ * Function availability
+ */
+/* Define to 1 if you have the `getaddrinfo' function. */
+#cmakedefine HAVE_GETADDRINFO @HAVE_GETADDRINFO@
+
+/* Define to 1 if you have the `getentropy' function. */
+#cmakedefine HAVE_GETENTROPY @HAVE_GETENTROPY@
+
+/* Define to 1 if you have the `getifaddrs' function. */
+#cmakedefine HAVE_GETIFADDRS @HAVE_GETIFADDRS@
+
+/* Define to 1 if you have the `getrandom' function. */
+#cmakedefine HAVE_GETRANDOM @HAVE_GETRANDOM@
+
+/* Define to 1 if you have the `if_nametoindex' function. */
+#cmakedefine HAVE_IF_NAMETOINDEX @HAVE_IF_NAMETOINDEX@
+
+/* Define to 1 if you have the `inet_pton' function. */
+#cmakedefine HAVE_INET_PTON @HAVE_INET_PTON@
+
+/* Define to 1 if you have the `malloc' function. */
+#cmakedefine HAVE_MALLOC @HAVE_MALLOC@
+
+/* Define to 1 if you have the `memset' function. */
+#cmakedefine HAVE_MEMSET @HAVE_MEMSET@
+
+/* Define to 1 if you have the `pthread_mutex_lock' function. */
+#cmakedefine HAVE_PTHREAD_MUTEX_LOCK @HAVE_PTHREAD_MUTEX_LOCK@
+
+/* Define to 1 if you have the `randon' function. */
+#cmakedefine HAVE_RANDOM @HAVE_RANDOM@
+
+/* Define to 1 if you have the `select' function. */
+#cmakedefine HAVE_SELECT @HAVE_SELECT@
+
+/* Define to 1 if you have the `socket' function. */
+#cmakedefine HAVE_SOCKET @HAVE_SOCKET@
+
+/* Define to 1 if you have the `strcasecmp' function. */
+#cmakedefine HAVE_STRCASECMP @HAVE_STRCASECMP@
+
+/* Define to 1 if you have the `strnlen' function. */
+#cmakedefine HAVE_STRNLEN @HAVE_STRNLEN@
+
+/* Define to 1 if you have the `strrchr' function. */
+#cmakedefine HAVE_STRRCHR @HAVE_STRRCHR@
+
+/*
+ * libcoap specific definitions
+ */
 /* Define to the address where bug reports for this package should be sent. */
 #cmakedefine PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
 
