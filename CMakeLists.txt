@@ -963,6 +963,8 @@ if(ENABLE_TESTS)
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_oscore.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_pdu.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_pdu.h
+    ${CMAKE_CURRENT_LIST_DIR}/tests/test_proxy.c
+    ${CMAKE_CURRENT_LIST_DIR}/tests/test_proxy.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_sendqueue.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_sendqueue.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_session.c

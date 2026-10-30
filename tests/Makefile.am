@@ -23,6 +23,7 @@ testdriver_SOURCES = \
  test_encode.c \
  test_options.c \
  test_pdu.c \
+ test_proxy.c \
  test_sendqueue.c \
  test_session.c \
  test_uri.c \

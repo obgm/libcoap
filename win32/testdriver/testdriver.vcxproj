@@ -381,6 +381,7 @@
     <ClCompile Include="..\..\tests\test_options.c" />
     <ClCompile Include="..\..\tests\test_oscore.c" />
     <ClCompile Include="..\..\tests\test_pdu.c" />
+    <ClCompile Include="..\..\tests\test_proxy.c" />
     <ClCompile Include="..\..\tests\test_sendqueue.c" />
     <ClCompile Include="..\..\tests\test_session.c" />
     <ClCompile Include="..\..\tests\test_tls.c" />
@@ -393,6 +394,7 @@
     <ClInclude Include="..\..\tests\test_options.h" />
     <ClInclude Include="..\..\tests\test_oscore.h" />
     <ClInclude Include="..\..\tests\test_pdu.h" />
+    <ClInclude Include="..\..\tests\test_proxy.h" />
     <ClInclude Include="..\..\tests\test_sendqueue.h" />
     <ClInclude Include="..\..\tests\test_session.h" />
     <ClInclude Include="..\..\tests\test_tls.h" />
