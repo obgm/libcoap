@@ -1001,6 +1001,9 @@ oscore_free_association(oscore_association_t *association) {
     coap_delete_bin_const(association->token);
     coap_delete_bin_const(association->aad);
     coap_delete_bin_const(association->nonce);
+    if (association->obs_partial_iv == association->partial_iv) {
+      association->obs_partial_iv = NULL;
+    }
     coap_delete_bin_const(association->partial_iv);
     coap_delete_bin_const(association->obs_partial_iv);
     coap_free_type(COAP_STRING, association);

@@ -783,9 +783,15 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
       if (association->aad == NULL)
         goto error;
       if (doing_observe && observe_value == 1) {
-        coap_delete_bin_const(association->obs_partial_iv);
+        if (association->obs_partial_iv &&
+            association->obs_partial_iv != association->partial_iv) {
+          coap_delete_bin_const(association->obs_partial_iv);
+        }
         association->obs_partial_iv = association->partial_iv;
       } else {
+        if (association->obs_partial_iv == association->partial_iv) {
+          association->obs_partial_iv = NULL;
+        }
         coap_delete_bin_const(association->partial_iv);
       }
       association->partial_iv =
