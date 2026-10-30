@@ -1362,8 +1362,8 @@ AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([memset select socket strcasecmp strrchr getaddrinfo getifaddrs \
-                strnlen malloc pthread_mutex_lock getentropy getrandom random if_nametoindex])
+AC_CHECK_FUNCS([getaddrinfo getentropy getifaddrs getrandom if_nametoindex inet_pton malloc memset \
+                pthread_mutex_lock random select socket strcasecmp strnlen strrchr])
 
 # Check if -lsocket -lnsl is required (specifically Solaris)
 AC_SEARCH_LIBS([socket], [socket])
