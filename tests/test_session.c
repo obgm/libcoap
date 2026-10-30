@@ -459,6 +459,100 @@ t_session_proxy_remove(void) {
   coap_delete_pdu(upstream_rsp);
   coap_session_release(ongoing);
 }
+
+/*
+ * The forward proxy must hand the upstream transfer its own copy of the
+ * request body, not the caller's buffer, because that buffer (the reassembled
+ * lg_srcv body) is freed once the incoming request has been handled while the
+ * upstream Block1 transfer still needs the data for later blocks.
+ */
+static void
+t_session_proxy_body_copy(void) {
+  coap_proxy_server_list_t server_list;
+  coap_address_t addr;
+  coap_session_t *incoming;
+  coap_session_t *ongoing;
+  coap_pdu_t *request;
+  coap_pdu_t *response;
+  const size_t body_len = 1600;
+  uint8_t *body;
+  size_t i;
+  coap_pdu_t *t_pdu;
+  uint8_t buf[4];
+
+  coap_debug_set_packet_loss("1-10");
+  body = coap_malloc_type(COAP_STRING, body_len);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(body);
+  for (i = 0; i < body_len; i++)
+    body[i] = (uint8_t)i;
+
+  coap_context_set_block_mode(ctx,
+                              COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+  memset(&server_list, 0, sizeof(server_list));
+  server_list.type = COAP_PROXY_FWD_DYNAMIC;
+  server_list.track_client_session = 1;
+
+  coap_address_init(&addr);
+  addr.size = sizeof(struct sockaddr_in);
+  addr.addr.sin.sin_family = AF_INET;
+  addr.addr.sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.addr.sin.sin_port = htons(5697);
+  incoming = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(incoming);
+  response = coap_pdu_init(COAP_MESSAGE_ACK, 0, 0x1234, 1152);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
+
+  request = coap_pdu_init(COAP_MESSAGE_NON, COAP_REQUEST_CODE_POST, 0x1235, 1152);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(request);
+  coap_add_token(request, 1, (const uint8_t *)"q");
+  coap_add_option(request, COAP_OPTION_PROXY_URI,
+                  strlen("coap://127.0.0.1:5696/z"),
+                  (const uint8_t *)"coap://127.0.0.1:5696/z");
+  /* Present the body as a single reassembled body owned outside the PDU */
+  request->body_data = body;
+  request->body_length = body_len;
+  request->body_total = body_len;
+
+  CU_ASSERT(coap_proxy_forward_request(incoming, request, response, NULL,
+                                       NULL, &server_list) == 1);
+  request->body_data = NULL;
+  coap_delete_pdu(request);
+  coap_delete_pdu(response);
+  coap_free_type(COAP_STRING, body);
+
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx->proxy_list);
+  ongoing = NULL;
+  for (i = 0; i < ctx->proxy_list_count; i++) {
+    if (ctx->proxy_list[i].proxy_req && ctx->proxy_list[i].ongoing &&
+        ctx->proxy_list[i].ongoing->lg_xmit) {
+      ongoing = ctx->proxy_list[i].ongoing;
+      break;
+    }
+  }
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ongoing);
+
+  /* Fake a 2.31 response to send the second block */
+  t_pdu = ctx->proxy_list[i].ongoing->lg_xmit->sent_pdu;
+  response = coap_pdu_init(COAP_MESSAGE_NON, COAP_RESPONSE_CODE(231), 0, 1152);
+  response->mid = t_pdu->mid;
+  coap_add_token(response, t_pdu->actual_token.length, t_pdu->actual_token.s);
+  coap_add_option(response, COAP_OPTION_BLOCK1, coap_encode_var_safe(buf, sizeof(buf),
+                  (0 << 4) |
+                  (1 << 3) |
+                  6),
+                  buf);
+
+  coap_lock_lock(return);
+  coap_dispatch(ctx, ongoing, response);
+  coap_lock_unlock();
+  coap_delete_pdu(response);
+
+  coap_lock_lock(return);
+  coap_proxy_remove_association(incoming, 0);
+  coap_lock_unlock();
+  coap_session_release(incoming);
+}
 #endif /* COAP_PROXY_SUPPORT */
 
 /* This function creates a set of nodes for testing. These nodes
@@ -524,6 +618,7 @@ t_init_session_tests(void) {
   SESSION_TEST(suite, t_session_508_hop_limit);
 #if COAP_PROXY_SUPPORT
   SESSION_TEST(suite, t_session_proxy_remove);
+  SESSION_TEST(suite, t_session_proxy_body_copy);
 #endif /* COAP_PROXY_SUPPORT */
 
   return suite;

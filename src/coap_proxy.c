@@ -1216,6 +1216,7 @@ coap_proxy_forward_request_lkd(coap_session_t *session,
       goto failed;
     }
     memcpy(body_data->s, data, size);
+    data = body_data->s;
     if (!coap_add_data_large_request_lkd(proxy_entry->ongoing, pdu, total, data,
                                          coap_proxy_release_body_data, body_data)) {
       coap_log_debug("proxy: add data error\n");
