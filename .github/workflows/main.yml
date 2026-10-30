@@ -142,9 +142,12 @@ jobs:
       - name: configure
         run: |
           ./configure --disable-documentation --disable-doxygen --disable-man --enable-examples --enable-tests --disable-dtls
-      - name: check
+      - name: check updates
         run: |
           scripts/check-missing-updates.sh
+      - name: check HAVE_
+        run: |
+          scripts/check_have_.sh
 
   build-linux:
     needs: do-caches

@@ -16,11 +16,12 @@
 
 #include "coap3/coap_libcoap_build.h"
 
+#ifdef HAVE_SYS_RANDOM_H
+#include <sys/random.h>
+#endif /* HAVE_SYS_RANDOM_H */
 
 #if defined(__ZEPHYR__)
 #include <zephyr/random/random.h>
-#elif defined(HAVE_GETRANDOM)
-#include <sys/random.h>
 #elif defined(WITH_CONTIKI)
 #include "lib/csprng.h"
 #else /* !WITH_CONTIKI */
