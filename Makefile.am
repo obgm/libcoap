@@ -159,6 +159,7 @@ EXTRA_DIST = \
   tests/test_options.h \
   tests/test_oscore.h \
   tests/test_pdu.h \
+  tests/test_proxy.h \
   tests/test_sendqueue.h \
   tests/test_session.h \
   tests/test_tls.h \

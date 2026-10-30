@@ -19,6 +19,7 @@
 #include "test_encode.h"
 #include "test_options.h"
 #include "test_pdu.h"
+#include "test_proxy.h"
 #include "test_error_response.h"
 #include "test_session.h"
 #include "test_sendqueue.h"
@@ -46,6 +47,7 @@ main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
   t_init_pdu_tests();
   t_init_error_response_tests();
 #if COAP_CLIENT_SUPPORT
+  t_init_proxy_tests();
   t_init_session_tests();
   t_init_sendqueue_tests();
   t_init_block_tests();
