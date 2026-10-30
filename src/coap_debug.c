@@ -226,6 +226,38 @@ print_readable(const uint8_t *data, size_t len,
   return cnt;
 }
 
+/*
+ * Appends formatted output to the zero terminated string held in buf, which
+ * is size bytes long. *len is the current length of that string and is
+ * updated to the new length. Output that does not fit is truncated, so *len
+ * never goes past size - 1 and always matches what is in buf.
+ */
+#if (defined(__GNUC__))
+static void print_append(char *buf, size_t size, size_t *len,
+                         const char *format, ...) __attribute__((format(printf, 4, 5)));
+#endif /* __GNUC__ */
+
+static void
+print_append(char *buf, size_t size, size_t *len, const char *format, ...) {
+  va_list ap;
+  int ret;
+
+  assert(size > 0 && *len < size);
+  if (size == 0 || *len >= size - 1)
+    return;
+
+  va_start(ap, format);
+  ret = vsnprintf(&buf[*len], size - *len, format, ap);
+  va_end(ap);
+  if (ret < 0) {
+    buf[*len] = '\000';
+  } else if ((size_t)ret >= size - *len) {
+    *len = size - 1;
+  } else {
+    *len += (size_t)ret;
+  }
+}
+
 #ifndef min
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -707,9 +739,9 @@ coap_option_string(coap_pdu_code_t code, coap_option_num_t number) {
   return buf;
 }
 
-static unsigned int
+static size_t
 print_content_format(unsigned int format_type,
-                     unsigned char *result, unsigned int buflen) {
+                     unsigned char *result, size_t buflen) {
   struct desc_t {
     unsigned int type;
     const char *name;
@@ -750,16 +782,19 @@ print_content_format(unsigned int format_type,
   };
 
   size_t i;
+  size_t len = 0;
 
   /* search format_type in list of known content formats */
   for (i = 0; i < sizeof(formats)/sizeof(struct desc_t); i++) {
     if (format_type == formats[i].type) {
-      return snprintf((char *)result, buflen, "%s", formats[i].name);
+      print_append((char *)result, buflen, &len, "%s", formats[i].name);
+      return len;
     }
   }
 
   /* unknown content format, just print numeric value to buf */
-  return snprintf((char *)result, buflen, "%u", format_type);
+  print_append((char *)result, buflen, &len, "%u", format_type);
+  return len;
 }
 
 /**
@@ -844,55 +879,51 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
   coap_mutex_lock(&m_show_pdu);
 #endif /* COAP_THREAD_SAFE */
   if (!pdu->session || COAP_PROTO_NOT_RELIABLE(pdu->session->proto)) {
-    snprintf(outbuf, sizeof(outbuf), "v:%d t:%s c:%s i:%04x {",
-             COAP_DEFAULT_VERSION, msg_type_string(pdu->type),
-             msg_code_string(pdu->code), pdu->mid);
+    print_append(outbuf, sizeof(outbuf), &outbuflen, "v:%d t:%s c:%s i:%04x {",
+                 COAP_DEFAULT_VERSION, msg_type_string(pdu->type),
+                 msg_code_string(pdu->code), pdu->mid);
   } else if (pdu->session->proto == COAP_PROTO_WS ||
              pdu->session->proto == COAP_PROTO_WSS) {
     if (pdu->type != COAP_MESSAGE_CON)
       coap_log_alert("WebSocket: type != CON\n");
-    snprintf(outbuf, sizeof(outbuf), "v:WebSocket c:%s {",
-             msg_code_string(pdu->code));
+    print_append(outbuf, sizeof(outbuf), &outbuflen, "v:WebSocket c:%s {",
+                 msg_code_string(pdu->code));
   } else {
     if (pdu->type != COAP_MESSAGE_CON)
       coap_log_alert("Reliable: type != CON\n");
-    snprintf(outbuf, sizeof(outbuf), "v:Reliable c:%s {",
-             msg_code_string(pdu->code));
+    print_append(outbuf, sizeof(outbuf), &outbuflen, "v:Reliable c:%s {",
+                 msg_code_string(pdu->code));
   }
 
   for (i = 0; i < pdu->actual_token.length; i++) {
-    outbuflen = strlen(outbuf);
-    snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-             "%02x", pdu->actual_token.s[i]);
+    print_append(outbuf, sizeof(outbuf), &outbuflen,
+                 "%02x", pdu->actual_token.s[i]);
   }
-  outbuflen = strlen(outbuf);
-  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "}");
+  print_append(outbuf, sizeof(outbuf), &outbuflen, "}");
 
   /* show options, if any */
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
-  outbuflen = strlen(outbuf);
-  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " [");
+  print_append(outbuf, sizeof(outbuf), &outbuflen, " [");
   while ((option = coap_option_next(&opt_iter))) {
     buf[0] = '\000';
+    buf_len = 0;
     if (!have_options) {
       have_options = 1;
     } else {
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ",");
+      print_append(outbuf, sizeof(outbuf), &outbuflen, ",");
     }
 
     if (pdu->code == COAP_SIGNALING_CODE_CSM) {
       switch ((coap_sig_csm_opt_t)opt_iter.number) {
       case COAP_SIG_OPT_EXTENDED_TOKEN_LENGTH:
       case COAP_SIG_OPT_MAX_MESSAGE_SIZE:
-        buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-                           coap_decode_var_bytes(coap_opt_value(option),
-                                                 coap_opt_length(option)));
+        print_append((char *)buf, sizeof(buf), &buf_len, "%u",
+                     coap_decode_var_bytes(coap_opt_value(option),
+                                           coap_opt_length(option)));
         break;
       case COAP_SIG_OPT_BLOCK_WISE_TRANSFER:
       default:
-        buf_len = 0;
         break;
       }
     } else if (pdu->code == COAP_SIGNALING_CODE_PING ||
@@ -900,7 +931,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
       switch ((coap_sig_ping_opt_t)opt_iter.number) {
       case COAP_SIG_OPT_CUSTODY:
       default:
-        buf_len = 0;
+        break;
       }
     } else if (pdu->code == COAP_SIGNALING_CODE_RELEASE) {
       switch ((coap_sig_release_opt_t)opt_iter.number) {
@@ -910,23 +941,21 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
                                  buf, sizeof(buf), 0);
         break;
       case COAP_SIG_OPT_HOLD_OFF:
-        buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-                           coap_decode_var_bytes(coap_opt_value(option),
-                                                 coap_opt_length(option)));
+        print_append((char *)buf, sizeof(buf), &buf_len, "%u",
+                     coap_decode_var_bytes(coap_opt_value(option),
+                                           coap_opt_length(option)));
         break;
       default:
-        buf_len = 0;
         break;
       }
     } else if (pdu->code == COAP_SIGNALING_CODE_ABORT) {
       switch ((coap_sig_abort_opt_t)opt_iter.number) {
       case COAP_SIG_OPT_BAD_CSM_OPTION:
-        buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-                           coap_decode_var_bytes(coap_opt_value(option),
-                                                 coap_opt_length(option)));
+        print_append((char *)buf, sizeof(buf), &buf_len, "%u",
+                     coap_decode_var_bytes(coap_opt_value(option),
+                                           coap_opt_length(option)));
         break;
       default:
-        buf_len = 0;
         break;
       }
     } else {
@@ -947,26 +976,25 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
          * letter M if set, the _ otherwise */
         if (COAP_OPT_BLOCK_SZX(option) == 7) {
           if (coap_get_data(pdu, &data_len, &data))
-            buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT(%" PRIuS ")",
-                               coap_opt_block_num(option), /* block number */
-                               COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-                               data_len);
+            print_append((char *)buf, sizeof(buf), &buf_len, "%u/%c/BERT(%" PRIuS ")",
+                         coap_opt_block_num(option), /* block number */
+                         COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+                         data_len);
           else
-            buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/BERT",
-                               coap_opt_block_num(option), /* block number */
-                               COAP_OPT_BLOCK_MORE(option) ? 'M' : '_'); /* M bit */
+            print_append((char *)buf, sizeof(buf), &buf_len, "%u/%c/BERT",
+                         coap_opt_block_num(option), /* block number */
+                         COAP_OPT_BLOCK_MORE(option) ? 'M' : '_'); /* M bit */
         } else {
-          buf_len = snprintf((char *)buf, sizeof(buf), "%u/%c/%u",
-                             coap_opt_block_num(option), /* block number */
-                             COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
-                             (unsigned)(1u << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
+          print_append((char *)buf, sizeof(buf), &buf_len, "%u/%c/%u",
+                       coap_opt_block_num(option), /* block number */
+                       COAP_OPT_BLOCK_MORE(option) ? 'M' : '_', /* M bit */
+                       (unsigned)(1u << (COAP_OPT_BLOCK_SZX(option) + 4))); /* block size */
         }
 
         break;
 
       case COAP_OPTION_OSCORE:
         opt_len = coap_opt_length(option);
-        buf[0] = '\000';
         if (opt_len) {
           size_t ofs = 1;
           size_t cnt;
@@ -974,20 +1002,18 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
           opt_val = coap_opt_value(option);
           if (opt_val[0] & 0x20) {
             /* Group Flag */
-            snprintf((char *)buf, sizeof(buf), "grp");
+            print_append((char *)buf, sizeof(buf), &buf_len, "grp");
           }
           if (opt_val[0] & 0x07) {
             /* Partial IV */
             cnt = opt_val[0] & 0x07;
             if (cnt > opt_len - ofs)
               goto no_more;
-            buf_len = strlen((char *)buf);
-            snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%spIV=0x",
-                     buf_len ? "," : "");
+            print_append((char *)buf, sizeof(buf), &buf_len, "%spIV=0x",
+                         buf_len ? "," : "");
             for (i = 0; (uint32_t)i < cnt; i++) {
-              buf_len = strlen((char *)buf);
-              snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
-                       "%02x", opt_val[ofs + i]);
+              print_append((char *)buf, sizeof(buf), &buf_len,
+                           "%02x", opt_val[ofs + i]);
             }
             ofs += cnt;
           }
@@ -999,13 +1025,11 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
             if (cnt > opt_len - ofs - 1)
               goto no_more;
             ofs++;
-            buf_len = strlen((char *)buf);
-            snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%skc=0x",
-                     buf_len ? "," : "");
+            print_append((char *)buf, sizeof(buf), &buf_len, "%skc=0x",
+                         buf_len ? "," : "");
             for (i = 0; (uint32_t)i < cnt; i++) {
-              buf_len = strlen((char *)buf);
-              snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
-                       "%02x", opt_val[ofs + i]);
+              print_append((char *)buf, sizeof(buf), &buf_len,
+                           "%02x", opt_val[ofs + i]);
             }
             ofs += cnt;
           }
@@ -1014,18 +1038,15 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
             if (ofs >= opt_len)
               goto no_more;
             cnt = opt_len - ofs;
-            buf_len = strlen((char *)buf);
-            snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len, "%skid=0x",
-                     buf_len ? "," : "");
+            print_append((char *)buf, sizeof(buf), &buf_len, "%skid=0x",
+                         buf_len ? "," : "");
             for (i = 0; (uint32_t)i < cnt; i++) {
-              buf_len = strlen((char *)buf);
-              snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
-                       "%02x", opt_val[ofs + i]);
+              print_append((char *)buf, sizeof(buf), &buf_len,
+                           "%02x", opt_val[ofs + i]);
             }
           }
         }
 no_more:
-        buf_len = strlen((char *)buf);
         is_oscore_payload = 1;
         break;
 
@@ -1037,9 +1058,9 @@ no_more:
       case COAP_OPTION_HOP_LIMIT:
         if (coap_opt_length(option)) {
           /* show values as unsigned decimal value */
-          buf_len = snprintf((char *)buf, sizeof(buf), "%u",
-                             coap_decode_var_bytes(coap_opt_value(option),
-                                                   coap_opt_length(option)));
+          print_append((char *)buf, sizeof(buf), &buf_len, "%u",
+                       coap_decode_var_bytes(coap_opt_value(option),
+                                             coap_opt_length(option)));
         }
         break;
 
@@ -1050,13 +1071,11 @@ no_more:
       case COAP_OPTION_RTAG:
         opt_len = coap_opt_length(option);
         opt_val = coap_opt_value(option);
-        snprintf((char *)buf, sizeof(buf), "0x");
+        print_append((char *)buf, sizeof(buf), &buf_len, "0x");
         for (i = 0; (uint32_t)i < opt_len; i++) {
-          buf_len = strlen((char *)buf);
-          snprintf((char *)&buf[buf_len], sizeof(buf)-buf_len,
-                   "%02x", opt_val[i]);
+          print_append((char *)buf, sizeof(buf), &buf_len,
+                       "%02x", opt_val[i]);
         }
-        buf_len = strlen((char *)buf);
         break;
       case COAP_OPTION_URI_PATH_ABB:
         value = coap_decode_var_bytes(coap_opt_value(option),
@@ -1066,11 +1085,10 @@ no_more:
           exp = coap_map_abbrev_uri_path(coap_upa_client_fallback_chain, value);
         }
         if (exp) {
-          snprintf((char *)&buf, sizeof(buf), "%s", exp);
+          print_append((char *)buf, sizeof(buf), &buf_len, "%s", exp);
         } else {
-          snprintf((char *)&buf, sizeof(buf), "(%" PRIu32 ")", value);
+          print_append((char *)buf, sizeof(buf), &buf_len, "(%" PRIu32 ")", value);
         }
-        buf_len = strlen((char *)buf);
         break;
       case COAP_OPTION_URI_PATH:
       case COAP_OPTION_PROXY_URI:
@@ -1091,23 +1109,19 @@ no_more:
                                  buf, sizeof(buf), 1);
       }
     }
-    outbuflen = strlen(outbuf);
-    snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-             " %s:%.*s", coap_option_string(pdu->code, opt_iter.number),
-             (int)buf_len, buf);
+    print_append(outbuf, sizeof(outbuf), &outbuflen,
+                 " %s:%.*s", coap_option_string(pdu->code, opt_iter.number),
+                 (int)buf_len, buf);
   }
 
-  outbuflen = strlen(outbuf);
-  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " ]");
+  print_append(outbuf, sizeof(outbuf), &outbuflen, " ]");
 
   if (coap_get_data(pdu, &data_len, &data)) {
     if (!enable_data_for_show_pdu) {
       /* Only output data if wanted */
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-               "data length %"PRIuS " (data suppressed)\n", data_len);
+      print_append(outbuf, sizeof(outbuf), &outbuflen, " :: ");
+      print_append(outbuf, sizeof(outbuf), &outbuflen,
+                   "data length %"PRIuS " (data suppressed)\n", data_len);
       COAP_DO_SHOW_OUTPUT_LINE;
 #if COAP_THREAD_SAFE
       coap_mutex_unlock(&m_show_pdu);
@@ -1115,60 +1129,49 @@ no_more:
       return;
     }
 
-    outbuflen = strlen(outbuf);
-    snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  " :: ");
+    print_append(outbuf, sizeof(outbuf), &outbuflen, " :: ");
 
     if (is_binary(content_format) || !isprint(data[0]) || is_oscore_payload) {
       size_t keep_data_len = data_len;
       const uint8_t *keep_data = data;
 
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-               "binary data length %"PRIuS "\n", data_len);
+      print_append(outbuf, sizeof(outbuf), &outbuflen,
+                   "binary data length %"PRIuS "\n", data_len);
       COAP_DO_SHOW_OUTPUT_LINE;
       /*
        * Output hex dump of binary data as a continuous entry
        */
       outbuf[0] = '\000';
-      snprintf(outbuf, sizeof(outbuf),  "<<");
+      outbuflen = 0;
+      print_append(outbuf, sizeof(outbuf), &outbuflen, "<<");
       while (data_len--) {
-        outbuflen = strlen(outbuf);
-        snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-                 "%02x", *data++);
+        print_append(outbuf, sizeof(outbuf), &outbuflen, "%02x", *data++);
       }
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
+      print_append(outbuf, sizeof(outbuf), &outbuflen, ">>");
       data_len = keep_data_len;
       data = keep_data;
-      outbuflen = strlen(outbuf);
       if (outbuflen == sizeof(outbuf)-1)
         outbuflen--;
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
+      print_append(outbuf, sizeof(outbuf), &outbuflen, "\n");
       COAP_DO_SHOW_OUTPUT_LINE;
       /*
        * Output ascii readable (if possible), immediately under the
        * hex value of the character output above to help binary debugging
        */
       outbuf[0] = '\000';
-      snprintf(outbuf, sizeof(outbuf),  "<<");
+      outbuflen = 0;
+      print_append(outbuf, sizeof(outbuf), &outbuflen, "<<");
       while (data_len--) {
-        outbuflen = strlen(outbuf);
-        snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,
-                 "%c ", isprint(*data) ? *data : '.');
+        print_append(outbuf, sizeof(outbuf), &outbuflen,
+                     "%c ", isprint(*data) ? *data : '.');
         data++;
       }
-      outbuflen = strlen(outbuf);
-      snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  ">>");
+      print_append(outbuf, sizeof(outbuf), &outbuflen, ">>");
     } else {
       size_t max_length;
 
-      outbuflen = strlen(outbuf);
+      print_append(outbuf, sizeof(outbuf), &outbuflen, "'");
       max_length = sizeof(outbuf)-outbuflen;
-      if (max_length > 1) {
-        outbuf[outbuflen++] = '\'';
-        outbuf[outbuflen] = '\000';
-        max_length--;
-      }
       if (max_length > 1) {
         outbuflen += print_readable(data, data_len,
                                     (unsigned char *)&outbuf[outbuflen],
@@ -1176,16 +1179,14 @@ no_more:
       }
       /* print_readable may be handling unprintables - hence headroom of 4 */
       if (outbuflen < sizeof(outbuf)-4-1) {
-        outbuf[outbuflen++] = '\'';
-        outbuf[outbuflen] = '\000';
+        print_append(outbuf, sizeof(outbuf), &outbuflen, "'");
       }
     }
   }
 
-  outbuflen = strlen(outbuf);
   if (outbuflen == sizeof(outbuf)-1)
     outbuflen--;
-  snprintf(&outbuf[outbuflen], sizeof(outbuf)-outbuflen,  "\n");
+  print_append(outbuf, sizeof(outbuf), &outbuflen, "\n");
   COAP_DO_SHOW_OUTPUT_LINE;
 
 #if COAP_THREAD_SAFE
