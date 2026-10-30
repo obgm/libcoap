@@ -19,6 +19,8 @@
 
 #if defined(__ZEPHYR__)
 #include <zephyr/random/random.h>
+#elif defined(__APPLE__) && defined(HAVE_GETENTROPY)
+#include <sys/random.h>
 #elif defined(HAVE_GETRANDOM)
 #include <sys/random.h>
 #elif defined(WITH_CONTIKI)
