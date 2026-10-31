@@ -3837,6 +3837,7 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   coap_opt_t *opt;
   int is_proxy_uri = 0;
   int is_proxy_scheme = 0;
+  int hop_limit = -1;
   int resp = 0;
   coap_string_t *query = NULL;
   coap_opt_t *observe = NULL;
@@ -3959,6 +3960,18 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
   }
   assert(resource == NULL);
 
+  opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
+  if (opt) {
+    hop_limit =
+        coap_decode_var_bytes(coap_opt_value(opt), coap_opt_length(opt));
+    if (hop_limit < 1 || hop_limit > 255) {
+      /* Need to return a 4.00 RFC8768 Section 3 */
+      coap_log_info("Invalid Hop Limit\n");
+      resp = 400;
+      goto fail_response;
+    }
+  }
+
   uri_path = coap_get_uri_path(pdu);
   if (!uri_path) {
     resp = 402;
@@ -4065,36 +4078,27 @@ handle_request(coap_context_t *context, coap_session_t *session, coap_pdu_t *pdu
 
   coap_resource_reference_lkd(resource);
 
-  if (is_proxy_scheme || is_proxy_uri ||
-      (resource == context->unknown_resource && resource->is_reverse_proxy)) {
-    opt = coap_check_option(pdu, COAP_OPTION_HOP_LIMIT, &opt_iter);
-    if (opt) {
-      size_t hop_limit;
-      uint8_t buf[4];
+  if (hop_limit >= 0 &&
+      (is_proxy_scheme || is_proxy_uri ||
+       (resource == context->unknown_resource && resource->is_reverse_proxy))) {
+    uint8_t buf[4];
 
-      hop_limit =
-          coap_decode_var_bytes(coap_opt_value(opt), coap_opt_length(opt));
-      if (hop_limit == 1) {
-        coap_log_info("Hop Limit expired\n");
-        if (resource == context->unknown_resource && resource->is_reverse_proxy) {
-          /* Need to hide this is a reverse proxy */
-          resp = 404;
-        } else {
-          /* coap_send_internal() will fill in the IP address for us */
-          resp = 508;
-        }
-        goto fail_response;
-      } else if (hop_limit < 1 || hop_limit > 255) {
-        /* Need to return a 4.00 RFC8768 Section 3 */
-        coap_log_info("Invalid Hop Limit\n");
-        resp = 400;
-        goto fail_response;
+    if (hop_limit == 1) {
+      coap_log_info("Hop Limit expired\n");
+      if (resource == context->unknown_resource && resource->is_reverse_proxy) {
+        /* Need to hide this is a reverse proxy */
+        resp = 404;
+      } else {
+        /* coap_send_internal() will fill in the IP address for us */
+        resp = 508;
       }
-      hop_limit--;
-      coap_update_option(pdu, COAP_OPTION_HOP_LIMIT,
-                         coap_encode_var_safe8(buf, sizeof(buf), hop_limit),
-                         buf);
+      goto fail_response;
     }
+    /* hop_limit == 0 or > 255 checked earlier */
+    hop_limit--;
+    coap_update_option(pdu, COAP_OPTION_HOP_LIMIT,
+                       coap_encode_var_safe8(buf, sizeof(buf), hop_limit),
+                       buf);
   }
 
 #if COAP_OSCORE_SUPPORT
