@@ -129,6 +129,8 @@ coap_prng_default(void *buf, size_t len) {
   return (getentropy(buf, len) == 0) ? 1 : 0;
 
 #elif defined(HAVE_RANDOM)
+#warning "Using random() for crypto randoms is not secure! Multiple CVEs raised."
+#warning "Please update your C-library and rerun the auto-configuration."
 #define RAND_BYTES (RAND_MAX >= 0xffffff ? 3 : (RAND_MAX >= 0xffff ? 2 : 1))
   unsigned char *dst = (unsigned char *)buf;
 
@@ -163,8 +165,8 @@ coap_prng_default(void *buf, size_t len) {
 
 #else /* !MBEDTLS_ENTROPY_HARDWARE_ALT && !HAVE_GETRANDOM &&
          !HAVE_RANDOM && !_WIN32 */
-#error "CVE-2021-34430: using rand() for crypto randoms is not secure!"
-#error "Please update you C-library and rerun the auto-configuration."
+#error "Using rand() for crypto randoms is not secure! Multiple CVEs raised."
+#error "Please update your C-library and rerun the auto-configuration."
   unsigned char *dst = (unsigned char *)buf;
   while (len--)
     *dst++ = rand() & 0xFF;
