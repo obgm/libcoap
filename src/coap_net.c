@@ -1036,12 +1036,13 @@ coap_option_check_critical(coap_session_t *session,
                            coap_crit_type_t is_proxy) {
   coap_context_t *ctx = session->context;
   coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
   int ok = 1;
   coap_option_num_t last_number = -1;
 
   coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
 
-  while (coap_option_next(&opt_iter)) {
+  while ((option = coap_option_next(&opt_iter))) {
     /* Check for explicitly reserved option RFC 5272 12.2 Table 7 */
     /* Need to check reserved options */
     switch (opt_iter.number) {
@@ -1169,9 +1170,21 @@ coap_option_check_critical(coap_session_t *session,
       /* Check for duplicated option RFC 5272 5.4.5 */
       if (!coap_option_check_repeatable(pdu, opt_iter.number)) {
         if (coap_option_filter_get(&ctx->known_options, opt_iter.number) <= 0) {
-          ok = 0;
-          if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
-            goto overflow;
+          if (opt_iter.number & 0x01) {
+            ok = 0;
+            if (coap_option_filter_set(unknown, opt_iter.number) == 0) {
+              goto overflow;
+            }
+          } else {
+            size_t opt_size = opt_iter.next_option - option;
+
+            /* RFC 7252 5.4.5: ignore supernumerary elective options.
+             * A duplicate has delta zero, so the next delta is unchanged. */
+            memmove(option, opt_iter.next_option, opt_iter.length);
+            pdu->used_size -= opt_size;
+            if (pdu->data)
+              pdu->data -= opt_size;
+            opt_iter.next_option = option;
           }
         }
       }

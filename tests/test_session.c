@@ -35,6 +35,64 @@
 static coap_context_t *ctx; /* Holds the coap context for most tests */
 static coap_session_t *session; /* Holds a reference-counted session object */
 
+static void
+t_session_repeated_elective_options(void) {
+  /* Three Content-Format options, then Max-Age and a payload. */
+  const uint8_t data[] = {
+    0x40, 0x01, 0x12, 0x34, 0xc1, 0x00, 0x01, 0x32,
+    0x01, 0x3c, 0x21, 0x0a, 0xff, 'b', 'o', 'd', 'y'
+  };
+  coap_pdu_t *request = coap_pdu_init(0, 0, 0, sizeof(data));
+  coap_opt_filter_t unknown;
+  coap_opt_iterator_t iter;
+  coap_opt_t *option;
+  size_t length;
+  const uint8_t *body;
+
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(request);
+  CU_ASSERT(coap_pdu_parse(COAP_PROTO_UDP, data, sizeof(data), request));
+  coap_option_filter_clear(&unknown);
+  CU_ASSERT(coap_option_check_critical(session, request, &unknown,
+                                       COAP_CRIT_NOT_PROXY));
+  CU_ASSERT(coap_option_filter_get(&unknown, COAP_OPTION_CONTENT_FORMAT) == 0);
+  coap_option_iterator_init(request, &iter, COAP_OPT_ALL);
+  option = coap_option_next(&iter);
+  CU_ASSERT_PTR_NOT_NULL_FATAL(option);
+  CU_ASSERT(iter.number == COAP_OPTION_CONTENT_FORMAT);
+  CU_ASSERT(coap_opt_length(option) == 1);
+  CU_ASSERT(coap_opt_value(option)[0] == 0);
+  option = coap_option_next(&iter);
+  CU_ASSERT_PTR_NOT_NULL_FATAL(option);
+  CU_ASSERT(iter.number == COAP_OPTION_MAXAGE);
+  CU_ASSERT(coap_opt_value(option)[0] == 10);
+  CU_ASSERT_PTR_NULL(coap_option_next(&iter));
+  CU_ASSERT(coap_get_data(request, &length, &body));
+  CU_ASSERT(length == 4);
+  CU_ASSERT(memcmp(body, "body", 4) == 0);
+  /* Rechecking must not remove the retained first occurrence. */
+  CU_ASSERT(coap_option_check_critical(session, request, &unknown,
+                                       COAP_CRIT_NOT_PROXY));
+  coap_delete_pdu(request);
+}
+
+static void
+t_session_repeated_critical_options(void) {
+  /* Two Accept options must still be rejected. */
+  const uint8_t data[] = {
+    0x40, 0x01, 0x12, 0x34, 0xd1, 0x04, 0x00, 0x01, 0x32
+  };
+  coap_pdu_t *request = coap_pdu_init(0, 0, 0, sizeof(data));
+  coap_opt_filter_t unknown;
+
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(request);
+  CU_ASSERT(coap_pdu_parse(COAP_PROTO_UDP, data, sizeof(data), request));
+  coap_option_filter_clear(&unknown);
+  CU_ASSERT(!coap_option_check_critical(session, request, &unknown,
+                                        COAP_CRIT_NOT_PROXY));
+  CU_ASSERT(coap_option_filter_get(&unknown, COAP_OPTION_ACCEPT) > 0);
+  coap_delete_pdu(request);
+}
+
 COAP_STATIC_INLINE int
 fpeq(const coap_fixed_point_t a, const coap_fixed_point_t b) {
   return (a.integer_part == b.integer_part) &&
@@ -375,6 +433,8 @@ t_init_session_tests(void) {
 #if COAP_SERVER_SUPPORT && COAP_ASYNC_SUPPORT
   SESSION_TEST(suite, t_observe_local_address);
 #endif
+  SESSION_TEST(suite, t_session_repeated_elective_options);
+  SESSION_TEST(suite, t_session_repeated_critical_options);
   SESSION_TEST(suite, t_session1);
   SESSION_TEST(suite, t_session2);
   SESSION_TEST(suite, t_session3);
