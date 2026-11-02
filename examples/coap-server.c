@@ -1762,7 +1762,7 @@ proxy_dtls_setup(coap_context_t *ctx, coap_proxy_server_list_t *proxy_info) {
 static void
 usage(const char *program, const char *version) {
   const char *p;
-  char buffer[150];
+  char buffer[200];
   const char *lib_build = coap_package_build();
 
   p = strrchr(program, '/');

@@ -588,7 +588,7 @@ individual_data(coap_session_t *session COAP_UNUSED,
 static void
 usage(const char *program, const char *version) {
   const char *p;
-  char buffer[150];
+  char buffer[200];
   const char *lib_build = coap_package_build();
 
   p = strrchr(program, '/');
