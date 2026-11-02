@@ -4627,6 +4627,9 @@ coap_call_response_handler(coap_session_t *session,
 static void
 handle_response(coap_context_t *context, coap_session_t *session,
                 coap_pdu_t *sent, coap_pdu_t *rcvd) {
+  coap_opt_t *option;
+  coap_opt_iterator_t opt_iter;
+  ssize_t content_type = -1;
 
   /* Set in case there is a later call to coap_update_token() */
   rcvd->session = session;
@@ -4702,7 +4705,14 @@ handle_response(coap_context_t *context, coap_session_t *session,
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
   /* See if the server is struggling */
-  if (rcvd->code == COAP_RESPONSE_CODE(503) || rcvd->code == COAP_RESPONSE_CODE(429)) {
+  option = coap_check_option(rcvd, COAP_OPTION_CONTENT_FORMAT, &opt_iter);
+  if (option) {
+    content_type = coap_decode_var_bytes8(coap_opt_value(option), coap_opt_length(option));
+  }
+  if (content_type == COAP_MEDIATYPE_APPLICATION_INFORMATIVE_RESPONSE_CBOR &&
+      rcvd->code == COAP_RESPONSE_CODE(503)) {
+    /* Informative multicast observe response.  Not a server struggle. */
+  } else if (rcvd->code == COAP_RESPONSE_CODE(503) || rcvd->code == COAP_RESPONSE_CODE(429)) {
     if (!sent && session->lg_crcv)
       sent = session->lg_crcv->sent_pdu;
 
@@ -4711,17 +4721,17 @@ handle_response(coap_context_t *context, coap_session_t *session,
       uint8_t buf[4];
       /* Need to resend request in max_age seconds */
       size_t max_age = 60;
-      coap_opt_iterator_t opt_iter;
-      coap_opt_t *option = coap_check_option(rcvd, COAP_OPTION_MAXAGE, &opt_iter);
       coap_queue_t *node = coap_new_node();
-      if (option)
-        max_age = coap_decode_var_bytes(coap_opt_value(option),
-                                        coap_opt_length(option));
 
       if (!node) {
         coap_log_debug("retransmit delay: insufficient memory\n");
         return;
       }
+
+      option = coap_check_option(rcvd, COAP_OPTION_MAXAGE, &opt_iter);
+      if (option)
+        max_age = coap_decode_var_bytes(coap_opt_value(option),
+                                        coap_opt_length(option));
 
       coap_pdu_reference_lkd(sent);
       sent->mid = coap_new_message_id_lkd(session);
