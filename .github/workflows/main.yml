@@ -28,7 +28,7 @@ env:
 
 jobs:
   do-caches:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: cache openHiTLS
@@ -416,7 +416,7 @@ jobs:
 
   other-build:
     needs: do-caches
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         OS: ["contiki", "lwip", "riot", "zephyr"]
@@ -619,7 +619,7 @@ jobs:
 
   distribution-builds:
     needs: distribution-tarball
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         BUILD: ["contiki", "lwip", "riot", "zephyr", "autogen", "cmake"]

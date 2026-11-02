@@ -233,7 +233,6 @@ fi
 # see https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 # and http://www.gnu.org/software/automake/manual/html_node/Flag-Variables-Ordering.html
 WARNING_CFLAGS="\
--pedantic \
 -Wall \
 -Wcast-qual \
 -Wextra \
