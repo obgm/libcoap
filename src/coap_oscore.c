@@ -1492,6 +1492,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                NULL,
                                0);
       oscore_roll_back_seq(rcp_ctx);
+      decrypt_request_association = NULL;
       goto error_no_ack;
     }
     coap_handle_event_lkd(session->context,
@@ -1539,6 +1540,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                NULL,
                                0);
       oscore_roll_back_seq(rcp_ctx);
+      decrypt_request_association = NULL;
       goto error_no_ack;
     } else {
       coap_handle_event_lkd(session->context,
@@ -1596,6 +1598,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                              NULL,
                              &oscore_r2,
                              1);
+    decrypt_request_association = NULL;
     goto error_no_ack;
   }
 #if COAP_CLIENT_SUPPORT
@@ -1675,6 +1678,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                      NULL,
                                      0);
             goto error_no_ack;
+            decrypt_request_association = NULL;
           } else {
             if (session->context->oscore_update_seq_num_cb != NULL) {
               /* notify echo challenge changed */
@@ -1703,6 +1707,7 @@ coap_oscore_decrypt_pdu(coap_session_t *session,
                                  rcp_ctx->echo_value,
                                  NULL,
                                  1);
+        decrypt_request_association = NULL;
         goto error_no_ack;
       }
     }
