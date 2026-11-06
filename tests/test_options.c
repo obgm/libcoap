@@ -230,6 +230,44 @@ t_parse_option14(void) {
   free(data);
 }
 
+static void
+t_parse_option15(void) {
+  /* delta == 65535 (largest legal value), length == 0 */
+  coap_str_const_t teststr = {  3, (const uint8_t *)"\xe0\xfe\xf2" };
+
+  size_t result;
+  coap_option_t option;
+
+  result = coap_opt_parse(teststr.s, teststr.length, &option);
+  CU_ASSERT(result == 3);
+  CU_ASSERT(option.delta == 65535);
+  CU_ASSERT(option.length == 0);
+}
+
+static void
+t_parse_option16(void) {
+  /* delta == 65536 (illegal, wraps to 0 in 16 bits), length == 0 */
+  coap_str_const_t teststr = {  3, (const uint8_t *)"\xe0\xfe\xf3" };
+
+  size_t result;
+  coap_option_t option;
+
+  result = coap_opt_parse(teststr.s, teststr.length, &option);
+  CU_ASSERT(result == 0);
+}
+
+static void
+t_parse_option17(void) {
+  /* delta == 65548 (illegal, wraps to 12 in 16 bits), length == 0 */
+  coap_str_const_t teststr = {  3, (const uint8_t *)"\xe0\xfe\xff" };
+
+  size_t result;
+  coap_option_t option;
+
+  result = coap_opt_parse(teststr.s, teststr.length, &option);
+  CU_ASSERT(result == 0);
+}
+
 /************************************************************************
  ** encoder tests
  ************************************************************************/
@@ -963,6 +1001,9 @@ t_init_option_tests(void) {
   OPTION_TEST(12, "parse option #12");
   OPTION_TEST(13, "parse option #13");
   OPTION_TEST(14, "parse option #14");
+  OPTION_TEST(15, "parse option #15");
+  OPTION_TEST(16, "parse option #16");
+  OPTION_TEST(17, "parse option #17");
 
   if ((suite[1] = CU_add_suite("option encoder", NULL, NULL))) {
 #define OPTION_ENCODER_TEST(n,s)                                  \
