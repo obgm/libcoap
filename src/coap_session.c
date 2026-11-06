@@ -397,6 +397,51 @@ coap_session_release_lkd(coap_session_t *session) {
   }
 }
 
+void
+coap_session_hold_lkd(coap_session_t *session) {
+  if (session) {
+    coap_lock_check_locked();
+    coap_session_reference_lkd(session);
+    session->in_use++;
+  }
+}
+
+void
+coap_session_unhold_lkd(coap_session_t *session) {
+  if (session) {
+    coap_lock_check_locked();
+    assert(session->in_use > 0);
+    if (session->in_use == 1 && session->disconnect_pending &&
+        !session->disconnecting) {
+      session->disconnect_pending = 0;
+      coap_session_disconnected_lkd(session, session->disconnect_reason);
+    }
+    if (session->in_use > 0)
+      session->in_use--;
+    coap_session_release_lkd(session);
+  }
+}
+
+void
+coap_session_send_failed_lkd(coap_session_t *session,
+                             coap_nack_reason_t reason) {
+  coap_lock_check_locked();
+  if (session->in_use == 0 && !session->disconnecting) {
+    coap_session_disconnected_lkd(session, reason);
+    return;
+  }
+  if (!session->disconnect_pending) {
+    coap_log_debug("***%s: session in use, disconnect deferred\n",
+                   coap_session_str(session));
+    session->disconnect_pending = 1;
+    session->disconnect_reason = reason;
+  }
+#if COAP_CLIENT_SUPPORT
+  /* Any coap_send_recv() waiting on this session returns now */
+  session->doing_send_recv = 0;
+#endif /* COAP_CLIENT_SUPPORT */
+}
+
 COAP_API void
 coap_session_set_app_data(coap_session_t *session, void *app_data) {
   assert(session);
@@ -974,7 +1019,8 @@ coap_session_connected(coap_session_t *session) {
     }
   }
 
-  while (session->delayqueue && session->state == COAP_SESSION_STATE_ESTABLISHED) {
+  while (session->delayqueue && session->state == COAP_SESSION_STATE_ESTABLISHED &&
+         !session->disconnect_pending) {
     ssize_t bytes_written;
     coap_queue_t *q = session->delayqueue;
     coap_address_t remote;
@@ -1091,9 +1137,15 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
   coap_lg_crcv_t *cq, *etmp;
 #endif /* COAP_CLIENT_SUPPORT */
   int sent_nack = 0;
+  uint8_t disconnecting = session->disconnecting;
   coap_queue_t *q;
 
   coap_lock_check_locked();
+  /*
+   * A send that fails from within the callbacks below does not disconnect
+   * the session again.
+   */
+  session->disconnecting = 1;
 #if COAP_CLIENT_SUPPORT
   coap_session_failed(session);
 #endif /* COAP_CLIENT_SUPPORT */
@@ -1203,6 +1255,8 @@ coap_session_disconnected_lkd(coap_session_t *session, coap_nack_reason_t reason
 #endif /* !COAP_DISABLE_TCP */
   if (session->sock.lfunc[COAP_LAYER_SESSION].l_close)
     session->sock.lfunc[COAP_LAYER_SESSION].l_close(session);
+  session->disconnecting = disconnecting;
+  session->disconnect_pending = 0;
 }
 
 #if COAP_CLIENT_SUPPORT

@@ -1240,7 +1240,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
        */
       obs_session = obs->session;
       obs_pdu = obs->pdu;
-      coap_session_reference_lkd(obs_session);
+      coap_session_hold_lkd(obs_session);
       coap_pdu_reference_lkd(obs_pdu);
 
       if (obs->session->con_active >= COAP_NSTART(obs->session) &&
@@ -1361,7 +1361,7 @@ coap_notify_observers(coap_context_t *context, coap_resource_t *r,
                         response->code & 0x1f);
           coap_delete_string(query);
           coap_delete_pdu_lkd(response);
-          coap_session_release_lkd(obs_session);
+          coap_session_unhold_lkd(obs_session);
           coap_pdu_release_lkd(obs_pdu);
           r->list_being_traversed = 0;
           coap_resource_release_lkd(r);
@@ -1480,7 +1480,7 @@ next_one_fail_no_pending:
       if (obs)
         obs->dirty = 1;
 cleanup:
-      coap_session_release_lkd(obs_session);
+      coap_session_unhold_lkd(obs_session);
       coap_pdu_release_lkd(obs_pdu);
     }
     r->list_being_traversed = 0;
