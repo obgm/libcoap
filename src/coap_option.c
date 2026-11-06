@@ -41,6 +41,7 @@ size_t
 coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 
   const coap_opt_t *opt_start = opt; /* store where parsing starts  */
+  uint32_t delta; /* wider than result->delta to detect overflow */
 
   assert(opt);
   assert(result);
@@ -50,6 +51,7 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
 
   result->delta = (*opt & 0xf0) >> 4;
   result->length = *opt & 0x0f;
+  delta = result->delta;
 
   switch (result->delta) {
   case 15:
@@ -62,15 +64,16 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
      * After that, the option pointer is advanced to the LSB which is handled
      * just like case delta == 13. */
     ADVANCE_OPT_CHECK(opt,length,1);
-    result->delta = ((*opt & 0xff) << 8) + 269;
-    if (result->delta < 269) {
-      coap_log_debug("delta too large\n");
-      return 0;
-    }
+    delta = ((*opt & 0xff) << 8) + 269;
   /* fall through */
   case 13:
     ADVANCE_OPT_CHECK(opt,length,1);
-    result->delta += *opt & 0xff;
+    delta += *opt & 0xff;
+    if (delta > 0xffff) {
+      coap_log_debug("delta too large\n");
+      return 0;
+    }
+    result->delta = (uint16_t)delta;
     break;
 
   default:
