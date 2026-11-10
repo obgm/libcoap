@@ -21,6 +21,10 @@
 
 #include <stdio.h>
 
+#if defined(HAVE_INET_PTON) && defined(HAVE_ARPA_INET_H)
+#include <arpa/inet.h>
+#endif /* HAVE_INET_PTON && HAVE_ARPA_INET_H */
+
 #ifdef COAP_EPOLL_SUPPORT
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
@@ -1808,7 +1812,6 @@ coap_sanitize_client_sni(char **client_sni) {
     return;
 
 #if defined(HAVE_INET_PTON) && defined(HAVE_ARPA_INET_H)
-#include <arpa/inet.h>
   coap_address_t addr;
 #if COAP_IPV4_SUPPORT
   if (inet_pton(AF_INET, *client_sni, &addr.addr.sin.sin_addr) == 1) {
