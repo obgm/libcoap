@@ -3728,6 +3728,18 @@ coap_handle_request_put_block(coap_context_t *context,
     goto free_lg_srcv;
   }
 
+  /*
+   * Received blocks are tracked by number, so all blocks must use the same
+   * block size.  Only block 0 may be larger, when the size is forced down.
+   */
+  if (block.szx != lg_srcv->szx &&
+      !(block.num == 0 && block.szx > lg_srcv->szx)) {
+    coap_add_data(response, sizeof("Block size mismatch")-1,
+                  (const uint8_t *)"Block size mismatch");
+    response->code = COAP_RESPONSE_CODE(408);
+    goto free_lg_srcv;
+  }
+
 #if COAP_Q_BLOCK_SUPPORT
   if (block_option == COAP_OPTION_Q_BLOCK1) {
     /* The body is passed on as total_len bytes, so the last block must end there */
@@ -4854,6 +4866,11 @@ reinit:
 
         if (fmt != lg_crcv->content_format) {
           coap_log_warn("Content-Format option mismatch\n");
+          goto fail_resp;
+        }
+        /* Received blocks are tracked by number, so the block size cannot change */
+        if (block.szx != lg_crcv->szx) {
+          coap_log_warn("block: block size changed during receipt\n");
           goto fail_resp;
         }
 #if COAP_Q_BLOCK_SUPPORT
