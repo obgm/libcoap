@@ -817,7 +817,16 @@ set(prefix ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix "\${prefix}")
 set(libdir "\${prefix}/lib")
 set(includedir "\${prefix}/include")
-string(REPLACE ";" " " DTLS_LIBS "${T_DTLS_LIBS}")
+# Installed .pc must not contain build-host library paths
+set(DTLS_LIBS "")
+foreach(dtls_lib ${T_DTLS_LIBS})
+  if(dtls_lib MATCHES "/lib([^/]+)\\.(so|a|dylib)$")
+    list(APPEND DTLS_LIBS "-l${CMAKE_MATCH_1}")
+  else()
+    list(APPEND DTLS_LIBS "${dtls_lib}")
+  endif()
+endforeach()
+string(REPLACE ";" " " DTLS_LIBS "${DTLS_LIBS}")
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/libcoap-3.pc.in
                ${CMAKE_CURRENT_BINARY_DIR}/libcoap-3.pc @ONLY)
