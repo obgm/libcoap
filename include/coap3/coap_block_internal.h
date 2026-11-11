@@ -63,7 +63,9 @@ extern "C" {
 
 #define COAP_BLOCK_MAX_SIZE_MASK 0x7000000 /* (svr)Mask to get the max supported block size */
 #define COAP_BLOCK_MAX_SIZE_SHIFT 24    /* (svr)Mask shift to get the max supported block size */
-#define COAP_BLOCK_MAX_SIZE_GET(a) (((a) & COAP_BLOCK_MAX_SIZE_MASK) >> COAP_BLOCK_MAX_SIZE_SHIFT)
+/* Gives actual max block_size or -1 if not defined */
+#define COAP_BLOCK_MAX_SIZE_GET(a) ((((a) & COAP_BLOCK_MAX_SIZE_MASK) >> COAP_BLOCK_MAX_SIZE_SHIFT) -1)
+/* In COAP_BLOCK_MAX_SIZE_MASK, 0 = not configured, 1 actually is max 0, 2 is max 1 ... 7 is max 6. */
 #define COAP_BLOCK_MAX_SIZE_SET(a) (((a) << COAP_BLOCK_MAX_SIZE_SHIFT) & COAP_BLOCK_MAX_SIZE_MASK)
 
 #if COAP_Q_BLOCK_SUPPORT
