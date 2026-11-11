@@ -534,7 +534,8 @@ coap_new_optlist(coap_option_num_t number,
     node->number = number;
     node->length = length;
     node->data = (uint8_t *)&node[1];
-    memcpy(node->data, data, length);
+    if (length)
+      memcpy(node->data, data, length);
   } else {
     coap_log_warn("coap_new_optlist: malloc failure\n");
   }

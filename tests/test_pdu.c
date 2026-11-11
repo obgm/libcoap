@@ -1459,6 +1459,43 @@ t_encode_pdu24(void) {
   }
 }
 
+static void
+t_encode_pdu25(void) {
+  coap_optlist_t *optlist = NULL;
+  coap_optlist_t *node;
+  const uint8_t path[] = "x";
+  const uint8_t query[] = "a=b";
+  const coap_option_num_t numbers[] = {
+    COAP_OPTION_OBSERVE, COAP_OPTION_URI_PATH,
+    COAP_OPTION_URI_QUERY, COAP_OPTION_URI_QUERY
+  };
+  const size_t lengths[] = { 0, sizeof(path) - 1, 0, sizeof(query) - 1 };
+  const uint8_t *values[] = { NULL, path, NULL, query };
+  const uint8_t expected[] = { 0x60, 0x51, 'x', 0x40, 0x03, 'a', '=', 'b' };
+  size_t n;
+
+  coap_pdu_clear(pdu, pdu->max_size);
+  coap_pdu_set_code(pdu, COAP_REQUEST_CODE_GET);
+
+  /* Observe establishment and an empty query both have zero-length values. */
+  for (n = 0; n < sizeof(numbers) / sizeof(numbers[0]); n++) {
+    node = coap_new_optlist(numbers[n], lengths[n], values[n]);
+    CU_ASSERT_PTR_NOT_NULL(node);
+    if (!node) {
+      coap_delete_optlist(optlist);
+      return;
+    }
+    CU_ASSERT(node->number == numbers[n]);
+    CU_ASSERT(node->length == lengths[n]);
+    CU_ASSERT(coap_insert_optlist(&optlist, node));
+  }
+  CU_ASSERT(coap_add_optlist_pdu(pdu, &optlist));
+  CU_ASSERT(pdu->used_size == sizeof(expected));
+  if (pdu->used_size == sizeof(expected))
+    CU_ASSERT(memcmp(pdu->token, expected, sizeof(expected)) == 0);
+  coap_delete_optlist(optlist);
+}
+
 static int
 t_pdu_tests_create(void) {
   pdu = coap_pdu_init(0, 0, 0, COAP_DEFAULT_MTU);
@@ -1539,6 +1576,7 @@ t_init_pdu_tests(void) {
     PDU_ENCODER_TEST(suite[1], t_encode_pdu22);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu23);
     PDU_ENCODER_TEST(suite[1], t_encode_pdu24);
+    PDU_ENCODER_TEST(suite[1], t_encode_pdu25);
 
   } else                         /* signal error */
     fprintf(stderr, "W: cannot add pdu parser test suite (%s)\n",
