@@ -453,8 +453,10 @@ coap_context_set_max_block_size(coap_context_t *context,
 
 int
 coap_context_set_max_block_size_lkd(coap_context_t *context, size_t max_block_size) {
+  uint32_t max_blk_szx_plus1;
+
   switch (max_block_size) {
-  case 0:
+  case 0:         /* Server has no restriction - default */
   case 16:
   case 32:
   case 64:
@@ -469,9 +471,10 @@ coap_context_set_max_block_size_lkd(coap_context_t *context, size_t max_block_si
     return 0;
   }
   coap_lock_check_locked();
-  max_block_size = (coap_fls((uint32_t)max_block_size >> 4) - 1) & 0x07;
+  /* 0 = not configured, 1 actually is max 0, 2 is max 1 ... 7 is max 6. */
+  max_blk_szx_plus1 = coap_fls((uint32_t)max_block_size >> 4) & 0x07;
   context->block_mode &= ~COAP_BLOCK_MAX_SIZE_MASK;
-  context->block_mode |= COAP_BLOCK_MAX_SIZE_SET((uint32_t)max_block_size);
+  context->block_mode |= COAP_BLOCK_MAX_SIZE_SET((uint32_t)max_blk_szx_plus1);
   return 1;
 }
 
@@ -855,7 +858,7 @@ coap_add_data_large_internal(coap_session_t *session,
   uint8_t buf[8];
   int have_block_defined = 0;
   uint8_t blk_size;
-  uint8_t max_blk_size;
+  int max_blk_szx;
   uint16_t option;
   size_t token_options;
   coap_opt_t *opt;
@@ -1058,9 +1061,10 @@ coap_add_data_large_internal(coap_session_t *session,
   if (blk_size > 6)
     blk_size = 6;
 
-  max_blk_size = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
-  if (max_blk_size && blk_size > max_blk_size)
-    blk_size = max_blk_size;
+  /* Check if server imposed limit */
+  max_blk_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
+  if (max_blk_szx != -1 && blk_size > max_blk_szx)
+    blk_size = max_blk_szx;
 
   /* see if BlockX defined - if so update blk_size as given by app */
   if (coap_get_block_b(session, pdu, option, &block)) {
@@ -2286,7 +2290,7 @@ coap_next_block_to_send(coap_session_t *session,
                                                    sizeof(buf),
                                                    ((block->num) << 4) |
                                                    (block->m << 3) |
-                                                   block->szx),
+                                                   block->aszx),
                               buf)) {
         coap_log_warn("Internal update issue option\n");
         coap_delete_pdu_lkd(block_pdu);
@@ -3462,7 +3466,7 @@ coap_handle_request_put_block(coap_context_t *context,
   const uint8_t *data = NULL;
   size_t offset = 0;
   size_t total = 0;
-  size_t size2 = 0;
+  size_t size1 = 0;
   coap_block_b_t block;
   coap_opt_iterator_t opt_iter;
   uint16_t block_option = 0;
@@ -3473,7 +3477,7 @@ coap_handle_request_put_block(coap_context_t *context,
   coap_opt_t *rtag_opt;
   size_t rtag_length;
   const uint8_t *rtag;
-  uint32_t max_block_szx;
+  int max_block_szx;
   int update_data;
   unsigned int saved_num;
   size_t saved_offset;
@@ -3561,9 +3565,9 @@ coap_handle_request_put_block(coap_context_t *context,
     goto skip_app_handler;
   }
   if (size_opt) {
-    size2 = coap_decode_var_bytes(coap_opt_value(size_opt), coap_opt_length(size_opt));
-    if (total < size2) {
-      total = size2;
+    size1 = coap_decode_var_bytes(coap_opt_value(size_opt), coap_opt_length(size_opt));
+    if (total < size1) {
+      total = size1;
     }
   }
   if (total < (block.num << (block.szx + 4)) + length + (block.m ? 1 : 0)) {
@@ -3574,8 +3578,8 @@ coap_handle_request_put_block(coap_context_t *context,
     uint32_t max_body;
 
     max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
-    if (max_block_szx == 0 || max_block_szx > block.szx) {
-      max_block_szx =  block.szx;
+    if (max_block_szx == -1 || (unsigned int)max_block_szx > block.szx) {
+      max_block_szx = block.szx;
     }
     max_body = ((1UL << 20) * (1 << (max_block_szx + 4)));
     if (max_body > MAX_BLK_LEN)
@@ -3612,13 +3616,25 @@ coap_handle_request_put_block(coap_context_t *context,
       && !block.bert) {
     uint8_t buf[4];
 
-    /* Ask for the next block */
-    coap_insert_option(response, block_option,
-                       coap_encode_var_safe(buf, sizeof(buf),
-                                            (block.num << 4) |
-                                            (block.m << 3) |
-                                            block.aszx),
-                       buf);
+    max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
+    if (max_block_szx == -1 || (unsigned int)max_block_szx >= block.szx) {
+      /* Ask for the next block */
+      coap_insert_option(response, block_option,
+                         coap_encode_var_safe(buf, sizeof(buf),
+                                              (block.num << 4) |
+                                              (block.m << 3) |
+                                              block.aszx),
+                         buf);
+    } else {
+      /* Need to indicate that a smaller SZX is required */
+      /* Not safe to change block.num as client may not do SHOULD */
+      coap_insert_option(response, block_option,
+                         coap_encode_var_safe(buf, sizeof(buf),
+                                              (block.num << 4) |
+                                              (block.m << 3) |
+                                              max_block_szx),
+                         buf);
+    }
     /* Not re-assembling or checking for receipt order */
     pdu->body_data = data;
     pdu->body_length = length;
@@ -3690,9 +3706,10 @@ coap_handle_request_put_block(coap_context_t *context,
     lg_srcv->content_format = fmt;
     lg_srcv->total_len = total;
     max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
-    if (!block.bert && block.num == 0 && max_block_szx != 0 &&
-        max_block_szx < block.szx) {
+    if (!block.bert && block.num == 0 && max_block_szx != -1 &&
+        (unsigned int)max_block_szx < block.szx) {
       lg_srcv->szx = max_block_szx;
+      block.szx = block.aszx = max_block_szx;
     } else {
       lg_srcv->szx = block.szx;
     }
@@ -3711,6 +3728,17 @@ coap_handle_request_put_block(coap_context_t *context,
     lg_srcv->r_m_payload_set = -1;
 #endif /* COAP_Q_BLOCK_SUPPORT */
     LL_PREPEND(session->lg_srcv, lg_srcv);
+  }
+  max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
+  if (block.szx > lg_srcv->szx || (max_block_szx != -1 && block.szx != max_block_szx)) {
+    /* Change in SZX is not allowed */
+    coap_add_data(response, sizeof("Change in SZX invalid")-1,
+                  (const uint8_t *)"Change in SZX invalid");
+    coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
+    response->code = COAP_RESPONSE_CODE(400);
+    goto skip_app_handler;
+  } else {
+    lg_srcv->szx = block.szx;
   }
   coap_ticks(&lg_srcv->last_used);
   coap_lg_srcv_reference_lkd(lg_srcv);
@@ -3955,8 +3983,8 @@ q_block_1_check:
 
       /* Check to see if block size is getting forced down */
       max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
-      if (!block.bert && saved_num == 0 && max_block_szx != 0 &&
-          max_block_szx < block.aszx) {
+      if (!block.bert && saved_num == 0 && max_block_szx != -1 &&
+          (unsigned int)max_block_szx < block.aszx) {
         block.aszx = max_block_szx;
       }
 
@@ -4296,10 +4324,12 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
           lg_xmit->send_blocks.range[0].end = (uint32_t)((lg_xmit->data_info->length -1) / chunk);
 #endif /* COAP_Q_BLOCK_SUPPORT */
           lg_xmit->blk_size = block.szx;
+          chunk = (size_t)1 << (lg_xmit->blk_size + 4);
           coap_log_debug("new Block size is %u, block number %u completed\n",
                          1 << (block.szx + 4), block.num);
           block.bert = 0;
           block.aszx = block.szx;
+          lg_xmit->last_block = block.num - 1;;
         }
       }
       track_echo(session, rcvd);
@@ -4774,9 +4804,17 @@ reinit:
           lg_crcv->rec_blocks.used = 0;
           lg_crcv->rec_blocks.total_blocks = 0;
           lg_crcv->total_len_set = 0;
+          lg_crcv->o_blk_size = block.aszx;
 #if COAP_Q_BLOCK_SUPPORT
           lg_crcv->rec_blocks.processing_payload_set = 0;
 #endif /* COAP_Q_BLOCK_SUPPORT */
+        }
+        if (block.aszx != lg_crcv->o_blk_size) {
+          coap_log_info("(Q-)Block2: Server block size change error\n");
+          /* Try to hint to the server there is an issue */
+          coap_send_rst_lkd(session, rcvd);
+          coap_handle_event_lkd(session->context, COAP_EVENT_BLOCK_ISSUE, session);
+          return 1;
         }
         /* Q-Block2 Size2 is the body length and is checked below */
         if (block_opt != COAP_OPTION_Q_BLOCK2 && !lg_crcv->total_len_set &&
@@ -4785,11 +4823,11 @@ reinit:
 
         /* Check whether we can handle this size */
         uint32_t max_body;
-        uint8_t max_block_szx;
+        int max_block_szx;
 
         max_block_szx = COAP_BLOCK_MAX_SIZE_GET(session->block_mode);
-        if (max_block_szx == 0 || max_block_szx > block.szx) {
-          max_block_szx =  block.szx;
+        if (max_block_szx == -1 || (unsigned int)max_block_szx > block.szx) {
+          max_block_szx = block.szx;
         }
         max_body = ((1UL << 20) * (1 << (max_block_szx + 4)));
         if (max_body > MAX_BLK_LEN)
@@ -4859,11 +4897,6 @@ reinit:
 
         if (fmt != lg_crcv->content_format) {
           coap_log_warn("Content-Format option mismatch\n");
-          goto fail_resp;
-        }
-        /* Received blocks are tracked by number, so the block size cannot change */
-        if (block.szx != lg_crcv->szx) {
-          coap_log_warn("block: block size changed during receipt\n");
           goto fail_resp;
         }
 #if COAP_Q_BLOCK_SUPPORT
