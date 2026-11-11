@@ -247,6 +247,7 @@ struct coap_lg_srcv_t {
   uint16_t content_format; /**< Content format for the set of blocks */
   uint8_t last_type;     /**< Last request type (CON/NON) */
   uint8_t szx;           /**< size of individual blocks */
+  uint8_t rec_blocks_szx; /**< SZX used by rec_blocks */
   uint16_t block_option; /**< Block option in use */
   uint8_t dont_timeout;  /**< Set if app handler in use */
   uint8_t total_len_set; /**< Set if total_len is where the last block ends */

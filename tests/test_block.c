@@ -314,37 +314,38 @@ t_block_qblock2_size2(void) {
 
 #if COAP_SERVER_SUPPORT
 static coap_pdu_t *
-block1_request(coap_session_t *s, coap_option_num_t opt, uint32_t blk,
-               size_t size1) {
+block1_request_payload(coap_session_t *s, coap_option_num_t opt, uint32_t blk,
+                       size_t size1, const uint8_t *payload,
+                       size_t payload_len) {
   static const uint8_t token[] = { 0x42, 0x31 };
   static const uint8_t rtag[] = { 0x02 };
-  uint8_t payload[16];
   uint8_t buf[4];
   coap_pdu_t *pdu;
 
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_PUT,
-                      coap_new_message_id_lkd(s), 256);
+                      coap_new_message_id_lkd(s), 256 + payload_len);
   if (!pdu)
     return NULL;
-  memset(payload, 'b', sizeof(payload));
   coap_add_token(pdu, sizeof(token), token);
   coap_add_option(pdu, COAP_OPTION_URI_PATH, 1, (const uint8_t *)"y");
   coap_add_option(pdu, opt, coap_encode_var_safe(buf, sizeof(buf), blk), buf);
   coap_add_option(pdu, COAP_OPTION_SIZE1,
                   coap_encode_var_safe(buf, sizeof(buf), size1), buf);
   coap_add_option(pdu, COAP_OPTION_RTAG, sizeof(rtag), rtag);
-  coap_add_data(pdu, sizeof(payload), payload);
+  coap_add_data(pdu, payload_len, payload);
   return pdu;
 }
 
 /*
- * Sends 16 byte blocks with the given Block option values, all with the
- * given Size1. Returns what coap_handle_request_put_block() returns for
- * the last one, with the body length handed on and the response code.
+ * Sends blocks with the given Block option values and payload lengths, all
+ * with the given Size1. Returns what coap_handle_request_put_block() returns
+ * for the last one, with the assembled body length and response code.
  */
 static int
-block1_put(coap_option_num_t opt, const uint32_t *blks, size_t count,
-           size_t size1, size_t *len, coap_pdu_code_t *code) {
+block1_put_data(coap_option_num_t opt, const uint32_t *blks,
+                const size_t *payload_lens, size_t count, size_t size1,
+                uint8_t *body, size_t body_size, size_t *len,
+                coap_pdu_code_t *code) {
   coap_context_t *sctx;
   coap_session_t *ssession;
   coap_resource_t *resource;
@@ -352,6 +353,8 @@ block1_put(coap_option_num_t opt, const uint32_t *blks, size_t count,
   coap_lg_srcv_t *free_lg_srcv;
   coap_pdu_t *request;
   coap_pdu_t *response;
+  uint8_t *payload;
+  size_t payload_len;
   size_t i;
   int added_block;
   int ret = -1;
@@ -381,9 +384,16 @@ block1_put(coap_option_num_t opt, const uint32_t *blks, size_t count,
     coap_add_resource_lkd(sctx, resource);
 
     for (i = 0; i < count; i++) {
-      request = block1_request(ssession, opt, blks[i], size1);
-      response = coap_pdu_init(COAP_MESSAGE_ACK, 0, 0, 256);
       ret = -1;
+      payload_len = payload_lens ? payload_lens[i] : 16;
+      payload = coap_malloc(payload_len);
+      if (!payload)
+        break;
+      memset(payload, payload_lens ? (uint8_t)('b' + i) : 'b', payload_len);
+      request = block1_request_payload(ssession, opt, blks[i], size1,
+                                       payload, payload_len);
+      coap_free(payload);
+      response = coap_pdu_init(COAP_MESSAGE_ACK, 0, 0, 256);
       *len = 0;
       if (request && response) {
         size_t offset, total;
@@ -392,8 +402,10 @@ block1_put(coap_option_num_t opt, const uint32_t *blks, size_t count,
         ret = coap_handle_request_put_block(sctx, ssession, request, response,
                                             resource, NULL, &added_block,
                                             &free_lg_srcv);
-        if (ret == 0)
-          coap_get_data_large(request, len, &data, &offset, &total);
+        if (ret == 0 && coap_get_data_large(request, len, &data,
+                                            &offset, &total) &&
+            body && *len <= body_size)
+          memcpy(body, data, *len);
         *code = response->code;
       }
       coap_delete_pdu_lkd(request);
@@ -405,6 +417,12 @@ block1_put(coap_option_num_t opt, const uint32_t *blks, size_t count,
   coap_session_release(ssession);
   coap_free_context(sctx);
   return ret;
+}
+
+static int
+block1_put(coap_option_num_t opt, const uint32_t *blks, size_t count,
+           size_t size1, size_t *len, coap_pdu_code_t *code) {
+  return block1_put_data(opt, blks, NULL, count, size1, NULL, 0, len, code);
 }
 
 /* A Block1 body is presented with the length the last block ends at,
@@ -442,6 +460,44 @@ t_block_block1_after_last(void) {
   CU_ASSERT(block1_put(COAP_OPTION_BLOCK1, repeated, 3, 32, &len, &code) == 0);
   CU_ASSERT(len == 32);
 }
+
+static void
+t_block_block1_szx_downshift(void) {
+  static const uint32_t blocks[] = {
+    (0 << 4) | (1 << 3) | 1,
+    (2 << 4) | (0 << 3) | 0
+  };
+  static const size_t payload_lens[] = { 32, 16 };
+  uint8_t body[48];
+  uint8_t expected[48];
+  coap_pdu_code_t code;
+  size_t len;
+
+  memset(expected, 'b', 32);
+  memset(&expected[32], 'c', 16);
+  memset(body, 0, sizeof(body));
+  CU_ASSERT(block1_put_data(COAP_OPTION_BLOCK1, blocks, payload_lens, 2,
+                            sizeof(body), body, sizeof(body),
+                            &len, &code) == 0);
+  CU_ASSERT(len == sizeof(body));
+  CU_ASSERT(memcmp(body, expected, sizeof(body)) == 0);
+}
+
+static void
+t_block_block1_szx_gap(void) {
+  static const uint32_t blocks[] = {
+    (0 << 4) | (1 << 3) | 0,
+    (1 << 4) | (0 << 3) | 6
+  };
+  static const size_t payload_lens[] = { 16, 1024 };
+  coap_pdu_code_t code;
+  size_t len;
+
+  CU_ASSERT(block1_put_data(COAP_OPTION_BLOCK1, blocks, payload_lens, 2,
+                            2048, NULL, 0, &len, &code) == 1);
+  CU_ASSERT(len == 0);
+}
+
 #endif /* COAP_SERVER_SUPPORT */
 
 CU_pSuite
@@ -471,6 +527,8 @@ t_init_block_tests(void) {
   BLOCK_TEST(suite, t_block_large_app_block_num);
   BLOCK_TEST(suite, t_block_block1_size1);
   BLOCK_TEST(suite, t_block_block1_after_last);
+  BLOCK_TEST(suite, t_block_block1_szx_downshift);
+  BLOCK_TEST(suite, t_block_block1_szx_gap);
 #endif /* COAP_SERVER_SUPPORT */
 
   return suite;
