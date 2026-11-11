@@ -1114,6 +1114,7 @@ coap_get_query(const coap_pdu_t *request) {
   coap_opt_t *q;
   coap_string_t *query = NULL;
   size_t length = 0;
+  int have_query = 0;
   static const uint8_t hex[] = "0123456789ABCDEF";
 
   coap_option_filter_clear(&f);
@@ -1122,6 +1123,7 @@ coap_get_query(const coap_pdu_t *request) {
   while ((q = coap_option_next(&opt_iter))) {
     uint16_t seg_len = coap_opt_length(q), i;
     const uint8_t *seg= coap_opt_value(q);
+    have_query = 1;
     for (i = 0; i < seg_len; i++) {
       if (is_unescaped_in_query(seg[i]))
         length += 1;
@@ -1132,15 +1134,28 @@ coap_get_query(const coap_pdu_t *request) {
   }
   if (length > 0)
     length -= 1;
-  if (length > 0) {
+  /* Allocate and return a string whenever at least one Uri-Query option is
+     present, even when every option is empty and the encoded length is zero.
+     A single empty Uri-Query then yields an empty string rather than NULL,
+     which is reserved for "no Uri-Query option at all". */
+  if (have_query) {
     query = coap_new_string(length);
     if (query) {
-      query->length = length;
       unsigned char *s = query->s;
+      int first = 1;
+      query->length = length;
       coap_option_iterator_init(request, &opt_iter, &f);
       while ((q = coap_option_next(&opt_iter))) {
-        if (s != query->s)
+        /* Write the '&' separator before every Uri-Query option except the
+           first. An empty Uri-Query option is a distinct zero-length segment
+           (just as "&&" is not "&"), so the separators around it must still
+           be emitted. Keying this off the option index rather than off
+           whether any byte has been written yet is what keeps leading empty
+           options from being dropped, and keeps the buffer fully written so
+           no uninitialised tail is exposed to callers. */
+        if (!first)
           *s++ = '&';
+        first = 0;
         uint16_t seg_len = coap_opt_length(q), i;
         const uint8_t *seg= coap_opt_value(q);
         for (i = 0; i < seg_len; i++) {
