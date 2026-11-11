@@ -1068,6 +1068,61 @@ t_parse_uri34(void) {
   CU_ASSERT(uri.query.s == NULL);
 }
 
+/* Reconstruct the Uri-Query options with coap_get_query() and compare against
+   the expected string. want == NULL expects coap_get_query() to return NULL
+   (no Uri-Query option present); an empty want expects a present but empty
+   query string. */
+static void
+check_get_query(const char *const *opts, int nopts, const char *want) {
+  coap_pdu_t *pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET,
+                                  0x1234, 4096);
+  coap_string_t *q;
+  int i;
+
+  CU_ASSERT(pdu != NULL);
+  assert(pdu != NULL);
+  for (i = 0; i < nopts; i++)
+    coap_add_option(pdu, COAP_OPTION_URI_QUERY, strlen(opts[i]),
+                    (const uint8_t *)opts[i]);
+  q = coap_get_query(pdu);
+  if (want == NULL) {
+    CU_ASSERT(q == NULL);
+  } else {
+    CU_ASSERT(q != NULL);
+    if (q != NULL) {
+      CU_ASSERT(q->length == strlen(want));
+      CU_ASSERT_NSTRING_EQUAL(q->s, want, strlen(want));
+    }
+  }
+  if (q != NULL)
+    coap_delete_string(q);
+  coap_delete_pdu(pdu);
+}
+
+static void
+t_parse_uri35(void) {
+  /* An empty Uri-Query option is a distinct zero-length segment, so the '&'
+     separators around it are preserved ("&&" is not "&") and the whole result
+     buffer is written (no uninitialised tail). A single empty Uri-Query option
+     yields an empty query string rather than NULL. */
+  const char *c1[] = { "a", "b" };
+  const char *c2[] = { "", "rt=x" };
+  const char *c3[] = { "a", "" };
+  const char *c4[] = { "", "", "x" };
+  const char *c5[] = { "a", "", "b" };
+  const char *c6[] = { "" };
+  const char *c7[] = { "", "" };
+
+  check_get_query(c1, 2, "a&b");
+  check_get_query(c2, 2, "&rt=x");
+  check_get_query(c3, 2, "a&");
+  check_get_query(c4, 3, "&&x");
+  check_get_query(c5, 3, "a&&b");
+  check_get_query(c6, 1, "");
+  check_get_query(c7, 2, "&");
+  check_get_query(NULL, 0, NULL);
+}
+
 CU_pSuite
 t_init_uri_tests(void) {
   CU_pSuite suite;
@@ -1120,6 +1175,7 @@ t_init_uri_tests(void) {
   URI_TEST(suite, t_parse_uri32);
   URI_TEST(suite, t_parse_uri33);
   URI_TEST(suite, t_parse_uri34);
+  URI_TEST(suite, t_parse_uri35);
 
   return suite;
 }
