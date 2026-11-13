@@ -2440,27 +2440,12 @@ get_san_or_cn_from_cert(coap_session_t *session, X509 *x509, const char *sni_mat
       }
       sk_GENERAL_NAME_pop_free(san_list, GENERAL_NAME_free);
     }
-    /* Otherwise look for the CN= field */
-    X509_NAME_oneline(X509_get_subject_name(x509), buffer, sizeof(buffer));
-
-    /* Need to emulate strcasestr() here.  Looking for CN= */
-    n = (int)strlen(buffer) - 3;
-    cn = buffer;
-    while (n > 0) {
-      if (((cn[0] == 'C') || (cn[0] == 'c')) &&
-          ((cn[1] == 'N') || (cn[1] == 'n')) &&
-          (cn[2] == '=')) {
-        cn += 3;
-        break;
-      }
-      cn++;
-      n--;
-    }
-    if (n > 0) {
-      char *ecn = strchr(cn, '/');
-      if (ecn) {
-        cn[ecn-cn] = '\000';
-      }
+    /* Otherwise use the CN attribute of the Subject */
+    n = X509_NAME_get_text_by_NID(X509_get_subject_name(x509), NID_commonName,
+                                  buffer, sizeof(buffer));
+    /* Make sure that there is not an embedded NUL in the CN */
+    if (n > 0 && n == (int)strlen(buffer)) {
+      cn = buffer;
       if (sni_match) {
         if (!coap_pki_name_match_sni(cn, strlen(cn), sni_match)) {
           coap_log_debug("   %s: got CN '%s'\n",
