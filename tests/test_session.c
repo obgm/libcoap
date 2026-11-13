@@ -357,6 +357,69 @@ t_session5(void) {
   session = NULL;
 }
 
+#if COAP_WS_SUPPORT
+static const uint8_t *t_ws_rd_src;
+static size_t t_ws_rd_avail;
+
+static ssize_t
+t_ws_split_read(coap_session_t *s COAP_UNUSED, uint8_t *data, size_t datalen) {
+  size_t len = datalen < t_ws_rd_avail ? datalen : t_ws_rd_avail;
+
+  memcpy(data, t_ws_rd_src, len);
+  t_ws_rd_src += len;
+  t_ws_rd_avail -= len;
+  return (ssize_t)len;
+}
+
+/* A WebSocket frame whose data arrives over two reads, where the caller
+ * provides a fresh receive buffer for each read */
+static void
+t_session_ws_split_frame(void) {
+  static const uint8_t frame[] = {
+    0x82, 0x0a,                                     /* binary, len 10 */
+    0x08, 0x45, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H' /* 2.05, token */
+  };
+  coap_session_t *ws_session;
+  uint8_t buf[64];
+  ssize_t ret;
+
+  ws_session = coap_malloc_type(COAP_SESSION, sizeof(coap_session_t));
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ws_session);
+  memset(ws_session, 0, sizeof(coap_session_t));
+  ws_session->context = ctx;
+  ws_session->proto = COAP_PROTO_WS;
+  ws_session->type = COAP_SESSION_TYPE_CLIENT;
+  ws_session->sock.lfunc[COAP_LAYER_WS].l_read = t_ws_split_read;
+  ws_session->ws = coap_malloc_type(COAP_STRING, sizeof(coap_ws_state_t));
+  if (!ws_session->ws) {
+    CU_FAIL("cannot allocate WebSocket state");
+    coap_free_type(COAP_SESSION, ws_session);
+    return;
+  }
+  memset(ws_session->ws, 0, sizeof(coap_ws_state_t));
+  ws_session->ws->state = COAP_SESSION_TYPE_CLIENT;
+  ws_session->ws->up = 1;
+
+  /* Frame header and the first 3 bytes of data */
+  t_ws_rd_src = frame;
+  t_ws_rd_avail = 5;
+  memset(buf, 0xaa, sizeof(buf));
+  ret = coap_ws_read(ws_session, buf, sizeof(buf));
+  CU_ASSERT(ret == 0);
+
+  /* Remainder of the data */
+  t_ws_rd_avail = sizeof(frame) - 5;
+  memset(buf, 0x55, sizeof(buf));
+  ret = coap_ws_read(ws_session, buf, sizeof(buf));
+  CU_ASSERT(ret == (ssize_t)(sizeof(frame) - 2));
+  CU_ASSERT(memcmp(buf, &frame[2], sizeof(frame) - 2) == 0);
+
+  coap_free_type(COAP_STRING, ws_session->ws->rd_data);
+  coap_free_type(COAP_STRING, ws_session->ws);
+  coap_free_type(COAP_SESSION, ws_session);
+}
+#endif /* COAP_WS_SUPPORT */
+
 /* Test 6 creates a new session after the original session has been
  * released by test 5 */
 static void
@@ -444,6 +507,9 @@ t_init_session_tests(void) {
   SESSION_TEST(suite, t_session_notify_send_fail);
 #endif /* COAP_SERVER_SUPPORT */
   SESSION_TEST(suite, t_session6);
+#if COAP_WS_SUPPORT
+  SESSION_TEST(suite, t_session_ws_split_frame);
+#endif /* COAP_WS_SUPPORT */
 
   return suite;
 }

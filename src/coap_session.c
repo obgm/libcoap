@@ -633,6 +633,8 @@ coap_session_mfree(coap_session_t *session) {
   coap_delete_str_const(session->b_2_retransmit_token);
 #endif /* COAP_OSCORE_SUPPORT */
 #if COAP_WS_SUPPORT
+  if (session->ws)
+    coap_free_type(COAP_STRING, session->ws->rd_data);
   coap_free_type(COAP_STRING, session->ws);
   coap_delete_str_const(session->ws_host);
 #endif /* COAP_WS_SUPPORT */
