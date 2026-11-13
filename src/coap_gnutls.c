@@ -763,27 +763,12 @@ get_san_or_cn(coap_session_t *session, gnutls_session_t g_session,
     }
   }
 
+  /* Otherwise use the CN attribute of the Subject */
   size = sizeof(dn);
-  G_CHECK(gnutls_x509_crt_get_dn(cert, dn, &size), "gnutls_x509_crt_get_dn");
-
-  /* Need to emulate strcasestr() here.  Looking for CN= */
-  n = strlen(dn) - 3;
-  cn = dn;
-  while (n > 0) {
-    if (((cn[0] == 'C') || (cn[0] == 'c')) &&
-        ((cn[1] == 'N') || (cn[1] == 'n')) &&
-        (cn[2] == '=')) {
-      cn += 3;
-      break;
-    }
-    cn++;
-    n--;
-  }
-  if (n > 0) {
-    char *ecn = strchr(cn, ',');
-    if (ecn) {
-      cn[ecn-cn] = '\000';
-    }
+  ret = gnutls_x509_crt_get_dn_by_oid(cert, GNUTLS_OID_X520_COMMON_NAME, 0, 0,
+                                      dn, &size);
+  if (ret == 0) {
+    cn = dn;
     if (sni_match) {
       if (!coap_pki_name_match_sni(cn, strlen(cn), sni_match)) {
         coap_log_debug("   %s: got CN '%s'\n",
