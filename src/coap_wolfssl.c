@@ -1119,9 +1119,11 @@ coap_dtls_context_set_spsk(coap_context_t *c_context,
     wolfSSL_CTX_set_max_proto_version(w_context->dtls.ctx,
                                       DTLS1_2_VERSION);
 #if !COAP_DISABLE_TCP
+#if LIBWOLFSSL_VERSION_HEX > 0x05006006
     wolfSSL_CTX_use_psk_identity_hint(w_context->tls.ctx, hint);
     wolfSSL_CTX_set_max_proto_version(w_context->tls.ctx,
                                       TLS1_2_VERSION);
+#endif /* LIBWOLFSSL_VERSION_HEX > 0x05006006 */
 #endif /* !COAP_DISABLE_TCP */
   }
   if (setup_data->validate_sni_call_back) {
