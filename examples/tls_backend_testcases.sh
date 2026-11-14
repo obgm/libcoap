@@ -36,6 +36,7 @@
 # - PKI SAN preferred over CN
 # - PKI second SAN preferred over CN
 # - PKI CN fallback without SAN
+# - PKI CN fallback without SAN with bad O=
 # - PKI bad returned CN or SAN
 # - PKI Wildcard Certificate
 # - PKI wrong Wildcard Certificate
@@ -270,7 +271,7 @@ start_server () {
   proto=$4
   id_file=$5
   server_log=$LOGDIR/$case_name.server
-  server_args="-A $TARGET_IP -p $BASE_PORT -k $PSK_KEY -h $PSK_HINT -v 8 $DTLS_LOGS"
+  server_args="-p $BASE_PORT -k $PSK_KEY -h $PSK_HINT -v 8 $DTLS_LOGS"
 
   if [ -n "$SERVER_PID" ]; then
     kill "$SERVER_PID" >/dev/null 2>&1
@@ -340,6 +341,7 @@ generate_pki_files () {
   wildcard_server_conf=$pki_dir/wildcard_server.cnf
   wildcard_bad_conf=$pki_dir/wildcard_bad.cnf
   cn_server_conf=$pki_dir/cn_server.cnf
+  bad_o_cn_server_conf=$pki_dir/bad_o_cn_server.cnf
   sni_server_conf=$pki_dir/sni_server.cnf
   client_conf=$pki_dir/client.cnf
   inter_conf=$pki_dir/inter.cnf
@@ -359,6 +361,8 @@ generate_pki_files () {
      [ -f "$pki_dir/wildcard_bad.key" ] &&
      [ -f "$pki_dir/cn_server.pem" ] &&
      [ -f "$pki_dir/cn_server.key" ] &&
+     [ -f "$pki_dir/bad_o_cn_server.pem" ] &&
+     [ -f "$pki_dir/bad_o_cn_server.key" ] &&
      [ -f "$pki_dir/sni_combined.pem" ] &&
      [ -f "$pki_dir/chain_server.pem" ] &&
      [ -f "$pki_dir/chain_depth_ok_server.pem" ] &&
@@ -506,6 +510,22 @@ keyUsage = critical,digitalSignature,keyEncipherment
 extendedKeyUsage = serverAuth
 EOF
 
+  cat > "$bad_o_cn_server_conf" <<EOF
+[req]
+distinguished_name = dn
+req_extensions = v3_req
+prompt = no
+
+[dn]
+O = cCN=bad
+CN = $SNI_HOST
+
+[v3_req]
+basicConstraints = CA:false
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+EOF
+
   cat > "$sni_server_conf" <<EOF
 [req]
 distinguished_name = dn
@@ -605,6 +625,14 @@ EOF
     -CA "$pki_dir/ca.pem" -CAkey "$pki_dir/ca.key" -CAcreateserial \
     -out "$pki_dir/cn_server.pem" -days 1 -sha256 \
     -extensions v3_req -extfile "$cn_server_conf" \
+    >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl req -new -newkey rsa:2048 -nodes -sha256 \
+    -keyout "$pki_dir/bad_o_cn_server.key" -out "$pki_dir/bad_o_cn_server.csr" \
+    -config "$bad_o_cn_server_conf" >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
+  openssl x509 -req -in "$pki_dir/bad_o_cn_server.csr" \
+    -CA "$pki_dir/ca.pem" -CAkey "$pki_dir/ca.key" -CAcreateserial \
+    -out "$pki_dir/bad_o_cn_server.pem" -days 1 -sha256 \
+    -extensions v3_req -extfile "$bad_o_cn_server_conf" \
     >> "$LOGDIR/$case_name.openssl" 2>&1 || return 1
   openssl req -new -newkey rsa:2048 -nodes -sha256 \
     -keyout "$pki_dir/sni_server.key" -out "$pki_dir/sni_server.csr" \
@@ -754,7 +782,7 @@ start_pki_server () {
     key_file=$pki_dir/server.key
   fi
 
-  server_args="-A $TARGET_IP -p $BASE_PORT -v 8 $DTLS_LOGS -c $cert_file -j $key_file"
+  server_args="-p $BASE_PORT -v 8 $DTLS_LOGS -c $cert_file -j $key_file"
   if [ -n "$root_ca_file" ]; then
     server_args="$server_args -R $root_ca_file"
   else
@@ -1703,6 +1731,33 @@ run_pki_cn_fallback () {
   fi
 }
 
+run_pki_bad_o_cn_fallback () {
+  case_name=pki_bad_o_cn_fallback
+  echo -n "PKI CN fallback without SAN with bad O= - "
+  pki_dir=$LOGDIR/pki
+
+  if ! generate_pki_files "$case_name"; then
+    fail_case "$case_name" "certificate generation failed"
+    return
+  fi
+  if ! start_pki_server "$case_name" "$pki_dir/bad_o_cn_server.pem" \
+      "$pki_dir/bad_o_cn_server.key"; then
+    fail_case "$case_name" "server did not start"
+    return
+  fi
+
+  run_pki_client "$case_name" "$pki_dir/ca.pem" "$CLIENT_TIMEOUT"
+
+  if assert_contains "$LOGDIR/$case_name.client" "COAP_EVENT_DTLS_CONNECTED" &&
+     assert_contains "$LOGDIR/$case_name.client" "2\\.05" &&
+     assert_contains "$LOGDIR/$case_name.client" "CN '$SNI_HOST' presented by server" &&
+     assert_contains "$LOGDIR/$case_name.server" "call handler for pseudo resource '.well-known/core'"; then
+    pass_case
+  else
+    fail_case "$case_name" "PKI CN fallback without SAN with bad O= did not complete"
+  fi
+}
+
 run_pki_bad_cn_or_san () {
   case_name=pki_bad_cn_or_san
   echo -n "PKI bad returned CN or SAN - "
@@ -1876,6 +1931,7 @@ run_pki_missing_client_cert
 run_pki_san_preferred_over_cn
 run_pki_second_san_preferred_over_cn
 run_pki_cn_fallback
+run_pki_bad_o_cn_fallback
 run_pki_bad_cn_or_san
 run_pki_wildcard
 run_pki_wildcard_bad
