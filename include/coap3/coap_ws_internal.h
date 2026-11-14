@@ -57,6 +57,7 @@ typedef struct coap_ws_state_t {
   uint8_t http_hdr[160]; /**< (Partial) HTTP header */
   size_t data_ofs;      /**< Offset into user provided buffer */
   size_t data_size;     /**< Data size as indicated by WebSocket frame */
+  uint8_t *rd_data;     /**< Frame data read in by an earlier call */
   uint8_t key[16];      /**< Random, but agreed key value */
 } coap_ws_state_t;
 
