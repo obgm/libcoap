@@ -1280,6 +1280,10 @@ static ssize_t
 coap_send_pdu(coap_session_t *session, coap_pdu_t *pdu, coap_queue_t *node) {
   ssize_t bytes_written;
 
+  if (session->disconnect_pending) {
+    /* A send has failed and the session is about to be disconnected */
+    return -1;
+  }
   if (session->state == COAP_SESSION_STATE_NONE) {
 #if ! COAP_CLIENT_SUPPORT
     return -1;
@@ -1662,6 +1666,10 @@ coap_send_lkd(coap_session_t *session, coap_pdu_t *pdu) {
     goto error;
   }
   pdu->session = session;
+  if (session->disconnect_pending) {
+    coap_log_debug("coap_send: Session about to be disconnected\n");
+    goto error;
+  }
 #if COAP_CLIENT_SUPPORT
   if (session->type == COAP_SESSION_TYPE_CLIENT &&
       !coap_netif_available(session) && !session->session_failed) {
@@ -2156,6 +2164,10 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
   (void)request_pdu;
 #endif /* COAP_SERVER_SUPPORT */
   pdu->session = session;
+  if (session->disconnect_pending) {
+    /* A send has failed and the session is about to be disconnected */
+    goto error;
+  }
 #if COAP_CLIENT_SUPPORT
   if (session->session_failed) {
     coap_session_reconnect(session);
@@ -2180,7 +2192,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
       while (1) {
         uint32_t timeout_ms;
 
-        if (send_recv_terminate) {
+        if (send_recv_terminate || session->disconnect_pending) {
           goto error;
         }
 
@@ -2310,7 +2322,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu, coap_pdu_t *request
   }
   if (bytes_written < 0) {
     if (pdu->code != 0)
-      coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
+      coap_session_send_failed_lkd(session, COAP_NACK_NOT_DELIVERABLE);
     goto error;
   }
 
@@ -2681,7 +2693,8 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
   (void)ctx;
   assert(session->sock.flags & COAP_SOCKET_CONNECTED);
 
-  while ((q = coap_remove_first_from_delayq(session)) != NULL) {
+  while (!session->disconnect_pending &&
+         (q = coap_remove_first_from_delayq(session)) != NULL) {
     ssize_t bytes_written;
 
     coap_address_copy(&session->addr_info.remote, &q->remote);
@@ -2943,13 +2956,13 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
   } else if (bytes_read > 0) {
     coap_session_t *session = coap_endpoint_get_session(endpoint, packet, now);
     if (session) {
-      coap_session_reference_lkd(session);
+      coap_session_hold_lkd(session);
       coap_log_debug("*  %s: netif: recv %4" PRIdS " bytes\n",
                      coap_session_str(session), bytes_read);
       result = coap_handle_dgram_for_proto(ctx, session, packet);
       if (endpoint->proto == COAP_PROTO_DTLS && session->type == COAP_SESSION_TYPE_HELLO && result == 1)
         coap_session_new_dtls_session(session, now);
-      coap_session_release_lkd(session);
+      coap_session_unhold_lkd(session);
     }
   }
   return result;
@@ -3005,7 +3018,7 @@ coap_io_do_io_lkd(coap_context_t *ctx, coap_tick_t now) {
 #endif /* !COAP_DISABLE_TCP */
     SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
       /* Make sure the session object is not deleted in one of the callbacks  */
-      coap_session_reference_lkd(s);
+      coap_session_hold_lkd(s);
 #if COAP_CLIENT_SUPPORT
       if (s->client_initiated && (s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0) {
         coap_connect_session(s, now);
@@ -3017,7 +3030,7 @@ coap_io_do_io_lkd(coap_context_t *ctx, coap_tick_t now) {
       if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0) {
         coap_write_session(ctx, s, now);
       }
-      coap_session_release_lkd(s);
+      coap_session_unhold_lkd(s);
     }
   }
 #endif /* COAP_SERVER_SUPPORT */
@@ -3025,7 +3038,7 @@ coap_io_do_io_lkd(coap_context_t *ctx, coap_tick_t now) {
 #if COAP_CLIENT_SUPPORT
   SESSIONS_ITER_SAFE(ctx->sessions, s, rtmp) {
     /* Make sure the session object is not deleted in one of the callbacks  */
-    coap_session_reference_lkd(s);
+    coap_session_hold_lkd(s);
     if ((s->sock.flags & COAP_SOCKET_CAN_CONNECT) != 0) {
       coap_connect_session(s, now);
     }
@@ -3035,7 +3048,7 @@ coap_io_do_io_lkd(coap_context_t *ctx, coap_tick_t now) {
     if ((s->sock.flags & COAP_SOCKET_CAN_WRITE) != 0 && s->ref > 1) {
       coap_write_session(ctx, s, now);
     }
-    coap_session_release_lkd(s);
+    coap_session_unhold_lkd(s);
   }
 #endif /* COAP_CLIENT_SUPPORT */
 #endif /* ! COAP_EPOLL_SUPPORT */
@@ -3105,7 +3118,7 @@ coap_io_do_epoll_lkd(coap_context_t *ctx, struct epoll_event *events, size_t nev
 
           /* Make sure the session object is not deleted
              in one of the callbacks  */
-          coap_session_reference_lkd(session);
+          coap_session_hold_lkd(session);
 #if COAP_CLIENT_SUPPORT
           if ((sock->flags & COAP_SOCKET_WANT_CONNECT) &&
               (events[j].events & (EPOLLOUT|EPOLLERR|EPOLLHUP|EPOLLRDHUP))) {
@@ -3135,7 +3148,7 @@ coap_io_do_epoll_lkd(coap_context_t *ctx, struct epoll_event *events, size_t nev
             coap_write_session(session->context, session, now);
           }
           /* Now dereference session so it can go away if needed */
-          coap_session_release_lkd(session);
+          coap_session_unhold_lkd(session);
         }
     } else if (ctx->eptimerfd != -1) {
       /*
@@ -4862,9 +4875,9 @@ check_token_size(coap_session_t *session, const coap_pdu_t *pdu, int is_local_mc
   return 1;
 }
 
-void
-coap_dispatch(coap_context_t *context, coap_session_t *session,
-              coap_pdu_t *pdu) {
+static void
+coap_dispatch_pdu(coap_context_t *context, coap_session_t *session,
+                  coap_pdu_t *pdu) {
   coap_queue_t *sent = NULL;
   coap_pdu_t *response;
   coap_pdu_t *orig_pdu = NULL;
@@ -5382,6 +5395,24 @@ finish:
   coap_pdu_release_lkd(pdu);
 }
 
+void
+coap_dispatch(coap_context_t *context, coap_session_t *session,
+              coap_pdu_t *pdu) {
+  if (session->disconnect_pending) {
+    /* A send has failed and the session is about to be disconnected */
+    coap_log_debug("***%s: coap_dispatch: PDU dropped, session about to be disconnected\n",
+                   coap_session_str(session));
+    return;
+  }
+  /*
+   * The handlers may send on the session. If such a send fails, the
+   * session is not disconnected until the PDU has been dealt with.
+   */
+  coap_session_hold_lkd(session);
+  coap_dispatch_pdu(context, session, pdu);
+  coap_session_unhold_lkd(session);
+}
+
 #if COAP_MAX_LOGGING_LEVEL >= _COAP_LOG_DEBUG
 static const char *
 coap_event_name(coap_event_t event) {
@@ -5611,15 +5642,19 @@ coap_check_async(coap_context_t *context, coap_tick_t now, coap_tick_t *tim_rem)
   LL_FOREACH_SAFE(context->async_state, async, tmp) {
     if (async->delay != 0 && !async->session->is_rate_limiting) {
       if (async->delay <= now) {
+        coap_session_t *session = async->session;
+
+        coap_session_hold_lkd(session);
         /* Restore the local address the request was received on */
-        coap_address_copy(&async->session->addr_info.local, &async->local_if);
+        coap_address_copy(&session->addr_info.local, &async->local_if);
         /* Send off the request to the application */
         coap_log_debug("Async PDU presented to app.\n");
         coap_show_pdu(COAP_LOG_DEBUG, async->pdu);
-        handle_request(context, async->session, async->pdu, NULL);
+        handle_request(context, session, async->pdu, NULL);
 
         /* Remove this async entry as it has now fired */
-        coap_free_async_lkd(async->session, async);
+        coap_free_async_lkd(session, async);
+        coap_session_unhold_lkd(session);
       } else {
         next_due = async->delay - now;
         ret = 1;
