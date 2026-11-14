@@ -195,6 +195,26 @@ jobs:
           cd build-${{matrix.TLS}}-${{matrix.CC}}
           libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
           examples/coap-server -? 2>&1 | head -10
+      - name: test TLS openssl
+        if: matrix.TLS == 'openssl' && matrix.CC == 'gcc'
+        run: |
+          examples/tls_backend_testcases.sh -s build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-server -c build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-client -I -F -p 5689
+      - name: test TLS gnutls
+        if: matrix.TLS == 'gnutls' && matrix.CC == 'gcc'
+        run: |
+          examples/tls_backend_testcases.sh -s build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-server -c build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-client -I -F -p 5691
+      - name: test TLS mbedtls
+        if: matrix.TLS == 'mbedtls' && matrix.CC == 'gcc'
+        run: |
+          examples/tls_backend_testcases.sh -s build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-server -c build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-client -I -F -p 5693
+      - name: test TLS wolfssl
+        if: matrix.TLS == 'wolfssl' && matrix.CC == 'gcc'
+        run: |
+          examples/tls_backend_testcases.sh -s build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-server -c build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-client -I -F -p 5695
+      - name: test TLS openhitls
+        if: matrix.TLS == 'openhitls' && matrix.CC == 'gcc'
+        run: |
+          examples/tls_backend_testcases.sh -s build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-server -c build-${{matrix.TLS}}-${{matrix.CC}}/examples/coap-client -I -F -p 5697
 
   build-linux2:
     needs: do-caches
