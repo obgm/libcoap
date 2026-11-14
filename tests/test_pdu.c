@@ -189,6 +189,79 @@ t_parse_pdu10(void) {
 }
 
 static void
+t_parse_pdu_elective_option_length(void) {
+  /* ETag (elective) with out of range length 9, followed by Uri-Path 'x' */
+  uint8_t teststr[] = {
+    0x40, 0x01, 0x12, 0x34,
+    0x49, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    0x71, 'x'
+  };
+  /* ETag len 9, then Max-Age (delta crosses the 13 encoding boundary) */
+  uint8_t grow_hdr[] = {
+    0x40, 0x01, 0x12, 0x34,
+    0x49, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    0xa1, 0x2a
+  };
+  /* ETag len 9 as the last option, followed by a payload */
+  uint8_t trailing[] = {
+    0x40, 0x01, 0x12, 0x34,
+    0x49, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    0xff, 'p', 'a', 'y'
+  };
+  /* Uri-Host (critical) with out of range length 0 */
+  uint8_t critical[] = { 0x40, 0x01, 0x12, 0x34, 0x30 };
+  /* Valid ETag length 8 for control */
+  uint8_t valid[] = {
+    0x40, 0x01, 0x12, 0x34,
+    0x48, 1, 2, 3, 4, 5, 6, 7, 8
+  };
+  coap_opt_iterator_t opt_iter;
+  coap_opt_t *option;
+
+  /* RFC 7252 Sec. 5.4.1/5.4.3: dropped as if unrecognized, parse continues */
+  CU_ASSERT(coap_pdu_parse(COAP_PROTO_UDP, teststr, sizeof(teststr), pdu) == 1);
+  CU_ASSERT_PTR_NULL(coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter));
+  option = coap_check_option(pdu, COAP_OPTION_URI_PATH, &opt_iter);
+  CU_ASSERT_PTR_NOT_NULL(option);
+  if (option) {
+    CU_ASSERT(coap_opt_length(option) == 1);
+    CU_ASSERT(*coap_opt_value(option) == 'x');
+  }
+  CU_ASSERT(pdu->max_opt == COAP_OPTION_URI_PATH);
+
+  /* Dropped option delta is merged into the following option header */
+  CU_ASSERT(coap_pdu_parse(COAP_PROTO_UDP, grow_hdr, sizeof(grow_hdr), pdu) == 1);
+  CU_ASSERT_PTR_NULL(coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter));
+  option = coap_check_option(pdu, COAP_OPTION_MAXAGE, &opt_iter);
+  CU_ASSERT_PTR_NOT_NULL(option);
+  if (option) {
+    CU_ASSERT(coap_opt_length(option) == 1);
+    CU_ASSERT(*coap_opt_value(option) == 0x2a);
+  }
+  CU_ASSERT(pdu->max_opt == COAP_OPTION_MAXAGE);
+
+  /* Trailing dropped option leaves the payload intact */
+  CU_ASSERT(coap_pdu_parse(COAP_PROTO_UDP, trailing, sizeof(trailing), pdu) == 1);
+  CU_ASSERT_PTR_NULL(coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter));
+  CU_ASSERT_PTR_NOT_NULL(pdu->data);
+  CU_ASSERT(pdu->used_size == 4);
+  CU_ASSERT(pdu->max_opt == 0);
+
+  /* Critical option with bad length still rejects the whole PDU */
+  CU_ASSERT(coap_pdu_parse(COAP_PROTO_UDP, critical, sizeof(critical), pdu) == 0);
+
+  /* Valid elective option still parses */
+  CU_ASSERT(coap_pdu_parse(COAP_PROTO_UDP, valid, sizeof(valid), pdu) == 1);
+  option = coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter);
+  CU_ASSERT_PTR_NOT_NULL(option);
+  if (option)
+    CU_ASSERT(coap_opt_length(option) == 8);
+
+  /* Outbound creation of an out of range option is still rejected */
+  CU_ASSERT(coap_add_option(pdu, COAP_OPTION_ETAG, 9, teststr + 5) == 0);
+}
+
+static void
 t_parse_pdu11(void) {
   uint8_t teststr[] = {  0x60, 0x00, 0x12, 0x34 };
   int result;
@@ -1500,6 +1573,7 @@ t_init_pdu_tests(void) {
   PDU_TEST(suite[0], t_parse_pdu8);
   PDU_TEST(suite[0], t_parse_pdu9);
   PDU_TEST(suite[0], t_parse_pdu10);
+  PDU_TEST(suite[0], t_parse_pdu_elective_option_length);
   PDU_TEST(suite[0], t_parse_pdu11);
   PDU_TEST(suite[0], t_parse_pdu12);
   PDU_TEST(suite[0], t_parse_pdu13);

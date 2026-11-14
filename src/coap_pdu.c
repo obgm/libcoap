@@ -1462,6 +1462,7 @@ write_char(char **obp, size_t *len, int c, int printable) {
 int
 coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
   int good = 1;
+  int drop_elective = 0;
 
   coap_option_filter_clear(error_opts);
 
@@ -1509,12 +1510,25 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
       if (COAP_PDU_IS_SIGNALING(pdu) ?
           !coap_pdu_parse_opt_csm(pdu->code, pdu->max_opt, len) :
           !coap_pdu_parse_opt_base(pdu->max_opt, len, opt_val)) {
-        coap_log_warn("coap_pdu_parse: %d.%02d: offset %u option %u has bad length %" PRIu32 " or value\n",
-                      pdu->code >> 5, pdu->code & 0x1F,
-                      (int)(opt_last - pdu->token - pdu->e_token_length), pdu->max_opt,
-                      len);
-        coap_option_filter_set(error_opts, pdu->max_opt);
-        good = 0;
+        if (!COAP_PDU_IS_SIGNALING(pdu) && !(pdu->max_opt & 0x01)) {
+          /*
+           * RFC 7252 Section 5.4.1 and 5.4.3: an elective option with an
+           * out of range length or value is treated as an unrecognized
+           * elective option and is silently dropped further down.
+           */
+          coap_log_info("coap_pdu_parse: %d.%02d: offset %u ignoring elective option %u with bad length %" PRIu32 " or value\n",
+                        pdu->code >> 5, pdu->code & 0x1F,
+                        (int)(opt_last - pdu->token - pdu->e_token_length), pdu->max_opt,
+                        len);
+          drop_elective = 1;
+        } else {
+          coap_log_warn("coap_pdu_parse: %d.%02d: offset %u option %u has bad length %" PRIu32 " or value\n",
+                        pdu->code >> 5, pdu->code & 0x1F,
+                        (int)(opt_last - pdu->token - pdu->e_token_length), pdu->max_opt,
+                        len);
+          coap_option_filter_set(error_opts, pdu->max_opt);
+          good = 0;
+        }
       }
     }
 
@@ -1576,6 +1590,54 @@ coap_pdu_parse_opt(coap_pdu_t *pdu, coap_opt_filter_t *error_opts) {
         *obp = '\000';
         coap_log_debug("%s\n", outbuf);
       }
+    }
+
+    if (good && drop_elective) {
+      /*
+       * Physically remove the dropped elective options from the PDU,
+       * merging the delta of each dropped option into the following option.
+       */
+      coap_opt_t *ropt = pdu->token + pdu->e_token_length;
+      coap_opt_t *wopt = ropt;
+      size_t rlen = pdu->used_size - pdu->e_token_length;
+      coap_option_num_t number = 0;
+      coap_option_num_t skip_delta = 0;
+
+      while (rlen > 0 && *ropt != COAP_PAYLOAD_START) {
+        coap_opt_t *cur = ropt;
+        size_t optsize = next_option_safe(&ropt, &rlen, &number);
+        coap_option_t decode;
+
+        /* The first pass has verified that the options are well formed */
+        assert(optsize != 0);
+        if (!coap_opt_parse(cur, optsize, &decode))
+          break; /* cannot happen */
+        if (!(number & 0x01) &&
+            !coap_pdu_parse_opt_base(number, decode.length, decode.value)) {
+          /* Drop this option, its delta is merged into the next option */
+          skip_delta += decode.delta;
+          continue;
+        }
+        if (wopt != cur) {
+          size_t new_hdr_size =
+              coap_opt_encode_size(decode.delta + skip_delta, decode.length) -
+              decode.length;
+
+          memmove(wopt + new_hdr_size, decode.value, decode.length);
+          coap_opt_setheader(wopt, new_hdr_size, decode.delta + skip_delta,
+                             decode.length);
+          skip_delta = 0;
+          wopt += new_hdr_size + decode.length;
+        } else {
+          wopt += optsize;
+        }
+      }
+      /* Move any payload marker and payload across the dropped options */
+      length = pdu->token + pdu->used_size - ropt;
+      memmove(wopt, ropt, length);
+      pdu->used_size -= (size_t)(ropt - wopt);
+      pdu->max_opt = number - skip_delta;
+      opt = wopt;
     }
 
     if (length > 0) {
