@@ -94,7 +94,7 @@ coap_resize_binary(coap_binary_t *s, size_t size) {
   coap_binary_t *new = coap_new_binary(size);
   if (new) {
     if (s) {
-      memcpy(new->s, s->s, s->length);
+      memcpy(new->s, s->s, s->length < size ? s->length : size);
       coap_delete_binary(s);
     }
   }
