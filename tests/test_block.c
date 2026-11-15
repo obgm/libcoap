@@ -537,6 +537,28 @@ t_block_qblock2_out_of_order(void) {
 #endif /* COAP_Q_BLOCK_SUPPORT */
 #endif /* COAP_SERVER_SUPPORT */
 
+/* A larger Size2 in a later block must not shrink the body and lose
+ * blocks that have already been saved further on */
+static void
+t_block_build_body_total_change(void) {
+  uint8_t later[16];
+  uint8_t first[16];
+  coap_binary_t *body;
+
+  memset(later, 'L', sizeof(later));
+  memset(first, 'F', sizeof(first));
+  body = coap_block_build_body(NULL, sizeof(later), later, 80, 97);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(body);
+  body = coap_block_build_body(body, sizeof(first), first, 0, 200);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(body);
+  CU_ASSERT(body->length >= 96);
+  if (body->length >= 96) {
+    CU_ASSERT(memcmp(&body->s[0], first, sizeof(first)) == 0);
+    CU_ASSERT(memcmp(&body->s[80], later, sizeof(later)) == 0);
+  }
+  coap_delete_binary(body);
+}
+
 CU_pSuite
 t_init_block_tests(void) {
   CU_pSuite suite;
@@ -558,6 +580,7 @@ t_init_block_tests(void) {
 #if COAP_Q_BLOCK_SUPPORT
   BLOCK_TEST(suite, t_block_qblock2_size2);
 #endif /* COAP_Q_BLOCK_SUPPORT */
+  BLOCK_TEST(suite, t_block_build_body_total_change);
 #if COAP_SERVER_SUPPORT
   BLOCK_TEST(suite, t_block_echo_get_func);
   BLOCK_TEST(suite, t_block_cancel_observe_get_func);

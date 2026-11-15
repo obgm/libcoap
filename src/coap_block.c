@@ -4604,7 +4604,8 @@ coap_block_build_body_lkd(coap_binary_t *body_data, size_t length,
   }
 
   /* Update saved data */
-  if (offset + length <= total && body_data->length >= total) {
+  if (offset + length <= body_data->length) {
+    /* Never shrink, blocks may have been saved past offset + length */
     memcpy(&body_data->s[offset], data, length);
   } else {
     /*
