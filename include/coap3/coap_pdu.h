@@ -177,6 +177,14 @@ typedef enum coap_pdu_signaling_proto_t {
 /* Content formats from RFC 8613 */
 #define COAP_MEDIATYPE_APPLICATION_OSCORE     10001 /* application/oscore */
 
+/* Content formats from RFC 9148 */
+#define COAP_MEDIATYPE_APPLICATION_PKCS7_SKG    280 /* application/pkcs7-mime; smime-type=server-generated-key */
+#define COAP_MEDIATYPE_APPLICATION_PKCS7_CERTS  281 /* application/pkcs7-mime; smime-type=certs-only */
+#define COAP_MEDIATYPE_APPLICATION_PKCS8        284 /* application/pkcs8 */
+#define COAP_MEDIATYPE_APPLICATION_CSRATTRS     285 /* application/csrattrs */
+#define COAP_MEDIATYPE_APPLICATION_PKCS10       286 /* application/pkcs10 */
+#define COAP_MEDIATYPE_APPLICATION_PKIX_CERT    287 /* application/pkix-cert */
+
 /**
  * coap_mid_t is used to store the CoAP Message ID of a CoAP PDU.
  * Valid message ids are 0 to 2^16.  Negative values are error codes.

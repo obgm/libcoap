@@ -746,6 +746,12 @@ print_content_format(unsigned int format_type,
     { COAP_MEDIATYPE_APPLICATION_ACE_CBOR, "application/ace+cbor" },
     { COAP_MEDIATYPE_APPLICATION_MB_CBOR_SEQ, "application/missing-blocks+cbor-seq" },
     { COAP_MEDIATYPE_APPLICATION_OSCORE, "application/oscore" },
+    { COAP_MEDIATYPE_APPLICATION_PKCS7_SKG, "application/pkcs7-mime; smime-type=server-generated-key" },
+    { COAP_MEDIATYPE_APPLICATION_PKCS7_CERTS, "application/pkcs7-mime; smime-type=certs-only" },
+    { COAP_MEDIATYPE_APPLICATION_PKCS8, "application/pkcs8" },
+    { COAP_MEDIATYPE_APPLICATION_CSRATTRS, "application/csrattrs" },
+    { COAP_MEDIATYPE_APPLICATION_PKCS10, "application/pkcs10" },
+    { COAP_MEDIATYPE_APPLICATION_PKIX_CERT, "application/pkix-cert" },
     { 75, "application/dcaf+cbor" }
   };
 
