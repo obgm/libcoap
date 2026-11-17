@@ -160,7 +160,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags valgrind
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags
           ./autogen.sh
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
@@ -179,13 +179,13 @@ jobs:
         run: |
           mkdir build-${{matrix.TLS}}-${{matrix.CC}}
           cd build-${{matrix.TLS}}-${{matrix.CC}}
-          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --disable-dtls CC=${{matrix.CC}}
+          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --disable-dtls --enable-sanitizer CC=${{matrix.CC}}
       - name: configure TLS
         if: matrix.TLS != 'no'
         run: |
           mkdir build-${{matrix.TLS}}-${{matrix.CC}}
           cd build-${{matrix.TLS}}-${{matrix.CC}}
-          "$GITHUB_WORKSPACE/configure" --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-${{matrix.TLS}} CC=${{matrix.CC}}
+          "$GITHUB_WORKSPACE/configure" --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-${{matrix.TLS}} --enable-sanitizer CC=${{matrix.CC}}
       - name: compile
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}
@@ -193,7 +193,7 @@ jobs:
       - name: test
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}
-          libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
+          tests/testdriver
           examples/coap-server -? 2>&1 | head -10
       - name: test TLS
         if: matrix.TLS != 'no' && matrix.CC == 'gcc'
@@ -212,7 +212,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags valgrind
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libmbedtls-dev libgnutls28-dev libwolfssl-dev libtool libtool-bin exuberant-ctags
           ./autogen.sh
       - name: cache openHiTLS
         if: matrix.TLS == 'openhitls'
@@ -231,13 +231,13 @@ jobs:
         run: |
           mkdir build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
           cd build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
-          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-${{matrix.TLS}}-oscore --disable-dtls CC=${{matrix.CC}}
+          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-${{matrix.TLS}}-oscore --disable-dtls --enable-sanitizer CC=${{matrix.CC}}
       - name: configure OSCORE + DTLS
         if: matrix.OSCORE_ONLY == 'no'
         run: |
           mkdir build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
           cd build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
-          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-${{matrix.TLS}}-oscore --enable-dtls CC=${{matrix.CC}}
+          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-${{matrix.TLS}}-oscore --enable-dtls --enable-sanitizer CC=${{matrix.CC}}
       - name: compile
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
@@ -245,14 +245,11 @@ jobs:
       - name: test
         run: |
           cd build-${{matrix.TLS}}-${{matrix.CC}}-${{matrix.OSCORE_ONLY}}
-          libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
+          tests/testdriver
           examples/coap-server -? 2>&1 | head -10
 
-  build-linux-sanitizer:
+  build-linux-sanitizer-32:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        BITS: ["32", "64" ]
     steps:
       - uses: actions/checkout@v6
       - name: setup
@@ -261,13 +258,8 @@ jobs:
           sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags build-essential libc6-dev-i386 libcunit1-dev:i386
           ./autogen.sh
       - name: configure-32
-        if: matrix.BITS == '32'
         run: |
           $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --disable-dtls --enable-sanitizer --build=i386
-      - name: configure-64
-        if: matrix.BITS == '64'
-        run: |
-          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --disable-dtls --enable-sanitizer
       - name: compile
         run: |
           make EXTRA_CFLAGS=-Werror
@@ -283,17 +275,17 @@ jobs:
           submodules: recursive
       - name: setup
         run: |
-          sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags valgrind
+          sudo apt-get update && sudo apt-get install -y libcunit1-dev libtool libtool-bin exuberant-ctags
           ./autogen.sh
       - name: configure
         run: |
-          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-tinydtls
+          $GITHUB_WORKSPACE/configure --disable-silent-rules --disable-documentation --enable-examples --enable-tests --with-tinydtls --enable-sanitizer
       - name: compile
         run: |
           make EXTRA_CFLAGS=-Werror && make check EXTRA_CFLAGS=-Werror
       - name: test
         run: |
-          LD_LIBRARY_PATH=ext/tinydtls libtool --mode=execute valgrind --track-origins=yes --leak-check=yes --show-reachable=yes --error-exitcode=123 --quiet --suppressions=$GITHUB_WORKSPACE/tests/valgrind_suppression tests/testdriver
+          LD_LIBRARY_PATH=ext/tinydtls tests/testdriver
 
   cmake-build:
     needs: do-caches
