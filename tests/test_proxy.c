@@ -158,6 +158,72 @@ t_proxy_remove(void) {
 }
 
 /*
+ * A forward-dynamic proxy must send each request to the upstream server
+ * given in its Proxy-Uri, not to the server an earlier request from the
+ * same client session went to.
+ */
+static void
+t_proxy_dynamic_upstream(void) {
+  coap_proxy_server_list_t server_list;
+  coap_address_t addr;
+  coap_session_t *incoming;
+  coap_pdu_t *request;
+  coap_pdu_t *response;
+  size_t i;
+  int first = 0;
+  int second = 0;
+
+  memset(&server_list, 0, sizeof(server_list));
+  server_list.type = COAP_PROXY_FWD_DYNAMIC;
+
+  coap_address_init(&addr);
+  addr.size = sizeof(struct sockaddr_in);
+  addr.addr.sin.sin_family = AF_INET;
+  addr.addr.sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.addr.sin.sin_port = htons(5695);
+  incoming = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(incoming);
+
+  response = coap_pdu_init(COAP_MESSAGE_ACK, 0, 0x1234, 1152);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
+  request = t_proxy_request("coap://127.0.0.1:5694/a");
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(request);
+  CU_ASSERT(coap_proxy_forward_request(incoming, request, response, NULL,
+                                       NULL, &server_list) == 1);
+  coap_delete_pdu(request);
+  coap_delete_pdu(response);
+
+  response = coap_pdu_init(COAP_MESSAGE_ACK, 0, 0x1235, 1152);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(response);
+  request = t_proxy_request("coap://127.0.0.2:5693/b");
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(request);
+  CU_ASSERT(coap_proxy_forward_request(incoming, request, response, NULL,
+                                       NULL, &server_list) == 1);
+  coap_delete_pdu(request);
+  coap_delete_pdu(response);
+
+  for (i = 0; i < ctx->proxy_list_count; i++) {
+    coap_proxy_req_t *proxy_req;
+
+    LL_FOREACH(ctx->proxy_list[i].proxy_req, proxy_req) {
+      if (proxy_req->incoming != incoming)
+        continue;
+      if (ctx->proxy_list[i].uri.port == 5694)
+        first++;
+      else if (ctx->proxy_list[i].uri.port == 5693)
+        second++;
+    }
+  }
+  CU_ASSERT(first == 1);
+  CU_ASSERT(second == 1);
+
+  coap_lock_lock(return);
+  coap_proxy_remove_association(incoming, 0);
+  coap_lock_unlock();
+  coap_session_release(incoming);
+}
+
+/*
  * The forward proxy must hand the upstream transfer its own copy of the
  * request body, not the caller's buffer, because that buffer (the reassembled
  * lg_srcv body) is freed once the incoming request has been handled while the
@@ -304,6 +370,7 @@ t_init_proxy_tests(void) {
   SESSION_TEST(suite, t_proxy_508_hop_limit);
 #if COAP_PROXY_SUPPORT
   SESSION_TEST(suite, t_proxy_remove);
+  SESSION_TEST(suite, t_proxy_dynamic_upstream);
   SESSION_TEST(suite, t_proxy_body_copy);
 #endif /* COAP_PROXY_SUPPORT */
 
