@@ -465,11 +465,16 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
 
   *proxy_entry_created = 0;
 
+  proxy_type = coap_proxy_map_type(server_list->type);
+
   /*
    * Maintain server stickability. server_use not needed as there is
    * ongoing session in place.
+   * Not for forward-dynamic, where the upstream server is defined by
+   * each request's Proxy-Uri or Proxy-Scheme options.
    */
-  if (session->proxy_entry) {
+  if (session->proxy_entry &&
+      (proxy_type & COAP_PROXY_NEW_MASK) != COAP_PROXY_FWD_DYNAMIC) {
     for (i = 0; i < proxy_list_count; i++) {
       if (&proxy_list[i] == session->proxy_entry) {
         if (session->proxy_entry->ongoing) {
@@ -490,8 +495,6 @@ coap_proxy_get_session(coap_session_t *session, const coap_pdu_t *request,
   } else {
     memset(server_use, 0, sizeof(*server_use));
   }
-
-  proxy_type = coap_proxy_map_type(server_list->type);
 
   if ((proxy_type & COAP_PROXY_NEW_MASK) == COAP_PROXY_FWD_DYNAMIC) {
     /* Need to get actual server from CoAP Proxy-Uri or Proxy-Scheme options */
