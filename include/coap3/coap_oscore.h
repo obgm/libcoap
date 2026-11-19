@@ -36,8 +36,8 @@ extern "C" {
  * Callback function type for overriding oscore_find_context().
  *
  * If set via coap_oscore_register_external_handlers(), this function is
- * called before the internal oscore_find_context() to locate the OSCORE
- * recipient and security context for an incoming request.
+ * called by oscore_find_context() when no matching context is already
+ * attached to the session or registered in RAM on the CoAP context.
  *
  * The implementation of this function should be combined with
  * @ref coap_oscore_update_seq_num_handler_t if sequence counter management is required.
