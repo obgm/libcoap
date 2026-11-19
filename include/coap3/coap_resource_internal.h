@@ -161,11 +161,11 @@ int coap_delete_resource_lkd(coap_resource_t *resource);
  * Note: This function must be called in the locked state.
  *
  * @param resource The CoAP resource.
+ *
+ * @return         @c 1 if the resource was found (and released),
+ *                 @c 0 otherwise.
  */
-COAP_STATIC_INLINE int
-coap_resource_release_lkd(coap_resource_t *resource) {
-  return coap_delete_resource_lkd(resource);
-}
+int coap_resource_release_lkd(coap_resource_t *resource);
 
 /**
  * Deletes all resources from given @p context and frees their storage.
