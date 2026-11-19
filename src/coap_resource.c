@@ -697,6 +697,11 @@ coap_delete_resource_lkd(coap_resource_t *resource) {
   return 1;
 }
 
+int
+coap_resource_release_lkd(coap_resource_t *resource) {
+  return coap_delete_resource_lkd(resource);
+}
+
 void
 coap_delete_all_resources(coap_context_t *context) {
   coap_resource_t *r;
