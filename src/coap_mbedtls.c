@@ -1930,6 +1930,7 @@ do_mbedtls_handshake(coap_session_t *c_session,
         if (mbedtls_ssl_get_peer_cid(&m_env->ssl, &enabled, peer_cid, &peer_cid_len) == 0 &&
             enabled == MBEDTLS_SSL_CID_ENABLED) {
           c_session->negotiated_cid = 1;
+          coap_log_info("** %s: CID was negotiated\n", coap_session_str(c_session));
         } else {
           coap_log_info("** %s: CID was not negotiated\n", coap_session_str(c_session));
           c_session->negotiated_cid = 0;
