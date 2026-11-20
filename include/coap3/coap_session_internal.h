@@ -265,6 +265,9 @@ struct coap_session_t {
                                        of the last CON */
 #if COAP_SERVER_SUPPORT
   coap_bin_const_t *client_cid;   /**< Contains client CID or NULL */
+  coap_addr_tuple_t cid_addr_info; /**< Address the last CID record came from */
+  uint8_t cid_addr_pending;       /**< Set if cid_addr_info is to be used once
+                                       the record is authenticated */
   coap_pdu_t *last_resp_pdu;      /**< Cached copy of last ACK response PDU */
 #endif /* COAP_SERVER_SUPPORT */
 #if COAP_CLIENT_SUPPORT
@@ -556,6 +559,15 @@ ssize_t coap_session_delay_pdu(coap_session_t *session, coap_pdu_t *pdu,
  */
 coap_session_t *coap_endpoint_get_session(coap_endpoint_t *endpoint,
                                           const coap_packet_t *packet, coap_tick_t now);
+
+/**
+ * Move the server session to the address that a DTLS Connection ID record
+ * was received from. Only to be called once that record has been
+ * authenticated (decrypted) by the DTLS layer.
+ *
+ * @param session The server session.
+ */
+void coap_session_cid_update_addr(coap_session_t *session);
 
 /**
  * Create a new endpoint for communicating with peers.

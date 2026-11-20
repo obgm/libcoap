@@ -1294,6 +1294,21 @@ coap_make_addr_hash(coap_addr_hash_t *addr_hash, coap_proto_t proto,
   addr_hash->proto = proto;
 }
 
+void
+coap_session_cid_update_addr(coap_session_t *session) {
+  if (!session->cid_addr_pending || !session->endpoint)
+    return;
+  session->cid_addr_pending = 0;
+  /* Updating IP address */
+  coap_log_info("***%s: CID: Old Client Session\n", coap_session_str(session));
+  SESSIONS_DELETE(session->endpoint->sessions, session);
+  session->addr_info = session->cid_addr_info;
+  coap_make_addr_hash(&session->addr_hash, session->endpoint->proto,
+                      &session->addr_info);
+  SESSIONS_ADD(session->endpoint->sessions, session);
+  coap_log_info("***%s: CID: New Client Session\n", coap_session_str(session));
+}
+
 /* Aids debugging when session is created */
 static coap_session_t *debug_session;
 
@@ -1315,6 +1330,8 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
     coap_address_copy(&session->addr_info.local, &packet->addr_info.local);
     session->ifindex = packet->ifindex;
     session->last_rx_tx = now;
+    /* Packet is from the current address, not from a new CID address */
+    session->cid_addr_pending = 0;
     return session;
   }
 
@@ -1444,13 +1461,16 @@ coap_endpoint_get_session(coap_endpoint_t *endpoint,
                length > (OFF_CID + session->client_cid->length) &&
                memcmp(session->client_cid->s, &payload[OFF_CID],
                       session->client_cid->length) == 0)) {
-            /* Updating IP address */
-            coap_log_info("***%s: CID: Old Client Session\n", coap_session_str(session));
-            SESSIONS_DELETE(endpoint->sessions, session);
-            session->addr_info = packet->addr_info;
-            memcpy(&session->addr_hash, &addr_hash, sizeof(session->addr_hash));
-            SESSIONS_ADD(endpoint->sessions, session);
-            coap_log_info("***%s: CID: New Client Session\n", coap_session_str(session));
+            /*
+             * The record has not been authenticated yet, so only remember
+             * the new address. coap_session_cid_update_addr() moves the
+             * session once the DTLS layer has decrypted the record
+             * (RFC 9146 Section 6).
+             */
+            coap_log_debug("***%s: CID: Client Session may have new address\n",
+                           coap_session_str(session));
+            session->cid_addr_info = packet->addr_info;
+            session->cid_addr_pending = 1;
             return session;
           }
         }

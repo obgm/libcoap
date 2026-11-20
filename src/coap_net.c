@@ -3178,6 +3178,10 @@ coap_handle_dgram(coap_context_t *ctx, coap_session_t *session,
   coap_opt_filter_t error_opts;
 
   assert(COAP_PROTO_NOT_RELIABLE(session->proto));
+#if COAP_SERVER_SUPPORT
+  /* The DTLS layer has authenticated the record, so the address can change */
+  coap_session_cid_update_addr(session);
+#endif /* COAP_SERVER_SUPPORT */
   if (msg_len < 4) {
     /* Minimum size of CoAP header - ignore runt */
     return -1;

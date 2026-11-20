@@ -253,6 +253,89 @@ t_session_notify_send_fail(void) {
   coap_session_release(nsession);
   coap_free_context(nctx);
 }
+
+/* A DTLS record carrying the session's Connection ID from a new address
+ * must only move the server session to that address once the record has
+ * been decrypted (RFC 9146 Section 6), i.e. when coap_handle_dgram() is
+ * called. A forged record that fails decryption is followed by a record
+ * from the old address, which must not pick up the forged address. */
+static void
+t_session_cid_new_address(void) {
+  static const uint8_t cid[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  /* Content Type Handshake, Client Hello */
+  uint8_t hello[14] = { 22, 0xfe, 0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 };
+  /* Content Type CID, CID at offset 11, then the (garbage) record */
+  uint8_t cid_rec[24] = { 25, 0xfe, 0xfd, 0, 1, 0, 0, 0, 0, 0, 9,
+                          1, 2, 3, 4, 5, 6, 7, 8, 0, 3, 0xaa, 0xbb, 0xcc
+                        };
+  /* Empty ACK, as decrypted application data */
+  uint8_t ack[4] = { 0x60, 0x00, 0x12, 0x34 };
+  coap_context_t *l_ctx;
+  coap_endpoint_t *ep;
+  coap_session_t *s;
+  coap_packet_t packet;
+  coap_address_t laddr, peer1, peer2;
+  coap_tick_t now;
+
+  coap_address_init(&laddr);
+  laddr.size = sizeof(struct sockaddr_in6);
+  laddr.addr.sin6.sin6_family = AF_INET6;
+  laddr.addr.sin6.sin6_addr = in6addr_loopback;
+  laddr.addr.sin6.sin6_port = htons(20006);
+  peer1 = laddr;
+  peer1.addr.sin6.sin6_port = htons(20007);
+  peer2 = laddr;
+  peer2.addr.sin6.sin6_port = htons(20008);
+
+  l_ctx = coap_new_context(NULL);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(l_ctx);
+  ep = coap_new_endpoint(l_ctx, &laddr, COAP_PROTO_UDP);
+  CU_ASSERT_PTR_NOT_NULL(ep);
+  if (!ep)
+    goto done;
+  /* Treat the endpoint as a DTLS one */
+  ep->proto = COAP_PROTO_DTLS;
+  coap_ticks(&now);
+
+  memset(&packet, 0, sizeof(packet));
+  coap_address_copy(&packet.addr_info.local, &laddr);
+  coap_address_copy(&packet.addr_info.remote, &peer1);
+  packet.payload = hello;
+  packet.length = sizeof(hello);
+  coap_lock_lock(goto done);
+  s = coap_endpoint_get_session(ep, &packet, now);
+  CU_ASSERT_PTR_NOT_NULL(s);
+  if (!s) {
+    coap_lock_unlock();
+    goto done;
+  }
+  s->type = COAP_SESSION_TYPE_SERVER;
+  s->client_cid = coap_new_bin_const(cid, sizeof(cid));
+
+  /* Forged record with the CID from peer2 - not yet authenticated */
+  coap_address_copy(&packet.addr_info.remote, &peer2);
+  packet.payload = cid_rec;
+  packet.length = sizeof(cid_rec);
+  CU_ASSERT(coap_endpoint_get_session(ep, &packet, now) == s);
+  CU_ASSERT(coap_address_equals(&s->addr_info.remote, &peer1));
+
+  /* Next record comes from peer1 and is decrypted */
+  coap_address_copy(&packet.addr_info.remote, &peer1);
+  CU_ASSERT(coap_endpoint_get_session(ep, &packet, now) == s);
+  coap_handle_dgram(l_ctx, s, ack, sizeof(ack));
+  CU_ASSERT(coap_address_equals(&s->addr_info.remote, &peer1));
+
+  /* Client has really moved to peer2 */
+  coap_address_copy(&packet.addr_info.remote, &peer2);
+  CU_ASSERT(coap_endpoint_get_session(ep, &packet, now) == s);
+  coap_handle_dgram(l_ctx, s, ack, sizeof(ack));
+  CU_ASSERT(coap_address_equals(&s->addr_info.remote, &peer2));
+  CU_ASSERT(coap_endpoint_get_session(ep, &packet, now) == s);
+  coap_lock_unlock();
+
+done:
+  coap_free_context(l_ctx);
+}
 #endif /* COAP_SERVER_SUPPORT */
 
 static unsigned int send_fail_nacks;
@@ -585,6 +668,7 @@ t_init_session_tests(void) {
   SESSION_TEST(suite, t_session5);
 #if COAP_SERVER_SUPPORT
   SESSION_TEST(suite, t_session_notify_send_fail);
+  SESSION_TEST(suite, t_session_cid_new_address);
 #endif /* COAP_SERVER_SUPPORT */
   SESSION_TEST(suite, t_session6);
   SESSION_TEST(suite, t_session_send_fail_deferred);
