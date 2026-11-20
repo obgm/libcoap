@@ -759,13 +759,18 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
   }
 
   /* Get in (remaining) data */
+  if (session->ws->rd_data) {
+    /* data is not preserved between calls, so restore what was read earlier */
+    memcpy(data, session->ws->rd_data, session->ws->data_ofs);
+  }
   ret = session->sock.lfunc[COAP_LAYER_WS].l_read(session,
                                                   &data[session->ws->data_ofs],
                                                   session->ws->data_size - session->ws->data_ofs);
-  if (ret <= 0)
-    return ret;
-  session->ws->data_ofs += ret;
-  if (session->ws->data_ofs == session->ws->data_size) {
+  if (ret > 0)
+    session->ws->data_ofs += ret;
+  if (ret > 0 && session->ws->data_ofs == session->ws->data_size) {
+    coap_free_type(COAP_STRING, session->ws->rd_data);
+    session->ws->rd_data = NULL;
     if (session->ws->state == COAP_SESSION_TYPE_SERVER) {
       /* Need to unmask the data */
       coap_ws_mask_data(session, data, session->ws->data_size);
@@ -777,6 +782,19 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
                    coap_session_str(session), session->ws->data_size);
     return session->ws->data_size;
   }
+  if (session->ws->data_ofs) {
+    /* Save the partial frame data for the next call */
+    if (!session->ws->rd_data) {
+      session->ws->rd_data = coap_malloc_type(COAP_STRING, session->ws->data_size);
+      if (!session->ws->rd_data) {
+        coap_session_disconnected_lkd(session, COAP_NACK_WS_LAYER_FAILED);
+        return -1;
+      }
+    }
+    memcpy(session->ws->rd_data, data, session->ws->data_ofs);
+  }
+  if (ret <= 0)
+    return ret;
   /* Need to get in all of the data */
   coap_log_debug("*  %s: Waiting Packet size %" PRIuS " (got %" PRIuS ")\n",
                  coap_session_str(session),
