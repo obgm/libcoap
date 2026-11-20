@@ -235,9 +235,10 @@ qblock2_response(coap_session_t *s, uint32_t blk, size_t size2) {
   return pdu;
 }
 
-/* Two 16 byte Q-Block2 responses, with the Size2 of each */
+/* Two 16 byte Q-Block2 responses, with the Q-Block2 and Size2 of each */
 static void
-qblock2_get(size_t size2_first, size_t size2_last) {
+qblock2_get_pair(uint32_t blk_first, size_t size2_first,
+                 uint32_t blk_last, size_t size2_last) {
   static const uint8_t token[] = { 0x51, 0x42 };
   coap_context_t *qctx;
   coap_session_t *qsession;
@@ -274,14 +275,14 @@ qblock2_get(size_t size2_first, size_t size2_last) {
     coap_add_token(sent, sizeof(token), token);
     coap_add_option(sent, COAP_OPTION_URI_PATH, 1, (const uint8_t *)"x");
 
-    rcvd = qblock2_response(qsession, (0 << 4) | (1 << 3) | 0, size2_first);
+    rcvd = qblock2_response(qsession, blk_first, size2_first);
     CU_ASSERT_PTR_NOT_NULL(rcvd);
     if (rcvd) {
       coap_handle_response_get_block(qctx, qsession, sent, rcvd,
                                      COAP_RECURSE_OK);
       coap_delete_pdu_lkd(rcvd);
     }
-    rcvd = qblock2_response(qsession, (1 << 4) | (0 << 3) | 0, size2_last);
+    rcvd = qblock2_response(qsession, blk_last, size2_last);
     CU_ASSERT_PTR_NOT_NULL(rcvd);
     if (rcvd) {
       coap_handle_response_get_block(qctx, qsession, sent, rcvd,
@@ -294,6 +295,12 @@ qblock2_get(size_t size2_first, size_t size2_last) {
 
   coap_session_release(qsession);
   coap_free_context(qctx);
+}
+
+static void
+qblock2_get(size_t size2_first, size_t size2_last) {
+  qblock2_get_pair((0 << 4) | (1 << 3) | 0, size2_first,
+                   (1 << 4) | (0 << 3) | 0, size2_last);
 }
 
 /* A Q-Block2 body is only presented with the 32 bytes that were received */
@@ -309,6 +316,15 @@ t_block_qblock2_size2(void) {
   qblock2_get(32, 32);
   CU_ASSERT(qblock2_calls == 1);
   CU_ASSERT(qblock2_len == 32);
+}
+
+/* Blocks of different sizes must not complete a body with unwritten gaps */
+static void
+t_block_qblock2_szx_change(void) {
+  /* 16 bytes at offset 1024 (SZX 6), then 16 bytes at offset 0 (SZX 0) */
+  qblock2_get_pair((1 << 4) | (0 << 3) | 6, 1040,
+                   (0 << 4) | (1 << 3) | 0, 1040);
+  CU_ASSERT(qblock2_calls == 0);
 }
 #endif /* COAP_Q_BLOCK_SUPPORT */
 
@@ -579,6 +595,7 @@ t_init_block_tests(void) {
 
 #if COAP_Q_BLOCK_SUPPORT
   BLOCK_TEST(suite, t_block_qblock2_size2);
+  BLOCK_TEST(suite, t_block_qblock2_szx_change);
 #endif /* COAP_Q_BLOCK_SUPPORT */
   BLOCK_TEST(suite, t_block_build_body_total_change);
 #if COAP_SERVER_SUPPORT

@@ -4861,6 +4861,11 @@ reinit:
           coap_log_warn("Content-Format option mismatch\n");
           goto fail_resp;
         }
+        /* Received blocks are tracked by number, so the block size cannot change */
+        if (block.szx != lg_crcv->szx) {
+          coap_log_warn("block: block size changed during receipt\n");
+          goto fail_resp;
+        }
 #if COAP_Q_BLOCK_SUPPORT
         if (block_opt == COAP_OPTION_Q_BLOCK2 && size2 != lg_crcv->total_len) {
           coap_log_warn("Size2 option mismatch (%"PRIuS " != %" PRIuS ")\n",
