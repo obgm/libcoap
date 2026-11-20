@@ -925,6 +925,7 @@ coap_dtls_send(coap_session_t *session,
         dtls_security_parameters_t *security = dtls_security_params(peer);
 
         if (security->write_cid_length > 0) {
+          coap_log_info("** %s: CID was negotiated\n", coap_session_str(session));
           session->negotiated_cid = 1;
         } else {
           coap_log_info("** %s: CID was not negotiated\n", coap_session_str(session));
@@ -1010,8 +1011,10 @@ coap_dtls_receive(coap_session_t *session,
         dtls_security_parameters_t *security = dtls_security_params(peer);
 
         if (security->write_cid_length > 0) {
+          coap_log_info("** %s: CID was negotiated\n", coap_session_str(session));
           session->negotiated_cid = 1;
         } else {
+          coap_log_info("** %s: CID was not negotiated\n", coap_session_str(session));
           session->negotiated_cid = 0;
         }
       }
