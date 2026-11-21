@@ -105,6 +105,8 @@ oscore_bytes_equal(uint8_t *a_ptr,
 
 static void
 oscore_enter_context(coap_context_t *c_context, oscore_ctx_t *osc_ctx) {
+  if (!osc_ctx)
+    return;
   if (c_context->p_osc_ctx) {
     oscore_ctx_t *head = c_context->p_osc_ctx;
     oscore_ctx_t *prev = head;
