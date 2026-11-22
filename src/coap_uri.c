@@ -313,7 +313,7 @@ coap_split_uri_sub(const uint8_t *str_var,
     }
   }
 
-path:                 /* at this point, p must point to an absolute path */
+path:                 /* q points just past the authority, or to a relative URI's leading '/' */
 
   if (!len)
     goto end;
@@ -329,15 +329,14 @@ path:                 /* at this point, p must point to an absolute path */
 
     if (p < q) {
       COAP_SET_STR(&uri->path, q - p, p);
-      p = q;
     }
   }
 
   /* Uri_Query */
-  if (len && *p == '?') {
-    ++p;
+  if (len && *q == '?') {
+    ++q;
     --len;
-    COAP_SET_STR(&uri->query, len, p);
+    COAP_SET_STR(&uri->query, len, q);
     len = 0;
   }
 
@@ -882,14 +881,11 @@ coap_path_into_optlist_abbrev(const uint8_t *s, size_t length, coap_option_num_t
   const uint8_t *p = s;
   coap_optlist_t *optlist;
   int num_dots;
-  coap_optlist_t **optlist_start;
+  coap_optlist_t **optlist_start = optlist_chain;
 
-  if (*optlist_chain) {
-    /* Something previously in optlist_chain. Need to make that the start */
-    optlist_start = &((*optlist_chain)->next);
-  } else {
-    optlist_start = optlist_chain;
-  }
+  /* A ".." can remove only segments appended by this call. */
+  while (*optlist_start)
+    optlist_start = &(*optlist_start)->next;
 
   if (length > 0 && mapping) {
     uint32_t i;
@@ -1063,6 +1059,7 @@ coap_clone_uri(const coap_uri_t *uri) {
   memset(result, 0, sizeof(coap_uri_t));
 
   result->port = uri->port;
+  result->scheme = uri->scheme;
 
   if (uri->host.length) {
     result->host.s = p = URI_DATA(result);

@@ -26,6 +26,23 @@ t_uri_scheme_case(void) {
 }
 
 static void
+t_clone_uri_scheme(void) {
+  const uint8_t input[] = "https://example.org:8443/status?v=1";
+  coap_uri_t uri;
+  coap_uri_t *copy;
+
+  CU_ASSERT_FATAL(coap_split_proxy_uri(input, sizeof(input) - 1, &uri) == 0);
+  copy = coap_clone_uri(&uri);
+  CU_ASSERT_PTR_NOT_NULL_FATAL(copy);
+  CU_ASSERT(copy->scheme == COAP_URI_SCHEME_HTTPS);
+  CU_ASSERT(copy->port == uri.port);
+  CU_ASSERT(coap_string_equal(&copy->host, &uri.host));
+  CU_ASSERT(coap_string_equal(&copy->path, &uri.path));
+  CU_ASSERT(coap_string_equal(&copy->query, &uri.query));
+  coap_delete_uri(copy);
+}
+
+static void
 t_parse_uri1(void) {
   char teststr[] = "coap://[::1]/.well-known/core";
 
@@ -91,6 +108,24 @@ t_parse_uri3(void) {
     CU_ASSERT_NSTRING_EQUAL(uri.query.s, "foo&bla=fasel", 13);
   } else {
     CU_FAIL("uri parser error");
+  }
+}
+
+static void
+t_parse_query_without_path(void) {
+  static const char *const inputs[] = {
+    "coap://localhost?x=1",
+    "coap://[::1]?x=1",
+    "coap://localhost:5683?x=1"
+  };
+  const coap_str_const_t *query = coap_make_str_const("x=1");
+  coap_uri_t uri;
+  size_t i;
+
+  for (i = 0; i < sizeof(inputs) / sizeof(inputs[0]); i++) {
+    CU_ASSERT(coap_split_uri((const uint8_t *)inputs[i], strlen(inputs[i]), &uri) == 0);
+    CU_ASSERT(uri.path.length == 0);
+    CU_ASSERT(coap_string_equal(&uri.query, query));
   }
 }
 
@@ -844,7 +879,12 @@ t_parse_uri27(void) {
   size_t buflen = sizeof(buf);
 
   const uint8_t pathcheckbuf_1[] = { 0x01, 0x61 };
-  const uint8_t pathcheckbuf_2[] = { 0x34, 0x68, 0x6f, 0x73, 0x74, 0x81, 0x61 };
+  const uint8_t port[] = { 0x50 };
+  const uint8_t pathcheckbuf_2[] = {
+    0x34, 'h', 'o', 's', 't', /* Uri-Host */
+    0x41, 0x50,               /* Uri-Port */
+    0x41, 'a'                 /* Uri-Path */
+  };
 
   result = coap_split_path((uint8_t *)testpath, strlen(testpath), buf, &buflen);
   CU_ASSERT(result == 1);
@@ -865,11 +905,13 @@ t_parse_uri27(void) {
   coap_delete_pdu(pdu);
 
   optlist_chain = NULL;
-  /* Add in a Uri-Host: option to check .. backup */
+  /* A leading ".." must preserve both existing options. */
   coap_insert_optlist(&optlist_chain,
                       coap_new_optlist(COAP_OPTION_URI_HOST,
                                        4,
                                        (const uint8_t *)"host"));
+  coap_insert_optlist(&optlist_chain,
+                      coap_new_optlist(COAP_OPTION_URI_PORT, sizeof(port), port));
   result = coap_path_into_optlist((uint8_t *)testpath, strlen(testpath),
                                   COAP_OPTION_URI_PATH, &optlist_chain);
   CU_ASSERT(result == 1);
@@ -879,8 +921,8 @@ t_parse_uri27(void) {
   result = coap_add_optlist_pdu(pdu, &optlist_chain);
   CU_ASSERT(result == 1);
   coap_delete_optlist(optlist_chain);
-  CU_ASSERT(pdu->used_size == sizeof(pathcheckbuf_2));
-  CU_ASSERT_NSTRING_EQUAL(pdu->token, pathcheckbuf_2, pdu->used_size);
+  CU_ASSERT(pdu->used_size == sizeof(pathcheckbuf_2) &&
+            memcmp(pdu->token, pathcheckbuf_2, sizeof(pathcheckbuf_2)) == 0);
   coap_delete_pdu(pdu);
 }
 
@@ -1163,9 +1205,11 @@ t_init_uri_tests(void) {
   }
 
   URI_TEST(suite, t_uri_scheme_case);
+  URI_TEST(suite, t_clone_uri_scheme);
   URI_TEST(suite, t_parse_uri1);
   URI_TEST(suite, t_parse_uri2);
   URI_TEST(suite, t_parse_uri3);
+  URI_TEST(suite, t_parse_query_without_path);
   URI_TEST(suite, t_parse_uri4);
   URI_TEST(suite, t_parse_uri5);
   URI_TEST(suite, t_parse_uri6);
