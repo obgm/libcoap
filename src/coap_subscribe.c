@@ -740,6 +740,30 @@ coap_op_obs_cnt_load_disk(coap_context_t *context) {
   fclose(fp);
 }
 
+/* Close both streams before replacing the counter file. */
+static int
+coap_op_obs_cnt_commit(FILE *src, FILE *dst, char *tmp, const char *path) {
+  int ok = !src || !ferror(src);
+
+  if (fclose(dst) != 0)
+    ok = 0;
+  if (src)
+    fclose(src);
+  if (ok) {
+#ifdef _WIN32
+    ok = MoveFileExA(tmp, path, MOVEFILE_REPLACE_EXISTING) != 0;
+#else
+    ok = rename(tmp, path) == 0;
+#endif
+  }
+  if (!ok) {
+    coap_log_warn("persist: could not update Observe counter file '%s'\n", path);
+    remove(tmp);
+  }
+  coap_free_type(COAP_STRING, tmp);
+  return ok;
+}
+
 /*
  * Called when the observe value of a resource has been changed, but limited
  * to be called every context->context->observe_save_freq to reduce update
@@ -757,6 +781,8 @@ coap_op_obs_cnt_track_observe(coap_context_t *context,
 
   (void)user_data;
 
+  if (!fp_orig && errno != ENOENT)
+    return 0;
   new = coap_malloc_type(COAP_STRING, context->obs_cnt_save_file->length + 5);
   if (!new)
     goto fail;
@@ -788,24 +814,16 @@ coap_op_obs_cnt_track_observe(coap_context_t *context,
   }
   if (fprintf(fp_new, "%s %u\n", resource_name->s, n_observe_num) < 0)
     goto fail;
-  if (fflush(fp_new) == EOF)
-    goto fail;
-  fclose(fp_new);
-  if (fp_orig)
-    fclose(fp_orig);
-  /* Either old or new is in place */
-  (void)rename(new, (const char *)context->obs_cnt_save_file->s);
-  coap_free_type(COAP_STRING, new);
-  return 1;
+  return coap_op_obs_cnt_commit(fp_orig, fp_new, new,
+                                (const char *)context->obs_cnt_save_file->s);
 
 fail:
-  if (fp_new)
+  if (fp_new) {
     fclose(fp_new);
-  if (fp_orig)
-    fclose(fp_orig);
-  if (new) {
     (void)remove(new);
   }
+  if (fp_orig)
+    fclose(fp_orig);
   coap_free_type(COAP_STRING, new);
   return 0;
 }
@@ -822,7 +840,7 @@ coap_op_obs_cnt_deleted(coap_context_t *context,
   char *new = NULL;
 
   if (fp_orig == NULL)
-    goto fail;
+    return errno == ENOENT;
   new = coap_malloc_type(COAP_STRING, context->obs_cnt_save_file->length + 5);
   if (!new)
     goto fail;
@@ -852,23 +870,16 @@ coap_op_obs_cnt_deleted(coap_context_t *context,
         goto fail;
     }
   }
-  if (fflush(fp_new) == EOF)
-    goto fail;
-  fclose(fp_new);
-  fclose(fp_orig);
-  /* Either old or new is in place */
-  (void)rename(new, (const char *)context->obs_cnt_save_file->s);
-  coap_free_type(COAP_STRING, new);
-  return 1;
+  return coap_op_obs_cnt_commit(fp_orig, fp_new, new,
+                                (const char *)context->obs_cnt_save_file->s);
 
 fail:
-  if (fp_new)
+  if (fp_new) {
     fclose(fp_new);
-  if (fp_orig)
-    fclose(fp_orig);
-  if (new) {
     (void)remove(new);
   }
+  if (fp_orig)
+    fclose(fp_orig);
   coap_free_type(COAP_STRING, new);
   return 0;
 }
@@ -1134,13 +1145,16 @@ static int
 coap_op_resource_deleted(coap_context_t *context,
                          coap_str_const_t *resource_name,
                          void *user_data) {
+  int counter_ok = 1;
+
   (void)user_data;
   if (context->obs_cnt_save_file)
-    coap_op_obs_cnt_deleted(context, resource_name);
-  if (!context->dyn_resource_save_file)
-    return 1;
-  return coap_op_dyn_resource_update(context->dyn_resource_save_file,
-                                     resource_name, COAP_PROTO_NONE, NULL);
+    counter_ok = coap_op_obs_cnt_deleted(context, resource_name);
+  if (context->dyn_resource_save_file &&
+      !coap_op_dyn_resource_update(context->dyn_resource_save_file,
+                                   resource_name, COAP_PROTO_NONE, NULL))
+    return 0;
+  return counter_ok;
 }
 
 COAP_API int
