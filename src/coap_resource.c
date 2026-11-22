@@ -202,7 +202,18 @@ coap_print_wellknown_lkd(coap_context_t *context, unsigned char *buf,
         }
         if (resource_param.length) { /* there is a query filter */
 
-          if (flags & MATCH_URI) {        /* match resource URI */
+          if ((flags & MATCH_PREFIX) && query_pattern.length == 0) {
+            int present = (flags & MATCH_URI) ||
+                          (r->observable && resource_param.length == 3 &&
+                           memcmp(resource_param.s, "obs", 3) == 0) ||
+#if COAP_OSCORE_SUPPORT
+                          ((r->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY) &&
+                           resource_param.length == 3 && memcmp(resource_param.s, "osc", 3) == 0) ||
+#endif
+                          coap_find_attr(r, &resource_param);
+            if (!present)
+              continue;
+          } else if (flags & MATCH_URI) { /* match resource URI */
             if (!match(r->uri_path, &query_pattern, (flags & MATCH_PREFIX) != 0))
               continue;
           } else {                        /* match attribute */
@@ -780,12 +791,12 @@ coap_print_link(const coap_resource_t *resource,
     }
 
   }
+  /* Keep implicit attributes in sync with coap_print_wellknown_lkd(). */
   if (resource->observable) {
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";obs", 4, *len);
   }
 
 #if COAP_OSCORE_SUPPORT
-  /* If oscore is enabled */
   if (resource->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY)
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";osc", 4, *len);
 #endif /* COAP_OSCORE_SUPPORT */
