@@ -274,6 +274,58 @@ t_wellknown5(void) {
   coap_delete_string(query);
 }
 
+static void
+t_wellknown_presence_filter(void) {
+  static const char root_link[] = "</>;empty=\"\";flag;obs";
+  struct {
+    char filter[16];
+    const char *expected;
+  } cases[] = {
+    { "obs=*", root_link },
+    { "flag=*", root_link },
+    { "empty=*", root_link },
+#if COAP_OSCORE_SUPPORT
+    { "osc=*", "</other>;rt=sensor;osc" },
+    { "rt=*", "</other>;rt=sensor;osc" },
+    { "href=*", "</>;empty=\"\";flag;obs,</other>;rt=sensor;osc" },
+#else
+    { "osc=*", "" },
+    { "rt=*", "</other>;rt=sensor" },
+    { "href=*", "</>;empty=\"\";flag;obs,</other>;rt=sensor" },
+#endif
+    { "missing=*", "" },
+    { "flag=x*", "" },
+    { "obs=x*", "" },
+    { "osc=x*", "" },
+  };
+  coap_context_t *context = coap_new_context(NULL);
+  coap_resource_t *root;
+  coap_resource_t *other;
+  size_t i;
+
+  CU_ASSERT_PTR_NOT_NULL_FATAL(context);
+  root = coap_resource_init(NULL, 0);
+  other = coap_resource_init(coap_make_str_const("other"), COAP_RESOURCE_FLAGS_OSCORE_ONLY);
+  coap_resource_set_get_observable(root, 1);
+  coap_add_attr(root, coap_make_str_const("flag"), NULL, 0);
+  coap_add_attr(root, coap_make_str_const("empty"), coap_make_str_const("\"\""), 0);
+  coap_add_attr(other, coap_make_str_const("rt"), coap_make_str_const("sensor"), 0);
+  coap_add_resource(context, root);
+  coap_add_resource(context, other);
+
+  for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    coap_string_t query = { strlen(cases[i].filter), (uint8_t *)cases[i].filter };
+    unsigned char buf[80];
+    size_t len = sizeof(buf);
+    size_t expected_len = strlen(cases[i].expected);
+    coap_print_status_t result = coap_print_wellknown(context, buf, &len, 0, &query);
+
+    CU_assertImplementation(result == expected_len && memcmp(buf, cases[i].expected, expected_len) == 0,
+                            __LINE__, cases[i].filter, __FILE__, "", CU_FALSE);
+  }
+  coap_free_context(context);
+}
+
 static int
 t_wkc_tests_create(void) {
   coap_address_t addr;
@@ -324,6 +376,7 @@ t_init_wellknown_tests(void) {
   WKC_TEST(suite, t_wellknown3);
   WKC_TEST(suite, t_wellknown4);
   WKC_TEST(suite, t_wellknown5);
+  WKC_TEST(suite, t_wellknown_presence_filter);
 
   return suite;
 }
