@@ -813,6 +813,10 @@ coap_new_context(const coap_address_t *listen_addr) {
 #endif /* COAP_SERVER_SUPPORT */
 
   c->max_token_size = COAP_TOKEN_DEFAULT_MAX; /* RFC8974 */
+#if COAP_ASYNC_SUPPORT
+  c->max_async = COAP_ASYNC_MAX_CONTEXT;
+  c->max_async_per_session = COAP_ASYNC_MAX_SESSION;
+#endif /* COAP_ASYNC_SUPPORT */
 
 #if defined(WITH_LWIP)
 #if NO_SYS == 0

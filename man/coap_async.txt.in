@@ -11,6 +11,7 @@ coap_async(3)
 NAME
 ----
 coap_async,
+coap_context_set_async_limits,
 coap_register_async,
 coap_async_trigger,
 coap_async_set_delay,
@@ -23,6 +24,9 @@ coap_async_get_app_data
 SYNOPSIS
 --------
 *#include <coap@LIBCOAP_API_VERSION@/coap.h>*
+
+*void coap_context_set_async_limits(coap_context_t *_context_,
+size_t _max_pending_, size_t _max_per_session_);*
 
 *coap_async_t *coap_register_async(coap_session_t *_session_,
 const coap_pdu_t *_request_, coap_tick_t _delay_);*
@@ -73,6 +77,15 @@ when received, so no need to use the async support.
 
 FUNCTIONS
 ---------
+
+*Function: coap_context_set_async_limits()*
+
+The library defaults to 64 pending asynchronous requests per context and 8 per
+session. Builds can override these defaults with COAP_ASYNC_MAX_CONTEXT and
+COAP_ASYNC_MAX_SESSION. Set either limit to zero to disable it. Lowering a
+limit leaves pending requests in place. When either limit is reached,
+*coap_register_async*() returns NULL. The request handler can then reply with
+5.03 (Service Unavailable).
 
 *Function: coap_register_async()*
 

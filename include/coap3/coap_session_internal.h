@@ -118,6 +118,9 @@ struct coap_session_t {
   coap_endpoint_t *endpoint;        /**< session's endpoint */
 #endif /* COAP_SERVER_SUPPORT */
   coap_context_t *context;          /**< session's context */
+#if COAP_ASYNC_SUPPORT
+  size_t async_count;               /**< Number of pending asynchronous requests */
+#endif /* COAP_ASYNC_SUPPORT */
   void *tls;                        /**< security parameters */
   uint16_t tx_mid;                  /**< the last message id that was used in
                                          this session */

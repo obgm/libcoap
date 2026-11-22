@@ -15,6 +15,21 @@
 
 #include "coap3/coap_libcoap_build.h"
 
+COAP_API void
+coap_context_set_async_limits(coap_context_t *context, size_t max_pending,
+                              size_t max_per_session) {
+#if COAP_ASYNC_SUPPORT
+  coap_lock_lock(return);
+  context->max_async = max_pending;
+  context->max_async_per_session = max_per_session;
+  coap_lock_unlock();
+#else /* ! COAP_ASYNC_SUPPORT */
+  (void)context;
+  (void)max_pending;
+  (void)max_per_session;
+#endif /* ! COAP_ASYNC_SUPPORT */
+}
+
 #if COAP_ASYNC_SUPPORT
 #include <stdio.h>
 
@@ -50,11 +65,15 @@ coap_async_t *
 coap_register_async_lkd(coap_session_t *session,
                         const coap_pdu_t *request, coap_tick_t delay) {
   coap_async_t *s;
+  coap_context_t *context = session->context;
   size_t len;
   const uint8_t *data;
 
   coap_lock_check_locked();
   if (!COAP_PDU_IS_REQUEST(request))
+    return NULL;
+  if ((context->max_async && context->async_count >= context->max_async) ||
+      (context->max_async_per_session && session->async_count >= context->max_async_per_session))
     return NULL;
 
   SEARCH_PAIR(session->context->async_state, s,
@@ -86,7 +105,10 @@ coap_register_async_lkd(coap_session_t *session,
   }
 
   memset(s, 0, sizeof(coap_async_t));
-  LL_PREPEND(session->context->async_state, s);
+  s->session = coap_session_reference_lkd(session);
+  session->async_count++;
+  context->async_count++;
+  LL_PREPEND(context->async_state, s);
 
   /* Note that this generates a new MID */
   s->pdu = coap_pdu_duplicate_lkd(request, session, request->actual_token.length,
@@ -100,8 +122,6 @@ coap_register_async_lkd(coap_session_t *session,
   if (coap_get_data(request, &len, &data)) {
     coap_add_data(s->pdu, len, data);
   }
-
-  s->session = coap_session_reference_lkd(session);
 
   /* Snapshot local address; addr_info.local may change before the async fires (multicast). */
   coap_address_copy(&s->local_if, &session->addr_info.local);
@@ -186,6 +206,8 @@ coap_free_async_sub(coap_context_t *context, coap_async_t *async) {
   if (async) {
     LL_DELETE(context->async_state,async);
     if (async->session) {
+      context->async_count--;
+      async->session->async_count--;
       coap_session_release_lkd(async->session);
       async->session = NULL;
     }
