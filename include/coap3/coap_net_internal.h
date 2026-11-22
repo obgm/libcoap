@@ -70,6 +70,9 @@ struct coap_context_t {
   /**
    * list of asynchronous message ids */
   coap_async_t *async_state;
+  size_t async_count;             /**< Number of pending asynchronous requests */
+  size_t max_async;               /**< Maximum pending in this context, 0 for unlimited */
+  size_t max_async_per_session;   /**< Maximum pending per session, 0 for unlimited */
   int async_state_traversing; /**< If hhe async state list is being traversed */
 #endif /* COAP_ASYNC_SUPPORT */
 

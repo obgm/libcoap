@@ -34,11 +34,24 @@ extern "C" {
  */
 
 /**
+ * Set the maximum number of pending asynchronous requests for the context and
+ * for each session. Each limit can be disabled independently by setting it to
+ * zero. Existing requests remain pending when a limit is lowered. The library
+ * defaults to 64 per context and 8 per session unless overridden at build time.
+ *
+ * @param context          The CoAP context.
+ * @param max_pending      Maximum pending across the context.
+ * @param max_per_session  Maximum pending on one session.
+ */
+COAP_API void coap_context_set_async_limits(coap_context_t *context, size_t max_pending,
+                                            size_t max_per_session);
+
+/**
  * Allocates a new coap_async_t object and fills its fields according to
  * the given @p request. This function returns a pointer to the registered
  * coap_async_t object or @c NULL on error. Note that this function will
  * return @c NULL in case that an object with the same identifier is already
- * registered.
+ * registered or a configured limit has been reached.
  *
  * When the delay expires, a copy of the @p request will get sent to the
  * appropriate request handler.

@@ -24,6 +24,13 @@ extern "C" {
 /* Note that if COAP_SERVER_SUPPORT is not set, then COAP_ASYNC_SUPPORT undefined */
 #if COAP_ASYNC_SUPPORT
 
+#ifndef COAP_ASYNC_MAX_CONTEXT
+#define COAP_ASYNC_MAX_CONTEXT 64
+#endif
+#ifndef COAP_ASYNC_MAX_SESSION
+#define COAP_ASYNC_MAX_SESSION 8
+#endif
+
 /**
  * @ingroup internal_api
  * @defgroup coap_async_internal Asynchronous Messaging

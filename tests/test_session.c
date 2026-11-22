@@ -207,6 +207,63 @@ fpeq(const coap_fixed_point_t a, const coap_fixed_point_t b) {
 }
 
 #if COAP_SERVER_SUPPORT && COAP_ASYNC_SUPPORT
+static coap_async_t *
+t_register_pending(coap_session_t *s, uint8_t token) {
+  coap_pdu_t *request = coap_pdu_init(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET, 1, 16);
+  coap_async_t *pending = NULL;
+
+  CU_ASSERT_PTR_NOT_NULL(request);
+  if (request) {
+    if (coap_add_token(request, 1, &token))
+      pending = coap_register_async(s, request, 0);
+    coap_delete_pdu(request);
+  }
+  return pending;
+}
+
+static void
+t_async_limits(void) {
+  coap_context_t *context = coap_new_context(NULL);
+  coap_session_t *a, *b;
+  coap_async_t *first, *second;
+  const coap_address_t *addr = coap_session_get_addr_remote(session);
+
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(context);
+  CU_ASSERT_EQUAL(context->max_async, COAP_ASYNC_MAX_CONTEXT);
+  CU_ASSERT_EQUAL(context->max_async_per_session, COAP_ASYNC_MAX_SESSION);
+  a = coap_new_client_session(context, NULL, addr, COAP_PROTO_UDP);
+  b = coap_new_client_session(context, NULL, addr, COAP_PROTO_UDP);
+  CU_ASSERT_PTR_NOT_NULL(a);
+  CU_ASSERT_PTR_NOT_NULL(b);
+  if (a && b) {
+    coap_context_set_async_limits(context, 0, 1);
+    first = t_register_pending(a, 1);
+    CU_ASSERT_PTR_NOT_NULL(first);
+    CU_ASSERT_PTR_NULL(t_register_pending(a, 2));
+    second = t_register_pending(b, 1);
+    CU_ASSERT_PTR_NOT_NULL(second);
+
+    /* Lower the context limit while both sessions have pending work. */
+    coap_context_set_async_limits(context, 1, 0);
+    CU_ASSERT_PTR_NULL(t_register_pending(b, 2));
+    if (first)
+      coap_free_async(a, first);
+    CU_ASSERT_PTR_NULL(t_register_pending(b, 2));
+    if (second)
+      coap_free_async(b, second);
+    first = t_register_pending(a, 2);
+    CU_ASSERT_PTR_NOT_NULL(first);
+
+    coap_context_set_async_limits(context, 0, 0);
+    CU_ASSERT_PTR_NOT_NULL(t_register_pending(a, 3));
+  }
+  if (a)
+    coap_session_release(a);
+  if (b)
+    coap_session_release(b);
+  coap_free_context(context);
+}
+
 static coap_address_t observe_expected_local;
 static coap_async_t *observe_async;
 static unsigned int observe_calls;
@@ -838,6 +895,7 @@ t_init_session_tests(void) {
   }
 
 #if COAP_SERVER_SUPPORT && COAP_ASYNC_SUPPORT
+  SESSION_TEST(suite, t_async_limits);
   SESSION_TEST(suite, t_observe_local_address);
 #endif
 #if COAP_SERVER_SUPPORT && COAP_WITH_OBSERVE_PERSIST && defined(HAVE_UNISTD_H) && !defined(_WIN32)
