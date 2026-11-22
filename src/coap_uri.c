@@ -1104,7 +1104,7 @@ is_unescaped_in_path(const uint8_t c) {
 
 static int
 is_unescaped_in_query(const uint8_t c) {
-  return is_unescaped_in_path(c) || c=='/' || c=='?';
+  return c != '&' && (is_unescaped_in_path(c) || c == '/' || c == '?');
 }
 
 coap_string_t *
