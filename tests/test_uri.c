@@ -14,6 +14,18 @@
 #include <stdio.h>
 
 static void
+t_uri_scheme_case(void) {
+  const uint8_t direct[] = "COAP://example.com/Temp";
+  const uint8_t proxy[] = "hTtP://example.com/Temp";
+  coap_uri_t uri;
+
+  CU_ASSERT(coap_split_uri(direct, sizeof(direct) - 1, &uri) == 0);
+  CU_ASSERT(uri.scheme == COAP_URI_SCHEME_COAP);
+  CU_ASSERT(coap_split_proxy_uri(proxy, sizeof(proxy) - 1, &uri) == 0);
+  CU_ASSERT(uri.scheme == COAP_URI_SCHEME_HTTP);
+}
+
+static void
 t_parse_uri1(void) {
   char teststr[] = "coap://[::1]/.well-known/core";
 
@@ -1150,6 +1162,7 @@ t_init_uri_tests(void) {
             CU_get_error_msg());                                      \
   }
 
+  URI_TEST(suite, t_uri_scheme_case);
   URI_TEST(suite, t_parse_uri1);
   URI_TEST(suite, t_parse_uri2);
   URI_TEST(suite, t_parse_uri3);

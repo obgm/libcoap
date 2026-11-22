@@ -118,7 +118,7 @@ coap_split_uri_sub(const uint8_t *str_var,
   }
   for (i = 0; i < COAP_URI_SCHEME_LAST; i++) {
     if ((p - str_var) == (int)strlen(coap_uri_scheme[i].name) &&
-        memcmp(str_var, coap_uri_scheme[i].name, p - str_var) == 0) {
+        strncasecmp((const char *)str_var, coap_uri_scheme[i].name, p - str_var) == 0) {
       if (check_proxy != COAP_URI_CHECK_PROXY && coap_uri_scheme[i].proxy_only) {
         coap_log_err("%.*s URI scheme not enabled (not a proxy)\n",
                      (int)(p - str_var), str_var);
