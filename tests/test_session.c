@@ -764,6 +764,75 @@ t_session_ws_split_frame(void) {
 }
 #endif /* COAP_WS_SUPPORT */
 
+#if COAP_SERVER_SUPPORT && COAP_WITH_OBSERVE_PERSIST && (defined(_WIN32) || defined(HAVE_UNISTD_H))
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
+static void
+t_persist_observe_counter_updates(void) {
+  coap_context_t *context;
+  FILE *fp;
+  char line[32];
+#ifdef _WIN32
+  char dir[MAX_PATH + 1], path[MAX_PATH + 1];
+  DWORD len = GetTempPathA(sizeof(dir), dir);
+  CU_ASSERT_FATAL(len > 0 && len < sizeof(dir));
+  CU_ASSERT_FATAL(GetTempFileNameA(dir, "coa", 0, path) != 0);
+#else
+  char path[] = "/tmp/libcoap-count-XXXXXX";
+  int fd = mkstemp(path);
+  CU_ASSERT_FATAL(fd >= 0);
+  close(fd);
+#endif
+  char tmp[sizeof(path) + sizeof(".tmp")];
+
+  snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+  context = coap_new_context(NULL);
+  if (context && coap_persist_startup(context, NULL, NULL, path, 1)) {
+    coap_str_const_t *key = coap_make_str_const("clock");
+    int blocked;
+
+    CU_ASSERT(context->track_observe_value_cb(context, key, 10, NULL));
+    CU_ASSERT(context->track_observe_value_cb(context, key, 30, NULL));
+#ifdef _WIN32
+    blocked = CreateDirectoryA(tmp, NULL) != 0;
+#else
+    blocked = mkdir(tmp, 0700) == 0;
+#endif
+    CU_ASSERT(blocked);
+    if (blocked) {
+      CU_ASSERT(!context->track_observe_value_cb(context, key, 40, NULL));
+      CU_ASSERT(!context->resource_deleted_cb(context, key, NULL));
+#ifdef _WIN32
+      CU_ASSERT(RemoveDirectoryA(tmp));
+#else
+      CU_ASSERT(rmdir(tmp) == 0);
+#endif
+    }
+    fp = fopen(path, "r");
+    CU_ASSERT_PTR_NOT_NULL(fp);
+    if (fp) {
+      CU_ASSERT(fgets(line, sizeof(line), fp) && strcmp(line, "clock 30\n") == 0);
+      fclose(fp);
+    }
+    CU_ASSERT(remove(path) == 0);
+    CU_ASSERT(context->resource_deleted_cb(context, key, NULL));
+  } else {
+    CU_FAIL("cannot start counter persistence");
+  }
+  if (context) {
+    coap_persist_stop(context);
+    coap_free_context(context);
+  }
+  remove(path);
+  remove(tmp);
+}
+#endif
+
 /* Test 6 creates a new session after the original session has been
  * released by test 5 */
 static void
@@ -857,6 +926,9 @@ t_init_session_tests(void) {
 #endif /* COAP_SERVER_SUPPORT */
   SESSION_TEST(suite, t_session6);
   SESSION_TEST(suite, t_session_send_fail_deferred);
+#if COAP_SERVER_SUPPORT && COAP_WITH_OBSERVE_PERSIST && (defined(_WIN32) || defined(HAVE_UNISTD_H))
+  SESSION_TEST(suite, t_persist_observe_counter_updates);
+#endif
 #if COAP_WS_SUPPORT
   SESSION_TEST(suite, t_session_ws_split_frame);
 #endif /* COAP_WS_SUPPORT */
