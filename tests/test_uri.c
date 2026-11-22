@@ -1123,6 +1123,15 @@ t_parse_uri35(void) {
   check_get_query(NULL, 0, NULL);
 }
 
+static void
+t_parse_uri36(void) {
+  const char *single[] = { "a=b&c=d" };
+  const char *separate[] = { "a=b", "c=d" };
+
+  check_get_query(single, 1, "a=b%26c=d");
+  check_get_query(separate, 2, "a=b&c=d");
+}
+
 CU_pSuite
 t_init_uri_tests(void) {
   CU_pSuite suite;
@@ -1176,6 +1185,7 @@ t_init_uri_tests(void) {
   URI_TEST(suite, t_parse_uri33);
   URI_TEST(suite, t_parse_uri34);
   URI_TEST(suite, t_parse_uri35);
+  URI_TEST(suite, t_parse_uri36);
 
   return suite;
 }
