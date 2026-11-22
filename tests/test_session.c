@@ -35,6 +35,113 @@
 static coap_context_t *ctx; /* Holds the coap context for most tests */
 static coap_session_t *session; /* Holds a reference-counted session object */
 
+#if COAP_SERVER_SUPPORT && COAP_WITH_OBSERVE_PERSIST && defined(HAVE_UNISTD_H) && !defined(_WIN32)
+#include <unistd.h>
+
+static int
+persist_save_resource(coap_context_t *context, uint8_t uri_path) {
+  uint8_t put[] = { 0x40, COAP_REQUEST_CODE_PUT, 0, 1, 0xb1, uri_path };
+  coap_bin_const_t packet = { sizeof(put), put };
+  coap_str_const_t name = { 1, &uri_path };
+  coap_session_t *s = coap_new_client_session(context, NULL, coap_session_get_addr_remote(session),
+                                              COAP_PROTO_UDP);
+  int saved;
+
+  CU_ASSERT_PTR_NOT_NULL(s);
+  if (!s)
+    return 0;
+  saved = context->dyn_resource_added_cb(s, &name, &packet, NULL);
+  coap_session_release(s);
+  return saved;
+}
+
+static coap_resource_t *
+persist_create_resource(coap_session_t *s, const coap_pdu_t *request) {
+  coap_string_t *path = coap_get_uri_path(request);
+  coap_resource_t *resource;
+
+  if (!path)
+    return NULL;
+  resource = coap_resource_init((coap_str_const_t *)path, 0);
+  coap_delete_string(path);
+  if (resource) {
+    coap_resource_set_get_observable(resource, 1);
+    coap_add_resource(coap_session_get_context(s), resource);
+  }
+  return resource;
+}
+
+static void
+t_persist_dynamic_resources(void) {
+  char dir[] = "/tmp/libcoap-persist-XXXXXX";
+  char path[sizeof(dir) + sizeof("/resources")];
+
+  CU_ASSERT_PTR_NOT_NULL_FATAL(mkdtemp(dir));
+  snprintf(path, sizeof(path), "%s/resources", dir);
+  for (int pass = 0; pass < 3; pass++) {
+    coap_context_t *context = coap_new_context(NULL);
+    CU_ASSERT_PTR_NOT_NULL(context);
+    if (!context)
+      break;
+    coap_register_dynamic_resource_handler(context, persist_create_resource, 3);
+    if (!coap_persist_startup(context, path, NULL, NULL, 1)) {
+      CU_FAIL("cannot start persistence");
+    } else if (pass == 0) {
+      CU_ASSERT(persist_save_resource(context, 'a'));
+      CU_ASSERT(persist_save_resource(context, 'b'));
+      CU_ASSERT(persist_save_resource(context, 'c'));
+    } else {
+      coap_resource_t *b = coap_get_resource_from_uri_path(context, coap_make_str_const("b"));
+      CU_ASSERT_PTR_NOT_NULL(coap_get_resource_from_uri_path(context, coap_make_str_const("a")));
+      CU_ASSERT_PTR_NOT_NULL(coap_get_resource_from_uri_path(context, coap_make_str_const("c")));
+      if (pass == 1) {
+        CU_ASSERT_PTR_NOT_NULL(b);
+        if (b)
+          CU_ASSERT(coap_delete_resource(context, b));
+      } else {
+        CU_ASSERT_PTR_NULL(b);
+      }
+    }
+    coap_persist_stop(context);
+    coap_free_context(context);
+  }
+  remove(path);
+  rmdir(dir);
+}
+
+static void
+t_persist_incomplete_resource_record(void) {
+  char path[] = "/tmp/libcoap-record-XXXXXX";
+  uint8_t contents[2];
+  coap_context_t *context;
+  FILE *fp;
+  int fd = mkstemp(path);
+
+  CU_ASSERT_FATAL(fd >= 0);
+  CU_ASSERT(write(fd, "x", 1) == 1);
+  close(fd);
+  context = coap_new_context(NULL);
+  CU_ASSERT_PTR_NOT_NULL(context);
+  if (context) {
+    if (coap_persist_startup(context, path, NULL, NULL, 1)) {
+      CU_ASSERT(!persist_save_resource(context, 'a'));
+    } else {
+      CU_FAIL("cannot start persistence");
+    }
+    coap_persist_stop(context);
+    coap_free_context(context);
+  }
+  fp = fopen(path, "rb");
+  CU_ASSERT_PTR_NOT_NULL(fp);
+  if (fp) {
+    CU_ASSERT(fread(contents, 1, sizeof(contents), fp) == 1 && contents[0] == 'x');
+    CU_ASSERT(feof(fp) && !ferror(fp));
+    fclose(fp);
+  }
+  remove(path);
+}
+#endif
+
 static void
 t_session_repeated_elective_options(void) {
   /* Three Content-Format options, then Max-Age and a payload. */
@@ -732,6 +839,10 @@ t_init_session_tests(void) {
 
 #if COAP_SERVER_SUPPORT && COAP_ASYNC_SUPPORT
   SESSION_TEST(suite, t_observe_local_address);
+#endif
+#if COAP_SERVER_SUPPORT && COAP_WITH_OBSERVE_PERSIST && defined(HAVE_UNISTD_H) && !defined(_WIN32)
+  SESSION_TEST(suite, t_persist_dynamic_resources);
+  SESSION_TEST(suite, t_persist_incomplete_resource_record);
 #endif
   SESSION_TEST(suite, t_session_repeated_elective_options);
   SESSION_TEST(suite, t_session_repeated_critical_options);

@@ -345,6 +345,9 @@ fail:
 
 #if COAP_WITH_OBSERVE_PERSIST
 #include <stdio.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 /*
  * read in active observe entry.
@@ -870,33 +873,40 @@ fail:
   return 0;
 }
 
+#define COAP_DYN_RESOURCE_MAX_FIELD_SIZE 0x10000
+
 /*
  * read in dynamic resource entry, allocating name & raw_packet
- * which need to be freed off by caller.
+ * which need to be freed off by caller. Return 1 for a record, 0 at EOF,
+ * or -1 on error (including an incomplete record).
  */
 static int
 coap_op_dyn_resource_read(FILE *fp, coap_proto_t *e_proto,
                           coap_string_t **name,
                           coap_binary_t **raw_packet) {
   ssize_t size;
+  size_t nread;
 
   *name = NULL;
   *raw_packet = NULL;
 
-  if (fread(e_proto, sizeof(*e_proto), 1, fp) == 1) {
+  nread = fread(e_proto, 1, sizeof(*e_proto), fp);
+  if (nread == 0 && feof(fp) && !ferror(fp))
+    return 0;
+  if (nread == sizeof(*e_proto)) {
     /* New record 'proto len resource_name len raw_packet' */
     if (fread(&size, sizeof(size), 1, fp) != 1)
       goto fail;
-    if (size < 0 || size > 0x10000)
+    if (size < 0 || size > COAP_DYN_RESOURCE_MAX_FIELD_SIZE)
       goto fail;
     *name = coap_new_string(size);
     if (!(*name))
       goto fail;
-    if (fread((*name)->s, size, 1, fp) != 1)
+    if (fread((*name)->s, 1, size, fp) != (size_t)size)
       goto fail;
     if (fread(&size, sizeof(size), 1, fp) != 1)
       goto fail;
-    if (size < 0 || size > 0x10000)
+    if (size <= 0 || size > COAP_DYN_RESOURCE_MAX_FIELD_SIZE)
       goto fail;
     *raw_packet = coap_new_binary(size);
     if (!(*raw_packet))
@@ -906,7 +916,7 @@ coap_op_dyn_resource_read(FILE *fp, coap_proto_t *e_proto,
     return 1;
   }
 fail:
-  return 0;
+  return -1;
 }
 
 /*
@@ -916,11 +926,14 @@ static int
 coap_op_dyn_resource_write(FILE *fp, coap_proto_t e_proto,
                            coap_str_const_t *name,
                            coap_bin_const_t *raw_packet) {
+  if (name->length > COAP_DYN_RESOURCE_MAX_FIELD_SIZE || !raw_packet->length ||
+      raw_packet->length > COAP_DYN_RESOURCE_MAX_FIELD_SIZE)
+    return 0;
   if (fwrite(&e_proto, sizeof(e_proto), 1, fp) != 1)
     goto fail;
   if (fwrite(&name->length, sizeof(name->length), 1, fp) != 1)
     goto fail;
-  if (fwrite(name->s, name->length, 1, fp) != 1)
+  if (name->length && fwrite(name->s, 1, name->length, fp) != name->length)
     goto fail;
   if (fwrite(&raw_packet->length, sizeof(raw_packet->length), 1, fp) != 1)
     goto fail;
@@ -952,7 +965,7 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
   if (!ctx->unknown_resource && !ctx->dyn_create_handler)
     return;
 
-  fp_orig = fopen((const char *)ctx->dyn_resource_save_file->s, "r");
+  fp_orig = fopen((const char *)ctx->dyn_resource_save_file->s, "rb");
   if (fp_orig == NULL)
     return;
   session = (coap_session_t *)coap_malloc_type(COAP_SESSION,
@@ -964,7 +977,7 @@ coap_op_dyn_resource_load_disk(coap_context_t *ctx) {
 
   /* Go through and create each dynamic resource if it does not exist*/
   while (1) {
-    if (!coap_op_dyn_resource_read(fp_orig, &e_proto, &name, &raw_packet))
+    if (coap_op_dyn_resource_read(fp_orig, &e_proto, &name, &raw_packet) != 1)
       break;
     r = coap_get_resource_from_uri_path_lkd(ctx, (coap_str_const_t *)name);
     if (!r) {
@@ -1035,152 +1048,99 @@ fail:
   coap_free_type(COAP_SESSION, session);
 }
 
-/*
- * Server has set up a new dynamic resource against a request for an unknown
- * resource.
- */
+/* Copy the other resource records, leaving the original file intact on error. */
+static int
+coap_op_dyn_resource_copy(FILE *src, FILE *dst, coap_str_const_t *skip) {
+  for (;;) {
+    coap_proto_t proto;
+    coap_string_t *name;
+    coap_binary_t *packet;
+    int status = coap_op_dyn_resource_read(src, &proto, &name, &packet);
+
+    if (status == 1 && !coap_string_equal(name, skip) &&
+        !coap_op_dyn_resource_write(dst, proto, (coap_str_const_t *)name,
+                                    (coap_bin_const_t *)packet))
+      status = -1;
+    coap_delete_string(name);
+    coap_delete_binary(packet);
+    if (status != 1)
+      return status == 0;
+  }
+}
+
+static int
+coap_op_dyn_resource_update(const coap_bin_const_t *file, coap_str_const_t *name,
+                            coap_proto_t proto, coap_bin_const_t *packet) {
+  const char *path = (const char *)file->s;
+  FILE *src = fopen(path, "rb");
+  FILE *dst;
+  char *tmp = NULL;
+  int ok = 0;
+
+  if (!src) {
+    if (errno != ENOENT)
+      goto finish;
+    if (!packet)
+      return 1;
+  }
+
+  tmp = coap_malloc_type(COAP_STRING, file->length + sizeof(".tmp"));
+  if (!tmp)
+    goto finish;
+  memcpy(tmp, path, file->length);
+  memcpy(tmp + file->length, ".tmp", sizeof(".tmp"));
+  dst = fopen(tmp, "wb");
+  if (!dst)
+    goto finish;
+
+  ok = (!src || coap_op_dyn_resource_copy(src, dst, name)) &&
+       (!packet || coap_op_dyn_resource_write(dst, proto, name, packet));
+  if (fclose(dst) != 0)
+    ok = 0;
+  if (src) {
+    fclose(src);
+    src = NULL;
+  }
+  if (ok) {
+#ifdef _WIN32
+    ok = MoveFileExA(tmp, path, MOVEFILE_REPLACE_EXISTING) != 0;
+#else
+    ok = rename(tmp, path) == 0;
+#endif
+  }
+  if (!ok)
+    remove(tmp);
+
+finish:
+  if (src)
+    fclose(src);
+  coap_free_type(COAP_STRING, tmp);
+  if (!ok)
+    coap_log_warn("persist: could not update dynamic resource file '%s'\n", path);
+  return ok;
+}
+
 static int
 coap_op_dyn_resource_added(coap_session_t *session,
                            coap_str_const_t *resource_name,
                            coap_bin_const_t *packet,
                            void *user_data) {
-  FILE *fp_orig;
-  FILE *fp_new = NULL;
-  char *new = NULL;
-  coap_context_t *context = session->context;
-  coap_string_t *name = NULL;
-  coap_binary_t *raw_packet = NULL;
-  coap_proto_t e_proto;
-
   (void)user_data;
-
-  fp_orig = fopen((const char *)context->dyn_resource_save_file->s, "a");
-  if (fp_orig == NULL)
-    return 0;
-
-  new = coap_malloc_type(COAP_STRING,
-                         context->dyn_resource_save_file->length + 5);
-  if (!new)
-    goto fail;
-
-  strcpy(new, (const char *)context->dyn_resource_save_file->s);
-  strcat(new, ".tmp");
-  fp_new = fopen(new, "w+");
-  if (fp_new == NULL)
-    goto fail;
-
-  /* Go through and locate duplicate resource to delete */
-  while (1) {
-    if (!coap_op_dyn_resource_read(fp_orig, &e_proto, &name, &raw_packet))
-      break;
-    if (!coap_string_equal(resource_name, name)) {
-      /* Copy across non-matching entry */
-      if (!coap_op_dyn_resource_write(fp_new, e_proto, (coap_str_const_t *)name,
-                                      (coap_bin_const_t *)raw_packet))
-        break;
-    }
-    coap_delete_string(name);
-    name = NULL;
-    coap_delete_binary(raw_packet);
-    raw_packet = NULL;
-  }
-  coap_delete_string(name);
-  coap_delete_binary(raw_packet);
-  /* Add new entry to the end */
-  if (!coap_op_dyn_resource_write(fp_new, session->proto,
-                                  resource_name, packet))
-    goto fail;
-
-  if (fflush(fp_new) == EOF)
-    goto fail;
-  fclose(fp_new);
-  fclose(fp_orig);
-  /* Either old or new is in place */
-  (void)rename(new, (const char *)context->dyn_resource_save_file->s);
-  coap_free_type(COAP_STRING, new);
-  return 1;
-
-fail:
-  if (fp_new)
-    fclose(fp_new);
-  if (fp_orig)
-    fclose(fp_orig);
-  if (new) {
-    (void)remove(new);
-  }
-  coap_free_type(COAP_STRING, new);
-  return 0;
+  return coap_op_dyn_resource_update(session->context->dyn_resource_save_file,
+                                     resource_name, session->proto, packet);
 }
 
-/*
- * Server has deleted a resource
- */
 static int
 coap_op_resource_deleted(coap_context_t *context,
                          coap_str_const_t *resource_name,
                          void *user_data) {
-  FILE *fp_orig = NULL;
-  FILE *fp_new = NULL;
-  char *new = NULL;
-  coap_proto_t e_proto;
-  coap_string_t *name = NULL;
-  coap_binary_t *raw_packet = NULL;
   (void)user_data;
-
-  coap_op_obs_cnt_deleted(context, resource_name);
-
-  fp_orig = fopen((const char *)context->dyn_resource_save_file->s, "r");
-  if (fp_orig == NULL)
+  if (context->obs_cnt_save_file)
+    coap_op_obs_cnt_deleted(context, resource_name);
+  if (!context->dyn_resource_save_file)
     return 1;
-
-  new = coap_malloc_type(COAP_STRING,
-                         context->dyn_resource_save_file->length + 5);
-  if (!new)
-    goto fail;
-
-  strcpy(new, (const char *)context->dyn_resource_save_file->s);
-  strcat(new, ".tmp");
-  fp_new = fopen(new, "w+");
-  if (fp_new == NULL)
-    goto fail;
-
-  /* Go through and locate resource to delete and not copy it across */
-  while (1) {
-    if (!coap_op_dyn_resource_read(fp_orig, &e_proto, &name, &raw_packet))
-      break;
-    if (!coap_string_equal(resource_name, name)) {
-      /* Copy across non-matching entry */
-      if (!coap_op_dyn_resource_write(fp_new, e_proto, (coap_str_const_t *)name,
-                                      (coap_bin_const_t *)raw_packet))
-        break;
-    }
-    coap_delete_string(name);
-    name = NULL;
-    coap_delete_binary(raw_packet);
-    raw_packet = NULL;
-  }
-  coap_delete_string(name);
-  coap_delete_binary(raw_packet);
-
-  if (fflush(fp_new) == EOF)
-    goto fail;
-  fclose(fp_new);
-  fclose(fp_orig);
-  /* Either old or new is in place */
-  (void)rename(new, (const char *)context->dyn_resource_save_file->s);
-  coap_free_type(COAP_STRING, new);
-  return 1;
-
-fail:
-  if (fp_new)
-    fclose(fp_new);
-  if (fp_orig)
-    fclose(fp_orig);
-  if (new) {
-    (void)remove(new);
-  }
-  coap_free_type(COAP_STRING, new);
-  return 0;
+  return coap_op_dyn_resource_update(context->dyn_resource_save_file,
+                                     resource_name, COAP_PROTO_NONE, NULL);
 }
 
 COAP_API int
