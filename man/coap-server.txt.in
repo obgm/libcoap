@@ -338,7 +338,8 @@ definitions have to be in DER, not PEM, format.  Otherwise all of
 *-M*::
   Raw Public Key (RPK) PEM file or PKCS11 URI that contains both PUBLIC KEY
   and PRIVATE KEY or just EC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support
-  only).  *-C cafile* or *-R trust_casfile* are not required.
+  only). GnuTLS also accepts a single unencrypted PKCS#8 private key.
+  *-C cafile* or *-R trust_casfile* are not required.
 
 *-R* trust_casfile::
   PEM file containing the set of trusted root CAs that are to be used to

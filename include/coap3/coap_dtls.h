@@ -200,8 +200,8 @@ typedef struct coap_pki_key_pem_buf_t {
   const uint8_t *ca_cert;     /**< PEM buffer Common CA Cert */
   const uint8_t *public_cert; /**< PEM buffer Public Cert, or Public Key if RPK */
   const uint8_t *private_key; /**< PEM buffer Private Key
-                                  If RPK and 'EC PRIVATE KEY' this can be used
-                                  for both the public_cert and private_key */
+                                  For RPK, an EC PRIVATE KEY (or unencrypted PKCS#8
+                                  with GnuTLS) can supply both key buffers. */
   size_t ca_cert_len;         /**< PEM buffer CA Cert length */
   size_t public_cert_len;     /**< PEM buffer Public Cert length */
   size_t private_key_len;     /**< PEM buffer Private Key length */

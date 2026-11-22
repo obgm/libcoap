@@ -806,9 +806,9 @@ will be in PEM format.  This file cannot be password protected.
 typedef struct coap_pki_key_pem_buf_t {
   const uint8_t *ca_cert;     /* PEM buffer Common CA Cert */
   const uint8_t *public_cert; /* PEM buffer Public Cert, or Public Key if RPK */
-  const uint8_t *private_key; /* PEM buffer Private Key */
-                                 If RPK and 'EC PRIVATE KEY' this can be used
-                                 for both the public_cert and private_key */
+  const uint8_t *private_key; /* PEM buffer Private Key.
+                                 For RPK, an EC PRIVATE KEY (or unencrypted PKCS#8
+                                 with GnuTLS) can supply both key buffers. */
   size_t ca_cert_len;         /* PEM buffer CA Cert length */
   size_t public_cert_len;     /* PEM buffer Public Cert length */
   size_t private_key_len;     /* PEM buffer Private Key length */
@@ -831,6 +831,7 @@ RPK) location in memory which will be in PEM format.
 *key.pem_buf.private_key* points to the private key location in memory which
 will be in PEM format.  This data cannot be password protected. If RPK and
 'EC PRIVATE KEY' this can be used for both the public_cert and private_key.
+With GnuTLS, a single unencrypted PKCS#8 private key can also supply both.
 
 *key.pem_buf.private_key* is the length of the private key.
 
@@ -993,6 +994,7 @@ points to the private key location as defined by *key.define.private_key_def*.
 This information cannot be password protected, but for type PKCS11
 *key.define.user_pin* can be defined. If type RPK and
 'EC PRIVATE KEY' this can be used for both the public_cert and private_key.
+With GnuTLS, a single unencrypted PKCS#8 private key can also supply both.
 
 *key.define.ca_len* is the optional length of the CA definition if
 required by *key.define.ca_def*.
