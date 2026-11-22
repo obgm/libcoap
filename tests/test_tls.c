@@ -1538,6 +1538,51 @@ finish:
     coap_free_context(server_ctx);
 }
 
+#ifdef COAP_WITH_LIBGNUTLS
+static void
+t_tls_gnutls_pkcs8_rpk(void) {
+  static const uint8_t pem[] =
+      "-----BEGIN PRIVATE KEY-----\n"
+      "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgOGab71HWLBclEDAN\n"
+      "yez6fT0zGRqohAPCEtXBU+wuDLihRANCAATMQ6364O26rNWJ2AdM8or03NwdTFaD\n"
+      "KXHG+g3xmDBYS+jbeNQiw43+p9aQ55OVLmpb/8N9qtTVrFlBjLOSsidc\n"
+      "-----END PRIVATE KEY-----\n";
+  coap_dtls_pki_t pki = { 0 };
+  coap_address_t addr;
+  coap_context_t *ctx;
+  coap_endpoint_t *endpoint;
+  coap_session_t *session;
+
+  if (!coap_dtls_rpk_is_supported())
+    return;
+  ctx = coap_new_context(NULL);
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx);
+  pki.version = COAP_DTLS_PKI_SETUP_VERSION;
+  pki.is_rpk_not_cert = 1;
+  pki.pki_key.key_type = COAP_PKI_KEY_PEM_BUF;
+  pki.pki_key.key.pem_buf.public_cert = pem;
+  pki.pki_key.key.pem_buf.public_cert_len = sizeof(pem);
+  pki.pki_key.key.pem_buf.private_key = pem;
+  pki.pki_key.key.pem_buf.private_key_len = sizeof(pem);
+  CU_ASSERT(coap_context_set_pki(ctx, &pki));
+  t_tls_init_address(&addr, 0);
+  endpoint = coap_new_endpoint(ctx, &addr, COAP_PROTO_DTLS);
+  CU_ASSERT_PTR_NOT_NULL(endpoint);
+  if (endpoint) {
+    session = coap_new_client_session_pki3(ctx, NULL, &endpoint->bind_addr,
+                                           COAP_PROTO_DTLS, &pki, NULL, NULL, NULL);
+    CU_ASSERT_PTR_NOT_NULL(session);
+    if (session) {
+      for (unsigned int i = 0; i < 100 && session->state == COAP_SESSION_STATE_HANDSHAKE; i++)
+        coap_io_process(ctx, 10);
+      CU_ASSERT(session->state == COAP_SESSION_STATE_ESTABLISHED);
+      coap_session_release(session);
+    }
+  }
+  coap_free_context(ctx);
+}
+#endif /* COAP_WITH_LIBGNUTLS */
+
 /* An EC-JPAKE client session starts its handshake with a zero terminated
  * cipher suite list. */
 static void
@@ -1709,6 +1754,9 @@ t_init_tls_tests(void) {
   TLS_TEST(suite, t_tls17);
   TLS_TEST(suite, t_tls18);
   TLS_TEST(suite, t_tls19);
+#ifdef COAP_WITH_LIBGNUTLS
+  TLS_TEST(suite, t_tls_gnutls_pkcs8_rpk);
+#endif /* COAP_WITH_LIBGNUTLS */
 #endif /* COAP_SERVER_SUPPORT && COAP_CLIENT_SUPPORT && COAP_IPV4_SUPPORT */
 #ifdef HAVE_MBEDTLS_TEST_ALLOCATOR
   TLS_TEST(suite, t_tls_mbedtls_construction_failure);

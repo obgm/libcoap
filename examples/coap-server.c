@@ -2029,6 +2029,7 @@ usage(const char *program, const char *version) {
           "\t-M rpk_file\tRaw Public Key (RPK) PEM file or PKCS11 URI that\n"
           "\t       \t\tcontains both PUBLIC KEY and PRIVATE KEY or just\n"
           "\t       \t\tEC PRIVATE KEY. (GnuTLS and TinyDTLS(PEM) support only).\n"
+          "\t       \t\tGnuTLS also accepts a single unencrypted PKCS#8 key.\n"
           "\t       \t\t'-C cafile' or '-R trust_casfile' are not required\n"
          );
   fprintf(stderr,
