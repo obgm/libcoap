@@ -290,7 +290,7 @@ coap_ws_split_rd_header(coap_session_t *session) {
 
   *cp = '\000';
   cp++;
-  while (isblank(*cp))
+  while (isblank((unsigned char)*cp))
     cp++;
   return cp;
 }
