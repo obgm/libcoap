@@ -125,12 +125,7 @@ coap_pdu_init(coap_pdu_type_t type, coap_pdu_code_t code, coap_mid_t mid,
   if (!pdu)
     return NULL;
 
-#if COAP_DEFAULT_MAX_PDU_RX_SIZE <= COAP_MAX_MESSAGE_SIZE_TCP16
-  /* on TCP, the CoAP header will also have a maximum length of 4 bytes */
-  pdu->max_hdr_size = COAP_PDU_MAX_UDP_HEADER_SIZE;
-#else
-  pdu->max_hdr_size = COAP_PDU_MAX_TCP_HEADER_SIZE;
-#endif
+  pdu->max_hdr_size = COAP_PDU_MAX_HEADER_SIZE;
   if (size > ((size_t)COAP_DEFAULT_MAX_PDU_RX_SIZE - pdu->max_hdr_size)) {
     coap_free_type(COAP_PDU, pdu);
     return NULL;
@@ -1094,7 +1089,7 @@ coap_pdu_parse_header_size(coap_proto_t proto,
     else
       header_size = 6;
   } else if (proto == COAP_PROTO_WS || proto==COAP_PROTO_WSS) {
-    header_size = 2;
+    header_size = COAP_PDU_WS_HEADER_SIZE;
   } else if (proto == COAP_PROTO_UDP || proto==COAP_PROTO_DTLS) {
     header_size = 4;
   }

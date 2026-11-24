@@ -106,6 +106,14 @@ extern "C" {
 
 #define COAP_PDU_MAX_UDP_HEADER_SIZE 4
 #define COAP_PDU_MAX_TCP_HEADER_SIZE 6
+#define COAP_PDU_WS_HEADER_SIZE 2
+
+/* Headroom reserved before the token in a PDU buffer. */
+#if COAP_DEFAULT_MAX_PDU_RX_SIZE <= COAP_MAX_MESSAGE_SIZE_TCP16
+#define COAP_PDU_MAX_HEADER_SIZE COAP_PDU_MAX_UDP_HEADER_SIZE
+#else
+#define COAP_PDU_MAX_HEADER_SIZE COAP_PDU_MAX_TCP_HEADER_SIZE
+#endif
 
 /**
  * structure for CoAP PDUs

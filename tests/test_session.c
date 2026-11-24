@@ -748,6 +748,72 @@ t_session5(void) {
 }
 
 #if COAP_WS_SUPPORT
+static ssize_t
+t_capture_csm(coap_session_t *s, const uint8_t *data, size_t len) {
+  coap_pdu_t *csm = coap_session_get_app_data(s);
+
+  CU_ASSERT(coap_pdu_parse(s->proto, data, len, csm));
+  return (ssize_t)len;
+}
+
+static void
+t_session_ws_csm_limit(void) {
+  static const coap_proto_t protos[] = {
+    COAP_PROTO_WS, COAP_PROTO_WSS, COAP_PROTO_TCP, COAP_PROTO_TLS
+  };
+  static const uint32_t limits[] = { COAP_DEFAULT_MAX_PDU_RX_SIZE, 256 };
+  coap_session_t s;
+  coap_pdu_t *csm = coap_pdu_init(0, 0, 0, 32);
+  uint32_t saved_limit = coap_context_get_csm_max_message_size(ctx);
+  size_t i, j;
+
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(csm);
+  memset(&s, 0, sizeof(s));
+  s.context = ctx;
+  s.sock.lfunc[COAP_LAYER_SESSION].l_write = t_capture_csm;
+  coap_session_set_app_data2(&s, csm, NULL);
+
+  coap_lock_lock(return);
+  for (i = 0; i < sizeof(protos) / sizeof(protos[0]); i++) {
+    s.proto = protos[i];
+    for (j = 0; j < sizeof(limits) / sizeof(limits[0]); j++) {
+      coap_opt_iterator_t oi;
+      coap_opt_t *opt;
+      uint32_t expected;
+
+      coap_context_set_csm_max_message_size(ctx, limits[j]);
+      expected = coap_context_get_csm_max_message_size(ctx);
+      coap_session_send_csm(&s);
+      CU_ASSERT_EQUAL(csm->code, COAP_SIGNALING_CODE_CSM);
+      opt = coap_check_option(csm, COAP_SIG_OPT_MAX_MESSAGE_SIZE, &oi);
+      CU_ASSERT_PTR_NOT_NULL(opt);
+      if (s.proto == COAP_PROTO_WS || s.proto == COAP_PROTO_WSS) {
+        size_t capacity = coap_session_max_pdu_rcv_size(&s);
+        coap_pdu_t *full = coap_pdu_init(0, 0, 0, capacity);
+
+        /* A WS message has a two-byte CoAP header on the wire. */
+        if (expected > COAP_RXBUFFER_SIZE)
+          expected = COAP_RXBUFFER_SIZE;
+        if (expected > COAP_DEFAULT_MAX_PDU_RX_SIZE - csm->max_hdr_size + 2)
+          expected = COAP_DEFAULT_MAX_PDU_RX_SIZE - csm->max_hdr_size + 2;
+        CU_ASSERT_EQUAL(capacity + 2, expected);
+        CU_ASSERT_PTR_NOT_NULL(full);
+        if (full) {
+          CU_ASSERT(coap_pdu_resize(full, expected - 2));
+          coap_delete_pdu_lkd(full);
+        }
+      }
+      if (opt)
+        CU_ASSERT_EQUAL(coap_decode_var_bytes(coap_opt_value(opt), coap_opt_length(opt)), expected);
+      CU_ASSERT_EQUAL(s.csm_rcv_mtu, expected);
+      CU_ASSERT_EQUAL(s.csm_bert_loc_support, expected > COAP_BERT_BASE);
+    }
+  }
+  coap_context_set_csm_max_message_size(ctx, saved_limit);
+  coap_lock_unlock();
+  coap_delete_pdu(csm);
+}
+
 static const uint8_t *t_ws_rd_src;
 static size_t t_ws_rd_avail;
 
@@ -988,6 +1054,7 @@ t_init_session_tests(void) {
   SESSION_TEST(suite, t_persist_observe_counter_updates);
 #endif
 #if COAP_WS_SUPPORT
+  SESSION_TEST(suite, t_session_ws_csm_limit);
   SESSION_TEST(suite, t_session_ws_split_frame);
 #endif /* COAP_WS_SUPPORT */
 
