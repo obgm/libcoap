@@ -775,9 +775,15 @@ coap_session_max_pdu_size_internal(const coap_session_t *session,
 
 size_t
 coap_session_max_pdu_rcv_size(const coap_session_t *session) {
-  if (session->csm_rcv_mtu)
+  if (session->csm_rcv_mtu) {
+#if COAP_WS_SUPPORT
+    if (session->proto == COAP_PROTO_WS || session->proto == COAP_PROTO_WSS)
+      return session->csm_rcv_mtu > COAP_PDU_WS_HEADER_SIZE ?
+             session->csm_rcv_mtu - COAP_PDU_WS_HEADER_SIZE : 0;
+#endif /* COAP_WS_SUPPORT */
     return coap_session_max_pdu_size_internal(session,
                                               (size_t)(session->csm_rcv_mtu));
+  }
 
   return coap_session_max_pdu_size_internal(session,
                                             (size_t)(session->mtu - session->tls_overhead));
@@ -897,17 +903,32 @@ void
 coap_session_send_csm(coap_session_t *session) {
   coap_pdu_t *pdu;
   uint8_t buf[4];
+  uint32_t max_message_size = session->context->csm_max_message_size;
+
   assert(COAP_PROTO_RELIABLE(session->proto));
   coap_log_debug("***%s: sending CSM\n", coap_session_str(session));
   session->state = COAP_SESSION_STATE_CSM;
   session->partial_write = 0;
   if (session->mtu == 0)
     coap_session_set_mtu(session, COAP_DEFAULT_MTU);  /* base value */
+#if COAP_WS_SUPPORT
+  if (session->proto == COAP_PROTO_WS || session->proto == COAP_PROTO_WSS) {
+    /* The PDU reserves more headroom than the two-byte CoAP header on WS. */
+    const uint32_t pdu_limit = COAP_DEFAULT_MAX_PDU_RX_SIZE -
+                               COAP_PDU_MAX_HEADER_SIZE + COAP_PDU_WS_HEADER_SIZE;
+
+    /* coap_ws_read() returns a whole CoAP message in the receive buffer. */
+    if (max_message_size > COAP_RXBUFFER_SIZE)
+      max_message_size = COAP_RXBUFFER_SIZE;
+    if (max_message_size > pdu_limit)
+      max_message_size = pdu_limit;
+  }
+#endif /* COAP_WS_SUPPORT */
   pdu = coap_pdu_init(COAP_MESSAGE_CON, COAP_SIGNALING_CODE_CSM, 0, 20);
   if (pdu == NULL
       || coap_add_option_internal(pdu, (coap_option_num_t)COAP_SIG_OPT_MAX_MESSAGE_SIZE,
                                   coap_encode_var_safe(buf, sizeof(buf),
-                                                       session->context->csm_max_message_size), buf) == 0
+                                                       max_message_size), buf) == 0
       || coap_add_option_internal(pdu, (coap_option_num_t)COAP_SIG_OPT_BLOCK_WISE_TRANSFER,
                                   coap_encode_var_safe(buf, sizeof(buf),
                                                        0), buf) == 0
@@ -928,7 +949,7 @@ coap_session_send_csm(coap_session_t *session) {
     if (bytes_written != (ssize_t)pdu->used_size + pdu->hdr_size) {
       coap_session_disconnected_lkd(session, COAP_NACK_NOT_DELIVERABLE);
     } else {
-      session->csm_rcv_mtu = session->context->csm_max_message_size;
+      session->csm_rcv_mtu = max_message_size;
       if (session->csm_rcv_mtu > COAP_BERT_BASE)
         session->csm_bert_loc_support = 1;
       else
