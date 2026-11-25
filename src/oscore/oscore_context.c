@@ -953,9 +953,11 @@ oscore_add_recipient(oscore_ctx_t *osc_ctx, coap_oscore_rcp_conf_t *rcp_conf,
   if (rcp_conf->window_initialized) {
     rcp_ctx->last_seq = rcp_conf->last_seq;
     rcp_ctx->sliding_window = rcp_conf->sliding_window;
+    rcp_ctx->initial_state = 0;
+  } else {
+    rcp_ctx->initial_state = 1;
   }
 
-  rcp_ctx->initial_state = 1;
   rcp_ctx->osc_ctx = osc_ctx;
 
   rcp_chain = osc_ctx->recipient_chain;
