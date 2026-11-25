@@ -1984,8 +1984,8 @@ coap_oscore_decrypt_pdu_ext(coap_session_t *session,
                                      NULL,
                                      NULL,
                                      0);
-            goto error_no_ack;
             decrypt_request_association = NULL;
+            goto error_no_ack;
           } else {
             if (session->context->oscore_update_seq_num_cb != NULL) {
               /* notify echo challenge changed */
