@@ -83,6 +83,104 @@ done:
   coap_free_context(l_ctx);
 }
 
+#if !COAP_DISABLE_TCP && COAP_IPV4_SUPPORT
+static size_t bert_put_length;
+
+typedef struct {
+  size_t length;
+  size_t next_offset;
+} bert_source_t;
+
+static int
+bert_get_data(coap_session_t *session COAP_UNUSED, size_t max, size_t offset,
+              uint8_t *data, size_t *length, void *app_ptr) {
+  bert_source_t *source = app_ptr;
+
+  CU_ASSERT_EQUAL(offset, source->next_offset);
+  if (offset >= source->length)
+    return 0;
+  *length = max < source->length - offset ? max : source->length - offset;
+  memset(data, 'x', *length);
+  source->next_offset = offset + *length;
+  return 1;
+}
+
+static void
+bert_put_handler(coap_resource_t *resource COAP_UNUSED,
+                 coap_session_t *session COAP_UNUSED, const coap_pdu_t *request,
+                 const coap_string_t *query COAP_UNUSED, coap_pdu_t *response) {
+  const uint8_t *data;
+  size_t offset, total;
+
+  coap_get_data_large(request, &bert_put_length, &data, &offset, &total);
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CHANGED);
+}
+
+static void
+check_bert_callback_put(uint32_t limit, size_t length) {
+  const uint8_t token = 0x42;
+  bert_source_t source = { length, 0 };
+  coap_context_t *ctx = coap_new_context(NULL);
+  coap_address_t addr;
+  coap_endpoint_t *ep;
+  coap_session_t *client = NULL;
+  coap_resource_t *resource;
+  coap_pdu_t *pdu;
+  unsigned int i;
+
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx);
+  coap_context_set_block_mode(ctx, COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+  coap_context_set_csm_max_message_size(ctx, limit);
+  coap_address_init(&addr);
+  addr.size = sizeof(struct sockaddr_in);
+  addr.addr.sin.sin_family = AF_INET;
+  addr.addr.sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  ep = coap_new_endpoint(ctx, &addr, COAP_PROTO_TCP);
+  CU_ASSERT_PTR_NOT_NULL(ep);
+  if (!ep)
+    goto done;
+  resource = coap_resource_init(coap_make_str_const("bert"), 0);
+  CU_ASSERT_PTR_NOT_NULL(resource);
+  if (!resource)
+    goto done;
+  coap_register_handler(resource, COAP_REQUEST_PUT, bert_put_handler);
+  coap_add_resource(ctx, resource);
+  client = coap_new_client_session(ctx, NULL, &ep->bind_addr, COAP_PROTO_TCP);
+  CU_ASSERT_PTR_NOT_NULL(client);
+  if (!client)
+    goto done;
+  for (i = 0; i < 50 && client->state != COAP_SESSION_STATE_ESTABLISHED; i++)
+    coap_io_process(ctx, 10);
+  CU_ASSERT(client->csm_bert_rem_support);
+  if (!client->csm_bert_rem_support)
+    goto done;
+  pdu = coap_new_pdu(COAP_MESSAGE_CON, COAP_REQUEST_CODE_PUT, client);
+  CU_ASSERT_PTR_NOT_NULL(pdu);
+  if (!pdu)
+    goto done;
+  CU_ASSERT(coap_add_token(pdu, sizeof(token), &token));
+  coap_add_option(pdu, COAP_OPTION_URI_PATH, 4, (const uint8_t *)"bert");
+  CU_ASSERT(coap_add_data_large_request_app(client, pdu, length, NULL,
+                                            bert_get_data, &source));
+  bert_put_length = 0;
+  CU_ASSERT(coap_send(client, pdu) != COAP_INVALID_MID);
+  for (i = 0; i < 50 && !bert_put_length; i++)
+    coap_io_process(ctx, 10);
+  CU_ASSERT_EQUAL(bert_put_length, length);
+done:
+  if (client)
+    coap_session_release(client);
+  coap_free_context(ctx);
+}
+
+static void
+t_block_bert_callback_put(void) {
+  /* One BERT unit per message, then room for several units per message. */
+  check_bert_callback_put(1472, 4096);
+  check_bert_callback_put(4096, 4609);
+}
+#endif /* ! COAP_DISABLE_TCP && COAP_IPV4_SUPPORT */
+
 /* Cancelling an observe whose request body was built by
  * coap_add_data_large_request_app() must get the body from the
  * application callback again. */
@@ -602,6 +700,9 @@ t_init_block_tests(void) {
   BLOCK_TEST(suite, t_block_echo_get_func);
   BLOCK_TEST(suite, t_block_cancel_observe_get_func);
   BLOCK_TEST(suite, t_block_large_app_block_num);
+#if !COAP_DISABLE_TCP && COAP_IPV4_SUPPORT
+  BLOCK_TEST(suite, t_block_bert_callback_put);
+#endif /* ! COAP_DISABLE_TCP && COAP_IPV4_SUPPORT */
   BLOCK_TEST(suite, t_block_block1_size1);
   BLOCK_TEST(suite, t_block_block1_after_last);
 #if COAP_Q_BLOCK_SUPPORT

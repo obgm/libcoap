@@ -4398,12 +4398,14 @@ coap_handle_response_send_block(coap_session_t *session, coap_pdu_t *sent,
 
         block.num++;
         offset = block.num * chunk;
-        if (block.bert) {
+        if (block.bert && !lg_xmit->data_info->get_func) {
           size_t token_options = pdu->data ? (size_t)(pdu->data - pdu->token) :
                                  pdu->used_size;
           block.m = (lg_xmit->data_info->length - offset) >
                     ((pdu->max_size - token_options) /1024) * 1024;
         } else {
+          /* The callback supplies one block per continuation, even with BERT. */
+          block.chunk_size = (uint32_t)chunk;
           block.m = (offset + chunk) < lg_xmit->data_info->length;
         }
         coap_update_option(pdu, lg_xmit->option,
