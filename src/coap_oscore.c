@@ -3852,6 +3852,9 @@ coap_oscore_recipient_set_latest_seq_lkd(coap_oscore_conf_t *oscore_conf,
   if (rcp_conf) {
     rcp_conf->last_seq = last_seq;
     rcp_conf->sliding_window = seq_window;
+    if (last_seq > 0) {
+      rcp_conf->window_initialized = 1;
+    }
     return 1;
   }
   return 0;
