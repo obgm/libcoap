@@ -75,6 +75,7 @@ struct coap_socket_t {
 #define COAP_SOCKET_NOT_EMPTY    0x0001  /**< the socket is not empty */
 #define COAP_SOCKET_BOUND        0x0002  /**< the socket is bound */
 #define COAP_SOCKET_CONNECTED    0x0004  /**< the socket is connected */
+#define COAP_SOCKET_READ_FAIL    0x0008  /**< the (TCP) socket has had connection reset */
 #define COAP_SOCKET_WANT_READ    0x0010  /**< non blocking socket is waiting for reading */
 #define COAP_SOCKET_WANT_WRITE   0x0020  /**< non blocking socket is waiting for writing */
 #define COAP_SOCKET_WANT_ACCEPT  0x0040  /**< non blocking server socket is waiting for accept */

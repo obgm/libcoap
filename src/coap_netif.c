@@ -251,6 +251,7 @@ coap_netif_strm_read(coap_session_t *session, uint8_t *data, size_t datalen) {
   } else if (bytes_read == -1 && errno != EAGAIN) {
     coap_log_debug("*  %s: netif: failed to receive any bytes (%s) state %d\n",
                    coap_session_str(session), coap_socket_strerror(), session->state);
+    session->sock.flags |= COAP_SOCKET_READ_FAIL;
     errno = keep_errno;
   }
   return bytes_read;
