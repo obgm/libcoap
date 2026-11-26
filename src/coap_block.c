@@ -478,13 +478,11 @@ coap_context_set_max_block_size_lkd(coap_context_t *context, size_t max_block_si
   return 1;
 }
 
-#if COAP_CLIENT_SUPPORT
 COAP_STATIC_INLINE int
 full_match(const uint8_t *a, size_t alen,
            const uint8_t *b, size_t blen) {
   return alen == blen && (alen == 0 || memcmp(a, b, alen) == 0);
 }
-#endif /* COAP_CLIENT_SUPPORT */
 
 coap_lg_xmit_t *
 coap_find_lg_xmit(coap_session_t *session, coap_pdu_t *pdu) {
@@ -806,6 +804,23 @@ coap_find_lg_xmit_response(const coap_session_t *session,
   }
   return NULL;
 }
+
+/* The request can carry several validators. Compare their wire values. */
+static int
+match_request_etag(const coap_pdu_t *response, coap_opt_t *request_etag,
+                   coap_opt_iterator_t *request_iter) {
+  coap_opt_iterator_t iter;
+  coap_opt_t *etag = coap_check_option(response, COAP_OPTION_ETAG, &iter);
+
+  if (!etag)
+    return 0;
+  do {
+    if (full_match(coap_opt_value(request_etag), coap_opt_length(request_etag),
+                   coap_opt_value(etag), coap_opt_length(etag)))
+      return 1;
+  } while ((request_etag = coap_option_next(request_iter)));
+  return 0;
+}
 #endif /* COAP_SERVER_SUPPORT */
 
 /*
@@ -839,7 +854,6 @@ coap_add_data_large_internal(coap_session_t *session,
                              coap_pdu_t *pdu,
                              coap_resource_t *resource,
                              const coap_string_t *query,
-                             int maxage,
                              uint64_t etag,
                              size_t length,
                              const uint8_t *data,
@@ -909,13 +923,7 @@ coap_add_data_large_internal(coap_session_t *session,
 #if COAP_SERVER_SUPPORT
   /* Possible response code not yet set, so check if not request */
   if (!COAP_PDU_IS_REQUEST(pdu) && length) {
-    coap_opt_t *etag_opt = coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter);
-
-    if (etag_opt) {
-      /* Have to use ETag as supplied in the response PDU */
-      etag = coap_decode_var_bytes8(coap_opt_value(etag_opt),
-                                    coap_opt_length(etag_opt));
-    } else {
+    if (!coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter)) {
       if (!etag) {
         /* calculate ETag for the response */
         coap_digest_t digest;
@@ -945,21 +953,13 @@ coap_add_data_large_internal(coap_session_t *session,
                          buf);
     }
     if (request) {
-      etag_opt = coap_check_option(request, COAP_OPTION_ETAG, &opt_iter);
-      if (etag_opt) {
-        /* There may be multiple ETag - need to check each one */
-        coap_option_iterator_init(request, &opt_iter, COAP_OPT_ALL);
-        while ((etag_opt = coap_option_next(&opt_iter))) {
-          if (opt_iter.number == COAP_OPTION_ETAG) {
-            uint64_t etag_r = coap_decode_var_bytes8(coap_opt_value(etag_opt),
-                                                     coap_opt_length(etag_opt));
-
-            if (etag == etag_r) {
-              pdu->code = COAP_RESPONSE_CODE(203);
-              return 1;
-            }
-          }
+      opt = coap_check_option(request, COAP_OPTION_ETAG, &opt_iter);
+      if (opt && match_request_etag(pdu, opt, &opt_iter)) {
+        pdu->code = COAP_RESPONSE_CODE(203);
+        if (release_func) {
+          coap_lock_callback(release_func(session, app_ptr));
         }
+        return 1;
       }
     }
   }
@@ -1237,13 +1237,14 @@ coap_add_data_large_internal(coap_session_t *session,
       } else {
         lg_xmit->b.b2.rtag_set = 0;
       }
-      lg_xmit->b.b2.etag = etag;
       lg_xmit->b.b2.request_method = request_method;
-      if (maxage >= 0) {
+      opt = coap_check_option(pdu, COAP_OPTION_MAXAGE, &opt_iter);
+      if (opt) {
         coap_tick_t now;
 
         coap_ticks(&now);
-        lg_xmit->b.b2.maxage_expire = coap_ticks_to_rt(now) + maxage;
+        lg_xmit->b.b2.maxage_expire = coap_ticks_to_rt(now) +
+                                      coap_decode_var_bytes8(coap_opt_value(opt), coap_opt_length(opt));
       } else {
         lg_xmit->b.b2.maxage_expire = 0;
       }
@@ -1427,7 +1428,7 @@ coap_add_data_large_request_lkd(coap_session_t *session,
     }
     return 0;
   }
-  return coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0,
+  return coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, 0,
                                       length, data, release_func, NULL, app_ptr, 0, 0);
 }
 
@@ -1461,7 +1462,7 @@ coap_add_data_large_request_app_lkd(coap_session_t *session,
   if (coap_client_delay_first(session) == 0) {
     return 0;
   }
-  return coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0,
+  return coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, 0,
                                       length, NULL, release_func, get_func,
                                       app_ptr, 0, 0);
 }
@@ -1587,7 +1588,7 @@ coap_add_data_large_response_lkd(coap_resource_t *resource,
   /* add data body */
   if (request &&
       !coap_add_data_large_internal(session, request, response, resource,
-                                    query, maxage, etag, length, data,
+                                    query, etag, length, data,
                                     release_func, NULL, app_ptr, single_request,
                                     request->code)) {
     response->code = COAP_RESPONSE_CODE(500);
@@ -3059,23 +3060,10 @@ coap_handle_request_send_block(coap_session_t *session,
   /* lg_xmit (response) found */
 
   etag_opt = coap_check_option(pdu, COAP_OPTION_ETAG, &opt_iter);
-  if (etag_opt) {
-    /* There may be multiple ETag - need to check each one */
-    coap_option_iterator_init(pdu, &opt_iter, COAP_OPT_ALL);
-    while ((etag_opt = coap_option_next(&opt_iter))) {
-      if (opt_iter.number == COAP_OPTION_ETAG) {
-        uint64_t etag = coap_decode_var_bytes8(coap_opt_value(etag_opt),
-                                               coap_opt_length(etag_opt));
-        if (etag == lg_xmit->b.b2.etag) {
-          break;
-        }
-      }
-    }
-    if (!etag_opt) {
-      /* Not a match - pass up to a higher level */
-      coap_free_type(COAP_STRING, out_blocks);
-      return 0;
-    }
+  if (etag_opt && !match_request_etag(lg_xmit->sent_pdu, etag_opt, &opt_iter)) {
+    /* Not a match - pass up to a higher level */
+    coap_free_type(COAP_STRING, out_blocks);
+    return 0;
   }
   out_pdu->code = lg_xmit->sent_pdu->code;
   coap_ticks(&lg_xmit->last_obs);
@@ -3253,7 +3241,7 @@ coap_handle_request_send_block(coap_session_t *session,
     }
     if (lg_xmit->b.b2.maxage_expire) {
       coap_tick_t now;
-      coap_time_t rem;
+      uint64_t rem;
 
       if (!(offset + chunk < lg_xmit->data_info->length)) {
         /* Last block - keep in cache for 4 * ACK_TIMOUT */
@@ -3262,7 +3250,7 @@ coap_handle_request_send_block(coap_session_t *session,
       coap_ticks(&now);
       rem = coap_ticks_to_rt(now);
       if (lg_xmit->b.b2.maxage_expire > rem) {
-        rem = lg_xmit->b.b2.maxage_expire - rem;
+        rem = min(lg_xmit->b.b2.maxage_expire - rem, UINT32_MAX);
       } else {
         rem = 0;
         /* Entry needs to be expired */
@@ -5079,7 +5067,7 @@ reinit:
 
               if (session->block_mode & COAP_BLOCK_STLESS_FETCH && pdu->code == COAP_REQUEST_CODE_FETCH) {
                 (void)coap_get_data(lg_crcv->sent_pdu, &length, &data);
-                coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, -1, 0, length, data, NULL, NULL, NULL,
+                coap_add_data_large_internal(session, NULL, pdu, NULL, NULL, 0, length, data, NULL, NULL, NULL,
                                              0, 0);
               }
               if (coap_send_internal(session, pdu, NULL) == COAP_INVALID_MID)

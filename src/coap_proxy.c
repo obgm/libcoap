@@ -894,8 +894,6 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
 
   if (coap_get_data_large(rcvd, &size, &data, &offset, &total)) {
     uint16_t media_type = 0;
-    int maxage = -1;
-    uint64_t etag = 0;
     coap_opt_t *option;
     coap_bin_const_t *body;
 
@@ -912,22 +910,12 @@ coap_proxy_call_response_handler(coap_session_t *session, const coap_pdu_t *sent
       media_type = coap_decode_var_bytes(coap_opt_value(option),
                                          coap_opt_length(option));
     }
-    option = coap_check_option(rcvd, COAP_OPTION_MAXAGE, &opt_iter);
-    if (option) {
-      maxage = coap_decode_var_bytes(coap_opt_value(option),
-                                     coap_opt_length(option));
-    }
-    option = coap_check_option(rcvd, COAP_OPTION_ETAG, &opt_iter);
-    if (option) {
-      etag = coap_decode_var_bytes8(coap_opt_value(option),
-                                    coap_opt_length(option));
-    }
     if (sent)
       l_query = coap_get_query(sent);
     if (!coap_add_data_large_response_lkd(proxy_req->resource, session, sent,
                                           resp_pdu,
                                           l_query,
-                                          media_type, maxage, etag, body->length,
+                                          media_type, -1, 0, body->length,
                                           body->s,
                                           coap_proxy_free_response_data,
                                           body)) {
@@ -1376,8 +1364,6 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
   size_t total;
   coap_proxy_entry_t *proxy_entry = NULL;
   uint16_t media_type = COAP_MEDIATYPE_TEXT_PLAIN;
-  int maxage = -1;
-  uint64_t etag = 0;
   coap_pdu_code_t rcv_code = coap_pdu_get_code(received);
   coap_bin_const_t req_token;
   coap_binary_t *body_data = NULL;
@@ -1439,14 +1425,6 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
       media_type = coap_decode_var_bytes(coap_opt_value(option),
                                          coap_opt_length(option));
       break;
-    case COAP_OPTION_MAXAGE:
-      maxage = coap_decode_var_bytes(coap_opt_value(option),
-                                     coap_opt_length(option));
-      break;
-    case COAP_OPTION_ETAG:
-      etag = coap_decode_var_bytes8(coap_opt_value(option),
-                                    coap_opt_length(option));
-      break;
     case COAP_OPTION_BLOCK2:
     case COAP_OPTION_Q_BLOCK2:
     case COAP_OPTION_SIZE2:
@@ -1467,7 +1445,7 @@ coap_proxy_forward_response_lkd(coap_session_t *session,
 
     coap_add_data_large_response_lkd(resource, incoming, req_pdu, pdu,
                                      l_query,
-                                     media_type, maxage, etag, size, data,
+                                     media_type, -1, 0, size, data,
                                      coap_proxy_release_body_data,
                                      body_data);
     body_data = NULL;
@@ -1596,13 +1574,6 @@ coap_proxy_process_incoming(coap_session_t *session,
     } else {
       /* The simple case */
       proxy_cache->rsp_pdu = coap_pdu_reference_lkd(rcvd);
-    }
-    option = coap_check_option(rcvd, COAP_OPTION_ETAG, &opt_iter);
-    if (option) {
-      proxy_cache->etag = coap_decode_var_bytes8(coap_opt_value(option),
-                                                 coap_opt_length(option));
-    } else {
-      proxy_cache->etag = 0;
     }
     coap_ticks(&now);
     option = coap_check_option(rcvd, COAP_OPTION_MAXAGE, &opt_iter);

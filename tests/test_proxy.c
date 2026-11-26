@@ -67,6 +67,102 @@ t_proxy_request(const char *proxy_uri) {
   return pdu;
 }
 
+static void
+check_proxy_forward_etag(coap_pdu_code_t code) {
+  static const uint8_t etag[] = { 0x00, 0x01 };
+  static const uint8_t body[32] = { 'v' };
+  const uint32_t maxage = code == COAP_RESPONSE_CODE_VALID ? 0 : UINT32_MAX;
+  uint8_t buf[4];
+  coap_tick_t start;
+  const char *host = "proxy.test";
+  coap_proxy_server_list_t servers = { 0 };
+  coap_context_t *proxy = coap_new_context(NULL);
+  coap_session_t *downstream;
+  coap_resource_t *resource;
+  coap_proxy_entry_t *entry;
+  const coap_bin_const_t *token;
+  coap_pdu_t *request = NULL;
+  coap_pdu_t *ack = NULL;
+  coap_pdu_t *upstream = NULL;
+  coap_queue_t *node;
+  coap_opt_iterator_t iter;
+  coap_opt_t *opt;
+
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(proxy);
+  coap_context_set_block_mode(proxy, COAP_BLOCK_USE_LIBCOAP);
+  downstream = coap_new_client_session(proxy, NULL,
+                                       coap_session_get_addr_remote(session),
+                                       COAP_PROTO_UDP);
+  CU_ASSERT_PTR_NOT_NULL(downstream);
+  if (!downstream)
+    goto done;
+  resource = coap_resource_proxy_uri_init(NULL, 1, &host);
+  CU_ASSERT_PTR_NOT_NULL(resource);
+  if (!resource)
+    goto done;
+  coap_add_resource(proxy, resource);
+  request = t_proxy_request("coap://[::1]/etag");
+  ack = coap_new_pdu(COAP_MESSAGE_ACK, 0, downstream);
+  CU_ASSERT(request && ack);
+  if (!request || !ack)
+    goto done;
+  coap_pdu_set_type(request, COAP_MESSAGE_CON);
+  if (code == COAP_RESPONSE_CODE_VALID) {
+    CU_ASSERT(coap_add_option(request, COAP_OPTION_ETAG, sizeof(etag), etag));
+  } else {
+    CU_ASSERT(coap_add_option(request, COAP_OPTION_BLOCK2, 0, NULL));
+  }
+  servers.type = COAP_PROXY_FWD_DYNAMIC;
+  CU_ASSERT(coap_proxy_forward_request(downstream, request, ack, resource,
+                                       NULL, &servers));
+  entry = proxy->proxy_list;
+  CU_ASSERT(entry && entry->proxy_req && entry->ongoing);
+  if (!entry || !entry->proxy_req || !entry->ongoing)
+    goto done;
+  token = entry->proxy_req->token_used;
+  upstream = coap_new_pdu(COAP_MESSAGE_ACK, code, entry->ongoing);
+  CU_ASSERT_PTR_NOT_NULL(upstream);
+  if (!upstream)
+    goto done;
+  CU_ASSERT(coap_add_token(upstream, token->length, token->s));
+  CU_ASSERT(coap_add_option(upstream, COAP_OPTION_ETAG, sizeof(etag), etag));
+  CU_ASSERT(coap_add_option(upstream, COAP_OPTION_MAXAGE,
+                            coap_encode_var_safe8(buf, sizeof(buf), maxage), buf));
+  if (code == COAP_RESPONSE_CODE_CONTENT)
+    CU_ASSERT(coap_add_data(upstream, sizeof(body), body));
+  coap_ticks(&start);
+  CU_ASSERT(coap_proxy_forward_response(entry->ongoing, upstream, NULL) ==
+            COAP_RESPONSE_OK);
+  /* The forwarded CON is in the retransmission queue until acknowledged. */
+  for (node = proxy->sendqueue; node; node = node->next) {
+    if (node->session != downstream)
+      continue;
+    CU_ASSERT(coap_pdu_get_code(node->pdu) == code);
+    opt = coap_check_option(node->pdu, COAP_OPTION_ETAG, &iter);
+    CU_ASSERT(opt && coap_opt_length(opt) == sizeof(etag) &&
+              memcmp(coap_opt_value(opt), etag, sizeof(etag)) == 0);
+    opt = coap_check_option(node->pdu, COAP_OPTION_MAXAGE, &iter);
+    CU_ASSERT(opt && coap_decode_var_bytes8(coap_opt_value(opt), coap_opt_length(opt)) == maxage);
+    if (code == COAP_RESPONSE_CODE_CONTENT)
+      CU_ASSERT(downstream->lg_xmit &&
+                downstream->lg_xmit->b.b2.maxage_expire >= (uint64_t)coap_ticks_to_rt(start) + maxage);
+    break;
+  }
+  CU_ASSERT_PTR_NOT_NULL(node);
+done:
+  coap_delete_pdu(upstream);
+  coap_delete_pdu(ack);
+  coap_delete_pdu(request);
+  coap_session_release(downstream);
+  coap_free_context(proxy);
+}
+
+static void
+t_proxy_forward_etag(void) {
+  check_proxy_forward_etag(COAP_RESPONSE_CODE_CONTENT);
+  check_proxy_forward_etag(COAP_RESPONSE_CODE_VALID);
+}
+
 /*
  * Removing a tracked client session must drop its proxy requests from
  * every proxy entry, not just from the first one that tracks it.
@@ -372,6 +468,7 @@ t_init_proxy_tests(void) {
   SESSION_TEST(suite, t_proxy_remove);
   SESSION_TEST(suite, t_proxy_dynamic_upstream);
   SESSION_TEST(suite, t_proxy_body_copy);
+  SESSION_TEST(suite, t_proxy_forward_etag);
 #endif /* COAP_PROXY_SUPPORT */
 
   return suite;
