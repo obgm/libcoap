@@ -758,6 +758,28 @@ coap_ws_read(coap_session_t *session, uint8_t *data, size_t datalen) {
     }
   }
 
+  /*
+   * A WebSocket frame that was partially read in cannot be followed by
+   * a subsequent coap_ws_read() that has a smaller buffer.
+   * Without this check data_ofs/data_size from the earlier call would
+   * overflow the current buffer in the subsequent read.
+   */
+  if (session->ws->all_hdr_in &&
+      (session->ws->data_size > datalen ||
+       session->ws->data_ofs > datalen)) {
+    coap_log_warn("coap_ws_read: partial WS frame (%" PRIuS "/%" PRIuS
+                  ") does not fit in %" PRIuS "\n",
+                  session->ws->data_ofs, session->ws->data_size, datalen);
+    session->ws->close_reason = 1009;   /* message too big */
+    session->ws->all_hdr_in = 0;
+    session->ws->hdr_ofs = 0;
+    session->ws->data_size = 0;
+    session->ws->data_ofs = 0;
+    coap_free_type(COAP_STRING, session->ws->rd_data);
+    session->ws->rd_data = NULL;
+    return -1;                          /* caller tears the session down */
+  }
+
   /* Get in (remaining) data */
   if (session->ws->rd_data) {
     /* data is not preserved between calls, so restore what was read earlier */
@@ -876,9 +898,7 @@ coap_ws_close(coap_session_t *session) {
     return;
   }
   if (session->ws && session->ws->up) {
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-    int count;
-#endif /* ! WITH_LWIP && ! WITH_CONTIKI */
+    int timeout_ms;
 
     if (!session->ws->sent_close) {
       size_t hdr_len = 2;
@@ -911,29 +931,30 @@ coap_ws_close(coap_session_t *session) {
       if (ret != hdr_len+2) {
         return;
       }
+    } else {
+      /* Session is already being closed down. */
+      return;
     }
-#if !defined(WITH_LWIP) && !defined(WITH_CONTIKI)
-    count = 5;
-    while (!session->ws->recv_close && count > 0 && coap_netif_available(session)) {
-      uint8_t buf[100];
-      fd_set readfds;
-      int result;
-      struct timeval tv;
-
-      FD_ZERO(&readfds);
-      FD_SET(session->sock.fd, &readfds);
-      tv.tv_sec = 0;
-      tv.tv_usec = 1000;
-      result = select((int)(session->sock.fd+1), &readfds, NULL, NULL, &tv);
+    /* Need to wait for close from remote end, or timeout */
+    timeout_ms = 5000;
+    coap_session_reference_lkd(session);
+    while (!session->ws->recv_close && coap_netif_available(session) &&
+           !(session->sock.flags & COAP_SOCKET_READ_FAIL)) {
+      int result = coap_io_process_lkd(session->context, 1000);
 
       if (result < 0) {
         break;
-      } else if (result > 0) {
-        coap_ws_read(session, buf, sizeof(buf));
       }
-      count --;
+      /* In case there is a spin. */
+      if (result < 10)
+        result = 10;
+      if (result < timeout_ms) {
+        timeout_ms -= result;
+      } else {
+        break;
+      }
     }
-#endif /* ! WITH_LWIP && ! WITH_CONTIKI */
+    coap_session_release_lkd(session);
     coap_handle_event_lkd(session->context, COAP_EVENT_WS_CLOSED, session);
   }
   session->sock.lfunc[COAP_LAYER_WS].l_close(session);
