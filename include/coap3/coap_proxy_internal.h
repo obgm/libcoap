@@ -37,7 +37,6 @@ typedef struct coap_proxy_cache_t {
   coap_pdu_t *req_pdu;          /**< P-Client's request PDU */
   coap_pdu_t *rsp_pdu;          /**< Latest response PDU seen by P-Client */
   coap_tick_t expire;           /**< When this cache entry is to expire */
-  uint64_t etag;                /**< ETag value of response PDU */
   unsigned ref;                 /**< No of coap_proxy_req_t reference this object */
 } coap_proxy_cache_t;
 

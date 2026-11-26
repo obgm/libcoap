@@ -153,12 +153,11 @@ typedef struct coap_l_block1_t {
 typedef struct coap_l_block2_t {
   coap_resource_t *resource; /**< associated resource */
   coap_string_t *query;  /**< Associated query for the resource */
-  uint64_t etag;         /**< ETag value */
   coap_pdu_code_t request_method; /**< Method used to request this data */
   uint8_t rtag_set;      /**< Set if RTag is in receive PDU */
   uint8_t rtag_length;   /**< RTag length */
   uint8_t rtag[8];       /**< RTag for block checking */
-  coap_time_t maxage_expire; /**< When this entry expires */
+  uint64_t maxage_expire; /**< When this entry expires, in seconds */
 } coap_l_block2_t;
 
 typedef struct coap_lg_xmit_data_t {

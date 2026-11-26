@@ -21,6 +21,84 @@
 #if COAP_SERVER_SUPPORT
 static size_t large_app_calls;
 
+static void
+count_response_release(coap_session_t *session COAP_UNUSED, void *app_ptr) {
+  unsigned int *count = app_ptr;
+  (*count)++;
+}
+
+static void
+t_block_response_etag(void) {
+  static const uint8_t padded[] = { 0x00, 0x01 };
+  static const uint8_t other = 0x02;
+  static const uint8_t body[] = "updated";
+  coap_context_t *ctx = coap_new_context(NULL);
+  coap_session_t *session;
+  coap_resource_t *resource;
+  coap_address_t addr;
+  coap_pdu_t *request;
+  coap_pdu_t *response;
+  const uint8_t *data;
+  size_t length;
+  unsigned int releases[2] = { 0 };
+  int add_match;
+
+  ReturnIf_CU_ASSERT_PTR_NOT_NULL(ctx);
+  coap_context_set_block_mode(ctx, COAP_BLOCK_USE_LIBCOAP);
+  coap_address_init(&addr);
+  addr.size = sizeof(struct sockaddr_in6);
+  addr.addr.sin6.sin6_family = AF_INET6;
+  addr.addr.sin6.sin6_addr = in6addr_loopback;
+  addr.addr.sin6.sin6_port = htons(COAP_DEFAULT_PORT);
+  session = coap_new_client_session(ctx, NULL, &addr, COAP_PROTO_UDP);
+  CU_ASSERT_PTR_NOT_NULL(session);
+  if (!session)
+    goto done;
+  resource = coap_resource_init(coap_make_str_const("etag"), 0);
+  CU_ASSERT_PTR_NOT_NULL(resource);
+  if (!resource)
+    goto done;
+  coap_add_resource(ctx, resource);
+
+  for (add_match = 0; add_match <= 1; add_match++) {
+    request = coap_new_pdu(COAP_MESSAGE_CON, COAP_REQUEST_CODE_GET, session);
+    response = coap_new_pdu(COAP_MESSAGE_ACK, COAP_RESPONSE_CODE_CONTENT,
+                            session);
+    CU_ASSERT_PTR_NOT_NULL(request);
+    CU_ASSERT_PTR_NOT_NULL(response);
+    if (request && response) {
+      CU_ASSERT(coap_add_option(request, COAP_OPTION_ETAG, sizeof(other), &other));
+      CU_ASSERT(coap_add_option(request, COAP_OPTION_ETAG, sizeof(padded), padded));
+      if (add_match)
+        CU_ASSERT(coap_add_option(request, COAP_OPTION_ETAG, 1, &padded[1]));
+      CU_ASSERT(coap_add_data_large_response(resource, session, request,
+                                             response, NULL, 0, -1, 1,
+                                             sizeof(body) - 1, body,
+                                             count_response_release, &releases[add_match]));
+      if (add_match) {
+        coap_opt_iterator_t iter;
+        coap_opt_t *opt = coap_check_option(response, COAP_OPTION_ETAG, &iter);
+
+        CU_ASSERT(coap_pdu_get_code(response) == COAP_RESPONSE_CODE_VALID);
+        CU_ASSERT(opt && coap_opt_length(opt) == 1 && coap_opt_value(opt)[0] == 1);
+        CU_ASSERT(!coap_get_data(response, &length, &data));
+      } else {
+        CU_ASSERT(coap_pdu_get_code(response) == COAP_RESPONSE_CODE_CONTENT);
+        CU_ASSERT(coap_get_data(response, &length, &data) &&
+                  length == sizeof(body) - 1 &&
+                  memcmp(data, body, length) == 0);
+      }
+    }
+    coap_delete_pdu(response);
+    coap_delete_pdu(request);
+  }
+done:
+  coap_session_release(session);
+  coap_free_context(ctx);
+  CU_ASSERT(releases[0] == 1);
+  CU_ASSERT(releases[1] == 1);
+}
+
 static int
 large_app_get_data(coap_session_t *s COAP_UNUSED, size_t max, size_t offset,
                    uint8_t *data, size_t *length, void *app_ptr COAP_UNUSED) {
@@ -697,6 +775,7 @@ t_init_block_tests(void) {
 #endif /* COAP_Q_BLOCK_SUPPORT */
   BLOCK_TEST(suite, t_block_build_body_total_change);
 #if COAP_SERVER_SUPPORT
+  BLOCK_TEST(suite, t_block_response_etag);
   BLOCK_TEST(suite, t_block_echo_get_func);
   BLOCK_TEST(suite, t_block_cancel_observe_get_func);
   BLOCK_TEST(suite, t_block_large_app_block_num);
