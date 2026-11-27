@@ -1529,14 +1529,14 @@ coap_client_delay_first(coap_session_t *session) {
      * Need to wait for first request to get out and response back before
      * continuing.. Response handler has to clear doing_first if not an error.
      */
-    coap_session_reference_lkd(session);
+    coap_session_hold_lkd(session);
     while (session->doing_first != 0) {
       int result = coap_io_process_lkd(session->context, 1000);
 
       if (result < 0) {
         coap_reset_doing_first(session);
         session->delay_recursive = 0;
-        coap_session_release_lkd(session);
+        coap_session_unhold_lkd(session);
         return 0;
       }
 
@@ -1568,7 +1568,7 @@ coap_client_delay_first(coap_session_t *session) {
       }
     }
     session->delay_recursive = 0;
-    coap_session_release_lkd(session);
+    coap_session_unhold_lkd(session);
   }
 #else /* ! COAP_CLIENT_SUPPORT */
   (void)session;

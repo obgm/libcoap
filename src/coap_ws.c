@@ -937,7 +937,7 @@ coap_ws_close(coap_session_t *session) {
     }
     /* Need to wait for close from remote end, or timeout */
     timeout_ms = 5000;
-    coap_session_reference_lkd(session);
+    coap_session_hold_lkd(session);
     while (!session->ws->recv_close && coap_netif_available(session) &&
            !(session->sock.flags & COAP_SOCKET_READ_FAIL)) {
       int result = coap_io_process_lkd(session->context, 1000);
@@ -954,7 +954,7 @@ coap_ws_close(coap_session_t *session) {
         break;
       }
     }
-    coap_session_release_lkd(session);
+    coap_session_unhold_lkd(session);
     coap_handle_event_lkd(session->context, COAP_EVENT_WS_CLOSED, session);
   }
   session->sock.lfunc[COAP_LAYER_WS].l_close(session);
