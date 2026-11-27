@@ -1019,8 +1019,11 @@ void coap_session_reestablished(coap_session_t *session);
 #define SESSIONS_ITER(e, el, rtmp)  \
   HASH_ITER(hh, (e), el, rtmp)
 
+int
+coap_check_still_session(coap_session_t *session_head, coap_session_t *check);
+
 #define SESSIONS_ITER_SAFE(e, el, rtmp) \
-  for ((el) = (e); (el) && ((rtmp) = (el)->hh.next, 1); (el) = (rtmp))
+  for ((el) = (e); (el) && coap_check_still_session((e), (el)) && ((rtmp) = (el)->hh.next, 1); (el) = (rtmp))
 
 #define SESSIONS_FIND(e, k, res) {                     \
     HASH_FIND(hh, (e), &(k), sizeof(k), (res)); \

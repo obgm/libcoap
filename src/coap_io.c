@@ -53,6 +53,22 @@
 #include <sys/select.h>
 #endif /* __ZEPHYR__ */
 
+/*
+ * Confirm that the session is still in the session linked list.
+ */
+int
+coap_check_still_session(coap_session_t *session_head, coap_session_t *check) {
+  coap_session_t *ch;
+
+  for (ch = session_head; ch; ch = ch->hh.next) {
+    if (ch == check)
+      break;
+  }
+  if (ch)
+    return 1;
+  return 0;
+}
+
 #if COAP_SERVER_SUPPORT
 coap_endpoint_t *
 coap_malloc_endpoint(void) {
