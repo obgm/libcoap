@@ -2424,6 +2424,9 @@ coap_crypto_read_ccs_public_cred(coap_bin_const_t *binary,
               elem_size = oscore_cbor_get_element_size(&data, &data_len);
               if (elem_size > data_len)
                 goto error;
+              /* Duplicates not on */
+              if (local->pub_raw)
+                goto error;
               local->pub_raw = coap_new_bin_const(data, elem_size);
               if (!local->pub_raw)
                 goto error;
